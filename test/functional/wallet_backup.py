@@ -51,6 +51,7 @@ class WalletBackupTest(BitcoinTestFramework):
             ["-whitelist=127.0.0.1"]
         ]
         self.rpc_timeout = 120
+        self.set_genesis_mocktime()
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
