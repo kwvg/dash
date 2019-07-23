@@ -8,7 +8,7 @@
 #include <consensus/consensus.h>
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
-#include <validation.h>
+#include <hash.h>
 #include <policy/policy.h>
 #include <policy/fees.h>
 #include <policy/settings.h>
@@ -16,7 +16,8 @@
 #include <util/system.h>
 #include <util/moneystr.h>
 #include <util/time.h>
-#include <hash.h>
+#include <validation.h>
+#include <validationinterface.h>
 
 #include <bls/bls.h>
 #include <evo/specialtx.h>
@@ -618,7 +619,12 @@ bool CTxMemPool::removeSpentIndex(const uint256 txhash)
 
 void CTxMemPool::removeUnchecked(txiter it, MemPoolRemovalReason reason)
 {
-    NotifyEntryRemoved(it->GetSharedTx(), reason);
+    CTransactionRef ptx = it->GetSharedTx();
+    NotifyEntryRemoved(ptx, reason);
+    if (reason != MemPoolRemovalReason::BLOCK && reason != MemPoolRemovalReason::CONFLICT) {
+        GetMainSignals().TransactionRemovedFromMempool(ptx, reason);
+    }
+
     const uint256 hash = it->GetTx().GetHash();
     for (const CTxIn& txin : it->GetTx().vin)
         mapNextTx.erase(txin.prevout);
