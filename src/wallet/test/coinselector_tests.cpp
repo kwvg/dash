@@ -546,17 +546,19 @@ BOOST_AUTO_TEST_CASE(knapsack_solver_test)
         for (int i = 0; i < RUN_TESTS; i++) {
             // picking 50 from 100 coins doesn't depend on the shuffle,
             // but does depend on randomness in the stochastic approximation code
-            BOOST_CHECK(wallet->SelectCoinsMinConf(50 * COIN, filter_standard, coins, setCoinsRet , nValueRet, coin_selection_params, bnb_used));
-            BOOST_CHECK(wallet->SelectCoinsMinConf(50 * COIN, filter_standard, coins, setCoinsRet2, nValueRet, coin_selection_params, bnb_used));
+            BOOST_CHECK(KnapsackSolver(50 * COIN, GroupCoins(coins), setCoinsRet, nValueRet, /*fFullyMixedOnly=*/false, /*maxTxFee=*/DEFAULT_TRANSACTION_MAXFEE));
+            BOOST_CHECK(KnapsackSolver(50 * COIN, GroupCoins(coins), setCoinsRet2, nValueRet, /*fFullyMixedOnly=*/false, /*maxTxFee=*/DEFAULT_TRANSACTION_MAXFEE));
             BOOST_CHECK(!equal_sets(setCoinsRet, setCoinsRet2));
 
             int fails = 0;
             for (int j = 0; j < RANDOM_REPEATS; j++)
             {
-                // selecting 1 from 100 identical coins depends on the shuffle; this test will fail 1% of the time
-                // run the test RANDOM_REPEATS times and only complain if all of them fail
-                BOOST_CHECK(wallet->SelectCoinsMinConf(COIN, filter_standard, coins, setCoinsRet , nValueRet, coin_selection_params, bnb_used));
-                BOOST_CHECK(wallet->SelectCoinsMinConf(COIN, filter_standard, coins, setCoinsRet2, nValueRet, coin_selection_params, bnb_used));
+                // Test that the KnapsackSolver selects randomly from equivalent coins (same value and same input size).
+                // When choosing 1 from 100 identical coins, 1% of the time, this test will choose the same coin twice
+                // which will cause it to fail.
+                // To avoid that issue, run the test RANDOM_REPEATS times and only complain if all of them fail
+                BOOST_CHECK(KnapsackSolver(COIN, GroupCoins(coins), setCoinsRet, nValueRet, /*fFullyMixedOnly=*/false, /*maxTxFee=*/DEFAULT_TRANSACTION_MAXFEE));
+                BOOST_CHECK(KnapsackSolver(COIN, GroupCoins(coins), setCoinsRet2, nValueRet, /*fFullyMixedOnly=*/false, /*maxTxFee=*/DEFAULT_TRANSACTION_MAXFEE));
                 if (equal_sets(setCoinsRet, setCoinsRet2))
                     fails++;
             }
@@ -576,10 +578,8 @@ BOOST_AUTO_TEST_CASE(knapsack_solver_test)
             int fails = 0;
             for (int j = 0; j < RANDOM_REPEATS; j++)
             {
-                // selecting 1 from 100 identical coins depends on the shuffle; this test will fail 1% of the time
-                // run the test RANDOM_REPEATS times and only complain if all of them fail
-                BOOST_CHECK(wallet->SelectCoinsMinConf(90*CENT, filter_standard, coins, setCoinsRet , nValueRet, coin_selection_params, bnb_used));
-                BOOST_CHECK(wallet->SelectCoinsMinConf(90*CENT, filter_standard, coins, setCoinsRet2, nValueRet, coin_selection_params, bnb_used));
+                BOOST_CHECK(KnapsackSolver(90*CENT, GroupCoins(coins), setCoinsRet, nValueRet, /*fFullyMixedOnly=*/false, /*maxTxFee=*/DEFAULT_TRANSACTION_MAXFEE));
+                BOOST_CHECK(KnapsackSolver(90*CENT, GroupCoins(coins), setCoinsRet2, nValueRet, /*fFullyMixedOnly=*/false, /*maxTxFee=*/DEFAULT_TRANSACTION_MAXFEE));
                 if (equal_sets(setCoinsRet, setCoinsRet2))
                     fails++;
             }
