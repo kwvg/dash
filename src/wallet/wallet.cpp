@@ -2887,7 +2887,7 @@ static bool isGroupISLocked(const OutputGroup& group, interfaces::Chain& chain)
 }
 
 bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, const CoinEligibilityFilter& eligibility_filter, std::vector<COutput> coins,
-                                 std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used, CoinType nCoinType) const
+                                 std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, CoinType nCoinType) const
 {
     setCoinsRet.clear();
     nValueRet = 0;
@@ -2902,27 +2902,22 @@ bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, const CoinEligibil
     std::vector<OutputGroup> positive_groups = GroupOutputs(coins, !coin_selection_params.m_avoid_partial_spends, effective_feerate, coin_selection_params.m_long_term_feerate, eligibility_filter, true /* positive_only */);
     // Note that unlike KnapsackSolver, we do not include the fee for creating a change output as BnB will not create a change output.
     if (SelectCoinsBnB(positive_groups, nTargetValue, coin_selection_params.m_cost_of_change, setCoinsRet, nValueRet)) {
-        bnb_used = true;
         return true;
     }
     // The knapsack solver has some legacy behavior where it will spend dust outputs. We retain this behavior, so don't filter for positive only here.
     std::vector<OutputGroup> all_groups = GroupOutputs(coins, !coin_selection_params.m_avoid_partial_spends, effective_feerate, coin_selection_params.m_long_term_feerate, eligibility_filter, false /* positive_only */);
-    bnb_used = false;
     // While nTargetValue includes the transaction fees for non-input things, it does not include the fee for creating a change output.
     // So we need to include that for KnapsackSolver as well, as we are expecting to create a change output.
     return KnapsackSolver(nTargetValue + coin_selection_params.m_change_fee, all_groups, setCoinsRet, nValueRet, nCoinType == CoinType::ONLY_FULLY_MIXED, m_default_max_tx_fee);
 }
 
-bool CWallet::SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const
+bool CWallet::SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params) const
 {
     // Note: this function should never be used for "always free" tx types like dstx
 
     std::vector<COutput> vCoins(vAvailableCoins);
     CoinType nCoinType = coin_control.nCoinType;
     CAmount value_to_select = nTargetValue;
-
-    // Default to bnb was not used. If we use it, we set it later
-    bnb_used = false;
 
     // coin control -> return all selected outputs (we want all selected to go into the transaction for sure)
     if (coin_control.HasSelected() && !coin_control.fAllowOtherInputs)
@@ -3016,26 +3011,26 @@ bool CWallet::SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAm
 
         // If possible, fund the transaction with confirmed UTXOs only. Prefer at least six
         // confirmations on outputs received from other wallets and only spend confirmed change.
-        if (SelectCoinsMinConf(value_to_select, CoinEligibilityFilter(1, 6, 0), vCoins, setCoinsRet, nValueRet, coin_selection_params, bnb_used, nCoinType)) return true;
-        if (SelectCoinsMinConf(value_to_select, CoinEligibilityFilter(1, 1, 0), vCoins, setCoinsRet, nValueRet, coin_selection_params, bnb_used, nCoinType)) return true;
+        if (SelectCoinsMinConf(value_to_select, CoinEligibilityFilter(1, 6, 0), vCoins, setCoinsRet, nValueRet, coin_selection_params, nCoinType)) return true;
+        if (SelectCoinsMinConf(value_to_select, CoinEligibilityFilter(1, 1, 0), vCoins, setCoinsRet, nValueRet, coin_selection_params, nCoinType)) return true;
 
         // Fall back to using zero confirmation change (but with as few ancestors in the mempool as
         // possible) if we cannot fund the transaction otherwise.
         if (m_spend_zero_conf_change) {
-            if (SelectCoinsMinConf(value_to_select, CoinEligibilityFilter(0, 1, 2), vCoins, setCoinsRet, nValueRet, coin_selection_params, bnb_used, nCoinType)) return true;
+            if (SelectCoinsMinConf(value_to_select, CoinEligibilityFilter(0, 1, 2), vCoins, setCoinsRet, nValueRet, coin_selection_params, nCoinType)) return true;
             if (SelectCoinsMinConf(value_to_select, CoinEligibilityFilter(0, 1, std::min((size_t)4, max_ancestors/3), std::min((size_t)4, max_descendants/3)),
-                                   vCoins, setCoinsRet, nValueRet, coin_selection_params, bnb_used, nCoinType)) {
+                                   vCoins, setCoinsRet, nValueRet, coin_selection_params, nCoinType)) {
                 return true;
             }
             if (SelectCoinsMinConf(value_to_select, CoinEligibilityFilter(0, 1, max_ancestors/2, max_descendants/2),
-                                   vCoins, setCoinsRet, nValueRet, coin_selection_params, bnb_used, nCoinType)) {
+                                   vCoins, setCoinsRet, nValueRet, coin_selection_params, nCoinType)) {
                 return true;
             }
             // If partial groups are allowed, relax the requirement of spending OutputGroups (groups
             // of UTXOs sent to the same address, which are obviously controlled by a single wallet)
             // in their entirety.
             if (SelectCoinsMinConf(value_to_select, CoinEligibilityFilter(0, 1, max_ancestors-1, max_descendants-1, true /* include_partial_groups */),
-                                   vCoins, setCoinsRet, nValueRet, coin_selection_params, bnb_used, nCoinType)) {
+                                   vCoins, setCoinsRet, nValueRet, coin_selection_params, nCoinType)) {
                 return true;
             }
             // Try with unsafe inputs if they are allowed. This may spend unconfirmed outputs
@@ -3043,7 +3038,7 @@ bool CWallet::SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAm
             if (coin_control.m_include_unsafe_inputs
                 && SelectCoinsMinConf(value_to_select,
                     CoinEligibilityFilter(0 /* conf_mine */, 0 /* conf_theirs */, max_ancestors-1, max_descendants-1, true /* include_partial_groups */),
-                    vCoins, setCoinsRet, nValueRet, coin_selection_params, bnb_used, nCoinType)) {
+                    vCoins, setCoinsRet, nValueRet, coin_selection_params, nCoinType)) {
                 return true;
             }
             // Try with unlimited ancestors/descendants. The transaction will still need to meet
@@ -3051,7 +3046,7 @@ bool CWallet::SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAm
             // OutputGroups use heuristics that may overestimate ancestor/descendant counts.
             if (!fRejectLongChains && SelectCoinsMinConf(value_to_select,
                                       CoinEligibilityFilter(0, 1, std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max(), true /* include_partial_groups */),
-                                      vCoins, setCoinsRet, nValueRet, coin_selection_params, bnb_used, nCoinType)) {
+                                      vCoins, setCoinsRet, nValueRet, coin_selection_params, nCoinType)) {
                 return true;
             }
         }
@@ -3646,8 +3641,6 @@ bool CWallet::CreateTransactionInternal(
             nFeeRet = 0;
             CAmount nValueIn = 0;
 
-            // BnB selector is the only selector used when this is true.
-            coin_selection_params.use_bnb = false; // Dash: never use BnB
             coin_selection_params.m_subtract_fee_outputs = nSubtractFeeFromAmount != 0; // If we are doing subtract fee from recipient, don't use effective values
 
             // Start with no fee and loop until there is enough fee, try it 500 times.
@@ -3685,10 +3678,9 @@ bool CWallet::CreateTransactionInternal(
                 CAmount nValueToSelect = nValue + not_input_fees;
 
                 // Choose coins to use
-                bool bnb_used = false;
                 nValueIn = 0;
                 setCoins.clear();
-                if (!SelectCoins(vAvailableCoins, /* nTargetValue */ nValueToSelect, setCoins, nValueIn, coin_control, coin_selection_params, bnb_used)) {
+                if (!SelectCoins(vAvailableCoins, /* nTargetValue */ nValueToSelect, setCoins, nValueIn, coin_control, coin_selection_params)) {
                     if (coin_control.nCoinType == CoinType::ONLY_NONDENOMINATED) {
                         error = _("Unable to locate enough non-denominated funds for this transaction.");
                     } else if (coin_control.nCoinType == CoinType::ONLY_FULLY_MIXED) {
