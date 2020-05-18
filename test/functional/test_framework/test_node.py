@@ -61,7 +61,7 @@ class TestNode():
     To make things easier for the test writer, any unrecognised messages will
     be dispatched to the RPC connection."""
 
-    def __init__(self, i, datadir, extra_args_from_options, *, chain, rpchost, timewait, factor, bitcoind, bitcoin_cli, mocktime, coverage_dir, cwd, extra_conf=None, extra_args=None, use_cli=False, start_perf=False, use_valgrind=False):
+    def __init__(self, i, datadir, extra_args_from_options, *, chain, rpchost, timewait, timeout_factor, bitcoind, bitcoin_cli, mocktime, coverage_dir, cwd, extra_conf=None, extra_args=None, use_cli=False, start_perf=False, use_valgrind=False):
         """
         Kwargs:
             start_perf (bool): If True, begin profiling the node with `perf` as soon as
@@ -130,7 +130,7 @@ class TestNode():
         self.perf_subprocesses = {}
 
         self.p2ps = []
-        self.factor = factor
+        self.timeout_factor = timeout_factor
 
     # derived using bip32 with derivation path m/0'/0' with extended private key
     # tprv8exZFVJvSQuq2FexStkSkRo3rVr9wtohdmnLu6XKzKXU2NtUUBwgJhw1gpdrCWzvJxFAb3fwqKUpCJTn8W7eD5fvsViM4BnRjCf5rz5uugJ
@@ -256,7 +256,7 @@ class TestNode():
                 # The wait is done here to make tests as robust as possible
                 # and prevent racy tests and intermittent failures as much
                 # as possible. Some tests might not need this, but the
-                # overhead is trivial, and the added gurantees are worth
+                # overhead is trivial, and the added guarantees are worth
                 # the minimal performance cost.
                 self.log.debug("RPC successfully started")
                 if self.use_cli:
@@ -341,13 +341,13 @@ class TestNode():
         return True
 
     def wait_until_stopped(self, timeout=BITCOIND_PROC_WAIT_TIMEOUT):
-        wait_until(self.is_node_stopped, timeout=timeout, factor=self.factor)
+        wait_until(self.is_node_stopped, timeout=timeout, timeout_factor=self.timeout_factor)
 
     @contextlib.contextmanager
     def assert_debug_log(self, expected_msgs, unexpected_msgs=None, timeout=2):
         if unexpected_msgs is None:
             unexpected_msgs = []
-        time_end = time.time() + timeout * self.factor
+        time_end = time.time() + timeout * self.timeout_factor
         chain = get_chain_folder(self.datadir, self.chain)
         debug_log = os.path.join(self.datadir, chain, 'debug.log')
         with open(debug_log, encoding='utf-8') as dl:
@@ -505,7 +505,7 @@ class TestNode():
         if 'dstaddr' not in kwargs:
             kwargs['dstaddr'] = '127.0.0.1'
 
-        p2p_conn.peer_connect(**kwargs, net=self.chain, factor=self.factor)()
+        p2p_conn.peer_connect(**kwargs, net=self.chain, timeout_factor=self.timeout_factor)()
         self.p2ps.append(p2p_conn)
         if wait_for_verack:
             # Wait for the node to send us the version and verack
@@ -519,7 +519,7 @@ class TestNode():
             # transaction that will be added to the mempool as soon as we return here.
             #
             # So syncing here is redundant when we only want to send a message, but the cost is low (a few milliseconds)
-            # in comparision to the upside of making tests less fragile and unexpected intermittent errors less likely.
+            # in comparison to the upside of making tests less fragile and unexpected intermittent errors less likely.
             p2p_conn.sync_with_ping()
 
         return p2p_conn
