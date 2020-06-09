@@ -48,8 +48,6 @@ from .util import (
     set_node_times,
     set_timeout_scale,
     satoshi_round,
-    sync_blocks,
-    sync_mempools,
     wait_until,
     get_chain_folder,
 )
@@ -523,21 +521,59 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
         connect_nodes(self.nodes[1], 2)
         self.sync_all()
 
-    def sync_blocks(self, nodes=None, **kwargs):
-        sync_blocks(nodes or self.nodes, **kwargs)
+    def sync_blocks(self, nodes=None, wait=1, timeout=60):
+        """
+        Wait until everybody has the same tip.
+        sync_blocks needs to be called with an rpc_connections set that has least
+        one node already synced to the latest, stable tip, otherwise there's a
+        chance it might return before all nodes are stably synced.
+        """
+        rpc_connections = nodes or self.nodes
+        timeout = int(timeout * self.options.timeout_factor)
+        stop_time = time.time() + timeout
+        while time.time() <= stop_time:
+            best_hash = [x.getbestblockhash() for x in rpc_connections]
+            if best_hash.count(best_hash[0]) == len(rpc_connections):
+                return
+            # Check that each peer has at least one connection
+            assert (all([len(x.getpeerinfo()) for x in rpc_connections]))
+            time.sleep(wait)
+        raise AssertionError("Block sync timed out:{}".format("".join("\n  {!r}".format(b) for b in best_hash)))
 
-    def sync_mempools(self, nodes=None, **kwargs):
+    def sync_mempools(self, nodes=None, wait=0, timeout=60, flush_scheduler=True, wait_func=None):
+        """
+        Wait until everybody has the same transactions in their memory
+        pools
+        """
         if self.mocktime != 0:
-            if 'wait' not in kwargs:
-                kwargs['wait'] = 0.1
-            if 'wait_func' not in kwargs:
-                kwargs['wait_func'] = lambda: self.bump_mocktime(3, nodes=nodes)
+            if wait_func == None:
+                wait_func = lambda: self.bump_mocktime(3, nodes=nodes)
+            if wait == 0:
+                wait = 0.1
+        else:
+            if wait == 0:
+                wait = 1
+        print(timeout)
+        rpc_connections = nodes or self.nodes
+        timeout = int(timeout * self.options.timeout_factor)
+        stop_time = time.time() + timeout
+        while time.time() <= stop_time:
+            pool = [set(r.getrawmempool()) for r in rpc_connections]
+            if pool.count(pool[0]) == len(rpc_connections):
+                if flush_scheduler:
+                    for r in rpc_connections:
+                        r.syncwithvalidationinterfacequeue()
+                return
+            if wait_func is not None:
+                wait_func()
+            # Check that each peer has at least one connection
+            assert (all([len(x.getpeerinfo()) for x in rpc_connections]))
+            time.sleep(wait)
+        raise AssertionError("Mempool sync timed out:{}".format("".join("\n  {!r}".format(m) for m in pool)))
 
-        sync_mempools(nodes or self.nodes, **kwargs)
-
-    def sync_all(self, nodes=None, **kwargs):
-        self.sync_blocks(nodes, **kwargs)
-        self.sync_mempools(nodes, **kwargs)
+    def sync_all(self, nodes=None):
+        self.sync_blocks(nodes)
+        self.sync_mempools(nodes)
 
     def bump_mocktime(self, t, update_nodes=True, nodes=None):
         self.mocktime += t
