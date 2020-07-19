@@ -1769,7 +1769,7 @@ void static ProcessGetBlockData(CNode* pfrom, const CChainParams& chainparams, c
 }
 
 //! Determine whether or not a peer can request a transaction, and return it (or nullptr if not found or not allowed).
-CTransactionRef static FindTxForGetData(CNode* peer, const uint256& txid, const std::chrono::seconds mempool_req, const std::chrono::seconds longlived_mempool_time) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+static CTransactionRef FindTxForGetData(const CTxMemPool& mempool, CNode* peer, const uint256& txid, const std::chrono::seconds mempool_req, const std::chrono::seconds longlived_mempool_time) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     // Check if the requested transaction is so recent that we're just
     // about to announce it to the peer; if so, they certainly shouldn't
@@ -1797,7 +1797,7 @@ CTransactionRef static FindTxForGetData(CNode* peer, const uint256& txid, const 
 }
 
 //! Determine whether or not a peer can request a coinjoin transaction, and return it (or nullptr if not found or not allowed).
-CCoinJoinBroadcastTxRef static FindDstxForGetData(CNode* peer, const uint256& txid, const std::chrono::seconds mempool_req, const std::chrono::seconds longlived_mempool_time) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+static CCoinJoinBroadcastTxRef FindDstxForGetData(const CTxMemPool& mempool, CNode* peer, const uint256& txid, const std::chrono::seconds mempool_req, const std::chrono::seconds longlived_mempool_time) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     // Check if the requested transaction is so recent that we're just
     // about to announce it to the peer; if so, they certainly shouldn't
@@ -1865,14 +1865,14 @@ void static ProcessGetData(CNode* pfrom, const CChainParams& chainparams, CConnm
             // Send stream from relay memory
             bool push = false;
 
-            auto dstx = FindDstxForGetData(pfrom, inv.hash, mempool_req, longlived_mempool_time);
+            auto dstx = FindDstxForGetData(mempool, pfrom, inv.hash, mempool_req, longlived_mempool_time);
             if (!push && dstx) {
                 connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::DSTX, *dstx));
                 mempool.RemoveUnbroadcastTx(inv.hash);
                 push = true;
             }
             
-            auto tx = FindTxForGetData(pfrom, inv.hash, mempool_req, longlived_mempool_time);
+            auto tx = FindTxForGetData(mempool, pfrom, inv.hash, mempool_req, longlived_mempool_time);
             if (!push && tx) {
                 connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::TX, *tx));
                 mempool.RemoveUnbroadcastTx(inv.hash);

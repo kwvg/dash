@@ -170,7 +170,7 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
 
     m_node.chainman = &::g_chainman;
 
-    m_node.mempool = &::mempool;
+    m_node.mempool = std::make_unique<CTxMemPool>(&::feeEstimator);
     m_node.mempool->setSanityCheck(1.0);
     m_node.connman = std::make_unique<CConnman>(0x1337, 0x1337); // Deterministic randomness for tests.
 
@@ -211,8 +211,8 @@ ChainTestingSetup::~ChainTestingSetup()
     ::sporkManager.reset();
     m_node.connman.reset();
     m_node.banman.reset();
-    UnloadBlockIndex(m_node.mempool);
-    m_node.mempool = nullptr;
+    UnloadBlockIndex(m_node.mempool.get());
+    m_node.mempool.reset();
     m_node.args = nullptr;
     m_node.scheduler.reset();
     m_node.llmq_ctx.reset();
