@@ -23,6 +23,7 @@
 
 #include <array>
 #include <stdint.h>
+#include <string.h>
 #include <thread>
 #include <univalue.h>
 #include <utility>
@@ -35,7 +36,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-using namespace std::string_literals;
+using namespace std::literals;
 
 static const std::string STRING_WITH_EMBEDDED_NULL_CHAR{"1"s "\0" "1"s};
 
@@ -1128,9 +1129,9 @@ BOOST_AUTO_TEST_CASE(util_ParseMoney)
     BOOST_CHECK(!ParseMoney("-1"));
 
     // Parsing strings with embedded NUL characters should fail
-    BOOST_CHECK(!ParseMoney(std::string("\0-1", 3)));
+    BOOST_CHECK(!ParseMoney("\0-1"s));
     BOOST_CHECK(!ParseMoney(STRING_WITH_EMBEDDED_NULL_CHAR));
-    BOOST_CHECK(!ParseMoney(std::string("1\0", 2)));
+    BOOST_CHECK(!ParseMoney("1\0"s));
 }
 
 BOOST_AUTO_TEST_CASE(util_IsHex)
