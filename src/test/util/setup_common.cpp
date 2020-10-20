@@ -170,8 +170,7 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
 
     m_node.chainman = &::g_chainman;
 
-    m_node.mempool = std::make_unique<CTxMemPool>(&::feeEstimator);
-    m_node.mempool->setSanityCheck(1.0);
+    m_node.mempool = std::make_unique<CTxMemPool>(&::feeEstimator, 1);
     m_node.connman = std::make_unique<CConnman>(0x1337, 0x1337); // Deterministic randomness for tests.
 
     ::sporkManager = std::make_unique<CSporkManager>();
