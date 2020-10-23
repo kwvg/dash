@@ -930,20 +930,14 @@ void PeerLogicValidation::ReattemptInitialBroadcast(CScheduler& scheduler) const
     scheduler.scheduleFromNow([&] { ReattemptInitialBroadcast(scheduler); }, delta.count());
 }
 
-void PeerLogicValidation::FinalizeNode(const CNode& node, bool& fUpdateConnectionTime) {
+void PeerLogicValidation::FinalizeNode(const CNode& node) {
     NodeId nodeid = node.GetId();
-    fUpdateConnectionTime = false;
     LOCK(cs_main);
     CNodeState *state = State(nodeid);
     assert(state != nullptr);
 
     if (state->fSyncStarted)
         nSyncStarted--;
-
-    if (state->nMisbehavior == 0 && state->fCurrentlyConnected /* && !node.IsBlockOnlyConn() */) {
-        // Note: we avoid changing visible addrman state for block-relay-only peers
-        fUpdateConnectionTime = true;
-    }
 
     for (const QueuedBlock& entry : state->vBlocksInFlight) {
         mapBlocksInFlight.erase(entry.hash);
@@ -963,6 +957,12 @@ void PeerLogicValidation::FinalizeNode(const CNode& node, bool& fUpdateConnectio
         assert(nPreferredDownload == 0);
         assert(nPeersWithValidatedDownloads == 0);
         assert(g_outbound_peers_with_protect_from_disconnect == 0);
+    }
+    if (state->nMisbehavior == 0 && state->fCurrentlyConnected /* && !node.IsBlockOnlyConn() */) {
+        // Only change visible addrman state for full outbound peers.  We don't
+        // call Connected() for feeler connections since they don't have
+        // fSuccessfullyConnected set.
+        m_addrman.Connected(node.addr);
     }
     LogPrint(BCLog::NET, "Cleared nodestate for peer=%d\n", nodeid);
 }
@@ -1255,9 +1255,9 @@ static bool BlockRequestAllowed(const CBlockIndex* pindex, const Consensus::Para
         (GetBlockProofEquivalentTime(*pindexBestHeader, *pindex, *pindexBestHeader, consensusParams) < STALE_RELAY_AGE_LIMIT);
 }
 
-PeerLogicValidation::PeerLogicValidation(CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman, CTxMemPool& pool,
-                                        std::unique_ptr<LLMQContext>& llmq_ctx) :
-    connman(connmanIn), m_banman(banman), m_chainman(chainman), m_mempool(pool), m_llmq_ctx(llmq_ctx), m_stale_tip_check_time(0)
+PeerLogicValidation::PeerLogicValidation(CConnman* connmanIn, CAddrMan& addrman, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman,
+                                         CTxMemPool& pool, std::unique_ptr<LLMQContext>& llmq_ctx) :
+    connman(connmanIn), m_addrman(addrman), m_banman(banman), m_chainman(chainman), m_mempool(pool), m_llmq_ctx(llmq_ctx), m_stale_tip_check_time(0)
 {
     // Initialize global variables that cannot be constructed at startup.
     recentRejects.reset(new CRollingBloomFilter(120000, 0.000001));
@@ -2580,7 +2580,7 @@ std::pair<bool /*ret*/, bool /*do_return*/> static ValidateDSTX(CTxMemPool& memp
 }
 
 bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, int64_t nTimeReceived,
-                    const CChainParams& chainparams, ChainstateManager& chainman, CTxMemPool& mempool,
+                    const CChainParams& chainparams, ChainstateManager& chainman, CAddrMan& addrman, CTxMemPool& mempool,
                     LLMQContext& llmq_ctx, CConnman* connman, BanMan* banman, const std::atomic<bool>& interruptMsgProc)
 {
     LogPrint(BCLog::NET, "received: %s (%u bytes) peer=%d\n", SanitizeString(msg_type), vRecv.size(), pfrom->GetId());
@@ -2627,7 +2627,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
         nServices = ServiceFlags(nServiceInt);
         if (!pfrom->fInbound)
         {
-            connman->SetServices(pfrom->addr, nServices);
+            addrman.SetServices(pfrom->addr, nServices);
         }
         if (!pfrom->fInbound && !pfrom->fFeeler && !pfrom->m_manual_connection && !HasAllDesirableServiceFlags(nServices))
         {
@@ -2766,7 +2766,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
             // Get recent addresses
             connman->PushMessage(pfrom, CNetMsgMaker(nSendVersion).Make(NetMsgType::GETADDR));
             pfrom->fGetAddr = true;
-            connman->MarkAddressGood(pfrom->addr);
+            addrman.Good(pfrom->addr);
         }
 
         std::string remoteAddr;
@@ -2944,7 +2944,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
             if (fReachable)
                 vAddrOk.push_back(addr);
         }
-        connman->AddNewAddresses(vAddrOk, pfrom->addr, 2 * 60 * 60);
+        addrman.Add(vAddrOk, pfrom->addr, 2 * 60 * 60);
         if (vAddr.size() < 1000)
             pfrom->fGetAddr = false;
         if (pfrom->fOneShot)
@@ -3634,7 +3634,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
         } // cs_main
 
         if (fProcessBLOCKTXN)
-            return ProcessMessage(pfrom, NetMsgType::BLOCKTXN, blockTxnMsg, nTimeReceived, chainparams, chainman, mempool, llmq_ctx, connman, banman, interruptMsgProc);
+            return ProcessMessage(pfrom, NetMsgType::BLOCKTXN, blockTxnMsg, nTimeReceived, chainparams, chainman, addrman, mempool, llmq_ctx, connman, banman, interruptMsgProc);
 
         if (fRevertToHeaderProcessing) {
             // Headers received from HB compact block peers are permitted to be
@@ -4229,7 +4229,7 @@ bool PeerLogicValidation::ProcessMessages(CNode* pfrom, std::atomic<bool>& inter
     bool fRet = false;
     try
     {
-        fRet = ProcessMessage(pfrom, msg_type, msg.m_recv, msg.m_time, chainparams, m_chainman, m_mempool, *m_llmq_ctx, connman, m_banman, interruptMsgProc);
+        fRet = ProcessMessage(pfrom, msg_type, msg.m_recv, msg.m_time, chainparams, m_chainman, m_addrman, m_mempool, *m_llmq_ctx, connman, m_banman, interruptMsgProc);
         if (interruptMsgProc)
             return false;
         if (!pfrom->vRecvGetData.empty())

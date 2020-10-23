@@ -11,6 +11,7 @@
 #include <sync.h>
 #include <validationinterface.h>
 
+class CAddrMan;
 class CTxMemPool;
 class ChainstateManager;
 struct LLMQContext;
@@ -28,14 +29,15 @@ class PeerLogicValidation final : public CValidationInterface, public NetEventsI
 private:
     CConnman* const connman;
     BanMan* const m_banman;
+    CAddrMan& m_addrman;
     ChainstateManager& m_chainman;
     CTxMemPool& m_mempool;
     std::unique_ptr<LLMQContext>& m_llmq_ctx;
 
     bool MaybeDiscourageAndDisconnect(CNode* pnode) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 public:
-    PeerLogicValidation(CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman, CTxMemPool& pool,
-                        std::unique_ptr<LLMQContext>& llmq_ctx);
+    PeerLogicValidation(CConnman* connmanIn, CAddrMan& addrman, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman,
+                        CTxMemPool& pool, std::unique_ptr<LLMQContext>& llmq_ctx);
 
     /**
      * Overridden from CValidationInterface.
@@ -58,7 +60,7 @@ public:
     /** Initialize a peer by adding it to mapNodeState and pushing a message requesting its version */
     void InitializeNode(CNode* pnode) override;
     /** Handle removal of a peer by updating various state and removing it from mapNodeState */
-    void FinalizeNode(const CNode& node, bool& fUpdateConnectionTime) override;
+    void FinalizeNode(const CNode& node) override;
     /**
     * Process protocol messages received from a given node
     *

@@ -9,6 +9,7 @@
 #include <optional>
 
 class ChainstateManager;
+class CBlockPolicyEstimator;
 class CTxMemPool;
 class CBlockPolicyEstimator;
 struct LLMQContext;
