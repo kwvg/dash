@@ -930,7 +930,8 @@ void PeerLogicValidation::ReattemptInitialBroadcast(CScheduler& scheduler) const
     scheduler.scheduleFromNow([&] { ReattemptInitialBroadcast(scheduler); }, delta.count());
 }
 
-void PeerLogicValidation::FinalizeNode(NodeId nodeid, bool& fUpdateConnectionTime) {
+void PeerLogicValidation::FinalizeNode(const CNode& node, bool& fUpdateConnectionTime) {
+    NodeId nodeid = node.GetId();
     fUpdateConnectionTime = false;
     LOCK(cs_main);
     CNodeState *state = State(nodeid);
@@ -939,7 +940,8 @@ void PeerLogicValidation::FinalizeNode(NodeId nodeid, bool& fUpdateConnectionTim
     if (state->fSyncStarted)
         nSyncStarted--;
 
-    if (state->nMisbehavior == 0 && state->fCurrentlyConnected) {
+    if (state->nMisbehavior == 0 && state->fCurrentlyConnected /* && !node.IsBlockOnlyConn() */) {
+        // Note: we avoid changing visible addrman state for block-relay-only peers
         fUpdateConnectionTime = true;
     }
 
