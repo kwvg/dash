@@ -51,6 +51,7 @@ typedef unsigned int SOCKET;
 #define WSAEINVAL           EINVAL
 #define WSAEALREADY         EALREADY
 #define WSAEWOULDBLOCK      EWOULDBLOCK
+#define WSAEAGAIN           EAGAIN
 #define WSAEMSGSIZE         EMSGSIZE
 #define WSAEINTR            EINTR
 #define WSAEINPROGRESS      EINPROGRESS
@@ -59,6 +60,14 @@ typedef unsigned int SOCKET;
 #define INVALID_SOCKET      (SOCKET)(~0)
 #define SOCKET_ERROR        -1
 #define SD_SEND             SHUT_WR
+#else
+#ifndef WSAEAGAIN
+#ifdef EAGAIN
+#define WSAEAGAIN EAGAIN
+#else
+#define WSAEAGAIN WSAEWOULDBLOCK
+#endif
+#endif
 #endif
 
 #ifdef WIN32
