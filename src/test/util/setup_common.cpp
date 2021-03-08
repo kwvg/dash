@@ -312,7 +312,7 @@ CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns,
             *sporkManager, *governance, *m_node.llmq_ctx->quorum_block_processor,
             *m_node.llmq_ctx->clhandler, *m_node.llmq_ctx->isman, *m_node.evodb,
             empty_pool, chainparams
-        ).CreateNewBlock(scriptPubKey);
+        ).CreateNewBlock(::ChainstateActive(), scriptPubKey);
     CBlock& block = pblocktemplate->block;
 
     std::vector<CTransactionRef> llmqCommitments;
