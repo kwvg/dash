@@ -280,14 +280,14 @@ bool KnapsackSolver(const CAmount& nTargetValue, std::vector<OutputGroup>& group
             if (tryDenom == 0 && CoinJoin::IsDenominatedAmount(group.m_value)) {
                 continue; // we don't want denom values on first run
             }
-            if (group.m_value == nTargetValue) {
+            if (group.effective_value == nTargetValue) {
                 util::insert(setCoinsRet, group.m_outputs);
                 nValueRet += group.m_value;
                 return true;
-            } else if (group.m_value < nTargetValue + nMinChange) {
+            } else if (group.effective_value < nTargetValue + nMinChange) {
                 applicable_groups.push_back(group);
-                nTotalLower += group.m_value;
-            } else if (!lowest_larger || group.m_value < lowest_larger->m_value) {
+                nTotalLower += group.effective_value;
+            } else if (!lowest_larger || group.effective_value < lowest_larger->effective_value) {
                 lowest_larger = group;
             }
         }
@@ -333,7 +333,7 @@ bool KnapsackSolver(const CAmount& nTargetValue, std::vector<OutputGroup>& group
     // If we have a bigger coin and (either the stochastic approximation didn't find a good solution,
     //                                   or the next bigger coin is closer), return the bigger coin
     if (lowest_larger &&
-        ((nBest != nTargetValue && nBest < nTargetValue + nMinChange) || lowest_larger->m_value <= nBest)) {
+        ((nBest != nTargetValue && nBest < nTargetValue + nMinChange) || lowest_larger->effective_value <= nBest)) {
         util::insert(setCoinsRet, lowest_larger->m_outputs);
         nValueRet += lowest_larger->m_value;
     } else {
