@@ -970,6 +970,8 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
 
                 case OP_CHECKSIG:
                 case OP_CHECKSIGVERIFY:
+                case OP_BLS_CHECKSIG:
+                case OP_BLS_CHECKSIGVERIFY:
                 {
                     // (sig pubkey -- bool)
                     if (stack.size() < 2)
@@ -1000,7 +1002,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     popstack(stack);
                     popstack(stack);
                     stack.push_back(fSuccess ? vchTrue : vchFalse);
-                    if (opcode == OP_CHECKSIGVERIFY)
+                    if (opcode == OP_CHECKSIGVERIFY || opcode == OP_BLS_CHECKSIGVERIFY)
                     {
                         if (fSuccess)
                             popstack(stack);
