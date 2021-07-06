@@ -2020,7 +2020,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
                 LOCK(cs_main);
                 node.evodb.reset();
                 node.evodb = std::make_unique<CEvoDB>(nEvoDbCache, false, fReset || fReindexChainState);
-                chainman.InitializeChainstate(llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor, node.evodb, *Assert(node.mempool));
+                chainman.InitializeChainstate(Assert(node.mempool.get()), llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor, node.evodb);
                 chainman.m_total_coinstip_cache = nCoinCacheUsage;
                 chainman.m_total_coinsdb_cache = nCoinDBCache;
 
