@@ -104,7 +104,7 @@ enum
     SCRIPT_VERIFY_CONST_SCRIPTCODE = (1U << 16),
 };
 
-bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError* serror);
+bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError* serror, bool isECDSA = true);
 
 struct PrecomputedTransactionData
 {
