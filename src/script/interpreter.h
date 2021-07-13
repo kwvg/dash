@@ -16,6 +16,7 @@
 class CPubKey;
 class CScript;
 class CTransaction;
+class CBLSPublicKey;
 class uint256;
 
 /** Signature hash types/flags */
@@ -154,6 +155,7 @@ private:
 
 protected:
     virtual bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
+    virtual bool VerifySignature(const std::vector<unsigned char>& vchSig, const CBLSPublicKey& vchPubKey, const uint256& sighash) const;
 
 public:
     GenericTransactionSignatureChecker(const T* txToIn, unsigned int nInIn, const CAmount& amountIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), txdata(nullptr) {}
