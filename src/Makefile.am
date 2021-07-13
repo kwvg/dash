@@ -557,6 +557,7 @@ libdash_common_a_SOURCES = \
   base58.cpp \
   bech32.cpp \
   bip39.cpp \
+  bls/keystore.cpp \
   chainparams.cpp \
   coins.cpp \
   compressor.cpp \
