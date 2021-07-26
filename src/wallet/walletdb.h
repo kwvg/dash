@@ -8,6 +8,7 @@
 
 #include <amount.h>
 #include <wallet/db.h>
+#include <wallet/keypool.h>
 #include <hdchain.h>
 #include <key.h>
 
@@ -35,7 +36,6 @@ class CAccount;
 class CAccountingEntry;
 struct CBlockLocator;
 class CGovernanceObject;
-class CKeyPool;
 class CMasterKey;
 class CScript;
 class CWallet;

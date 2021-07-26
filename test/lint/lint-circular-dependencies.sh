@@ -93,6 +93,8 @@ EXPECTED_CIRCULAR_DEPENDENCIES=(
     "evo/deterministicmns -> evo/simplifiedmns -> llmq/quorums_blockprocessor -> net_processing -> evo/deterministicmns"
     "evo/specialtx -> llmq/quorums_blockprocessor -> net_processing -> txmempool -> evo/specialtx"
     "evo/providertx -> evo/specialtx -> llmq/quorums_blockprocessor -> net_processing -> txmempool -> evo/providertx"
+    "wallet/keypool -> wallet/wallet -> wallet/keypool"
+    "wallet/keypool -> wallet/wallet -> wallet/walletdb -> wallet/keypool"
 
     "coinjoin/coinjoin-client -> net_processing -> coinjoin/coinjoin-client"
     "llmq/quorums -> net_processing -> llmq/quorums"

@@ -20,6 +20,7 @@
 #include <wallet/coincontrol.h>
 #include <wallet/crypter.h>
 #include <wallet/coinselection.h>
+#include <wallet/keypool.h>
 #include <wallet/walletdb.h>
 #include <wallet/walletutil.h>
 
@@ -72,7 +73,6 @@ class CBlockIndex;
 class CCoinControl;
 class CKey;
 class COutput;
-class CReserveKey;
 class CScript;
 class CTxDSIn;
 class CTxMemPool;
@@ -116,45 +116,6 @@ enum WalletFlags : uint64_t {
 };
 
 static constexpr uint64_t g_known_wallet_flags = WALLET_FLAG_DISABLE_PRIVATE_KEYS;
-
-/** A key pool entry */
-class CKeyPool
-{
-public:
-    int64_t nTime;
-    CPubKey vchPubKey;
-    bool fInternal; // for change outputs
-
-    CKeyPool();
-    CKeyPool(const CPubKey& vchPubKeyIn, bool fInternalIn);
-
-    template<typename Stream>
-    void Serialize(Stream& s) const
-    {
-        int nVersion = s.GetVersion();
-        if (!(s.GetType() & SER_GETHASH)) {
-            s << nVersion;
-        }
-        s << nTime << vchPubKey << fInternal;
-    }
-
-    template<typename Stream>
-    void Unserialize(Stream& s)
-    {
-        int nVersion = s.GetVersion();
-        if (!(s.GetType() & SER_GETHASH)) {
-            s >> nVersion;
-        }
-        s >> nTime >> vchPubKey;
-        try {
-            s >> fInternal;
-        } catch (std::ios_base::failure&) {
-            /* flag as external address if we can't read the internal boolean
-               (this will be the case for any wallet before the HD chain split version) */
-            fInternal = false;
-        }
-    }
-};
 
 /** Address book data */
 class CAddressBookData
@@ -1335,36 +1296,6 @@ public:
     /** Implement lookup of key origin information through wallet key metadata. */
     bool GetKeyOrigin(const CKeyID& keyid, KeyOriginInfo& info) const override;
 };
-
-/** A key allocated from the key pool. */
-class CReserveKey final : public CReserveScript
-{
-protected:
-    CWallet* pwallet;
-    int64_t nIndex{-1};
-    CPubKey vchPubKey;
-    bool fInternal{false};
-
-public:
-    explicit CReserveKey(CWallet* pwalletIn)
-    {
-        pwallet = pwalletIn;
-    }
-
-    CReserveKey(const CReserveKey&) = delete;
-    CReserveKey& operator=(const CReserveKey&) = delete;
-
-    ~CReserveKey()
-    {
-        ReturnKey();
-    }
-
-    void ReturnKey();
-    bool GetReservedKey(CPubKey &pubkey, bool fInternalIn /*= false*/);
-    void KeepKey();
-    void KeepScript() override { KeepKey(); }
-};
-
 
 /**
  * DEPRECATED Account information.

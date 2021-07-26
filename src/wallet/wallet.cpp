@@ -4623,39 +4623,6 @@ void CWallet::DeleteLabel(const std::string& label)
     batch.EraseAccount(label);
 }
 
-bool CReserveKey::GetReservedKey(CPubKey& pubkey, bool fInternalIn)
-{
-    if (nIndex == -1)
-    {
-        CKeyPool keypool;
-        if (!pwallet->ReserveKeyFromKeyPool(nIndex, keypool, fInternalIn)) {
-            return false;
-        }
-        vchPubKey = keypool.vchPubKey;
-        fInternal = keypool.fInternal;
-    }
-    assert(vchPubKey.IsValid());
-    pubkey = vchPubKey;
-    return true;
-}
-
-void CReserveKey::KeepKey()
-{
-    if (nIndex != -1) {
-        pwallet->KeepKey(nIndex);
-    }
-    nIndex = -1;
-    vchPubKey = CPubKey();
-}
-
-void CReserveKey::ReturnKey()
-{
-    if (nIndex != -1) {
-        pwallet->ReturnKey(nIndex, fInternal, vchPubKey);
-    }
-    nIndex = -1;
-    vchPubKey = CPubKey();
-}
 
 void CWallet::MarkReserveKeysAsUsed(int64_t keypool_id)
 {
@@ -5514,19 +5481,6 @@ std::vector<const CGovernanceObject*> CWallet::GetGovernanceObjects()
         vecObjects.push_back(&obj.second);
     }
     return vecObjects;
-}
-
-CKeyPool::CKeyPool()
-{
-    nTime = GetTime();
-    fInternal = false;
-}
-
-CKeyPool::CKeyPool(const CPubKey& vchPubKeyIn, bool fInternalIn)
-{
-    nTime = GetTime();
-    vchPubKey = vchPubKeyIn;
-    fInternal = fInternalIn;
 }
 
 CWalletKey::CWalletKey(int64_t nExpires)
