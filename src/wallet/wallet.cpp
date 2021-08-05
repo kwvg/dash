@@ -3275,7 +3275,7 @@ bool CWallet::FundTransaction(CMutableTransaction& tx, CAmount& nFeeRet, int& nC
     if (tx.nVersion == 3 && tx.nType != TRANSACTION_NORMAL)
         nExtraPayloadSize = (int)tx.vExtraPayload.size();
 
-    CReserveKey reservekey(this);
+    CReserveKey<CPubKey> reservekey(this);
     CTransactionRef tx_new;
     if (!CreateTransaction(vecSend, tx_new, reservekey, nFeeRet, nChangePosInOut, strFailReason, coinControl, false, nExtraPayloadSize)) {
         return false;
@@ -3516,7 +3516,7 @@ bool CWallet::HasCollateralInputs(bool fOnlyConfirmed) const
 bool CWallet::GetBudgetSystemCollateralTX(CTransactionRef& tx, uint256 hash, CAmount amount, const COutPoint& outpoint)
 {
     // make our change address
-    CReserveKey reservekey(this);
+    CReserveKey<CPubKey> reservekey(this);
 
     CScript scriptChange;
     scriptChange << OP_RETURN << ToByteVector(hash);
@@ -3540,7 +3540,7 @@ bool CWallet::GetBudgetSystemCollateralTX(CTransactionRef& tx, uint256 hash, CAm
     return true;
 }
 
-bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CTransactionRef& tx, CReserveKey& reservekey, CAmount& nFeeRet,
+bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CTransactionRef& tx, CReserveKey<CPubKey>& reservekey, CAmount& nFeeRet,
                          int& nChangePosInOut, std::string& strFailReason, const CCoinControl& coin_control, bool sign, int nExtraPayloadSize)
 {
     CAmount nValue = 0;
@@ -3961,7 +3961,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CTransac
 /**
  * Call after CreateTransaction unless you want to abort
  */
-bool CWallet::CommitTransaction(CTransactionRef tx, mapValue_t mapValue, std::vector<std::pair<std::string, std::string>> orderForm, std::string fromAccount, CReserveKey& reservekey, CConnman* connman, CValidationState& state)
+bool CWallet::CommitTransaction(CTransactionRef tx, mapValue_t mapValue, std::vector<std::pair<std::string, std::string>> orderForm, std::string fromAccount, CReserveKey<CPubKey>& reservekey, CConnman* connman, CValidationState& state)
 {
     {
         LOCK2(cs_main, mempool.cs);
@@ -4250,7 +4250,7 @@ size_t CWallet::KeypoolCountExternalKeys()
     return setExternalKeyPool.size();
 }
 
-void CWallet::LoadKeyPool(int64_t nIndex, const CKeyPool &keypool)
+void CWallet::LoadKeyPool(int64_t nIndex, const CKeyPool<CPubKey> &keypool)
 {
     AssertLockHeld(cs_wallet);
     if (keypool.fInternal) {
@@ -4320,7 +4320,7 @@ bool CWallet::TopUpKeyPool(unsigned int kpSize)
 
             // TODO: implement keypools for all accounts?
             CPubKey pubkey(GenerateNewKey(batch, 0, fInternal));
-            if (!batch.WritePool(index, CKeyPool(pubkey, fInternal))) {
+            if (!batch.WritePool(index, CKeyPool<CPubKey>(pubkey, fInternal))) {
                 throw std::runtime_error(std::string(__func__) + ": writing generated key failed");
             }
 
@@ -4345,7 +4345,7 @@ bool CWallet::TopUpKeyPool(unsigned int kpSize)
     return true;
 }
 
-bool CWallet::ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool& keypool, bool fRequestedInternal)
+bool CWallet::ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool<CPubKey>& keypool, bool fRequestedInternal)
 {
     nIndex = -1;
     keypool.vchPubKey = CPubKey();
@@ -4421,7 +4421,7 @@ bool CWallet::GetKeyFromPool(CPubKey& result, bool internal)
         return false;
     }
 
-    CKeyPool keypool;
+    CKeyPool<CPubKey> keypool;
     {
         LOCK(cs_wallet);
         int64_t nIndex;
@@ -4440,7 +4440,7 @@ bool CWallet::GetKeyFromPool(CPubKey& result, bool internal)
 }
 
 static int64_t GetOldestKeyInPool(const std::set<int64_t>& setKeyPool, WalletBatch& batch) {
-    CKeyPool keypool;
+    CKeyPool<CPubKey> keypool;
     int64_t nIndex = *(setKeyPool.begin());
     if (!batch.ReadPool(nIndex, keypool)) {
         throw std::runtime_error(std::string(__func__) + ": read oldest key in keypool failed");
@@ -4637,7 +4637,7 @@ void CWallet::MarkReserveKeysAsUsed(int64_t keypool_id)
         const int64_t& index = *(it);
         if (index > keypool_id) break; // set*KeyPool is ordered
 
-        CKeyPool keypool;
+        CKeyPool<CPubKey> keypool;
         if (batch.ReadPool(index, keypool)) { //TODO: This should be unnecessary
             m_pool_key_to_index.erase(keypool.vchPubKey.GetID());
         }
@@ -4649,7 +4649,7 @@ void CWallet::MarkReserveKeysAsUsed(int64_t keypool_id)
 
 void CWallet::GetScriptForMining(std::shared_ptr<CReserveScript> &script)
 {
-    std::shared_ptr<CReserveKey> rKey = std::make_shared<CReserveKey>(this);
+    std::shared_ptr<CReserveKey<CPubKey>> rKey = std::make_shared<CReserveKey<CPubKey>>(this);
     CPubKey pubkey;
     if (!rKey->GetReservedKey(pubkey, false))
         return;

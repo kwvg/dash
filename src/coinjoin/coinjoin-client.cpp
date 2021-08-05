@@ -1540,7 +1540,7 @@ bool CCoinJoinClientSession::CreateCollateralTransaction(CMutableTransaction& tx
         // make our change address
         CScript scriptChange;
         CPubKey vchPubKey;
-        CReserveKey reservekey(&mixingWallet);
+        CReserveKey<CPubKey> reservekey(&mixingWallet);
         bool success = reservekey.GetReservedKey(vchPubKey, true);
         assert(success); // should never fail, as we just unlocked
         scriptChange = GetScriptForDestination(vchPubKey.GetID());

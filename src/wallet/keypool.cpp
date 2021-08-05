@@ -9,24 +9,27 @@
 #include <coinjoin/coinjoin-client.h>
 #include <wallet/wallet.h>
 
-CKeyPool::CKeyPool()
+template <class PublicKey>
+CKeyPool<PublicKey>::CKeyPool()
 {
     nTime = GetTime();
     fInternal = false;
 }
 
-CKeyPool::CKeyPool(const CPubKey& vchPubKeyIn, bool fInternalIn)
+template <class PublicKey>
+CKeyPool<PublicKey>::CKeyPool(const PublicKey& vchPubKeyIn, bool fInternalIn)
 {
     nTime = GetTime();
     vchPubKey = vchPubKeyIn;
     fInternal = fInternalIn;
 }
 
-bool CReserveKey::GetReservedKey(CPubKey& pubkey, bool fInternalIn)
+template <class PublicKey>
+bool CReserveKey<PublicKey>::GetReservedKey(PublicKey& pubkey, bool fInternalIn)
 {
     if (nIndex == -1)
     {
-        CKeyPool keypool;
+        CKeyPool<CPubKey> keypool;
         if (!pwallet->ReserveKeyFromKeyPool(nIndex, keypool, fInternalIn)) {
             return false;
         }
@@ -38,20 +41,25 @@ bool CReserveKey::GetReservedKey(CPubKey& pubkey, bool fInternalIn)
     return true;
 }
 
-void CReserveKey::KeepKey()
+template <class PublicKey>
+void CReserveKey<PublicKey>::KeepKey()
 {
     if (nIndex != -1) {
         pwallet->KeepKey(nIndex);
     }
     nIndex = -1;
-    vchPubKey = CPubKey();
+    vchPubKey = PublicKey();
 }
 
-void CReserveKey::ReturnKey()
+template <class PublicKey>
+void CReserveKey<PublicKey>::ReturnKey()
 {
     if (nIndex != -1) {
         pwallet->ReturnKey(nIndex, fInternal, vchPubKey);
     }
     nIndex = -1;
-    vchPubKey = CPubKey();
+    vchPubKey = PublicKey();
 }
+
+template class CKeyPool<CPubKey>;
+template class CReserveKey<CPubKey>;

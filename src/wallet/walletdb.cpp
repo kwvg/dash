@@ -136,12 +136,12 @@ bool WalletBatch::WriteOrderPosNext(int64_t nOrderPosNext)
     return WriteIC(std::string("orderposnext"), nOrderPosNext);
 }
 
-bool WalletBatch::ReadPool(int64_t nPool, CKeyPool& keypool)
+bool WalletBatch::ReadPool(int64_t nPool, CKeyPool<CPubKey>& keypool)
 {
     return m_batch.Read(std::make_pair(std::string("pool"), nPool), keypool);
 }
 
-bool WalletBatch::WritePool(int64_t nPool, const CKeyPool& keypool)
+bool WalletBatch::WritePool(int64_t nPool, const CKeyPool<CPubKey>& keypool)
 {
     return WriteIC(std::make_pair(std::string("pool"), nPool), keypool);
 }
@@ -481,7 +481,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
         {
             int64_t nIndex;
             ssKey >> nIndex;
-            CKeyPool keypool;
+            CKeyPool<CPubKey> keypool;
             ssValue >> keypool;
             pwallet->LoadKeyPool(nIndex, keypool);
         }

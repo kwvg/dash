@@ -75,8 +75,8 @@ public:
     {
         CompactTallyItem tallyItem;
         CTransactionRef tx;
-        CReserveKey destKey(wallet.get());
-        CReserveKey reserveKey(wallet.get());
+        CReserveKey<CPubKey> destKey(wallet.get());
+        CReserveKey<CPubKey> reserveKey(wallet.get());
         CAmount nFeeRet;
         int nChangePosRet = -1;
         std::string strError;

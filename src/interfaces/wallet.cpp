@@ -55,7 +55,7 @@ public:
 
     CTransactionRef m_tx;
     CWallet& m_wallet;
-    CReserveKey m_key;
+    CReserveKey<CPubKey> m_key;
 };
 
 //! Construct wallet tx struct.

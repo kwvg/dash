@@ -275,7 +275,7 @@ static UniValue getrawchangeaddress(const JSONRPCRequest& request)
         pwallet->TopUpKeyPool();
     }
 
-    CReserveKey reservekey(pwallet);
+    CReserveKey<CPubKey> reservekey(pwallet);
     CPubKey vchPubKey;
     if (!reservekey.GetReservedKey(vchPubKey, true))
         throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
@@ -470,7 +470,7 @@ static CTransactionRef SendMoney(CWallet * const pwallet, const CTxDestination &
     CScript scriptPubKey = GetScriptForDestination(address);
 
     // Create and send the transaction
-    CReserveKey reservekey(pwallet);
+    CReserveKey<CPubKey> reservekey(pwallet);
     CAmount nFeeRequired;
     std::string strError;
     std::vector<CRecipient> vecSend;
@@ -1346,7 +1346,7 @@ static UniValue sendmany(const JSONRPCRequest& request)
     }
 
     // Send
-    CReserveKey keyChange(pwallet);
+    CReserveKey<CPubKey> keyChange(pwallet);
     CAmount nFeeRequired = 0;
     int nChangePosRet = -1;
     std::string strFailReason;

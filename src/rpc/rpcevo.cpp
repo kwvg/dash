@@ -210,7 +210,7 @@ static void FundSpecialTx(CWallet* pwallet, CMutableTransaction& tx, const Speci
     }
 
     CTransactionRef newTx;
-    CReserveKey reservekey(pwallet);
+    CReserveKey<CPubKey> reservekey(pwallet);
     CAmount nFee;
     int nChangePos = -1;
     std::string strFailReason;

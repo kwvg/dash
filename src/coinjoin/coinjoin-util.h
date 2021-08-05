@@ -12,7 +12,7 @@ class CTransactionBuilder;
 class CKeyHolder
 {
 private:
-    CReserveKey reserveKey;
+    CReserveKey<CPubKey> reserveKey;
     CPubKey pubKey;
 
 public:
@@ -46,7 +46,7 @@ class CTransactionBuilderOutput
     /// Used for amount updates
     CTransactionBuilder* pTxBuilder{nullptr};
     /// Reserve key where the amount of this output will end up
-    CReserveKey key;
+    CReserveKey<CPubKey> key;
     /// Amount this output will receive
     CAmount nAmount{0};
     /// ScriptPubKey of this output
@@ -82,7 +82,7 @@ class CTransactionBuilder
     /// Dummy since we anyway use tallyItem's destination as change destination in coincontrol.
     /// Its a member just to make sure ReturnKey can be called in destructor just in case it gets generated/kept
     /// somewhere in CWallet code.
-    CReserveKey dummyReserveKey;
+    CReserveKey<CPubKey> dummyReserveKey;
     /// Contains all utxos available to generate this transactions. They are all from the same address.
     CompactTallyItem tallyItem;
     /// Contains the number of bytes required for a transaction with only the inputs of tallyItems, no outputs

@@ -224,7 +224,7 @@ static UniValue gobject_prepare(const JSONRPCRequest& request)
     }
 
     // -- make our change address
-    CReserveKey reservekey(pwallet);
+    CReserveKey<CPubKey> reservekey(pwallet);
     // -- send the tx to the network
     CValidationState state;
     if (!pwallet->CommitTransaction(tx, {}, {}, {}, reservekey, g_connman.get(), state)) {

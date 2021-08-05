@@ -293,7 +293,7 @@ public:
     CWalletTx& AddTx(CRecipient recipient)
     {
         CTransactionRef tx;
-        CReserveKey reservekey(wallet.get());
+        CReserveKey<CPubKey> reservekey(wallet.get());
         CAmount fee;
         int changePos = -1;
         std::string error;
@@ -442,7 +442,7 @@ public:
     bool CreateTransaction(const std::vector<std::pair<CAmount, bool>>& vecEntries, std::string strErrorExpected, int nChangePosRequest = -1, bool fCreateShouldSucceed = true, ChangeTest changeTest = ChangeTest::Skip)
     {
         CTransactionRef tx;
-        CReserveKey reservekey(wallet.get());
+        CReserveKey<CPubKey> reservekey(wallet.get());
         CAmount nFeeRet;
         int nChangePos = nChangePosRequest;
         std::string strError;
@@ -494,7 +494,7 @@ public:
     std::vector<COutPoint> GetCoins(const std::vector<std::pair<CAmount, bool>>& vecEntries)
     {
         CTransactionRef tx;
-        CReserveKey reserveKey(wallet.get());
+        CReserveKey<CPubKey> reserveKey(wallet.get());
         CAmount nFeeRet;
         int nChangePosRet = -1;
         std::string strError;
@@ -831,8 +831,8 @@ BOOST_FIXTURE_TEST_CASE(select_coins_grouped_by_addresses, ListCoinsTestingSetup
     // Create two conflicting transactions, add one to the wallet and mine the other one.
     CTransactionRef tx1;
     CTransactionRef tx2;
-    CReserveKey reservekey1(wallet.get());
-    CReserveKey reservekey2(wallet.get());
+    CReserveKey<CPubKey> reservekey1(wallet.get());
+    CReserveKey<CPubKey> reservekey2(wallet.get());
     CAmount fee;
     int changePos = -1;
     std::string error;
