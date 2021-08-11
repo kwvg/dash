@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include <bls/bls.h>
 #include <consensus/validation.h>
 #include <key_io.h>
 #include <rpc/server.h>

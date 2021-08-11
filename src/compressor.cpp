@@ -5,6 +5,7 @@
 
 #include <compressor.h>
 
+#include <bls/bls.h>
 #include <hash.h>
 #include <pubkey.h>
 #include <script/standard.h>

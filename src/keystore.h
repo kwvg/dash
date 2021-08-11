@@ -6,6 +6,7 @@
 #ifndef BITCOIN_KEYSTORE_H
 #define BITCOIN_KEYSTORE_H
 
+#include <bls/bls.h>
 #include <hdchain.h>
 #include <key.h>
 #include <pubkey.h>

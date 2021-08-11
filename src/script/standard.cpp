@@ -5,6 +5,7 @@
 
 #include <script/standard.h>
 
+#include <bls/bls.h>
 #include <pubkey.h>
 #include <script/script.h>
 #include <util/system.h>

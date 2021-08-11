@@ -10,6 +10,7 @@
 #include <evo/simplifiedmns.h>
 #include <evo/specialtx.h>
 
+#include <bls/bls.h>
 #include <pubkey.h>
 #include <serialize.h>
 #include <version.h>

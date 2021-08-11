@@ -4,6 +4,7 @@
 
 #include <script/descriptor.h>
 
+#include <bls/bls.h>
 #include <key_io.h>
 #include <pubkey.h>
 #include <script/script.h>

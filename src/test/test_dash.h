@@ -6,6 +6,7 @@
 #ifndef BITCOIN_TEST_TEST_DASH_H
 #define BITCOIN_TEST_TEST_DASH_H
 
+#include <bls/bls.h>
 #include <chainparamsbase.h>
 #include <fs.h>
 #include <key.h>
