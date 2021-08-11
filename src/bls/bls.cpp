@@ -21,7 +21,14 @@ static const std::unique_ptr<bls::CoreMPL>& Scheme(const bool fLegacy)
     return fLegacy ? pSchemeLegacy : pScheme;
 }
 
-CBLSId::CBLSId(const uint256& nHash) : CBLSWrapper<CBLSIdImplicit, BLS_CURVE_ID_SIZE, CBLSId>()
+CBLSId::CBLSId(const uint256& nHash) : CBLSWrapper<CBLSIdImplicit<uint256>, BLS_CURVE_ID_SIZE, CBLSId>()
+{
+    impl = nHash;
+    fValid = true;
+    cachedHash.SetNull();
+}
+
+CBLSKeyID::CBLSKeyID(const uint160& nHash) : CBLSWrapper<CBLSIdImplicit<uint160>, BLS_CURVE_ID_SIZE, CBLSKeyID>()
 {
     impl = nHash;
     fValid = true;

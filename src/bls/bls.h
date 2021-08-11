@@ -152,6 +152,12 @@ public:
         return IsValid();
     }
 
+    //! CKey-like read only interface to access byte vector
+    unsigned int size() const { return (new std::vector<uint8_t>(ToByteVector()))->size(); }
+    const unsigned char* begin() const { return (new std::vector<uint8_t>(ToByteVector()))->data(); }
+    const unsigned char* end() const { return (new std::vector<uint8_t>(ToByteVector()))->data() + size(); }
+    const unsigned char& operator[](unsigned int pos) const { return (new std::vector<uint8_t>(ToByteVector()))->data()[pos]; }
+
 public:
     inline void Serialize(CSizeComputer& s) const
     {
@@ -193,12 +199,13 @@ public:
     }
 };
 
-struct CBLSIdImplicit : public uint256
+template <typename T1>
+struct CBLSIdImplicit : public T1
 {
     CBLSIdImplicit() = default;
-    CBLSIdImplicit(const uint256& id)
+    CBLSIdImplicit(const T1& id)
     {
-        memcpy(begin(), id.begin(), sizeof(uint256));
+        memcpy(this->begin(), id.begin(), sizeof(T1));
     }
     static CBLSIdImplicit FromBytes(const uint8_t* buffer, const bool fLegacy = false)
     {
@@ -208,11 +215,11 @@ struct CBLSIdImplicit : public uint256
     }
     std::vector<uint8_t> Serialize(const bool fLegacy = false) const
     {
-        return {begin(), end()};
+        return {this->begin(), this->end()};
     }
 };
 
-class CBLSId : public CBLSWrapper<CBLSIdImplicit, BLS_CURVE_ID_SIZE, CBLSId>
+class CBLSId : public CBLSWrapper<CBLSIdImplicit<uint256>, BLS_CURVE_ID_SIZE, CBLSId>
 {
 public:
     using CBLSWrapper::operator=;
@@ -222,6 +229,20 @@ public:
 
     CBLSId() = default;
     explicit CBLSId(const uint256& nHash);
+};
+
+class CBLSKeyID : public CBLSWrapper<CBLSIdImplicit<uint160>, BLS_CURVE_ID_SIZE, CBLSKeyID>
+{
+public:
+    using CBLSWrapper::operator=;
+    using CBLSWrapper::operator==;
+    using CBLSWrapper::operator!=;
+    using CBLSWrapper::CBLSWrapper;
+
+    CBLSKeyID() = default;
+    explicit CBLSKeyID(const uint160& nHash);
+
+    friend inline bool operator<(const CBLSKeyID& a, const CBLSKeyID& b) { return a.impl.Compare(b.impl) < 0; }
 };
 
 class CBLSSecretKey : public CBLSWrapper<bls::PrivateKey, BLS_CURVE_SECKEY_SIZE, CBLSSecretKey>
