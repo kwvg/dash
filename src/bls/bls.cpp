@@ -400,3 +400,57 @@ bool BLSInit()
 #endif
     return true;
 }
+
+bool CSecretKey::Load(const std::vector<unsigned char, secure_allocator<unsigned char> >& privkey, const CPublicKey& vchPubKey, bool fSkipCheck)
+{
+    CPublicKey pkTmp;
+    std::vector<unsigned char> vchTmp;
+    vchTmp.assign(privkey.begin(), privkey.end());
+    pkTmp.SetByteVector(vchTmp);
+    SetByteVector(vchTmp);
+    return fSkipCheck ? IsValid() : IsValid() && vchPubKey == pkTmp;
+}
+
+bool CSecretKey::Sign(const uint256& hash, std::vector<unsigned char>& vchSig) const
+{
+    CBLSSignature sig = Sign(hash);
+    if (sig.IsValid()) {
+        vchSig = sig.ToByteVector();
+        return true;
+    }
+    return false;
+}
+
+bool CSecretKey::VerifyPubKey(const CPublicKey& vchPubKey) const
+{
+    CPublicKey vchTmp;
+    vchTmp.SetByteVector(ToByteVector());
+    return vchPubKey == vchTmp;
+}
+
+CBLSKeyID CPublicKey::GetID() const
+{
+    return CBLSKeyID(Hash160(ToByteVector()));
+}
+
+uint256 CPublicKey::GetHash() const
+{
+    return uint256(ToByteVector());
+}
+
+bool CPublicKey::Verify(const uint256& hash, const std::vector<unsigned char>& vchSig) const
+{
+    return CBLSSignature(vchSig, false).VerifyInsecure(*this, hash);
+}
+
+std::vector<unsigned char, secure_allocator<unsigned char> > CSecretKey::GetPrivKey() const
+{
+    return std::vector<unsigned char, secure_allocator<unsigned char> >(ToByteVector().begin(), ToByteVector().end());
+}
+
+CPublicKey CSecretKey::GetPubKey() const
+{
+    CPublicKey vchPubKey;
+    vchPubKey.SetByteVector(ToByteVector());
+    return vchPubKey;
+}

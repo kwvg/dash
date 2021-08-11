@@ -10,6 +10,8 @@
 #include <uint256.h>
 #include <util/strencodings.h>
 
+#include <support/allocators/secure.h>
+
 // bls-dash uses relic, which may define DEBUG and ERROR, which leads to many warnings in some build setups
 #undef ERROR
 #undef DEBUG
@@ -32,6 +34,8 @@ static const bool fLegacyDefault{true};
 #define BLS_CURVE_PUBKEY_SIZE 48
 #define BLS_CURVE_SIG_SIZE 96
 
+class CPublicKey;
+class CSecretKey;
 class CBLSSignature;
 class CBLSPublicKey;
 
@@ -42,10 +46,9 @@ class CBLSWrapper
     friend class CBLSPublicKey;
     friend class CBLSSignature;
 
-    bool fLegacy;
-
 protected:
     ImplType impl;
+    bool fLegacy = fLegacyDefault;
     bool fValid{false};
     mutable uint256 cachedHash;
 
@@ -269,6 +272,25 @@ public:
     CBLSSignature Sign(const uint256& hash) const;
 };
 
+class CSecretKey : public CBLSSecretKey
+{
+protected:
+    bool fLegacy = false;
+public:
+    using CBLSSecretKey::Sign;
+
+    CSecretKey() = default;
+    CSecretKey(const CSecretKey&) = default;
+    CSecretKey& operator=(const CSecretKey&) = default;
+
+    std::vector<unsigned char, secure_allocator<unsigned char> > GetPrivKey() const;
+    CPublicKey GetPubKey() const;
+
+    bool Load(const std::vector<unsigned char, secure_allocator<unsigned char> >& privkey, const CPublicKey& vchPubKey, bool fSkipCheck);
+    bool Sign(const uint256& hash, std::vector<unsigned char>& vchSig) const;
+    bool VerifyPubKey(const CPublicKey& vchPubKey) const;
+};
+
 class CBLSPublicKey : public CBLSWrapper<bls::G1Element, BLS_CURVE_PUBKEY_SIZE, CBLSPublicKey>
 {
     friend class CBLSSecretKey;
@@ -288,6 +310,19 @@ public:
     bool PublicKeyShare(const std::vector<CBLSPublicKey>& mpk, const CBLSId& id);
     bool DHKeyExchange(const CBLSSecretKey& sk, const CBLSPublicKey& pk);
 
+};
+
+class CPublicKey : public CBLSPublicKey
+{
+protected:
+    bool fLegacy = false;
+public:
+    CPublicKey() = default;
+
+    CBLSKeyID GetID() const;
+    uint256 GetHash() const;
+
+    bool Verify(const uint256& hash, const std::vector<unsigned char>& vchSig) const;
 };
 
 class CBLSSignature : public CBLSWrapper<bls::G2Element, BLS_CURVE_SIG_SIZE, CBLSSignature>
