@@ -15,6 +15,7 @@
 
 static const bool DEFAULT_ACCEPT_DATACARRIER = true;
 
+class CBLSKeyID;
 class CKeyID;
 class CScript;
 
@@ -76,7 +77,7 @@ public:
  *  * CScriptID: TX_SCRIPTHASH destination
  *  A CTxDestination is the internal data type encoded in a bitcoin address
  */
-typedef boost::variant<CNoDestination, CKeyID, CScriptID> CTxDestination;
+typedef boost::variant<CNoDestination, CKeyID, CScriptID, CBLSKeyID> CTxDestination;
 
 /** Check whether a CTxDestination is a CNoDestination. */
 bool IsValidDestination(const CTxDestination& dest);

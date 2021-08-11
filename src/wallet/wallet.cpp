@@ -160,6 +160,10 @@ public:
             Process(script);
     }
 
+    void operator()(const CBLSKeyID &keyId) {
+        throw std::runtime_error("Unimplemented logic!");
+    }
+
     void operator()(const CNoDestination &none) {}
 };
 

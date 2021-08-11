@@ -215,6 +215,12 @@ public:
         return false;
     }
 
+    bool operator()(const CBLSKeyID &keyID) const {
+        script->clear();
+        *script << OP_DUP << OP_HASH160 << keyID.ToByteVector() << OP_EQUALVERIFY << OP_BLS_CHECKSIG;
+        return true;
+    }
+
     bool operator()(const CKeyID &keyID) const {
         script->clear();
         *script << OP_DUP << OP_HASH160 << ToByteVector(keyID) << OP_EQUALVERIFY << OP_CHECKSIG;
