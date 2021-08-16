@@ -28,13 +28,18 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
                                                      ChainstateManager& chainman,
                                                      NodeContext& node,
                                                      bool fPruneMode,
+                                                     bool is_addrindex_enabled,
                                                      bool is_governance_enabled,
+                                                     bool is_spentindex_enabled,
+                                                     bool is_timeindex_enabled,
+                                                     bool is_txindex_enabled,
                                                      const CChainParams& chainparams,
-                                                     const ArgsManager& args,
                                                      bool fReindexChainState,
                                                      int64_t nBlockTreeDBCache,
                                                      int64_t nCoinDBCache,
-                                                     int64_t nCoinCacheUsage)
+                                                     int64_t nCoinCacheUsage,
+                                                     unsigned int check_blocks,
+                                                     unsigned int check_level)
 {
     auto is_coinsview_empty = [&](CChainState* chainstate) EXCLUSIVE_LOCKS_REQUIRED(::cs_main) {
         return fReset || fReindexChainState || chainstate->CoinsTip().GetBestBlock().IsNull();
@@ -120,22 +125,22 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
 
             // TODO: Remove this when pruning is fixed.
             // See https://github.com/dashpay/dash/pull/1817 and https://github.com/dashpay/dash/pull/1743
-            if (is_governance_enabled && !args.GetBoolArg("-txindex", DEFAULT_TXINDEX) && chainparams.NetworkIDString() != CBaseChainParams::REGTEST) {
+            if (is_governance_enabled && !is_txindex_enabled && chainparams.NetworkIDString() != CBaseChainParams::REGTEST) {
                 return ChainstateLoadingError::ERROR_TXINDEX_DISABLED_WHEN_GOV_ENABLED;
             }
 
             // Check for changed -addressindex state
-            if (fAddressIndex != args.GetBoolArg("-addressindex", DEFAULT_ADDRESSINDEX)) {
+            if (fAddressIndex != is_addrindex_enabled) {
                 return ChainstateLoadingError::ERROR_ADDRIDX_NEEDS_REINDEX;
             }
 
             // Check for changed -spentindex state
-            if (fSpentIndex != args.GetBoolArg("-spentindex", DEFAULT_SPENTINDEX)) {
+            if (fSpentIndex != is_spentindex_enabled) {
                 return ChainstateLoadingError::ERROR_SPENTIDX_NEEDS_REINDEX;
             }
 
             // Check for changed -timestampindex state
-            if (fTimestampIndex != args.GetBoolArg("-timestampindex", DEFAULT_TIMESTAMPINDEX)) {
+            if (fTimestampIndex != is_timeindex_enabled) {
                 return ChainstateLoadingError::ERROR_TIMEIDX_NEEDS_REINDEX;
             }
 
@@ -214,7 +219,7 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
             for (CChainState* chainstate : chainman.GetAll()) {
                 if (!is_coinsview_empty(chainstate)) {
                     uiInterface.InitMessage(_("Verifying blocks…").translated);
-                    if (chainman.m_blockman.m_have_pruned && args.GetArg("-checkblocks", DEFAULT_CHECKBLOCKS) > MIN_BLOCKS_TO_KEEP) {
+                    if (chainman.m_blockman.m_have_pruned && check_blocks > MIN_BLOCKS_TO_KEEP) {
                         LogPrintf("Prune: pruned datadir may not have more than %d blocks; only checking available blocks\n",
                             MIN_BLOCKS_TO_KEEP);
                     }
@@ -233,8 +238,8 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
                     if (!CVerifyDB().VerifyDB(
                             *chainstate, chainparams, chainstate->CoinsDB(),
                             *node.evodb,
-                            args.GetArg("-checklevel", DEFAULT_CHECKLEVEL),
-                            args.GetArg("-checkblocks", DEFAULT_CHECKBLOCKS))) {
+                            check_level,
+                            check_blocks)) {
                         return ChainstateLoadingError::ERROR_CORRUPTED_BLOCK_DB;
                     }
 
@@ -245,7 +250,7 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
                         LogPrintf("%s: bls_legacy_scheme=%d\n", __func__, bls::bls_legacy_scheme.load());
                     }
 
-                    if (args.GetArg("-checklevel", DEFAULT_CHECKLEVEL) >= 3) {
+                    if (check_level >= 3) {
                         chainstate->ResetBlockFailureFlags(nullptr);
                     }
 
