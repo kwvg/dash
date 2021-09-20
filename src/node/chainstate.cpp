@@ -7,7 +7,7 @@
 #include <chainparams.h> // for CChainParams
 #include <deploymentstatus.h> // for DeploymentActiveAfter
 #include <rpc/blockchain.h> // for RPCNotifyBlockChange
-#include <util/time.h> // for GetTime, GetTimeMillis
+#include <util/time.h> // for GetTime
 #include <util/translation.h> // for bilingual_str
 #include <node/blockstorage.h> // for CleanupBlockRevFiles, fHavePruned, fReindex
 #include <node/context.h> // for NodeContext
@@ -43,7 +43,6 @@ bool LoadChainstate(bool& fLoaded,
     };
 
     do {
-        const int64_t load_block_index_start_time = GetTimeMillis();
         try {
             LOCK(cs_main);
 
@@ -305,7 +304,6 @@ bool LoadChainstate(bool& fLoaded,
 
         if (!failed_verification) {
             fLoaded = true;
-            LogPrintf(" block index %15dms\n", GetTimeMillis() - load_block_index_start_time);
         }
     } while(false);
     return true;
