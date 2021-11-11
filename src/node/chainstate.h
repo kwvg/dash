@@ -5,10 +5,10 @@
 #ifndef BITCOIN_NODE_CHAINSTATE_H
 #define BITCOIN_NODE_CHAINSTATE_H
 
-#include <cstdint> // for int64_t
-#include <functional> // for std::function
-#include <optional> // for std::optional
-#include <string> // for std::string
+#include <cstdint>
+#include <functional>
+#include <optional>
+#include <string>
 
 class CEvoDB;
 class ChainstateManager;
