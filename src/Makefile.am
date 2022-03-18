@@ -258,6 +258,7 @@ BITCOIN_CORE_H = \
   instantsend/instantsend.h \
   instantsend/lock.h \
   instantsend/signing.h \
+  kernel/mempool_limits.h \
   kernel/mempool_options.h \
   key.h \
   key_io.h \
