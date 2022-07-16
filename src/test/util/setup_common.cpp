@@ -190,15 +190,15 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     }
 
     deterministicMNManager.reset(new CDeterministicMNManager(*evoDb, *m_node.connman));
-    llmq::InitLLMQSystem(*evoDb, *m_node.mempool, *m_node.connman, true);
+    llmq::InitLLMQSystem(m_node, *evoDb, *m_node.mempool, *m_node.connman, true);
 }
 
 TestingSetup::~TestingSetup()
 {
     m_node.scheduler->stop();
     deterministicMNManager.reset();
-    llmq::InterruptLLMQSystem();
-    llmq::StopLLMQSystem();
+    llmq::InterruptLLMQSystem(m_node);
+    llmq::StopLLMQSystem(m_node);
     threadGroup.interrupt_all();
     threadGroup.join_all();
     StopScriptCheckWorkerThreads();
@@ -268,7 +268,7 @@ CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransacti
 CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
-    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
+    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*m_node.mempool, chainparams).CreateNewBlock(m_node, scriptPubKey);
     CBlock& block = pblocktemplate->block;
 
     std::vector<CTransactionRef> llmqCommitments;
@@ -296,7 +296,7 @@ CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns,
         if (!CalcCbTxMerkleRootMNList(block, ::ChainActive().Tip(), cbTx.merkleRootMNList, state, ::ChainstateActive().CoinsTip())) {
             BOOST_ASSERT(false);
         }
-        if (!CalcCbTxMerkleRootQuorums(block, ::ChainActive().Tip(), cbTx.merkleRootQuorums, state)) {
+        if (!CalcCbTxMerkleRootQuorums(*m_node.quorumBlockProcessor, block, ::ChainActive().Tip(), cbTx.merkleRootQuorums, state)) {
             BOOST_ASSERT(false);
         }
         CMutableTransaction tmpTx{*block.vtx[0]};

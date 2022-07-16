@@ -6,11 +6,12 @@
 #define BITCOIN_DSNOTIFICATIONINTERFACE_H
 
 #include <validationinterface.h>
+#include <node/context.h>
 
 class CDSNotificationInterface : public CValidationInterface
 {
 public:
-    explicit CDSNotificationInterface(CConnman& connmanIn): connman(connmanIn) {}
+    explicit CDSNotificationInterface(CConnman& connmanIn, NodeContext& nodeContext): connman(connmanIn), node(nodeContext) {}
     virtual ~CDSNotificationInterface() = default;
 
     // a small helper to initialize current block height in sub-modules on startup
@@ -31,6 +32,7 @@ protected:
 
 private:
     CConnman& connman;
+    NodeContext& node;
 };
 
 #endif // BITCOIN_DSNOTIFICATIONINTERFACE_H

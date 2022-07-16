@@ -23,6 +23,17 @@ class ChainClient;
 class WalletClient;
 } // namespace interfaces
 
+namespace llmq {
+class CDKGDebugManager;
+class CQuorumBlockProcessor;
+class CDKGSessionManager;
+class CQuorumManager;
+class CSigSharesManager;
+class CSigningManager;
+class CChainLocksHandler;
+class CInstantSendManager;
+}
+
 //! NodeContext struct containing references to chain state and connection
 //! state.
 //!
@@ -48,6 +59,17 @@ struct NodeContext {
     interfaces::WalletClient* wallet_client{nullptr};
     std::unique_ptr<CScheduler> scheduler;
     std::function<void()> rpc_interruption_point = [] {};
+
+    // Dash
+    std::unique_ptr<llmq::CDKGDebugManager> quorumDKGDebugManager;
+    std::unique_ptr<llmq::CQuorumBlockProcessor> quorumBlockProcessor;
+    std::unique_ptr<llmq::CDKGSessionManager> quorumDKGSessionManager;
+    std::unique_ptr<llmq::CQuorumManager> quorumManager;
+    std::unique_ptr<llmq::CSigSharesManager> quorumSigSharesManager;
+    std::unique_ptr<llmq::CSigningManager> quorumSigningManager;
+    std::unique_ptr<llmq::CChainLocksHandler> chainLocksHandler;
+    std::unique_ptr<llmq::CInstantSendManager> quorumInstantSendManager;
+    // End Dash
 
     //! Declare default constructor and destructor that are not inline, so code
     //! instantiating the NodeContext struct doesn't need to #include class

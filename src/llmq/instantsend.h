@@ -14,12 +14,15 @@
 #include <primitives/transaction.h>
 #include <threadinterrupt.h>
 #include <txmempool.h>
+#include <node/context.h>
 
 #include <unordered_map>
 #include <unordered_set>
 
 namespace llmq
 {
+class CChainLocksHandler;
+class CSigningManager;
 
 struct CInstantSendLock
 {
@@ -194,6 +197,7 @@ class CInstantSendManager : public CRecoveredSigsListener
 {
 private:
     CInstantSendDb db;
+    NodeContext& nodeContext;
     CConnman& connman;
     CTxMemPool& mempool;
 
@@ -243,7 +247,7 @@ private:
     std::unordered_set<uint256, StaticSaltedHasher> pendingRetryTxs GUARDED_BY(cs_pendingRetry);
 
 public:
-    explicit CInstantSendManager(CTxMemPool& _mempool, CConnman& _connman, bool unitTests, bool fWipe) : db(unitTests, fWipe), mempool(_mempool), connman(_connman) { workInterrupt.reset(); }
+    explicit CInstantSendManager(CTxMemPool& _mempool, CConnman& _connman, NodeContext& node, bool unitTests, bool fWipe) : db(unitTests, fWipe), mempool(_mempool), connman(_connman), nodeContext(node) { workInterrupt.reset(); }
     ~CInstantSendManager() = default;
 
     void Start();
@@ -314,8 +318,6 @@ public:
 
     size_t GetInstantSendLockCount() const;
 };
-
-extern CInstantSendManager* quorumInstantSendManager;
 
 bool IsInstantSendEnabled();
 /**
