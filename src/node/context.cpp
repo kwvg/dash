@@ -10,5 +10,10 @@
 #include <net_processing.h>
 #include <scheduler.h>
 
+namespace dash {
+Context::Context() {}
+Context::~Context() {}
+} // namespace dash
+
 NodeContext::NodeContext() {}
 NodeContext::~NodeContext() {}

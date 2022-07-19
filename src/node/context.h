@@ -14,6 +14,7 @@ class ArgsManager;
 class BanMan;
 class CConnman;
 class CScheduler;
+class CSporkManager;
 class CTxMemPool;
 class ChainstateManager;
 class PeerLogicValidation;
@@ -22,6 +23,16 @@ class Chain;
 class ChainClient;
 class WalletClient;
 } // namespace interfaces
+
+namespace dash {
+struct Context {
+    //! Declare default constructor and destructor that are not inline, so code
+    //! instantiating the Context struct doesn't need to #include class
+    //! definitions for all the unique_ptr members.
+    Context();
+    ~Context();
+};
+} // namespace dash
 
 //! NodeContext struct containing references to chain state and connection
 //! state.
@@ -48,6 +59,7 @@ struct NodeContext {
     interfaces::WalletClient* wallet_client{nullptr};
     std::unique_ptr<CScheduler> scheduler;
     std::function<void()> rpc_interruption_point = [] {};
+    std::unique_ptr<dash::Context> ctx;
 
     //! Declare default constructor and destructor that are not inline, so code
     //! instantiating the NodeContext struct doesn't need to #include class
