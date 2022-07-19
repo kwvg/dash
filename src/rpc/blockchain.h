@@ -21,7 +21,10 @@ class UniValue;
 struct NodeContext;
 namespace util {
 class Ref;
-} // namespace util
+}; // namespace util
+namespace llmq {
+struct Context;
+}; // namespace llmq
 
 static constexpr int NUM_GETBLOCKSTATS_PERCENTILES = 5;
 
@@ -52,6 +55,7 @@ UniValue blockheaderToJSON(const CBlockIndex* tip, const CBlockIndex* blockindex
 void CalculatePercentilesBySize(CAmount result[NUM_GETBLOCKSTATS_PERCENTILES], std::vector<std::pair<CAmount, int64_t>>& scores, int64_t total_size);
 
 NodeContext& EnsureNodeContext(const util::Ref& context);
+llmq::Context& EnsureLLMQContext(const util::Ref& context);
 CTxMemPool& EnsureMemPool(const util::Ref& context);
 ChainstateManager& EnsureChainman(const util::Ref& context);
 

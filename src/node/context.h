@@ -12,6 +12,7 @@
 
 class ArgsManager;
 class BanMan;
+class CBLSWorker;
 class CConnman;
 class CScheduler;
 class CTxMemPool;
@@ -32,6 +33,24 @@ class CSigSharesManager;
 class CSigningManager;
 class CChainLocksHandler;
 class CInstantSendManager;
+
+struct Context {
+    std::shared_ptr<CBLSWorker> blsWorker;                          /* shared between quorumDKGSessionManager and quorumManager */
+    std::unique_ptr<CDKGDebugManager> quorumDKGDebugManager;
+    std::unique_ptr<CQuorumBlockProcessor> quorumBlockProcessor;
+    std::unique_ptr<CDKGSessionManager> quorumDKGSessionManager;
+    std::unique_ptr<CQuorumManager> quorumManager;
+    std::unique_ptr<CSigSharesManager> quorumSigSharesManager;
+    std::unique_ptr<CSigningManager> quorumSigningManager;
+    std::unique_ptr<CChainLocksHandler> chainLocksHandler;
+    std::unique_ptr<CInstantSendManager> quorumInstantSendManager;
+
+    //! Declare default constructor and destructor that are not inline, so code
+    //! instantiating the llmq::Context struct doesn't need to #include class
+    //! definitions for all the unique_ptr members.
+    Context();
+    ~Context();
+};
 }
 
 //! NodeContext struct containing references to chain state and connection
@@ -59,17 +78,7 @@ struct NodeContext {
     interfaces::WalletClient* wallet_client{nullptr};
     std::unique_ptr<CScheduler> scheduler;
     std::function<void()> rpc_interruption_point = [] {};
-
-    // Dash
-    std::unique_ptr<llmq::CDKGDebugManager> quorumDKGDebugManager;
-    std::unique_ptr<llmq::CQuorumBlockProcessor> quorumBlockProcessor;
-    std::unique_ptr<llmq::CDKGSessionManager> quorumDKGSessionManager;
-    std::unique_ptr<llmq::CQuorumManager> quorumManager;
-    std::unique_ptr<llmq::CSigSharesManager> quorumSigSharesManager;
-    std::unique_ptr<llmq::CSigningManager> quorumSigningManager;
-    std::unique_ptr<llmq::CChainLocksHandler> chainLocksHandler;
-    std::unique_ptr<llmq::CInstantSendManager> quorumInstantSendManager;
-    // End Dash
+    std::unique_ptr<llmq::Context> llmq_ctx;
 
     //! Declare default constructor and destructor that are not inline, so code
     //! instantiating the NodeContext struct doesn't need to #include class

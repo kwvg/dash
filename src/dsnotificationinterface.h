@@ -32,7 +32,7 @@ protected:
 
 private:
     CConnman& connman;
-    NodeContext& node;
+    llmq::Context& llmq_ctx;
 };
 
 #endif // BITCOIN_DSNOTIFICATIONINTERFACE_H

@@ -53,9 +53,10 @@ BlockAssembler::Options::Options() {
     nBlockMaxSize = DEFAULT_BLOCK_MAX_SIZE;
 }
 
-BlockAssembler::BlockAssembler(const CTxMemPool& mempool, const CChainParams& params, const Options& options)
+BlockAssembler::BlockAssembler(const CTxMemPool& mempool, const CChainParams& params, const llmq::Context& _ctx, const Options& options)
     : chainparams(params),
-      m_mempool(mempool)
+      m_mempool(mempool),
+      llmq_ctx(_ctx)
 {
     blockMinFeeRate = options.blockMinFeeRate;
     // Limit size to between 1K and MaxBlockSize()-1K for sanity:
@@ -79,8 +80,8 @@ static BlockAssembler::Options DefaultOptions()
     return options;
 }
 
-BlockAssembler::BlockAssembler(const CTxMemPool& mempool, const CChainParams& params)
-    : BlockAssembler(mempool, params, DefaultOptions()) {}
+BlockAssembler::BlockAssembler(const CTxMemPool& mempool, const CChainParams& params, const llmq::Context& _ctx)
+    : BlockAssembler(mempool, params, _ctx, DefaultOptions()) {}
 
 void BlockAssembler::resetBlock()
 {
@@ -140,7 +141,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(NodeContext& node
     if (fDIP0003Active_context) {
         for (const Consensus::LLMQParams& params : llmq::CLLMQUtils::GetEnabledQuorumParams(pindexPrev)) {
             std::vector<CTransactionRef> vqcTx;
-            if (node.quorumBlockProcessor->GetMineableCommitmentsTx(params,
+            if (llmq_ctx.quorumBlockProcessor->GetMineableCommitmentsTx(params,
                                                                      nHeight,
                                                                      vqcTx)) {
                 for (const auto& qcTx : vqcTx) {
@@ -200,7 +201,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(NodeContext& node
             throw std::runtime_error(strprintf("%s: CalcCbTxMerkleRootMNList failed: %s", __func__, FormatStateMessage(state)));
         }
         if (fDIP0008Active_context) {
-            if (!CalcCbTxMerkleRootQuorums(*node.quorumBlockProcessor, *pblock, pindexPrev, cbTx.merkleRootQuorums, state)) {
+            if (!CalcCbTxMerkleRootQuorums(*llmq_ctx.quorumBlockProcessor, *pblock, pindexPrev, cbTx.merkleRootQuorums, state)) {
                 throw std::runtime_error(strprintf("%s: CalcCbTxMerkleRootQuorums failed: %s", __func__, FormatStateMessage(state)));
             }
         }
@@ -264,7 +265,7 @@ bool BlockAssembler::TestPackageTransactions(NodeContext& node, const CTxMemPool
     for (CTxMemPool::txiter it : package) {
         if (!IsFinalTx(it->GetTx(), nHeight, nLockTimeCutoff))
             return false;
-        if (!node.chainLocksHandler->IsTxSafeForMining(it->GetTx().GetHash())) {
+        if (!llmq_ctx.chainLocksHandler->IsTxSafeForMining(it->GetTx().GetHash())) {
             return false;
         }
     }

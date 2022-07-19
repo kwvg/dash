@@ -13,15 +13,12 @@ class NodeContext;
 
 namespace llmq
 {
-
-// Init/destroy LLMQ globals
-void InitLLMQSystem(NodeContext& node, CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, bool unitTests, bool fWipe = false);
 void DestroyLLMQSystem();
 
 // Manage scheduled tasks, threads, listeners etc.
-void StartLLMQSystem(NodeContext& node);
-void StopLLMQSystem(NodeContext& node);
-void InterruptLLMQSystem(NodeContext& node);
+void StartLLMQSystem(Context &ctx);
+void StopLLMQSystem(Context &ctx);
+void InterruptLLMQSystem(Context &ctx);
 } // namespace llmq
 
 #endif // BITCOIN_LLMQ_INIT_H

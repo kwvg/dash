@@ -137,7 +137,7 @@ static bool GenerateBlock(ChainstateManager& chainman, CBlock& block, uint64_t& 
     return true;
 }
 
-UniValue generateBlocks(ChainstateManager& chainman, const CTxMemPool& mempool, std::shared_ptr<CReserveScript> coinbaseScript, int nGenerate, uint64_t nMaxTries, bool keepScript)
+UniValue generateBlocks(ChainstateManager& chainman, const CTxMemPool& mempool, const llmq::Context& llmq_ctx, std::shared_ptr<CReserveScript> coinbaseScript, int nGenerate, uint64_t nMaxTries, bool keepScript)
 {
     int nHeightEnd = 0;
     int nHeight = 0;
@@ -151,7 +151,7 @@ UniValue generateBlocks(ChainstateManager& chainman, const CTxMemPool& mempool, 
     UniValue blockHashes(UniValue::VARR);
     while (nHeight < nHeightEnd && !ShutdownRequested())
     {
-        std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(mempool, Params()).CreateNewBlock(coinbaseScript->reserveScript));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(mempool, Params(), llmq_ctx).CreateNewBlock(coinbaseScript->reserveScript));
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         CBlock *pblock = &pblocktemplate->block;
@@ -245,7 +245,8 @@ static UniValue generatetodescriptor(const JSONRPCRequest& request)
     std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
     coinbaseScript->reserveScript = coinbase_script;
 
-    return generateBlocks(chainman, mempool, coinbaseScript, num_blocks, max_tries, false);
+    const llmq::Context& llmq_ctx = EnsureLLMQContext(request.context);
+    return generateBlocks(chainman, mempool, llmq_ctx, coinbaseScript, num_blocks, max_tries, false);
 }
 
 static UniValue generatetoaddress(const JSONRPCRequest& request)
@@ -286,7 +287,8 @@ static UniValue generatetoaddress(const JSONRPCRequest& request)
     std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
     coinbaseScript->reserveScript = GetScriptForDestination(destination);
 
-    return generateBlocks(chainman, mempool, coinbaseScript, nGenerate, nMaxTries, false);
+    const llmq::Context& llmq_ctx = EnsureLLMQContext(request.context);
+    return generateBlocks(chainman, mempool, llmq_ctx, coinbaseScript, nGenerate, nMaxTries, false);
 }
 
 static UniValue generateblock(const JSONRPCRequest& request)
@@ -361,7 +363,8 @@ static UniValue generateblock(const JSONRPCRequest& request)
         LOCK(cs_main);
 
         CTxMemPool empty_mempool;
-        std::unique_ptr<CBlockTemplate> blocktemplate(BlockAssembler(empty_mempool, chainparams).CreateNewBlock(coinbase_script));
+        NodeContext& node = EnsureNodeContext(request.context);
+        std::unique_ptr<CBlockTemplate> blocktemplate(BlockAssembler(empty_mempool, chainparams, *node.llmq_ctx).CreateNewBlock(coinbase_script));
         if (!blocktemplate) {
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         }
@@ -768,7 +771,8 @@ static UniValue getblocktemplate(const JSONRPCRequest& request)
 
         // Create new block
         CScript scriptDummy = CScript() << OP_TRUE;
-        pblocktemplate = BlockAssembler(mempool, Params()).CreateNewBlock(scriptDummy);
+        NodeContext& node = EnsureNodeContext(request.context);
+        pblocktemplate = BlockAssembler(mempool, Params(), *node.llmq_ctx).CreateNewBlock(scriptDummy);
         if (!pblocktemplate)
             throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
 

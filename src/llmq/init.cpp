@@ -22,86 +22,61 @@
 
 namespace llmq
 {
-
-std::shared_ptr<CBLSWorker> blsWorker; // shared between quorumDKGSessionManager and quorumManager
-
-void InitLLMQSystem(NodeContext& node, CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, bool unitTests, bool fWipe)
-{
-    blsWorker = std::make_shared<CBLSWorker>();
-
-    node.quorumDKGDebugManager = std::make_unique<CDKGDebugManager>();
-    node.quorumBlockProcessor = std::make_unique<CQuorumBlockProcessor>(evoDb, connman);
-    node.quorumDKGSessionManager = std::make_unique<CDKGSessionManager>(connman, blsWorker, *node.quorumDKGDebugManager, unitTests, fWipe);
-    node.quorumManager = std::make_unique<CQuorumManager>(evoDb, connman, blsWorker, *node.quorumBlockProcessor, *node.quorumDKGSessionManager);
-    node.quorumSigSharesManager = std::make_unique<CSigSharesManager>(connman, node);
-    node.quorumSigningManager = std::make_unique<CSigningManager>(connman, *node.quorumManager, *node.quorumSigSharesManager, unitTests, fWipe);
-    node.chainLocksHandler = std::make_unique<CChainLocksHandler>(mempool, connman, node);
-    node.quorumInstantSendManager = std::make_unique<CInstantSendManager>(mempool, connman, node, unitTests, fWipe);
-
-    // NOTE: we use this only to wipe the old db, do NOT use it for anything else
-    // TODO: remove it in some future version
-    auto llmqDbTmp = std::make_unique<CDBWrapper>(unitTests ? "" : (GetDataDir() / "llmq"), 1 << 20, unitTests, true);
-}
-
-void DestroyLLMQSystem()
-{
+void DestroyLLMQSystem() {
     LOCK(cs_llmq_vbc);
     llmq_versionbitscache.Clear();
 }
 
-void StartLLMQSystem(NodeContext& node)
-{
-    if (blsWorker) {
-        blsWorker->Start();
+void StartLLMQSystem(Context &ctx) {
+    if (ctx.blsWorker) {
+        ctx.blsWorker->Start();
     }
-    if (node.quorumDKGSessionManager) {
-        node.quorumDKGSessionManager->StartThreads();
+    if (ctx.quorumDKGSessionManager) {
+        ctx.quorumDKGSessionManager->StartThreads();
     }
-    if (node.quorumManager) {
-        node.quorumManager->Start();
+    if (ctx.quorumManager) {
+        ctx.quorumManager->Start();
     }
-    if (node.quorumSigSharesManager != nullptr && node.quorumSigningManager != nullptr) {
-        node.quorumSigningManager->RegisterRecoveredSigsListener(node.quorumSigSharesManager.get());
-        node.quorumSigSharesManager->StartWorkerThread();
+    if (ctx.quorumSigSharesManager != nullptr && ctx.quorumSigningManager != nullptr) {
+        ctx.quorumSigningManager->RegisterRecoveredSigsListener(ctx.quorumSigSharesManager.get());
+        ctx.quorumSigSharesManager->StartWorkerThread();
     }
-    if (node.chainLocksHandler) {
-        node.chainLocksHandler->Start();
+    if (ctx.chainLocksHandler) {
+        ctx.chainLocksHandler->Start();
     }
-    if (node.quorumInstantSendManager) {
-        node.quorumInstantSendManager->Start();
-    }
-}
-
-void StopLLMQSystem(NodeContext& node)
-{
-    if (node.quorumInstantSendManager) {
-        node.quorumInstantSendManager->Stop();
-    }
-    if (node.chainLocksHandler) {
-        node.chainLocksHandler->Stop();
-    }
-    if (node.quorumSigSharesManager != nullptr && node.quorumSigningManager != nullptr) {
-        node.quorumSigSharesManager->StopWorkerThread();
-        node.quorumSigningManager->UnregisterRecoveredSigsListener(node.quorumSigSharesManager.get());
-    }
-    if (node.quorumManager) {
-        node.quorumManager->Stop();
-    }
-    if (node.quorumDKGSessionManager) {
-        node.quorumDKGSessionManager->StopThreads();
-    }
-    if (blsWorker) {
-        blsWorker->Stop();
+    if (ctx.quorumInstantSendManager) {
+        ctx.quorumInstantSendManager->Start();
     }
 }
 
-void InterruptLLMQSystem(NodeContext& node)
-{
-    if (node.quorumSigSharesManager) {
-        node.quorumSigSharesManager->InterruptWorkerThread();
+void StopLLMQSystem(Context &ctx) {
+    if (ctx.quorumInstantSendManager) {
+        ctx.quorumInstantSendManager->Stop();
     }
-    if (node.quorumInstantSendManager) {
-        node.quorumInstantSendManager->InterruptWorkerThread();
+    if (ctx.chainLocksHandler) {
+        ctx.chainLocksHandler->Stop();
+    }
+    if (ctx.quorumSigSharesManager != nullptr && ctx.quorumSigningManager != nullptr) {
+        ctx.quorumSigSharesManager->StopWorkerThread();
+        ctx.quorumSigningManager->UnregisterRecoveredSigsListener(ctx.quorumSigSharesManager.get());
+    }
+    if (ctx.quorumManager) {
+        ctx.quorumManager->Stop();
+    }
+    if (ctx.quorumDKGSessionManager) {
+        ctx.quorumDKGSessionManager->StopThreads();
+    }
+    if (ctx.blsWorker) {
+        ctx.blsWorker->Stop();
+    }
+}
+
+void InterruptLLMQSystem(Context &ctx) {
+    if (ctx.quorumSigSharesManager) {
+        ctx.quorumSigSharesManager->InterruptWorkerThread();
+    }
+    if (ctx.quorumInstantSendManager) {
+        ctx.quorumInstantSendManager->InterruptWorkerThread();
     }
 }
 

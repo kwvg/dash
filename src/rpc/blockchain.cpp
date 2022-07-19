@@ -73,6 +73,15 @@ NodeContext& EnsureNodeContext(const util::Ref& context)
     return context.Get<NodeContext>();
 }
 
+llmq::Context& EnsureLLMQContext(const util::Ref& context)
+{
+    NodeContext& node = EnsureNodeContext(context);
+    if (!node.llmq_ctx) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "LLMQ context not found");
+    }
+    return *node.llmq_ctx;
+}
+
 CTxMemPool& EnsureMemPool(const util::Ref& context)
 {
     NodeContext& node = EnsureNodeContext(context);
