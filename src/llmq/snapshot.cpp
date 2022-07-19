@@ -118,7 +118,7 @@ void CQuorumRotationInfo::ToJson(UniValue& obj) const
     obj.pushKV("mnListDiffList", mnlistdifflist);
 }
 
-bool BuildQuorumRotationInfo(llmq::CQuorumBlockProcessor& quorumBlockProcessor, const CGetQuorumRotationInfo& request, CQuorumRotationInfo& response, std::string& errorRet)
+bool BuildQuorumRotationInfo(NodeContext& node, const CGetQuorumRotationInfo& request, CQuorumRotationInfo& response, std::string& errorRet)
 {
     AssertLockHeld(cs_main);
 
@@ -154,7 +154,7 @@ bool BuildQuorumRotationInfo(llmq::CQuorumBlockProcessor& quorumBlockProcessor, 
         return false;
     }
     //Build MN list Diff always with highest baseblock
-    if (!BuildSimplifiedMNListDiff(quorumBlockProcessor, baseBlockIndexes.back()->GetBlockHash(), tipBlockIndex->GetBlockHash(), response.mnListDiffTip, errorRet)) {
+    if (!BuildSimplifiedMNListDiff(node.quorumBlockProcessor, baseBlockIndexes.back()->GetBlockHash(), tipBlockIndex->GetBlockHash(), response.mnListDiffTip, errorRet)) {
         return false;
     }
 
@@ -185,7 +185,7 @@ bool BuildQuorumRotationInfo(llmq::CQuorumBlockProcessor& quorumBlockProcessor, 
     }
 
     //Build MN list Diff always with highest baseblock
-    if (!BuildSimplifiedMNListDiff(quorumBlockProcessor, GetLastBaseBlockHash(baseBlockIndexes, pWorkBlockIndex), pWorkBlockIndex->GetBlockHash(), response.mnListDiffH, errorRet)) {
+    if (!BuildSimplifiedMNListDiff(node.quorumBlockProcessor, GetLastBaseBlockHash(baseBlockIndexes, pWorkBlockIndex), pWorkBlockIndex->GetBlockHash(), response.mnListDiffH, errorRet)) {
         return false;
     }
 
@@ -231,7 +231,7 @@ bool BuildQuorumRotationInfo(llmq::CQuorumBlockProcessor& quorumBlockProcessor, 
     const CBlockIndex* pWorkBlockHMinus4CIndex = pBlockHMinus4CIndex->GetAncestor(pBlockHMinus4CIndex->nHeight - workDiff);
     //Checked later if extraShare is on
 
-    if (!BuildSimplifiedMNListDiff(quorumBlockProcessor, GetLastBaseBlockHash(baseBlockIndexes, pWorkBlockHMinusCIndex), pWorkBlockHMinusCIndex->GetBlockHash(), response.mnListDiffAtHMinusC, errorRet)) {
+    if (!BuildSimplifiedMNListDiff(node.quorumBlockProcessor, GetLastBaseBlockHash(baseBlockIndexes, pWorkBlockHMinusCIndex), pWorkBlockHMinusCIndex->GetBlockHash(), response.mnListDiffAtHMinusC, errorRet)) {
         return false;
     }
 
@@ -243,7 +243,7 @@ bool BuildQuorumRotationInfo(llmq::CQuorumBlockProcessor& quorumBlockProcessor, 
         response.quorumSnapshotAtHMinusC = std::move(snapshotHMinusC.value());
     }
 
-    if (!BuildSimplifiedMNListDiff(quorumBlockProcessor, GetLastBaseBlockHash(baseBlockIndexes, pWorkBlockHMinus2CIndex), pWorkBlockHMinus2CIndex->GetBlockHash(), response.mnListDiffAtHMinus2C, errorRet)) {
+    if (!BuildSimplifiedMNListDiff(node.quorumBlockProcessor, GetLastBaseBlockHash(baseBlockIndexes, pWorkBlockHMinus2CIndex), pWorkBlockHMinus2CIndex->GetBlockHash(), response.mnListDiffAtHMinus2C, errorRet)) {
         return false;
     }
 
@@ -255,7 +255,7 @@ bool BuildQuorumRotationInfo(llmq::CQuorumBlockProcessor& quorumBlockProcessor, 
         response.quorumSnapshotAtHMinus2C = std::move(snapshotHMinus2C.value());
     }
 
-    if (!BuildSimplifiedMNListDiff(quorumBlockProcessor, GetLastBaseBlockHash(baseBlockIndexes, pWorkBlockHMinus3CIndex), pWorkBlockHMinus3CIndex->GetBlockHash(), response.mnListDiffAtHMinus3C, errorRet)) {
+    if (!BuildSimplifiedMNListDiff(node.quorumBlockProcessor, GetLastBaseBlockHash(baseBlockIndexes, pWorkBlockHMinus3CIndex), pWorkBlockHMinus3CIndex->GetBlockHash(), response.mnListDiffAtHMinus3C, errorRet)) {
         return false;
     }
 
@@ -284,7 +284,7 @@ bool BuildQuorumRotationInfo(llmq::CQuorumBlockProcessor& quorumBlockProcessor, 
         }
 
         CSimplifiedMNListDiff mn4c;
-        if (!BuildSimplifiedMNListDiff(quorumBlockProcessor, GetLastBaseBlockHash(baseBlockIndexes, pWorkBlockHMinus4CIndex), pWorkBlockHMinus4CIndex->GetBlockHash(), mn4c, errorRet)) {
+        if (!BuildSimplifiedMNListDiff(node.quorumBlockProcessor, GetLastBaseBlockHash(baseBlockIndexes, pWorkBlockHMinus4CIndex), pWorkBlockHMinus4CIndex->GetBlockHash(), mn4c, errorRet)) {
             return false;
         }
 
@@ -297,11 +297,11 @@ bool BuildQuorumRotationInfo(llmq::CQuorumBlockProcessor& quorumBlockProcessor, 
 
     std::set<int> snapshotHeightsNeeded;
 
-    std::vector<std::pair<int, const CBlockIndex*>> qdata = quorumBlockProcessor.GetLastMinedCommitmentsPerQuorumIndexUntilBlock(llmqType, blockIndex, 0);
+    std::vector<std::pair<int, const CBlockIndex*>> qdata = node.quorumBlockProcessor.GetLastMinedCommitmentsPerQuorumIndexUntilBlock(llmqType, blockIndex, 0);
 
     for (const auto& obj : qdata) {
         uint256 minedBlockHash;
-        llmq::CFinalCommitmentPtr qc = quorumBlockProcessor.GetMinedCommitment(llmqType, obj.second->GetBlockHash(), minedBlockHash);
+        llmq::CFinalCommitmentPtr qc = node.quorumBlockProcessor.GetMinedCommitment(llmqType, obj.second->GetBlockHash(), minedBlockHash);
         if (qc == nullptr) {
             return false;
         }
@@ -340,7 +340,7 @@ bool BuildQuorumRotationInfo(llmq::CQuorumBlockProcessor& quorumBlockProcessor, 
         }
 
         CSimplifiedMNListDiff mnhneeded;
-        if (!BuildSimplifiedMNListDiff(quorumBlockProcessor, GetLastBaseBlockHash(baseBlockIndexes, pNeededWorkBlockIndex), pNeededWorkBlockIndex->GetBlockHash(), mnhneeded, errorRet)) {
+        if (!BuildSimplifiedMNListDiff(node.quorumBlockProcessor, GetLastBaseBlockHash(baseBlockIndexes, pNeededWorkBlockIndex), pNeededWorkBlockIndex->GetBlockHash(), mnhneeded, errorRet)) {
             return false;
         }
 

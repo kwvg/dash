@@ -99,7 +99,7 @@ bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
     return false;
 }
 
-bool ProcessSpecialTxsInBlock(NodeContext& nodeContext, const CBlock& block, const CBlockIndex* pindex, CValidationState& state, const CCoinsViewCache& view, bool fJustCheck, bool fCheckCbTxMerleRoots)
+bool ProcessSpecialTxsInBlock(NodeContext& node, const CBlock& block, const CBlockIndex* pindex, CValidationState& state, const CCoinsViewCache& view, bool fJustCheck, bool fCheckCbTxMerleRoots)
 {
     AssertLockHeld(cs_main);
 
@@ -112,7 +112,7 @@ bool ProcessSpecialTxsInBlock(NodeContext& nodeContext, const CBlock& block, con
         int64_t nTime1 = GetTimeMicros();
 
         for (const auto& ptr_tx : block.vtx) {
-            if (!CheckSpecialTx(*nodeContext.quorumSigningManager, *ptr_tx, pindex->pprev, state, view, fCheckCbTxMerleRoots)) {
+            if (!CheckSpecialTx(*node.quorumSigningManager, *ptr_tx, pindex->pprev, state, view, fCheckCbTxMerleRoots)) {
                 // pass the state returned by the function above
                 return false;
             }
@@ -126,7 +126,7 @@ bool ProcessSpecialTxsInBlock(NodeContext& nodeContext, const CBlock& block, con
         nTimeLoop += nTime2 - nTime1;
         LogPrint(BCLog::BENCHMARK, "        - Loop: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1), nTimeLoop * 0.000001);
 
-        if (!nodeContext.quorumBlockProcessor->ProcessBlock(block, pindex, state, fJustCheck, fCheckCbTxMerleRoots)) {
+        if (!node.quorumBlockProcessor->ProcessBlock(block, pindex, state, fJustCheck, fCheckCbTxMerleRoots)) {
             // pass the state returned by the function above
             return false;
         }
@@ -144,7 +144,7 @@ bool ProcessSpecialTxsInBlock(NodeContext& nodeContext, const CBlock& block, con
         nTimeDMN += nTime4 - nTime3;
         LogPrint(BCLog::BENCHMARK, "        - deterministicMNManager: %.2fms [%.2fs]\n", 0.001 * (nTime4 - nTime3), nTimeDMN * 0.000001);
 
-        if (fCheckCbTxMerleRoots && !CheckCbTxMerkleRoots(*nodeContext.quorumBlockProcessor, block, pindex, state, view)) {
+        if (fCheckCbTxMerleRoots && !CheckCbTxMerkleRoots(*node.quorumBlockProcessor, block, pindex, state, view)) {
             // pass the state returned by the function above
             return false;
         }

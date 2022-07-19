@@ -40,7 +40,7 @@ class CChainLocksHandler : public CRecoveredSigsListener
 
 private:
     CConnman& connman;
-    NodeContext& nodeContext;
+    NodeContext& node;
     CTxMemPool& mempool;
     std::unique_ptr<CScheduler> scheduler;
     std::unique_ptr<std::thread> scheduler_thread;
@@ -74,7 +74,7 @@ private:
     int64_t lastCleanupTime GUARDED_BY(cs) {0};
 
 public:
-    explicit CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, NodeContext& _nodeContext);
+    explicit CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, NodeContext& _node);
     ~CChainLocksHandler();
 
     void Start();

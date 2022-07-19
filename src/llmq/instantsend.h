@@ -197,7 +197,7 @@ class CInstantSendManager : public CRecoveredSigsListener
 {
 private:
     CInstantSendDb db;
-    NodeContext& nodeContext;
+    NodeContext& node;
     CConnman& connman;
     CTxMemPool& mempool;
 
@@ -247,7 +247,7 @@ private:
     std::unordered_set<uint256, StaticSaltedHasher> pendingRetryTxs GUARDED_BY(cs_pendingRetry);
 
 public:
-    explicit CInstantSendManager(CTxMemPool& _mempool, CConnman& _connman, NodeContext& node, bool unitTests, bool fWipe) : db(unitTests, fWipe), mempool(_mempool), connman(_connman), nodeContext(node) { workInterrupt.reset(); }
+    explicit CInstantSendManager(CTxMemPool& _mempool, CConnman& _connman, NodeContext& _node, bool unitTests, bool fWipe) : db(unitTests, fWipe), mempool(_mempool), connman(_connman), node(_node) { workInterrupt.reset(); }
     ~CInstantSendManager() = default;
 
     void Start();

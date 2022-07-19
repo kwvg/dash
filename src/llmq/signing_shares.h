@@ -395,12 +395,12 @@ private:
     FastRandomContext rnd GUARDED_BY(cs);
 
     CConnman& connman;
-    NodeContext& nodeContext;
+    NodeContext& node;
     int64_t lastCleanupTime{0};
     std::atomic<uint32_t> recoveredSigsCounter{0};
 
 public:
-    explicit CSigSharesManager(CConnman& _connman, NodeContext& node) : connman(_connman), nodeContext(node)
+    explicit CSigSharesManager(CConnman& _connman, NodeContext& _node) : connman(_connman), node(_node)
     {
         workInterrupt.reset();
     };
