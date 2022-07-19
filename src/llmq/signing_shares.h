@@ -24,6 +24,7 @@ class CScheduler;
 
 class CDeterministicMN;
 using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
+class CSporkManager;
 
 namespace dash { struct Context; }
 
@@ -414,7 +415,7 @@ public:
     void UnregisterAsRecoveredSigsListener();
     void InterruptWorkerThread();
 
-    void ProcessMessage(const CSporkManager& sporkManager, const CNode* pnode, const std::string& msg_type, CDataStream& vRecv);
+    void ProcessMessage(const CNode* pnode, const std::string& msg_type, CDataStream& vRecv);
 
     void AsyncSign(const CQuorumCPtr& quorum, const uint256& id, const uint256& msgHash);
     std::optional<CSigShare> CreateSigShare(const CQuorumCPtr& quorum, const uint256& id, const uint256& msgHash) const;

@@ -721,7 +721,7 @@ std::set<size_t> CLLMQUtils::CalcDeterministicWatchConnections(Consensus::LLMQTy
     return result;
 }
 
-bool CLLMQUtils::EnsureQuorumConnections(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pQuorumBaseBlockIndex,
+bool CLLMQUtils::EnsureQuorumConnections(const Consensus::LLMQParams& llmqParams, const dash::Context& ctx, const CBlockIndex* pQuorumBaseBlockIndex,
                                          CConnman& connman, const uint256& myProTxHash)
 {
     auto members = GetAllQuorumMembers(llmqParams.type, pQuorumBaseBlockIndex);
@@ -734,7 +734,7 @@ bool CLLMQUtils::EnsureQuorumConnections(const Consensus::LLMQParams& llmqParams
     std::set<uint256> connections;
     std::set<uint256> relayMembers;
     if (isMember) {
-        connections = CLLMQUtils::GetQuorumConnections(llmqParams, pQuorumBaseBlockIndex, myProTxHash, true);
+        connections = CLLMQUtils::GetQuorumConnections(llmqParams, ctx, pQuorumBaseBlockIndex, myProTxHash, true);
         relayMembers = CLLMQUtils::GetQuorumRelayMembers(llmqParams, pQuorumBaseBlockIndex, myProTxHash, true);
     } else {
         auto cindexes = CLLMQUtils::CalcDeterministicWatchConnections(llmqParams.type, pQuorumBaseBlockIndex, members.size(), 1);

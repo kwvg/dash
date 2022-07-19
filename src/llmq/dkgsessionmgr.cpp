@@ -37,7 +37,7 @@ CDKGSessionManager::CDKGSessionManager(CConnman& _connman, CBLSWorker& _blsWorke
         for (const auto i : irange::range(session_count)) {
             dkgSessionHandlers.emplace(std::piecewise_construct,
                                        std::forward_as_tuple(params.type, i),
-                                       std::forward_as_tuple(params, blsWorker, *this, connman, i));
+                                       std::forward_as_tuple(params, blsWorker, *this, connman, ctx, i));
         }
     }
 }
