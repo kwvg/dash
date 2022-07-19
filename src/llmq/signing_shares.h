@@ -25,6 +25,8 @@ class CScheduler;
 class CDeterministicMN;
 using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 
+namespace dash { struct Context; }
+
 namespace llmq
 {
 // <signHash, quorumMember>
@@ -394,11 +396,12 @@ private:
     FastRandomContext rnd GUARDED_BY(cs);
 
     CConnman& connman;
+    dash::Context& ctx;
     int64_t lastCleanupTime{0};
     std::atomic<uint32_t> recoveredSigsCounter{0};
 
 public:
-    explicit CSigSharesManager(CConnman& _connman) : connman(_connman)
+    explicit CSigSharesManager(CConnman& _connman, dash::Context& _ctx) : connman(_connman), ctx(_ctx)
     {
         workInterrupt.reset();
     };
@@ -411,7 +414,7 @@ public:
     void UnregisterAsRecoveredSigsListener();
     void InterruptWorkerThread();
 
-    void ProcessMessage(const CNode* pnode, const std::string& msg_type, CDataStream& vRecv);
+    void ProcessMessage(const CSporkManager& sporkManager, const CNode* pnode, const std::string& msg_type, CDataStream& vRecv);
 
     void AsyncSign(const CQuorumCPtr& quorum, const uint256& id, const uint256& msgHash);
     std::optional<CSigShare> CreateSigShare(const CQuorumCPtr& quorum, const uint256& id, const uint256& msgHash) const;

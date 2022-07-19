@@ -10,11 +10,13 @@ class CDBWrapper;
 class CEvoDB;
 class CTxMemPool;
 
+namespace dash { struct Context; }
+
 namespace llmq
 {
 
 // Init/destroy LLMQ globals
-void InitLLMQSystem(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, bool unitTests, bool fWipe = false);
+void InitLLMQSystem(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, dash::Context& ctx, bool unitTests, bool fWipe = false);
 void DestroyLLMQSystem();
 
 // Manage scheduled tasks, threads, listeners etc.

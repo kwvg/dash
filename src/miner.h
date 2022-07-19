@@ -23,6 +23,7 @@ class CConnman;
 class CScript;
 
 namespace Consensus { struct Params; };
+namespace dash { struct Context; }
 
 static const bool DEFAULT_PRINTPRIORITY = false;
 
@@ -148,6 +149,7 @@ private:
     int64_t nLockTimeCutoff;
     const CChainParams& chainparams;
     const CTxMemPool& m_mempool;
+    const dash::Context& m_ctx;
 
 public:
     struct Options {
@@ -156,8 +158,8 @@ public:
         CFeeRate blockMinFeeRate;
     };
 
-    explicit BlockAssembler(const CTxMemPool& mempool, const CChainParams& params);
-    explicit BlockAssembler(const CTxMemPool& mempool, const CChainParams& params, const Options& options);
+    explicit BlockAssembler(const CTxMemPool& mempool, const CChainParams& params, const dash::Context& ctx);
+    explicit BlockAssembler(const CTxMemPool& mempool, const CChainParams& params, const Options& options, const dash::Context& ctx);
 
     /** Construct a new block template with coinbase to scriptPubKeyIn */
     std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn);

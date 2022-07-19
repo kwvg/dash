@@ -20,8 +20,11 @@ class CConnman;
 class CBlockIndex;
 class CDeterministicMN;
 class CDeterministicMNList;
+class CSporkManager;
 using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 class CBLSPublicKey;
+
+namespace dash { struct Context; }
 
 namespace llmq
 {
@@ -71,15 +74,15 @@ public:
     static uint256 BuildCommitmentHash(Consensus::LLMQType llmqType, const uint256& blockHash, const std::vector<bool>& validMembers, const CBLSPublicKey& pubKey, const uint256& vvecHash);
     static uint256 BuildSignHash(Consensus::LLMQType llmqType, const uint256& quorumHash, const uint256& id, const uint256& msgHash);
 
-    static bool IsAllMembersConnectedEnabled(Consensus::LLMQType llmqType);
-    static bool IsQuorumPoseEnabled(Consensus::LLMQType llmqType);
+    static bool IsAllMembersConnectedEnabled(Consensus::LLMQType llmqType, const CSporkManager& sporkManager);
+    static bool IsQuorumPoseEnabled(Consensus::LLMQType llmqType, const CSporkManager& sporkManager);
     static uint256 DeterministicOutboundConnection(const uint256& proTxHash1, const uint256& proTxHash2);
-    static std::set<uint256> GetQuorumConnections(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pQuorumBaseBlockIndex, const uint256& forMember, bool onlyOutbound);
+    static std::set<uint256> GetQuorumConnections(const Consensus::LLMQParams& llmqParams, const dash::Context& ctx, const CBlockIndex* pQuorumBaseBlockIndex, const uint256& forMember, bool onlyOutbound);
     static std::set<uint256> GetQuorumRelayMembers(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pQuorumBaseBlockIndex, const uint256& forMember, bool onlyOutbound);
     static std::set<size_t> CalcDeterministicWatchConnections(Consensus::LLMQType llmqType, const CBlockIndex* pQuorumBaseBlockIndex, size_t memberCount, size_t connectionCount);
 
     static bool EnsureQuorumConnections(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pQuorumBaseBlockIndex, CConnman& connman, const uint256& myProTxHash);
-    static void AddQuorumProbeConnections(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pQuorumBaseBlockIndex, CConnman& connman, const uint256& myProTxHash);
+    static void AddQuorumProbeConnections(const Consensus::LLMQParams& llmqParams, const CSporkManager& sporkManager, const CBlockIndex* pQuorumBaseBlockIndex, CConnman& connman, const uint256& myProTxHash);
 
     static bool IsQuorumActive(Consensus::LLMQType llmqType, const uint256& quorumHash);
     static bool IsQuorumTypeEnabled(Consensus::LLMQType llmqType, const CBlockIndex* pindex);

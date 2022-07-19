@@ -4,6 +4,7 @@
 
 #include <llmq/init.h>
 
+#include <node/context.h>
 #include <llmq/quorums.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/commitment.h>
@@ -23,18 +24,18 @@ namespace llmq
 
 CBLSWorker* blsWorker;
 
-void InitLLMQSystem(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, bool unitTests, bool fWipe)
+void InitLLMQSystem(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, dash::Context& ctx, bool unitTests, bool fWipe)
 {
     blsWorker = new CBLSWorker();
 
     quorumDKGDebugManager = new CDKGDebugManager();
     quorumBlockProcessor = new CQuorumBlockProcessor(evoDb, connman);
-    quorumDKGSessionManager = new CDKGSessionManager(connman, *blsWorker, unitTests, fWipe);
+    quorumDKGSessionManager = new CDKGSessionManager(connman, *blsWorker, ctx, unitTests, fWipe);
     quorumManager = new CQuorumManager(evoDb, connman, *blsWorker, *quorumDKGSessionManager);
-    quorumSigSharesManager = new CSigSharesManager(connman);
+    quorumSigSharesManager = new CSigSharesManager(connman, ctx);
     quorumSigningManager = new CSigningManager(connman, unitTests, fWipe);
-    chainLocksHandler = new CChainLocksHandler(mempool, connman);
-    quorumInstantSendManager = new CInstantSendManager(mempool, connman, unitTests, fWipe);
+    chainLocksHandler = new CChainLocksHandler(mempool, connman, ctx);
+    quorumInstantSendManager = new CInstantSendManager(mempool, connman, ctx, unitTests, fWipe);
 
     // NOTE: we use this only to wipe the old db, do NOT use it for anything else
     // TODO: remove it in some future version

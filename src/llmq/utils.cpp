@@ -13,6 +13,7 @@
 #include <evo/evodb.h>
 #include <masternode/meta.h>
 #include <net.h>
+#include <node/context.h>
 #include <random.h>
 #include <spork.h>
 #include <timedata.h>
@@ -539,12 +540,12 @@ static bool EvalSpork(Consensus::LLMQType llmqType, int64_t spork_value)
     return false;
 }
 
-bool CLLMQUtils::IsAllMembersConnectedEnabled(Consensus::LLMQType llmqType)
+bool CLLMQUtils::IsAllMembersConnectedEnabled(Consensus::LLMQType llmqType, const CSporkManager& sporkManager)
 {
     return EvalSpork(llmqType, sporkManager.GetSporkValue(SPORK_21_QUORUM_ALL_CONNECTED));
 }
 
-bool CLLMQUtils::IsQuorumPoseEnabled(Consensus::LLMQType llmqType)
+bool CLLMQUtils::IsQuorumPoseEnabled(Consensus::LLMQType llmqType, const CSporkManager& sporkManager)
 {
     return EvalSpork(llmqType, sporkManager.GetSporkValue(SPORK_23_QUORUM_POSE));
 }
@@ -620,10 +621,10 @@ uint256 CLLMQUtils::DeterministicOutboundConnection(const uint256& proTxHash1, c
     return proTxHash2;
 }
 
-std::set<uint256> CLLMQUtils::GetQuorumConnections(const Consensus::LLMQParams& llmqParams, const CBlockIndex* pQuorumBaseBlockIndex,
+std::set<uint256> CLLMQUtils::GetQuorumConnections(const Consensus::LLMQParams& llmqParams, const dash::Context& ctx, const CBlockIndex* pQuorumBaseBlockIndex,
                                                    const uint256& forMember, bool onlyOutbound)
 {
-    if (IsAllMembersConnectedEnabled(llmqParams.type)) {
+    if (IsAllMembersConnectedEnabled(llmqParams.type, *ctx.sporkManager)) {
         auto mns = GetAllQuorumMembers(llmqParams.type, pQuorumBaseBlockIndex);
         std::set<uint256> result;
 
@@ -764,10 +765,10 @@ bool CLLMQUtils::EnsureQuorumConnections(const Consensus::LLMQParams& llmqParams
     return true;
 }
 
-void CLLMQUtils::AddQuorumProbeConnections(const Consensus::LLMQParams& llmqParams, const CBlockIndex *pQuorumBaseBlockIndex,
+void CLLMQUtils::AddQuorumProbeConnections(const Consensus::LLMQParams& llmqParams, const CSporkManager& sporkManager, const CBlockIndex *pQuorumBaseBlockIndex,
                                            CConnman& connman, const uint256 &myProTxHash)
 {
-    if (!CLLMQUtils::IsQuorumPoseEnabled(llmqParams.type)) {
+    if (!CLLMQUtils::IsQuorumPoseEnabled(llmqParams.type, sporkManager)) {
         return;
     }
 

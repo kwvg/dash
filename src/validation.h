@@ -52,6 +52,10 @@ struct ChainTxData;
 struct DisconnectedBlockTransactions;
 struct LockPoints;
 
+namespace dash {
+    struct Context;
+}; // namespace dash
+
 /** Default for -minrelaytxfee, minimum relay fee for transactions */
 static const unsigned int DEFAULT_MIN_RELAY_TX_FEE = 1000;
 /** Default for -limitancestorcount, max number of in-mempool ancestors */
@@ -530,8 +534,11 @@ private:
     //! Manages the UTXO set, which is a reflection of the contents of `m_chain`.
     std::unique_ptr<CoinsViews> m_coins_views;
 
+    //! Manages the state context
+    dash::Context& m_ctx;
+
 public:
-    explicit CChainState(BlockManager& blockman, uint256 from_snapshot_blockhash = uint256());
+    explicit CChainState(BlockManager& blockman, dash::Context& ctx, uint256 from_snapshot_blockhash = uint256());
 
     /**
      * Initialize the CoinsViews UTXO set database management data structures. The in-memory
@@ -843,7 +850,7 @@ public:
     //!
     //! @param[in] snapshot_blockhash   If given, signify that this chainstate
     //!                                 is based on a snapshot.
-    CChainState& InitializeChainstate(const uint256& snapshot_blockhash = uint256())
+    CChainState& InitializeChainstate(const dash::Context& ctx, const uint256& snapshot_blockhash = uint256())
         EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     //! Get all chainstates currently being used.

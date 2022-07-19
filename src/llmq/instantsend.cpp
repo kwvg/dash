@@ -15,6 +15,7 @@
 #include <index/txindex.h>
 #include <masternode/sync.h>
 #include <net_processing.h>
+#include <node/context.h>
 #include <spork.h>
 #include <txmempool.h>
 #include <util/irange.h>
@@ -480,7 +481,7 @@ void CInstantSendManager::Stop()
 
 void CInstantSendManager::ProcessTx(const CTransaction& tx, bool fRetroactive, const Consensus::Params& params)
 {
-    if (!fMasternodeMode || !IsInstantSendEnabled() || !masternodeSync.IsBlockchainSynced()) {
+    if (!fMasternodeMode || !IsInstantSendEnabled(*ctx.sporkManager) || !masternodeSync.IsBlockchainSynced()) {
         return;
     }
 
@@ -635,7 +636,7 @@ bool CInstantSendManager::CheckCanLock(const COutPoint& outpoint, bool printDebu
 
 void CInstantSendManager::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig)
 {
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager)) {
         return;
     }
 
@@ -763,7 +764,7 @@ void CInstantSendManager::HandleNewInstantSendLockRecoveredSig(const llmq::CReco
 
 void CInstantSendManager::ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv)
 {
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager)) {
         return;
     }
 
@@ -865,7 +866,7 @@ bool CInstantSendManager::ProcessPendingInstantSendLocks(bool deterministic)
     decltype(pendingInstantSendLocks) pend;
     bool fMoreWork{false};
 
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager)) {
         return false;
     }
 
@@ -1131,7 +1132,7 @@ void CInstantSendManager::ProcessInstantSendLock(NodeId from, const uint256& has
 
 void CInstantSendManager::TransactionAddedToMempool(const CTransactionRef& tx)
 {
-    if (!IsInstantSendEnabled() || !masternodeSync.IsBlockchainSynced() || tx->vin.empty()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager) || !masternodeSync.IsBlockchainSynced() || tx->vin.empty()) {
         return;
     }
 
@@ -1180,7 +1181,7 @@ void CInstantSendManager::TransactionRemovedFromMempool(const CTransactionRef& t
 
 void CInstantSendManager::BlockConnected(const std::shared_ptr<const CBlock>& pblock, const CBlockIndex* pindex, const std::vector<CTransactionRef>& vtxConflicted)
 {
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager)) {
         return;
     }
 
@@ -1341,7 +1342,7 @@ void CInstantSendManager::UpdatedBlockTip(const CBlockIndex* pindexNew)
 
 void CInstantSendManager::HandleFullyConfirmedBlock(const CBlockIndex* pindex)
 {
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager)) {
         return;
     }
 
@@ -1566,7 +1567,7 @@ void CInstantSendManager::ProcessPendingRetryLockTxs()
         return;
     }
 
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager)) {
         return;
     }
 
@@ -1621,7 +1622,7 @@ void CInstantSendManager::ProcessPendingRetryLockTxs()
 
 bool CInstantSendManager::AlreadyHave(const CInv& inv) const
 {
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager)) {
         return true;
     }
 
@@ -1631,7 +1632,7 @@ bool CInstantSendManager::AlreadyHave(const CInv& inv) const
 
 bool CInstantSendManager::GetInstantSendLockByHash(const uint256& hash, llmq::CInstantSendLock& ret) const
 {
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager)) {
         return false;
     }
 
@@ -1656,7 +1657,7 @@ bool CInstantSendManager::GetInstantSendLockByHash(const uint256& hash, llmq::CI
 
 CInstantSendLockPtr CInstantSendManager::GetInstantSendLockByTxid(const uint256& txid) const
 {
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager)) {
         return nullptr;
     }
 
@@ -1665,7 +1666,7 @@ CInstantSendLockPtr CInstantSendManager::GetInstantSendLockByTxid(const uint256&
 
 bool CInstantSendManager::IsLocked(const uint256& txHash) const
 {
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager)) {
         return false;
     }
 
@@ -1674,7 +1675,7 @@ bool CInstantSendManager::IsLocked(const uint256& txHash) const
 
 bool CInstantSendManager::IsWaitingForTx(const uint256& txHash) const
 {
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager)) {
         return false;
     }
 
@@ -1693,7 +1694,7 @@ bool CInstantSendManager::IsWaitingForTx(const uint256& txHash) const
 
 CInstantSendLockPtr CInstantSendManager::GetConflictingLock(const CTransaction& tx) const
 {
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(*ctx.sporkManager)) {
         return nullptr;
     }
 
@@ -1727,17 +1728,17 @@ void CInstantSendManager::WorkThreadMain()
     }
 }
 
-bool IsInstantSendEnabled()
+bool IsInstantSendEnabled(const CSporkManager& sporkManager)
 {
     return !fReindex && !fImporting && sporkManager.IsSporkActive(SPORK_2_INSTANTSEND_ENABLED);
 }
 
-bool IsInstantSendMempoolSigningEnabled()
+bool IsInstantSendMempoolSigningEnabled(const CSporkManager& sporkManager)
 {
     return !fReindex && !fImporting && sporkManager.GetSporkValue(SPORK_2_INSTANTSEND_ENABLED) == 0;
 }
 
-bool RejectConflictingBlocks()
+bool RejectConflictingBlocks(const CSporkManager& sporkManager)
 {
     if (!masternodeSync.IsBlockchainSynced()) {
         return false;

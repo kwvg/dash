@@ -18,6 +18,10 @@
 #include <unordered_map>
 #include <unordered_set>
 
+class CSporkManager;
+
+namespace dash { struct Context; }
+
 namespace llmq
 {
 
@@ -196,6 +200,7 @@ private:
     CInstantSendDb db;
     CConnman& connman;
     CTxMemPool& mempool;
+    dash::Context& ctx;
 
     std::atomic<bool> fUpgradedDB{false};
 
@@ -243,7 +248,7 @@ private:
     std::unordered_set<uint256, StaticSaltedHasher> pendingRetryTxs GUARDED_BY(cs_pendingRetry);
 
 public:
-    explicit CInstantSendManager(CTxMemPool& _mempool, CConnman& _connman, bool unitTests, bool fWipe) : db(unitTests, fWipe), mempool(_mempool), connman(_connman) { workInterrupt.reset(); }
+    explicit CInstantSendManager(CTxMemPool& _mempool, CConnman& _connman, dash::Context& _ctx, bool unitTests, bool fWipe) : db(unitTests, fWipe), mempool(_mempool), connman(_connman), ctx(_ctx) { workInterrupt.reset(); }
     ~CInstantSendManager() = default;
 
     void Start();
@@ -317,14 +322,14 @@ public:
 
 extern CInstantSendManager* quorumInstantSendManager;
 
-bool IsInstantSendEnabled();
+bool IsInstantSendEnabled(const CSporkManager& sporkManager);
 /**
  * If true, MN should sign all transactions, if false, MN should not sign
  * transactions in mempool, but should sign txes included in a block. This
  * allows ChainLocks to continue even while this spork is disabled.
  */
-bool IsInstantSendMempoolSigningEnabled();
-bool RejectConflictingBlocks();
+bool IsInstantSendMempoolSigningEnabled(const CSporkManager& sporkManager);
+bool RejectConflictingBlocks(const CSporkManager& sporkManager);
 
 } // namespace llmq
 

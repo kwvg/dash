@@ -22,8 +22,6 @@
 
 #include <string>
 
-CSporkManager sporkManager;
-
 bool CSporkManager::SporkValueIsActive(SporkId nSporkID, int64_t& nActiveValueRet) const
 {
     AssertLockHeld(cs);

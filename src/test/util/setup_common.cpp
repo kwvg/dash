@@ -157,8 +157,11 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
 
     pblocktree.reset(new CBlockTreeDB(1 << 20, true));
 
+    m_node.ctx = std::make_unique<dash::Context>();
+    m_node.ctx->sporkManager = std::make_unique<CSporkManager>();
+
     m_node.chainman = &::g_chainman;
-    m_node.chainman->InitializeChainstate();
+    m_node.chainman->InitializeChainstate(*m_node.ctx);
     ::ChainstateActive().InitCoinsDB(
         /* cache_size_bytes */ 1 << 23, /* in_memory */ true, /* should_wipe */ false);
     assert(!::ChainstateActive().CanFlushToDisk());
@@ -190,7 +193,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     }
 
     deterministicMNManager.reset(new CDeterministicMNManager(*evoDb, *m_node.connman));
-    llmq::InitLLMQSystem(*evoDb, *m_node.mempool, *m_node.connman, true);
+    llmq::InitLLMQSystem(*evoDb, *m_node.mempool, *m_node.connman, *m_node.ctx, true);
 }
 
 TestingSetup::~TestingSetup()
@@ -213,6 +216,8 @@ TestingSetup::~TestingSetup()
     llmq::DestroyLLMQSystem();
     m_node.chainman->Reset();
     m_node.chainman = nullptr;
+    m_node.ctx->sporkManager.reset();
+    m_node.ctx.reset();
     pblocktree.reset();
 }
 

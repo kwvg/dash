@@ -15,6 +15,7 @@
 #include <masternode/node.h>
 #include <net_processing.h>
 #include <netmessagemaker.h>
+#include <node/context.h>
 #include <spork.h>
 #include <util/irange.h>
 
@@ -215,7 +216,7 @@ void CSigSharesManager::InterruptWorkerThread()
     workInterrupt();
 }
 
-void CSigSharesManager::ProcessMessage(const CNode* pfrom, const std::string& msg_type, CDataStream& vRecv)
+void CSigSharesManager::ProcessMessage(const CSporkManager& sporkManager, const CNode* pfrom, const std::string& msg_type, CDataStream& vRecv)
 {
     // non-masternodes are not interested in sigshares
     if (!fMasternodeMode || WITH_LOCK(activeMasternodeInfoCs, return activeMasternodeInfo.proTxHash.IsNull())) {
@@ -697,7 +698,7 @@ void CSigSharesManager::ProcessSigShare(const CSigShare& sigShare, const CConnma
 
     // prepare node set for direct-push in case this is our sig share
     std::set<NodeId> quorumNodes;
-    if (!CLLMQUtils::IsAllMembersConnectedEnabled(llmqType) && sigShare.getQuorumMember() == quorum->GetMemberIndex(WITH_LOCK(activeMasternodeInfoCs, return activeMasternodeInfo.proTxHash))) {
+    if (!CLLMQUtils::IsAllMembersConnectedEnabled(llmqType, *ctx.sporkManager) && sigShare.getQuorumMember() == quorum->GetMemberIndex(WITH_LOCK(activeMasternodeInfoCs, return activeMasternodeInfo.proTxHash))) {
         quorumNodes = connman.GetMasternodeQuorumNodes(sigShare.getLlmqType(), sigShare.getQuorumHash());
     }
 
@@ -711,7 +712,7 @@ void CSigSharesManager::ProcessSigShare(const CSigShare& sigShare, const CConnma
         if (!sigShares.Add(sigShare.GetKey(), sigShare)) {
             return;
         }
-        if (!CLLMQUtils::IsAllMembersConnectedEnabled(llmqType)) {
+        if (!CLLMQUtils::IsAllMembersConnectedEnabled(llmqType, *ctx.sporkManager)) {
             sigSharesQueuedToAnnounce.Add(sigShare.GetKey(), true);
         }
 
@@ -856,7 +857,7 @@ void CSigSharesManager::CollectSigSharesToRequest(std::unordered_map<NodeId, std
         decltype(sigSharesToRequest.begin()->second)* invMap = nullptr;
 
         for (auto& [signHash, session] : nodeState.sessions) {
-            if (CLLMQUtils::IsAllMembersConnectedEnabled(session.llmqType)) {
+            if (CLLMQUtils::IsAllMembersConnectedEnabled(session.llmqType, *ctx.sporkManager)) {
                 continue;
             }
 
@@ -925,7 +926,7 @@ void CSigSharesManager::CollectSigSharesToSend(std::unordered_map<NodeId, std::u
         decltype(sigSharesToSend.begin()->second)* sigSharesToSend2 = nullptr;
 
         for (auto& [signHash, session] : nodeState.sessions) {
-            if (CLLMQUtils::IsAllMembersConnectedEnabled(session.llmqType)) {
+            if (CLLMQUtils::IsAllMembersConnectedEnabled(session.llmqType, *ctx.sporkManager)) {
                 continue;
             }
 
@@ -979,7 +980,7 @@ void CSigSharesManager::CollectSigSharesToSendConcentrated(std::unordered_map<No
     auto curTime = GetTime<std::chrono::milliseconds>().count();
 
     for (auto& [_, signedSession] : signedSessions) {
-        if (!CLLMQUtils::IsAllMembersConnectedEnabled(signedSession.quorum->params.type)) {
+        if (!CLLMQUtils::IsAllMembersConnectedEnabled(signedSession.quorum->params.type, *ctx.sporkManager)) {
             continue;
         }
 
@@ -1481,7 +1482,7 @@ void CSigSharesManager::SignPendingSigShares()
             auto sigShare = *opt_sigShare;
             ProcessSigShare(sigShare, connman, pQuorum);
 
-            if (CLLMQUtils::IsAllMembersConnectedEnabled(pQuorum->params.type)) {
+            if (CLLMQUtils::IsAllMembersConnectedEnabled(pQuorum->params.type, *ctx.sporkManager)) {
                 LOCK(cs);
                 auto& session = signedSessions[sigShare.GetSignHash()];
                 session.sigShare = sigShare;
@@ -1535,7 +1536,7 @@ std::optional<CSigShare> CSigSharesManager::CreateSigShare(const CQuorumCPtr& qu
 // causes all known sigShares to be re-announced
 void CSigSharesManager::ForceReAnnouncement(const CQuorumCPtr& quorum, Consensus::LLMQType llmqType, const uint256& id, const uint256& msgHash)
 {
-    if (CLLMQUtils::IsAllMembersConnectedEnabled(llmqType)) {
+    if (CLLMQUtils::IsAllMembersConnectedEnabled(llmqType, *ctx.sporkManager)) {
         return;
     }
 

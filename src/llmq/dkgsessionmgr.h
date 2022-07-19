@@ -13,6 +13,8 @@
 class UniValue;
 class CBlockIndex;
 
+namespace dash { struct Context; }
+
 namespace llmq
 {
 
@@ -24,6 +26,7 @@ private:
     std::unique_ptr<CDBWrapper> db{nullptr};
     CBLSWorker& blsWorker;
     CConnman& connman;
+    dash::Context& ctx;
 
     //TODO name struct instead of std::pair
     std::map<std::pair<Consensus::LLMQType, int>, CDKGSessionHandler> dkgSessionHandlers;
@@ -48,7 +51,7 @@ private:
     mutable std::map<ContributionsCacheKey, ContributionsCacheEntry> contributionsCache GUARDED_BY(contributionsCacheCs);
 
 public:
-    CDKGSessionManager(CConnman& _connman, CBLSWorker& _blsWorker, bool unitTests, bool fWipe);
+    CDKGSessionManager(CConnman& _connman, CBLSWorker& _blsWorker, dash::Context& _ctx, bool unitTests, bool fWipe);
     ~CDKGSessionManager() = default;
 
     void StartThreads();
@@ -79,7 +82,7 @@ private:
     void CleanupCache() const;
 };
 
-bool IsQuorumDKGEnabled();
+bool IsQuorumDKGEnabled(const CSporkManager& sporkManager);
 
 extern CDKGSessionManager* quorumDKGSessionManager;
 

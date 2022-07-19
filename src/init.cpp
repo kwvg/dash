@@ -266,7 +266,7 @@ void PrepareShutdown(NodeContext& node)
         CFlatDB<CNetFulfilledRequestManager> flatdb4("netfulfilled.dat", "magicFulfilledCache");
         flatdb4.Dump(netfulfilledman);
         CFlatDB<CSporkManager> flatdb6("sporks.dat", "magicSporkCache");
-        flatdb6.Dump(sporkManager);
+        flatdb6.Dump(*node.ctx->sporkManager);
         if (!fDisableGovernance) {
             CFlatDB<CGovernanceManager> flatdb3("governance.dat", "magicGovernanceCache");
             flatdb3.Dump(governance);
@@ -1693,27 +1693,35 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
         StartScriptCheckWorkerThreads(script_threads);
     }
 
-    std::vector<std::string> vSporkAddresses;
-    if (args.IsArgSet("-sporkaddr")) {
-        vSporkAddresses = args.GetArgs("-sporkaddr");
-    } else {
-        vSporkAddresses = Params().SporkAddresses();
-    }
-    for (const auto& address: vSporkAddresses) {
-        if (!sporkManager.SetSporkAddress(address)) {
-            return InitError(_("Invalid spork address specified with -sporkaddr"));
+    assert(!node.ctx);
+    node.ctx = std::make_unique<dash::Context>();
+
+    assert(!node.ctx->sporkManager);
+    node.ctx->sporkManager = std::make_unique<CSporkManager>();
+    {
+        CSporkManager& sporkManager = *node.ctx->sporkManager;
+
+        std::vector<std::string> vSporkAddresses;
+        if (args.IsArgSet("-sporkaddr")) {
+            vSporkAddresses = args.GetArgs("-sporkaddr");
+        } else {
+            vSporkAddresses = Params().SporkAddresses();
         }
-    }
+        for (const auto& address: vSporkAddresses) {
+            if (!sporkManager.SetSporkAddress(address)) {
+                return InitError(_("Invalid spork address specified with -sporkaddr"));
+            }
+        }
 
-    int minsporkkeys = args.GetArg("-minsporkkeys", Params().MinSporkKeys());
-    if (!sporkManager.SetMinSporkKeys(minsporkkeys)) {
-        return InitError(_("Invalid minimum number of spork signers specified with -minsporkkeys"));
-    }
+        int minsporkkeys = args.GetArg("-minsporkkeys", Params().MinSporkKeys());
+        if (!sporkManager.SetMinSporkKeys(minsporkkeys)) {
+            return InitError(_("Invalid minimum number of spork signers specified with -minsporkkeys"));
+        }
 
-
-    if (args.IsArgSet("-sporkkey")) { // spork priv key
-        if (!sporkManager.SetPrivKey(args.GetArg("-sporkkey", ""))) {
-            return InitError(_("Unable to sign spork message, wrong key?"));
+        if (args.IsArgSet("-sporkkey")) { // spork priv key
+            if (!sporkManager.SetPrivKey(args.GetArg("-sporkkey", ""))) {
+                return InitError(_("Unable to sign spork message, wrong key?"));
+            }
         }
     }
 
@@ -1925,7 +1933,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     uiInterface.InitMessage(_("Loading sporks cache...").translated);
     CFlatDB<CSporkManager> flatdb6("sporks.dat", "magicSporkCache");
-    if (!flatdb6.Load(sporkManager)) {
+    if (!flatdb6.Load(*node.ctx->sporkManager)) {
         return InitError(strprintf(_("Failed to load sporks cache from %s"), (GetDataDir() / "sporks.dat").string()));
     }
 
@@ -1984,7 +1992,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
             try {
                 LOCK(cs_main);
-                chainman.InitializeChainstate();
+                chainman.InitializeChainstate(*node.ctx);
                 chainman.m_total_coinstip_cache = nCoinCacheUsage;
                 chainman.m_total_coinsdb_cache = nCoinDBCache;
 
@@ -2002,8 +2010,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
                 deterministicMNManager.reset(new CDeterministicMNManager(*evoDb, *node.connman));
                 llmq::quorumSnapshotManager.reset();
                 llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(*evoDb));
-
-                llmq::InitLLMQSystem(*evoDb, *node.mempool, *node.connman, false, fReset || fReindexChainState);
+                llmq::InitLLMQSystem(*evoDb, *node.mempool, *node.connman, *node.ctx, false, fReset || fReindexChainState);
 
                 if (fReset) {
                     pblocktree->WriteReindexing(true);

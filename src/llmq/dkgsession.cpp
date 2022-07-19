@@ -15,6 +15,7 @@
 #include <masternode/meta.h>
 #include <chainparams.h>
 #include <netmessagemaker.h>
+#include <node/context.h>
 #include <univalue.h>
 #include <validation.h>
 
@@ -445,7 +446,7 @@ void CDKGSession::VerifyAndComplain(CDKGPendingMessages& pendingMessages)
 
 void CDKGSession::VerifyConnectionAndMinProtoVersions() const
 {
-    if (!CLLMQUtils::IsQuorumPoseEnabled(params.type)) {
+    if (!CLLMQUtils::IsQuorumPoseEnabled(params.type, *ctx.sporkManager)) {
         return;
     }
 
@@ -460,7 +461,7 @@ void CDKGSession::VerifyConnectionAndMinProtoVersions() const
         protoMap.emplace(verifiedProRegTxHash, pnode->nVersion);
     });
 
-    bool fShouldAllMembersBeConnected = CLLMQUtils::IsAllMembersConnectedEnabled(params.type);
+    bool fShouldAllMembersBeConnected = CLLMQUtils::IsAllMembersConnectedEnabled(params.type, *ctx.sporkManager);
     for (const auto& m : members) {
         if (m->dmn->proTxHash == myProTxHash) {
             continue;

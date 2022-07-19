@@ -26,6 +26,8 @@ class WalletClient;
 
 namespace dash {
 struct Context {
+    std::unique_ptr<CSporkManager> sporkManager;
+
     //! Declare default constructor and destructor that are not inline, so code
     //! instantiating the Context struct doesn't need to #include class
     //! definitions for all the unique_ptr members.
