@@ -4,15 +4,22 @@
 
 #include <node/context.h>
 
+#include <bls/bls_worker.h>
 #include <banman.h>
 #include <interfaces/chain.h>
 #include <net.h>
 #include <net_processing.h>
 #include <scheduler.h>
 
-#include <llmq/debug.h>
 #include <llmq/blockprocessor.h>
+#include <llmq/chainlocks.h>
 #include <llmq/commitment.h>
+#include <llmq/debug.h>
+#include <llmq/dkgsessionmgr.h>
+#include <llmq/init.h>
+#include <llmq/instantsend.h>
+#include <llmq/signing_shares.h>
+#include <llmq/quorums.h>
 
 NodeContext::NodeContext() {}
 NodeContext::~NodeContext() {}

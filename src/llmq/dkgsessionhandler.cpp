@@ -491,9 +491,9 @@ void CDKGSessionHandler::HandleDKGRound()
         return changed;
     });
 
-    CLLMQUtils::EnsureQuorumConnections(params, pQuorumBaseBlockIndex, connman, curSession->myProTxHash);
+    CLLMQUtils::EnsureQuorumConnections(params, pQuorumBaseBlockIndex, *ctx.quorumManager, connman, curSession->myProTxHash);
     if (curSession->AreWeMember()) {
-        CLLMQUtils::AddQuorumProbeConnections(params, pQuorumBaseBlockIndex, connman, curSession->myProTxHash);
+        CLLMQUtils::AddQuorumProbeConnections(params, pQuorumBaseBlockIndex, *ctx.quorumManager, connman, curSession->myProTxHash);
     }
 
     WaitForNextPhase(QuorumPhase::Initialized, QuorumPhase::Contribute, curQuorumHash);
