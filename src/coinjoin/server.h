@@ -11,6 +11,8 @@
 class CCoinJoinServer;
 class UniValue;
 
+namespace llmq { struct Context; }
+
 // The main object for accessing mixing
 extern CCoinJoinServer coinJoinServer;
 
@@ -26,7 +28,7 @@ private:
     bool fUnitTest;
 
     /// Add a clients entry to the pool
-    bool AddEntry(CConnman& connman, const llmq::CInstantSendManager& instantSendManager, const CCoinJoinEntry& entry, PoolMessage& nMessageIDRet) LOCKS_EXCLUDED(cs_coinjoin);
+    bool AddEntry(CConnman& connman, const llmq::Context& ctx, const CCoinJoinEntry& entry, PoolMessage& nMessageIDRet) LOCKS_EXCLUDED(cs_coinjoin);
     /// Add signature to a txin
     bool AddScriptSig(const CTxIn& txin) LOCKS_EXCLUDED(cs_coinjoin);
 
@@ -38,15 +40,15 @@ private:
     void ConsumeCollateral(CConnman& connman, const CTransactionRef& txref) const;
 
     /// Check for process
-    void CheckPool(CConnman& connman);
+    void CheckPool(CConnman& connman, llmq::Context& ctx);
 
     void CreateFinalTransaction(CConnman& connman) LOCKS_EXCLUDED(cs_coinjoin);
-    void CommitFinalTransaction(CConnman& connman) LOCKS_EXCLUDED(cs_coinjoin);
+    void CommitFinalTransaction(CConnman& connman, llmq::Context& ctx) LOCKS_EXCLUDED(cs_coinjoin);
 
     /// Is this nDenom and txCollateral acceptable?
-    bool IsAcceptableDSA(llmq::CInstantSendManager& instantSendManager, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet) const;
-    bool CreateNewSession(llmq::CInstantSendManager& instantSendManager, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet, CConnman& connman) LOCKS_EXCLUDED(cs_vecqueue);
-    bool AddUserToExistingSession(llmq::CInstantSendManager& instantSendManager, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet);
+    bool IsAcceptableDSA(llmq::Context& ctx, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet) const;
+    bool CreateNewSession(llmq::Context& ctx, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet, CConnman& connman) LOCKS_EXCLUDED(cs_vecqueue);
+    bool AddUserToExistingSession(llmq::Context& ctx, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet);
     /// Do we have enough users to take entries?
     bool IsSessionReady() const;
 
@@ -64,10 +66,10 @@ private:
     void RelayStatus(PoolStatusUpdate nStatusUpdate, CConnman& connman, PoolMessage nMessageID = MSG_NOERR) EXCLUSIVE_LOCKS_REQUIRED(cs_coinjoin);
     void RelayCompletedTransaction(PoolMessage nMessageID, CConnman& connman) LOCKS_EXCLUDED(cs_coinjoin);
 
-    void ProcessDSACCEPT(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61) LOCKS_EXCLUDED(cs_vecqueue);
-    void ProcessDSQUEUE(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61) LOCKS_EXCLUDED(cs_vecqueue);
-    void ProcessDSVIN(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61) LOCKS_EXCLUDED(cs_coinjoin);
-    void ProcessDSSIGNFINALTX(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61) LOCKS_EXCLUDED(cs_coinjoin);
+    void ProcessDSACCEPT(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::Context& ctx, bool enable_bip61) LOCKS_EXCLUDED(cs_vecqueue);
+    void ProcessDSQUEUE(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::Context& ctx, bool enable_bip61) LOCKS_EXCLUDED(cs_vecqueue);
+    void ProcessDSVIN(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::Context& ctx, bool enable_bip61) LOCKS_EXCLUDED(cs_coinjoin);
+    void ProcessDSSIGNFINALTX(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::Context& ctx, bool enable_bip61) LOCKS_EXCLUDED(cs_coinjoin);
 
     void SetNull() EXCLUSIVE_LOCKS_REQUIRED(cs_coinjoin);
 
@@ -76,13 +78,13 @@ public:
         vecSessionCollaterals(),
         fUnitTest(false) {}
 
-    void ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61);
+    void ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::Context& ctx, bool enable_bip61);
 
     bool HasTimedOut() const;
     void CheckTimeout(CConnman& connman);
     void CheckForCompleteQueue(CConnman& connman);
 
-    void DoMaintenance(CConnman& connman) const;
+    void DoMaintenance(CConnman& connman, llmq::Context& ctx) const;
 
     void GetJsonInfo(UniValue& obj) const;
 };

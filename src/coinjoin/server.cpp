@@ -26,26 +26,26 @@
 CCoinJoinServer coinJoinServer; // TODO deblogalize this!
 constexpr static CAmount DEFAULT_MAX_RAW_TX_FEE{COIN / 10};
 
-void CCoinJoinServer::ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61)
+void CCoinJoinServer::ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::Context& ctx, bool enable_bip61)
 {
     if (!fMasternodeMode) return;
     if (!masternodeSync.IsBlockchainSynced()) return;
 
     if (msg_type == NetMsgType::DSACCEPT) {
-        ProcessDSACCEPT(pfrom, msg_type, vRecv, connman, instantSendManager, enable_bip61);
+        ProcessDSACCEPT(pfrom, msg_type, vRecv, connman, ctx, enable_bip61);
         return;
     } else if (msg_type == NetMsgType::DSQUEUE) {
-        ProcessDSQUEUE(pfrom, msg_type, vRecv, connman, instantSendManager, enable_bip61);
+        ProcessDSQUEUE(pfrom, msg_type, vRecv, connman, ctx, enable_bip61);
         return;
     } else if (msg_type == NetMsgType::DSVIN) {
-        ProcessDSVIN(pfrom, msg_type, vRecv, connman, instantSendManager, enable_bip61);
+        ProcessDSVIN(pfrom, msg_type, vRecv, connman, ctx, enable_bip61);
         return;
     } else if (msg_type == NetMsgType::DSSIGNFINALTX) {
-        ProcessDSSIGNFINALTX(pfrom, msg_type, vRecv, connman, instantSendManager, enable_bip61);
+        ProcessDSSIGNFINALTX(pfrom, msg_type, vRecv, connman, ctx, enable_bip61);
     }
 }
 
-void CCoinJoinServer::ProcessDSACCEPT(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61)
+void CCoinJoinServer::ProcessDSACCEPT(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::Context& ctx, bool enable_bip61)
 {
     if (IsSessionReady()) {
         // too many users in this session already, reject new ones
@@ -97,8 +97,8 @@ void CCoinJoinServer::ProcessDSACCEPT(CNode* pfrom, const std::string& msg_type,
 
     PoolMessage nMessageID = MSG_NOERR;
 
-    bool fResult = nSessionID == 0 ? CreateNewSession(instantSendManager, dsa, nMessageID, connman)
-            : AddUserToExistingSession(instantSendManager, dsa, nMessageID);
+    bool fResult = nSessionID == 0 ? CreateNewSession(ctx, dsa, nMessageID, connman)
+            : AddUserToExistingSession(ctx, dsa, nMessageID);
     if (fResult) {
         LogPrint(BCLog::COINJOIN, "DSACCEPT -- is compatible, please submit!\n");
         PushStatus(pfrom, STATUS_ACCEPTED, nMessageID, connman);
@@ -110,7 +110,7 @@ void CCoinJoinServer::ProcessDSACCEPT(CNode* pfrom, const std::string& msg_type,
     }
 }
 
-void CCoinJoinServer::ProcessDSQUEUE(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61)
+void CCoinJoinServer::ProcessDSQUEUE(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::Context& ctx, bool enable_bip61)
 {
     CCoinJoinQueue dsq;
     vRecv >> dsq;
@@ -166,7 +166,7 @@ void CCoinJoinServer::ProcessDSQUEUE(CNode* pfrom, const std::string& msg_type, 
     }
 }
 
-void CCoinJoinServer::ProcessDSVIN(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61)
+void CCoinJoinServer::ProcessDSVIN(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::Context& ctx, bool enable_bip61)
 {
     //do we have enough users in the current session?
     if (!IsSessionReady()) {
@@ -183,9 +183,9 @@ void CCoinJoinServer::ProcessDSVIN(CNode* pfrom, const std::string& msg_type, CD
     PoolMessage nMessageID = MSG_NOERR;
 
     entry.addr = pfrom->addr;
-    if (AddEntry(connman, instantSendManager, entry, nMessageID)) {
+    if (AddEntry(connman, ctx, entry, nMessageID)) {
         PushStatus(pfrom, STATUS_ACCEPTED, nMessageID, connman);
-        CheckPool(connman);
+        CheckPool(connman, ctx);
         LOCK(cs_coinjoin);
         RelayStatus(STATUS_ACCEPTED, connman);
     } else {
@@ -193,7 +193,7 @@ void CCoinJoinServer::ProcessDSVIN(CNode* pfrom, const std::string& msg_type, CD
     }
 }
 
-void CCoinJoinServer::ProcessDSSIGNFINALTX(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61)
+void CCoinJoinServer::ProcessDSSIGNFINALTX(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::Context& ctx, bool enable_bip61)
 {
     std::vector<CTxIn> vecTxIn;
     vRecv >> vecTxIn;
@@ -214,7 +214,7 @@ void CCoinJoinServer::ProcessDSSIGNFINALTX(CNode* pfrom, const std::string& msg_
         LogPrint(BCLog::COINJOIN, "DSSIGNFINALTX -- AddScriptSig() %d/%d success\n", nTxInIndex, nTxInsCount);
     }
     // all is good
-    CheckPool(connman);
+    CheckPool(connman, ctx);
 }
 
 void CCoinJoinServer::SetNull()
@@ -230,7 +230,7 @@ void CCoinJoinServer::SetNull()
 //
 // Check the mixing progress and send client updates if a Masternode
 //
-void CCoinJoinServer::CheckPool(CConnman& connman)
+void CCoinJoinServer::CheckPool(CConnman& connman, llmq::Context& ctx)
 {
     if (!fMasternodeMode) return;
 
@@ -257,7 +257,7 @@ void CCoinJoinServer::CheckPool(CConnman& connman)
     // If we have all the signatures, try to compile the transaction
     if (nState == POOL_STATE_SIGNING && IsSignaturesComplete()) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::CheckPool -- SIGNING\n");
-        CommitFinalTransaction(connman);
+        CommitFinalTransaction(connman, ctx);
         return;
     }
 }
@@ -292,7 +292,7 @@ void CCoinJoinServer::CreateFinalTransaction(CConnman& connman)
     RelayFinalTransaction(CTransaction(finalMutableTransaction), connman);
 }
 
-void CCoinJoinServer::CommitFinalTransaction(CConnman& connman)
+void CCoinJoinServer::CommitFinalTransaction(CConnman& connman, llmq::Context& ctx)
 {
     AssertLockNotHeld(cs_coinjoin);
     if (!fMasternodeMode) return; // check and relay final tx only on masternode
@@ -307,7 +307,7 @@ void CCoinJoinServer::CommitFinalTransaction(CConnman& connman)
         TRY_LOCK(cs_main, lockMain);
         CValidationState validationState;
         mempool.PrioritiseTransaction(hashTx, 0.1 * COIN);
-        if (!lockMain || !AcceptToMemoryPool(mempool, validationState, finalTransaction, nullptr /* pfMissingInputs */, false /* bypass_limits */, DEFAULT_MAX_RAW_TX_FEE /* nAbsurdFee */)) {
+        if (!lockMain || !AcceptToMemoryPool(mempool, validationState, ctx, finalTransaction, nullptr /* pfMissingInputs */, false /* bypass_limits */, DEFAULT_MAX_RAW_TX_FEE /* nAbsurdFee */)) {
             LogPrint(BCLog::COINJOIN, "CCoinJoinServer::CommitFinalTransaction -- AcceptToMemoryPool() error: Transaction not valid\n");
             WITH_LOCK(cs_coinjoin, SetNull());
             // not much we can do in this case, just notify clients
@@ -542,7 +542,7 @@ bool CCoinJoinServer::IsInputScriptSigValid(const CTxIn& txin) const
 //
 // Add a client's transaction inputs/outputs to the pool
 //
-bool CCoinJoinServer::AddEntry(CConnman& connman, const llmq::CInstantSendManager& instantSendManager, const CCoinJoinEntry& entry, PoolMessage& nMessageIDRet)
+bool CCoinJoinServer::AddEntry(CConnman& connman, const llmq::Context& ctx, const CCoinJoinEntry& entry, PoolMessage& nMessageIDRet)
 {
     AssertLockNotHeld(cs_coinjoin);
     if (!fMasternodeMode) return false;
@@ -553,7 +553,7 @@ bool CCoinJoinServer::AddEntry(CConnman& connman, const llmq::CInstantSendManage
         return false;
     }
 
-    if (!CCoinJoin::IsCollateralValid(instantSendManager, *entry.txCollateral)) {
+    if (!CCoinJoin::IsCollateralValid(ctx, *entry.txCollateral)) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::%s -- ERROR: collateral not valid!\n", __func__);
         nMessageIDRet = ERR_INVALID_COLLATERAL;
         return false;
@@ -587,7 +587,7 @@ bool CCoinJoinServer::AddEntry(CConnman& connman, const llmq::CInstantSendManage
     }
 
     bool fConsumeCollateral{false};
-    if (!IsValidInOuts(instantSendManager, vin, entry.vecTxOut, nMessageIDRet, &fConsumeCollateral)) {
+    if (!IsValidInOuts(ctx, vin, entry.vecTxOut, nMessageIDRet, &fConsumeCollateral)) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::%s -- ERROR! IsValidInOuts() failed: %s\n", __func__, CCoinJoin::GetMessageByID(nMessageIDRet).translated);
         if (fConsumeCollateral) {
             ConsumeCollateral(connman, entry.txCollateral);
@@ -652,7 +652,7 @@ bool CCoinJoinServer::IsSignaturesComplete() const
     });
 }
 
-bool CCoinJoinServer::IsAcceptableDSA(llmq::CInstantSendManager& instantSendManager, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet) const
+bool CCoinJoinServer::IsAcceptableDSA(llmq::Context& ctx, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet) const
 {
     if (!fMasternodeMode) return false;
 
@@ -664,7 +664,7 @@ bool CCoinJoinServer::IsAcceptableDSA(llmq::CInstantSendManager& instantSendMana
     }
 
     // check collateral
-    if (!fUnitTest && !CCoinJoin::IsCollateralValid(instantSendManager, CTransaction(dsa.txCollateral))) {
+    if (!fUnitTest && !CCoinJoin::IsCollateralValid(ctx, CTransaction(dsa.txCollateral))) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::%s -- collateral not valid!\n", __func__);
         nMessageIDRet = ERR_INVALID_COLLATERAL;
         return false;
@@ -673,7 +673,7 @@ bool CCoinJoinServer::IsAcceptableDSA(llmq::CInstantSendManager& instantSendMana
     return true;
 }
 
-bool CCoinJoinServer::CreateNewSession(llmq::CInstantSendManager& instantSendManager, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet, CConnman& connman)
+bool CCoinJoinServer::CreateNewSession(llmq::Context& ctx, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet, CConnman& connman)
 {
     if (!fMasternodeMode || nSessionID != 0) return false;
 
@@ -684,7 +684,7 @@ bool CCoinJoinServer::CreateNewSession(llmq::CInstantSendManager& instantSendMan
         return false;
     }
 
-    if (!IsAcceptableDSA(instantSendManager, dsa, nMessageIDRet)) {
+    if (!IsAcceptableDSA(ctx, dsa, nMessageIDRet)) {
         return false;
     }
 
@@ -712,11 +712,11 @@ bool CCoinJoinServer::CreateNewSession(llmq::CInstantSendManager& instantSendMan
     return true;
 }
 
-bool CCoinJoinServer::AddUserToExistingSession(llmq::CInstantSendManager& instantSendManager, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet)
+bool CCoinJoinServer::AddUserToExistingSession(llmq::Context& ctx, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet)
 {
     if (!fMasternodeMode || nSessionID == 0 || IsSessionReady()) return false;
 
-    if (!IsAcceptableDSA(instantSendManager, dsa, nMessageIDRet)) {
+    if (!IsAcceptableDSA(ctx, dsa, nMessageIDRet)) {
         return false;
     }
 
@@ -863,14 +863,14 @@ void CCoinJoinServer::SetState(PoolState nStateNew)
     nState = nStateNew;
 }
 
-void CCoinJoinServer::DoMaintenance(CConnman& connman) const
+void CCoinJoinServer::DoMaintenance(CConnman& connman, llmq::Context& ctx) const
 {
     if (!fMasternodeMode) return; // only run on masternodes
 
     if (!masternodeSync.IsBlockchainSynced() || ShutdownRequested()) return;
 
     coinJoinServer.CheckForCompleteQueue(connman);
-    coinJoinServer.CheckPool(connman);
+    coinJoinServer.CheckPool(connman, ctx);
     coinJoinServer.CheckTimeout(connman);
 }
 

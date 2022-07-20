@@ -112,7 +112,7 @@ bool ProcessSpecialTxsInBlock(const llmq::Context& ctx, const CBlock& block, con
         int64_t nTime1 = GetTimeMicros();
 
         for (const auto& ptr_tx : block.vtx) {
-            if (!CheckSpecialTx(*ctx.quorumSigningManager, *ptr_tx, pindex->pprev, state, view, fCheckCbTxMerleRoots)) {
+            if (!CheckSpecialTx(ctx, *ptr_tx, pindex->pprev, state, view, fCheckCbTxMerleRoots)) {
                 // pass the state returned by the function above
                 return false;
             }
@@ -176,7 +176,7 @@ bool UndoSpecialTxsInBlock(const llmq::Context& ctx, const CBlock& block, const 
             return false;
         }
 
-        if (!*ctx.quorumBlockProcessor.UndoBlock(block, pindex)) {
+        if (!ctx.quorumBlockProcessor->UndoBlock(block, pindex)) {
             return false;
         }
     } catch (const std::exception& e) {

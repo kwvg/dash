@@ -23,6 +23,8 @@ class CNode;
 
 class UniValue;
 
+namespace llmq { struct Context; }
+
 
 // The main object for accessing mixing
 extern std::map<const std::string, std::shared_ptr<CCoinJoinClientManager>> coinJoinClientManagers;
@@ -134,7 +136,7 @@ public:
     bool GetMixingMasternodeInfo(CDeterministicMNCPtr& ret) const;
 
     /// Passively run mixing in the background according to the configuration in settings
-    bool DoAutomaticDenominating(CConnman& connman, bool fDryRun = false) LOCKS_EXCLUDED(cs_coinjoin);
+    bool DoAutomaticDenominating(CConnman& connman, llmq::Context& ctx, bool fDryRun = false) LOCKS_EXCLUDED(cs_coinjoin);
 
     /// As a client, submit part of a future mixing transaction to a Masternode to start the process
     bool SubmitDenominate(CConnman& connman);
@@ -232,6 +234,6 @@ public:
 };
 
 
-void DoCoinJoinMaintenance(CConnman& connman);
+void DoCoinJoinMaintenance(CConnman& connman, llmq::Context& ctx);
 
 #endif // BITCOIN_COINJOIN_CLIENT_H

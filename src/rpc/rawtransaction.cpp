@@ -908,6 +908,7 @@ static UniValue testmempoolaccept(const JSONRPCRequest& request)
     }
 
     CTxMemPool& mempool = EnsureMemPool(request.context);
+    llmq::Context& llmq_ctx = EnsureLLMQContext(request.context);
 
     UniValue result(UniValue::VARR);
     UniValue result_0(UniValue::VOBJ);
@@ -918,7 +919,7 @@ static UniValue testmempoolaccept(const JSONRPCRequest& request)
     bool test_accept_res;
     {
         LOCK(cs_main);
-        test_accept_res = AcceptToMemoryPool(mempool, state, std::move(tx), &missing_inputs,
+        test_accept_res = AcceptToMemoryPool(mempool, state, llmq_ctx, std::move(tx), &missing_inputs,
             false /* bypass_limits */, max_raw_tx_fee, /* test_accept */ true);
     }
     result_0.pushKV("allowed", test_accept_res);

@@ -212,7 +212,7 @@ std::string CCoinJoinBaseSession::GetStateString() const
     }
 }
 
-bool CCoinJoinBaseSession::IsValidInOuts(const llmq::CInstantSendManager& instantSendManager, const std::vector<CTxIn>& vin, const std::vector<CTxOut>& vout, PoolMessage& nMessageIDRet, bool* fConsumeCollateralRet) const
+bool CCoinJoinBaseSession::IsValidInOuts(const llmq::Context& ctx, const std::vector<CTxIn>& vin, const std::vector<CTxOut>& vout, PoolMessage& nMessageIDRet, bool* fConsumeCollateralRet) const
 {
     std::set<CScript> setScripPubKeys;
     nMessageIDRet = MSG_NOERR;
@@ -274,7 +274,7 @@ bool CCoinJoinBaseSession::IsValidInOuts(const llmq::CInstantSendManager& instan
 
         Coin coin;
         if (!viewMemPool.GetCoin(txin.prevout, coin) || coin.IsSpent() ||
-            (coin.nHeight == MEMPOOL_HEIGHT && !instantSendManager.IsLocked(txin.prevout.hash))) {
+            (coin.nHeight == MEMPOOL_HEIGHT && !ctx.quorumInstantSendManager->IsLocked(txin.prevout.hash))) {
             LogPrint(BCLog::COINJOIN, "CCoinJoinBaseSession::%s -- ERROR: missing, spent or non-locked mempool input! txin=%s\n", __func__, txin.ToString());
             nMessageIDRet = ERR_MISSING_TX;
             return false;
@@ -303,7 +303,7 @@ Mutex CCoinJoin::cs_mapdstx;
 std::map<uint256, CCoinJoinBroadcastTx> CCoinJoin::mapDSTX GUARDED_BY(CCoinJoin::cs_mapdstx);
 
 // check to make sure the collateral provided by the client is valid
-bool CCoinJoin::IsCollateralValid(const llmq::CInstantSendManager& instantSendManager, const CTransaction& txCollateral)
+bool CCoinJoin::IsCollateralValid(const llmq::Context& ctx, const CTransaction& txCollateral)
 {
     if (txCollateral.vout.empty()) return false;
     if (txCollateral.nLockTime != 0) return false;
@@ -324,7 +324,7 @@ bool CCoinJoin::IsCollateralValid(const llmq::CInstantSendManager& instantSendMa
         Coin coin;
         auto mempoolTx = mempool.get(txin.prevout.hash);
         if (mempoolTx != nullptr) {
-            if (mempool.isSpent(txin.prevout) || !instantSendManager.IsLocked(txin.prevout.hash)) {
+            if (mempool.isSpent(txin.prevout) || !ctx.quorumInstantSendManager->IsLocked(txin.prevout.hash)) {
                 LogPrint(BCLog::COINJOIN, "CCoinJoin::IsCollateralValid -- spent or non-locked mempool input! txin=%s\n", txin.ToString());
                 return false;
             }
@@ -348,7 +348,7 @@ bool CCoinJoin::IsCollateralValid(const llmq::CInstantSendManager& instantSendMa
     {
         LOCK(cs_main);
         CValidationState validationState;
-        if (!AcceptToMemoryPool(mempool, validationState, MakeTransactionRef(txCollateral), /*pfMissingInputs=*/nullptr, /*bypass_limits=*/false, /*nAbsurdFee=*/DEFAULT_MAX_RAW_TX_FEE, /*test_accept=*/true)) {
+        if (!AcceptToMemoryPool(mempool, validationState, ctx, MakeTransactionRef(txCollateral), /*pfMissingInputs=*/nullptr, /*bypass_limits=*/false, /*nAbsurdFee=*/DEFAULT_MAX_RAW_TX_FEE, /*test_accept=*/true)) {
             LogPrint(BCLog::COINJOIN, "CCoinJoin::IsCollateralValid -- didn't pass AcceptToMemoryPool()\n");
             return false;
         }

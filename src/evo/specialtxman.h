@@ -17,6 +17,7 @@ class CValidationState;
 extern CCriticalSection cs_main;
 
 namespace llmq {
+    struct Context;
     class CSigningManager;
     class CQuorumBlockProcessor;
 }

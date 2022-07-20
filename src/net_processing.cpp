@@ -3323,7 +3323,7 @@ bool ProcessMessage(llmq::Context& ctx, CNode* pfrom, const std::string& msg_typ
         bool fMissingInputs = false;
         CValidationState state;
 
-        if (!AlreadyHave(node, inv, mempool) && AcceptToMemoryPool(mempool, state, ptx, &fMissingInputs /* pfMissingInputs */,
+        if (!AlreadyHave(node, inv, mempool) && AcceptToMemoryPool(mempool, state, ctx, ptx, &fMissingInputs /* pfMissingInputs */,
                 false /* bypass_limits */, 0 /* nAbsurdFee */)) {
             // Process custom txes, this changes AlreadyHave to "true"
             if (nInvType == MSG_DSTX) {

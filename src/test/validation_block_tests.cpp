@@ -294,6 +294,7 @@ BOOST_AUTO_TEST_CASE(mempool_locks_reorg)
                 BOOST_REQUIRE(AcceptToMemoryPool(
                     ::mempool,
                     state,
+                    *m_node.llmq_ctx,
                     tx,
                     /* pfMissingInputs */ &ignored,
                     /* bypass_limits */ false,

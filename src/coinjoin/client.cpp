@@ -735,7 +735,7 @@ bool CCoinJoinClientManager::CheckAutomaticBackup()
 //
 // Passively run mixing in the background to mix funds based on the given configuration.
 //
-bool CCoinJoinClientSession::DoAutomaticDenominating(CConnman& connman, bool fDryRun)
+bool CCoinJoinClientSession::DoAutomaticDenominating(CConnman& connman, llmq::Context& ctx, bool fDryRun)
 {
     if (fMasternodeMode) return false; // no client-side mixing on masternodes
     if (nState != POOL_STATE_IDLE) return false;
@@ -888,7 +888,7 @@ bool CCoinJoinClientSession::DoAutomaticDenominating(CConnman& connman, bool fDr
                 return false;
             }
         } else {
-            if (!CCoinJoin::IsCollateralValid(CTransaction(txMyCollateral))) {
+            if (!CCoinJoin::IsCollateralValid(ctx, CTransaction(txMyCollateral))) {
                 LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::DoAutomaticDenominating -- invalid collateral, recreating...\n");
                 if (!CreateCollateralTransaction(txMyCollateral, strReason)) {
                     LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::DoAutomaticDenominating -- create collateral error: %s\n", strReason);
@@ -1843,11 +1843,11 @@ void CCoinJoinClientManager::GetJsonInfo(UniValue& obj) const
     obj.pushKV("sessions",  arrSessions);
 }
 
-void DoCoinJoinMaintenance(CConnman& connman)
+void DoCoinJoinMaintenance(CConnman& connman, llmq::Context& ctx)
 {
     coinJoinClientQueueManager.DoMaintenance();
     for (const auto& pair : coinJoinClientManagers) {
-        pair.second->DoMaintenance(connman);
+        pair.second->DoMaintenance(connman, ctx);
     }
 }
 

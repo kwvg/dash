@@ -1985,7 +1985,9 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
             try {
                 LOCK(cs_main);
-                chainman.InitializeChainstate();
+                node.llmq_ctx = std::make_unique<llmq::Context>(node, *evoDb, *node.mempool, *node.connman, false, fReset || fReindexChainState);
+
+                chainman.InitializeChainstate(*node.llmq_ctx);
                 chainman.m_total_coinstip_cache = nCoinCacheUsage;
                 chainman.m_total_coinsdb_cache = nCoinDBCache;
 
@@ -2003,7 +2005,6 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
                 deterministicMNManager.reset(new CDeterministicMNManager(*evoDb, *node.connman));
                 llmq::quorumSnapshotManager.reset();
                 llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(*evoDb));
-                node.llmq_ctx = std::make_unique<llmq::Context>(node, *evoDb, *node.mempool, *node.connman, false, fReset || fReindexChainState);
 
                 if (fReset) {
                     pblocktree->WriteReindexing(true);
@@ -2389,7 +2390,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
         node.scheduler->scheduleEvery(std::bind(&llmq::CDKGSessionManager::CleanupOldContributions, std::ref(*node.llmq_ctx->quorumDKGSessionManager)), 60 * 60 * 1000);
 #ifdef ENABLE_WALLET
     } else if(CCoinJoinClientOptions::IsEnabled()) {
-        node.scheduler->scheduleEvery(std::bind(&DoCoinJoinMaintenance, std::ref(*node.connman)), 1 * 1000);
+        node.scheduler->scheduleEvery(std::bind(&DoCoinJoinMaintenance, std::ref(*node.connman), std::ref(*node.llmq_ctx)), 1 * 1000);
 #endif // ENABLE_WALLET
     }
 

@@ -224,7 +224,7 @@ void UnlinkPrunedFiles(const std::set<int>& setFilesToPrune);
 void PruneBlockFilesManual(int nManualPruneHeight);
 
 /** (try to) add transaction to memory pool */
-bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransactionRef &tx, const llmq::Context& ctx
+bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const llmq::Context& ctx, const CTransactionRef &tx,
                         bool* pfMissingInputs, bool bypass_limits,
                         const CAmount nAbsurdFee, bool test_accept=false) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
@@ -532,8 +532,10 @@ private:
     //! Manages the UTXO set, which is a reflection of the contents of `m_chain`.
     std::unique_ptr<CoinsViews> m_coins_views;
 
+    //! Manages state
+    llmq::Context& m_ctx;
 public:
-    explicit CChainState(BlockManager& blockman, uint256 from_snapshot_blockhash = uint256());
+    explicit CChainState(BlockManager& blockman, llmq::Context& ctx, uint256 from_snapshot_blockhash = uint256());
 
     /**
      * Initialize the CoinsViews UTXO set database management data structures. The in-memory
@@ -845,7 +847,7 @@ public:
     //!
     //! @param[in] snapshot_blockhash   If given, signify that this chainstate
     //!                                 is based on a snapshot.
-    CChainState& InitializeChainstate(const uint256& snapshot_blockhash = uint256())
+    CChainState& InitializeChainstate(llmq::Context& ctx, const uint256& snapshot_blockhash = uint256())
         EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     //! Get all chainstates currently being used.
