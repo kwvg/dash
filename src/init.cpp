@@ -2321,7 +2321,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     // ********************************************************* Step 10b: setup CoinJoin
 
-    coinJoinServer = std::make_unique<CCoinJoinServer>();
+    coinJoinServer = std::make_unique<CCoinJoinServer>(*node.connman, *node.llmq_ctx);
     g_wallet_init_interface.InitCoinJoinSettings();
 
     // ********************************************************* Step 10b: Load cache data
@@ -2387,7 +2387,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     }
 
     if (fMasternodeMode) {
-        node.scheduler->scheduleEvery(std::bind(&CCoinJoinServer::DoMaintenance, std::ref(coinJoinServer), std::ref(*node.connman), std::ref(*node.llmq_ctx)), 1 * 1000);
+        node.scheduler->scheduleEvery(std::bind(&CCoinJoinServer::DoMaintenance, std::ref(coinJoinServer)), 1 * 1000);
         node.scheduler->scheduleEvery(std::bind(&llmq::CDKGSessionManager::CleanupOldContributions, std::ref(*node.llmq_ctx->quorumDKGSessionManager)), 60 * 60 * 1000);
 #ifdef ENABLE_WALLET
     } else if(CCoinJoinClientOptions::IsEnabled()) {

@@ -4114,7 +4114,7 @@ bool ProcessMessage(llmq::Context& ctx, CNode* pfrom, const std::string& msg_typ
             pair.second->ProcessMessage(pfrom, msg_type, vRecv, *connman, enable_bip61);
         }
 #endif // ENABLE_WALLET
-        coinJoinServer->ProcessMessage(pfrom, msg_type, vRecv, *connman, *ctx.quorumInstantSendManager, enable_bip61);
+        coinJoinServer->ProcessMessage(pfrom, msg_type, vRecv, enable_bip61);
         sporkManager.ProcessSporkMessages(pfrom, msg_type, vRecv, *connman);
         masternodeSync.ProcessMessage(pfrom, msg_type, vRecv);
         governance.ProcessMessage(pfrom, msg_type, vRecv, *connman, enable_bip61);
