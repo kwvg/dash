@@ -17,7 +17,7 @@
 #include <validation.h>
 #include <node/context.h>
 
-bool CheckSpecialTx(const llmq::CSigningManager& quorumSigningManager, const CTransaction& tx, const CBlockIndex* pindexPrev, CValidationState& state, const CCoinsViewCache& view, bool check_sigs)
+bool CheckSpecialTx(const llmq::Context& ctx, const CTransaction& tx, const CBlockIndex* pindexPrev, CValidationState& state, const CCoinsViewCache& view, bool check_sigs)
 {
     AssertLockHeld(cs_main);
 
@@ -41,9 +41,9 @@ bool CheckSpecialTx(const llmq::CSigningManager& quorumSigningManager, const CTr
         case TRANSACTION_COINBASE:
             return CheckCbTx(tx, pindexPrev, state);
         case TRANSACTION_QUORUM_COMMITMENT:
-            return llmq::CheckLLMQCommitment(tx, pindexPrev, state);
+            return llmq::CheckLLMQCommitment(tx, pindexPrev, state, *ctx.quorumManager);
         case TRANSACTION_MNHF_SIGNAL:
-            return VersionBitsTipState(Params().GetConsensus(), Consensus::DEPLOYMENT_DIP0024) == ThresholdState::ACTIVE && CheckMNHFTx(quorumSigningManager, tx, pindexPrev, state);
+            return VersionBitsTipState(Params().GetConsensus(), Consensus::DEPLOYMENT_DIP0024) == ThresholdState::ACTIVE && CheckMNHFTx(*ctx.quorumSigningManager, tx, pindexPrev, state);
         }
     } catch (const std::exception& e) {
         LogPrintf("%s -- failed: %s\n", __func__, e.what());
@@ -126,7 +126,7 @@ bool ProcessSpecialTxsInBlock(const llmq::Context& ctx, const CBlock& block, con
         nTimeLoop += nTime2 - nTime1;
         LogPrint(BCLog::BENCHMARK, "        - Loop: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1), nTimeLoop * 0.000001);
 
-        if (!ctx.quorumBlockProcessor->ProcessBlock(block, pindex, state, fJustCheck, fCheckCbTxMerleRoots)) {
+        if (!ctx.quorumBlockProcessor->ProcessBlock(block, pindex, *ctx.quorumManager, state, fJustCheck, fCheckCbTxMerleRoots)) {
             // pass the state returned by the function above
             return false;
         }
@@ -135,7 +135,7 @@ bool ProcessSpecialTxsInBlock(const llmq::Context& ctx, const CBlock& block, con
         nTimeQuorum += nTime3 - nTime2;
         LogPrint(BCLog::BENCHMARK, "        - quorumBlockProcessor: %.2fms [%.2fs]\n", 0.001 * (nTime3 - nTime2), nTimeQuorum * 0.000001);
 
-        if (!deterministicMNManager->ProcessBlock(block, pindex, state, view, fJustCheck)) {
+        if (!deterministicMNManager->ProcessBlock(block, pindex, state, view, *ctx.quorumManager, fJustCheck)) {
             // pass the state returned by the function above
             return false;
         }
@@ -160,7 +160,7 @@ bool ProcessSpecialTxsInBlock(const llmq::Context& ctx, const CBlock& block, con
     return true;
 }
 
-bool UndoSpecialTxsInBlock(llmq::CQuorumBlockProcessor& quorumBlockProcessor, const CBlock& block, const CBlockIndex* pindex)
+bool UndoSpecialTxsInBlock(const llmq::Context& ctx, const CBlock& block, const CBlockIndex* pindex)
 {
     AssertLockHeld(cs_main);
 
@@ -176,7 +176,7 @@ bool UndoSpecialTxsInBlock(llmq::CQuorumBlockProcessor& quorumBlockProcessor, co
             return false;
         }
 
-        if (!quorumBlockProcessor.UndoBlock(block, pindex)) {
+        if (!*ctx.quorumBlockProcessor.UndoBlock(block, pindex)) {
             return false;
         }
     } catch (const std::exception& e) {

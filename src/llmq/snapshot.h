@@ -205,7 +205,7 @@ public:
     void ToJson(UniValue& obj) const;
 };
 
-bool BuildQuorumRotationInfo(NodeContext& node, const CGetQuorumRotationInfo& request, CQuorumRotationInfo& quorumRotationInfoRet, std::string& errorRet);
+bool BuildQuorumRotationInfo(llmq::Context& ctx, const CGetQuorumRotationInfo& request, CQuorumRotationInfo& quorumRotationInfoRet, std::string& errorRet);
 uint256 GetLastBaseBlockHash(const std::vector<const CBlockIndex*>& baseBlockIndexes, const CBlockIndex* blockIndex);
 
 class CQuorumSnapshotManager

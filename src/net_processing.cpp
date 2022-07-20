@@ -455,7 +455,7 @@ static void UpdatePreferredDownload(CNode* node, CNodeState* state) EXCLUSIVE_LO
 {
     nPreferredDownload -= state->fPreferredDownload;
 
-    // Whether this node should be marked as a preferred download node.
+    // Whether this node should be marked as a preferred download ctx.
     state->fPreferredDownload = (!node->fInbound || node->HasPermission(PF_NOBAN)) && !node->fOneShot && !node->fClient;
 
     nPreferredDownload += state->fPreferredDownload;
@@ -1268,8 +1268,8 @@ static bool BlockRequestAllowed(const CBlockIndex* pindex, const Consensus::Para
         (GetBlockProofEquivalentTime(*pindexBestHeader, *pindex, *pindexBestHeader, consensusParams) < STALE_RELAY_AGE_LIMIT);
 }
 
-PeerLogicValidation::PeerLogicValidation(NodeContext& node, CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman, CTxMemPool& pool, bool enable_bip61)
-    : m_node(node), connman(connmanIn), m_banman(banman), m_chainman(chainman), m_mempool(pool), m_stale_tip_check_time(0), m_enable_bip61(enable_bip61) {
+PeerLogicValidation::PeerLogicValidation(llmq::Context& ctx, CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman, CTxMemPool& pool, bool enable_bip61)
+    : m_ctx(ctx), connman(connmanIn), m_banman(banman), m_chainman(chainman), m_mempool(pool), m_stale_tip_check_time(0), m_enable_bip61(enable_bip61) {
     // Initialize global variables that cannot be constructed at startup.
     recentRejects.reset(new CRollingBloomFilter(120000, 0.000001));
 
@@ -1465,7 +1465,7 @@ void PeerLogicValidation::BlockChecked(const CBlock& block, const CValidationSta
 //
 
 
-bool static AlreadyHave(NodeContext& node, const CInv& inv, const CTxMemPool& mempool) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+bool static AlreadyHave(llmq::Context& ctx, const CInv& inv, const CTxMemPool& mempool) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     switch (inv.type)
     {
@@ -1503,8 +1503,8 @@ bool static AlreadyHave(NodeContext& node, const CInv& inv, const CTxMemPool& me
             // crafted invalid DSTX-es and potentially cause high load cheaply, because
             // corresponding checks in ProcessMessage won't let it to send DSTX-es too often.
             bool fIgnoreRecentRejects = inv.type == MSG_DSTX ||
-                                        node.quorumInstantSendManager->IsWaitingForTx(inv.hash) ||
-                                        node.quorumInstantSendManager->IsLocked(inv.hash);
+                                        ctx.quorumInstantSendManager->IsWaitingForTx(inv.hash) ||
+                                        ctx.quorumInstantSendManager->IsLocked(inv.hash);
 
             return (!fIgnoreRecentRejects && recentRejects->contains(inv.hash)) ||
                    (inv.type == MSG_DSTX && static_cast<bool>(CCoinJoin::GetDSTX(inv.hash))) ||
@@ -1538,19 +1538,19 @@ bool static AlreadyHave(NodeContext& node, const CInv& inv, const CTxMemPool& me
         return ! governance.ConfirmInventoryRequest(inv);
 
     case MSG_QUORUM_FINAL_COMMITMENT:
-        return node.quorumBlockProcessor->HasMineableCommitment(inv.hash);
+        return ctx.quorumBlockProcessor->HasMineableCommitment(inv.hash);
     case MSG_QUORUM_CONTRIB:
     case MSG_QUORUM_COMPLAINT:
     case MSG_QUORUM_JUSTIFICATION:
     case MSG_QUORUM_PREMATURE_COMMITMENT:
-        return node.quorumDKGSessionManager->AlreadyHave(inv);
+        return ctx.quorumDKGSessionManager->AlreadyHave(inv);
     case MSG_QUORUM_RECOVERED_SIG:
-        return node.quorumSigningManager->AlreadyHave(inv);
+        return ctx.quorumSigningManager->AlreadyHave(inv);
     case MSG_CLSIG:
-        return node.chainLocksHandler->AlreadyHave(inv);
+        return ctx.chainLocksHandler->AlreadyHave(inv);
     case MSG_ISLOCK:
     case MSG_ISDLOCK:
-        return node.quorumInstantSendManager->AlreadyHave(inv);
+        return ctx.quorumInstantSendManager->AlreadyHave(inv);
     }
 
     // Don't know what it is, just say we already got one
@@ -1749,7 +1749,7 @@ void static ProcessGetBlockData(CNode* pfrom, const CChainParams& chainparams, c
     }
 }
 
-void static ProcessGetData(NodeContext& node, CNode* pfrom, const CChainParams& chainparams, CConnman* connman, CTxMemPool& mempool, const std::atomic<bool>& interruptMsgProc) LOCKS_EXCLUDED(cs_main)
+void static ProcessGetData(llmq::Context& ctx, CNode* pfrom, const CChainParams& chainparams, CConnman* connman, CTxMemPool& mempool, const std::atomic<bool>& interruptMsgProc) LOCKS_EXCLUDED(cs_main)
 {
     AssertLockNotHeld(cs_main);
 
@@ -1857,7 +1857,7 @@ void static ProcessGetData(NodeContext& node, CNode* pfrom, const CChainParams& 
 
             if (!push && (inv.type == MSG_QUORUM_FINAL_COMMITMENT)) {
                 llmq::CFinalCommitment o;
-                if (node.quorumBlockProcessor->GetMineableCommitmentByHash(
+                if (ctx.quorumBlockProcessor->GetMineableCommitmentByHash(
                         inv.hash, o)) {
                     connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::QFCOMMITMENT, o));
                     push = true;
@@ -1866,7 +1866,7 @@ void static ProcessGetData(NodeContext& node, CNode* pfrom, const CChainParams& 
 
             if (!push && (inv.type == MSG_QUORUM_CONTRIB)) {
                 llmq::CDKGContribution o;
-                if (node.quorumDKGSessionManager->GetContribution(inv.hash, o)) {
+                if (ctx.quorumDKGSessionManager->GetContribution(inv.hash, o)) {
                     connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::QCONTRIB, o));
                     push = true;
                 }
@@ -1874,7 +1874,7 @@ void static ProcessGetData(NodeContext& node, CNode* pfrom, const CChainParams& 
 
             if (!push && (inv.type == MSG_QUORUM_COMPLAINT)) {
                 llmq::CDKGComplaint o;
-                if (node.quorumDKGSessionManager->GetComplaint(inv.hash, o)) {
+                if (ctx.quorumDKGSessionManager->GetComplaint(inv.hash, o)) {
                     connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::QCOMPLAINT, o));
                     push = true;
                 }
@@ -1882,7 +1882,7 @@ void static ProcessGetData(NodeContext& node, CNode* pfrom, const CChainParams& 
 
             if (!push && (inv.type == MSG_QUORUM_JUSTIFICATION)) {
                 llmq::CDKGJustification o;
-                if (node.quorumDKGSessionManager->GetJustification(inv.hash, o)) {
+                if (ctx.quorumDKGSessionManager->GetJustification(inv.hash, o)) {
                     connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::QJUSTIFICATION, o));
                     push = true;
                 }
@@ -1890,7 +1890,7 @@ void static ProcessGetData(NodeContext& node, CNode* pfrom, const CChainParams& 
 
             if (!push && (inv.type == MSG_QUORUM_PREMATURE_COMMITMENT)) {
                 llmq::CDKGPrematureCommitment o;
-                if (node.quorumDKGSessionManager->GetPrematureCommitment(inv.hash, o)) {
+                if (ctx.quorumDKGSessionManager->GetPrematureCommitment(inv.hash, o)) {
                     connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::QPCOMMITMENT, o));
                     push = true;
                 }
@@ -1898,7 +1898,7 @@ void static ProcessGetData(NodeContext& node, CNode* pfrom, const CChainParams& 
 
             if (!push && (inv.type == MSG_QUORUM_RECOVERED_SIG)) {
                 llmq::CRecoveredSig o;
-                if (node.quorumSigningManager->GetRecoveredSigForGetData(inv.hash, o)) {
+                if (ctx.quorumSigningManager->GetRecoveredSigForGetData(inv.hash, o)) {
                     connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::QSIGREC, o));
                     push = true;
                 }
@@ -1906,7 +1906,7 @@ void static ProcessGetData(NodeContext& node, CNode* pfrom, const CChainParams& 
 
             if (!push && (inv.type == MSG_CLSIG)) {
                 llmq::CChainLockSig o;
-                if (node.chainLocksHandler->GetChainLockByHash(inv.hash, o)) {
+                if (ctx.chainLocksHandler->GetChainLockByHash(inv.hash, o)) {
                     connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::CLSIG, o));
                     push = true;
                 }
@@ -1914,7 +1914,7 @@ void static ProcessGetData(NodeContext& node, CNode* pfrom, const CChainParams& 
 
             if (!push && (inv.type == MSG_ISLOCK || inv.type == MSG_ISDLOCK)) {
                 llmq::CInstantSendLock o;
-                if (node.quorumInstantSendManager->GetInstantSendLockByHash(inv.hash, o)) {
+                if (ctx.quorumInstantSendManager->GetInstantSendLockByHash(inv.hash, o)) {
                     const auto msg_type = inv.type == MSG_ISLOCK ? NetMsgType::ISLOCK : NetMsgType::ISDLOCK;
                     connman->PushMessage(pfrom, msgMaker.Make(msg_type, o));
                     push = true;
@@ -1931,7 +1931,7 @@ void static ProcessGetData(NodeContext& node, CNode* pfrom, const CChainParams& 
         const CInv &inv = *it;
         if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK || inv.type == MSG_CMPCT_BLOCK) {
             it++;
-            ProcessGetBlockData(pfrom, chainparams, inv, connman, *node.quorumInstantSendManager);
+            ProcessGetBlockData(pfrom, chainparams, inv, connman, *ctx.quorumInstantSendManager);
         }
     }
 
@@ -2501,7 +2501,7 @@ std::pair<bool /*ret*/, bool /*do_return*/> static ValidateDSTX(CCoinJoinBroadca
     return {true, false};
 }
 
-bool ProcessMessage(NodeContext& node, CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, int64_t nTimeReceived, const CChainParams& chainparams, ChainstateManager& chainman, CTxMemPool& mempool, CConnman* connman, BanMan* banman, const std::atomic<bool>& interruptMsgProc, bool enable_bip61)
+bool ProcessMessage(llmq::Context& ctx, CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, int64_t nTimeReceived, const CChainParams& chainparams, ChainstateManager& chainman, CTxMemPool& mempool, CConnman* connman, BanMan* banman, const std::atomic<bool>& interruptMsgProc, bool enable_bip61)
 {
     LogPrint(BCLog::NET, "received: %s (%u bytes) peer=%d\n", SanitizeString(msg_type), vRecv.size(), pfrom->GetId());
     statsClient.inc("message.received." + SanitizeString(msg_type), 1.0f);
@@ -3388,7 +3388,7 @@ bool ProcessMessage(NodeContext& node, CNode* pfrom, const std::string& msg_type
                 // We will continue to reject this tx since it has rejected
                 // parents so avoid re-requesting it from other peers.
                 recentRejects->insert(tx.GetHash());
-                node.quorumInstantSendManager->TransactionRemovedFromMempool(ptx);
+                ctx.quorumInstantSendManager->TransactionRemovedFromMempool(ptx);
             }
         } else {
             assert(IsTransactionReason(state.GetReason()));
@@ -3443,7 +3443,7 @@ bool ProcessMessage(NodeContext& node, CNode* pfrom, const std::string& msg_type
             }
             MaybePunishNode(pfrom->GetId(), state, /*via_compact_block*/ false);
 
-            node.quorumInstantSendManager->TransactionRemovedFromMempool(ptx);
+            ctx.quorumInstantSendManager->TransactionRemovedFromMempool(ptx);
         }
         return true;
     }
@@ -4015,7 +4015,7 @@ bool ProcessMessage(NodeContext& node, CNode* pfrom, const std::string& msg_type
 
         CSimplifiedMNListDiff mnListDiff;
         std::string strError;
-        if (BuildSimplifiedMNListDiff(*node.quorumBlockProcessor, cmd.baseBlockHash, cmd.blockHash, mnListDiff, strError)) {
+        if (BuildSimplifiedMNListDiff(*ctx.quorumBlockProcessor, cmd.baseBlockHash, cmd.blockHash, mnListDiff, strError)) {
             connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::MNLISTDIFF, mnListDiff));
         } else {
             strError = strprintf("getmnlistdiff failed for baseBlockHash=%s, blockHash=%s. error=%s", cmd.baseBlockHash.ToString(), cmd.blockHash.ToString(), strError);
@@ -4055,7 +4055,7 @@ bool ProcessMessage(NodeContext& node, CNode* pfrom, const std::string& msg_type
 
         llmq::CQuorumRotationInfo quorumRotationInfoRet;
         std::string strError;
-        if (BuildQuorumRotationInfo(node, cmd, quorumRotationInfoRet, strError)) {
+        if (BuildQuorumRotationInfo(ctx, cmd, quorumRotationInfoRet, strError)) {
             connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::QUORUMROTATIONINFO, quorumRotationInfoRet));
         } else {
             strError = strprintf("getquorumrotationinfo failed for size(baseBlockHashes)=%d, blockRequestHash=%s. error=%s", cmd.baseBlockHashes.size(), cmd.blockRequestHash.ToString(), strError);
@@ -4114,18 +4114,18 @@ bool ProcessMessage(NodeContext& node, CNode* pfrom, const std::string& msg_type
             pair.second->ProcessMessage(pfrom, msg_type, vRecv, *connman, enable_bip61);
         }
 #endif // ENABLE_WALLET
-        coinJoinServer.ProcessMessage(pfrom, msg_type, vRecv, *connman, enable_bip61);
+        coinJoinServer.ProcessMessage(pfrom, msg_type, vRecv, *connman, *ctx.quorumInstantSendManager, enable_bip61);
         sporkManager.ProcessSporkMessages(pfrom, msg_type, vRecv, *connman);
         masternodeSync.ProcessMessage(pfrom, msg_type, vRecv);
         governance.ProcessMessage(pfrom, msg_type, vRecv, *connman, enable_bip61);
         CMNAuth::ProcessMessage(pfrom, msg_type, vRecv, *connman);
-        node.quorumBlockProcessor->ProcessMessage(pfrom, msg_type, vRecv);
-        node.quorumDKGSessionManager->ProcessMessage(pfrom, msg_type, vRecv);
-        node.quorumManager->ProcessMessage(pfrom, msg_type, vRecv);
-        node.quorumSigSharesManager->ProcessMessage(pfrom, msg_type, vRecv);
-        node.quorumSigningManager->ProcessMessage(pfrom, msg_type, vRecv);
-        node.chainLocksHandler->ProcessMessage(pfrom, msg_type, vRecv);
-        node.quorumInstantSendManager->ProcessMessage(pfrom, msg_type, vRecv);
+        ctx.quorumBlockProcessor->ProcessMessage(pfrom, msg_type, vRecv);
+        ctx.quorumDKGSessionManager->ProcessMessage(pfrom, msg_type, vRecv);
+        ctx.quorumManager->ProcessMessage(pfrom, msg_type, vRecv);
+        ctx.quorumSigSharesManager->ProcessMessage(pfrom, msg_type, vRecv);
+        ctx.quorumSigningManager->ProcessMessage(pfrom, msg_type, vRecv);
+        ctx.chainLocksHandler->ProcessMessage(pfrom, msg_type, vRecv);
+        ctx.quorumInstantSendManager->ProcessMessage(pfrom, msg_type, vRecv);
         return true;
     }
 
@@ -4801,14 +4801,14 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                         int nInvType = CCoinJoin::GetDSTX(hash) ? MSG_DSTX : MSG_TX;
                         queueAndMaybePushInv(CInv(nInvType, hash));
 
-                        const auto islock = m_node.quorumInstantSendManager->GetInstantSendLockByTxid(hash);
+                        const auto islock = m_ctx.quorumInstantSendManager->GetInstantSendLockByTxid(hash);
                         if (islock == nullptr) continue;
                         if (pto->nVersion < ISDLOCK_PROTO_VERSION && islock->IsDeterministic()) continue;
                         queueAndMaybePushInv(CInv(islock->IsDeterministic() ? MSG_ISDLOCK : MSG_ISLOCK, ::SerializeHash(*islock)));
                     }
 
                     // Send an inv for the best ChainLock we have
-                    const auto& clsig = m_node.chainLocksHandler->GetBestChainLock();
+                    const auto& clsig = m_ctx.chainLocksHandler->GetBestChainLock();
                     if (!clsig.IsNull()) {
                         uint256 chainlockHash = ::SerializeHash(clsig);
                         queueAndMaybePushInv(CInv(MSG_CLSIG, chainlockHash));

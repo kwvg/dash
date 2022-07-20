@@ -64,8 +64,9 @@ static UniValue quorum_list(const JSONRPCRequest& request)
     UniValue ret(UniValue::VOBJ);
 
     CBlockIndex* pindexTip = WITH_LOCK(cs_main, return ::ChainActive().Tip());
-
-    for (auto& type : llmq::CLLMQUtils::GetEnabledQuorumTypes(pindexTip)) {
+    
+    const llmq::Context& llmq_ctx = EnsureLLMQContext(request.context);
+    for (auto& type : llmq::CLLMQUtils::GetEnabledQuorumTypes(*llmq_ctx.quorumManager, pindexTip)) {
         const auto& llmq_params = llmq::GetLLMQParams(type);
         UniValue v(UniValue::VARR);
 
@@ -193,10 +194,11 @@ static UniValue quorum_dkgstatus(const JSONRPCRequest& request)
     int tipHeight = pindexTip->nHeight;
 
     auto proTxHash = WITH_LOCK(activeMasternodeInfoCs, return activeMasternodeInfo.proTxHash);
+    const llmq::Context& llmq_ctx = EnsureLLMQContext(request.context);
 
     UniValue minableCommitments(UniValue::VARR);
     UniValue quorumArrConnections(UniValue::VARR);
-    for (const auto& type : llmq::CLLMQUtils::GetEnabledQuorumTypes(pindexTip)) {
+    for (const auto& type : llmq::CLLMQUtils::GetEnabledQuorumTypes(*llmq_ctx.quorumManager, pindexTip)) {
         const auto& llmq_params = llmq::GetLLMQParams(type);
         bool rotation_enabled = llmq::CLLMQUtils::IsQuorumRotationEnabled(type, pindexTip);
         size_t quorums_num = rotation_enabled ? llmq_params.signingActiveQuorumCount : 1;
@@ -297,8 +299,9 @@ static UniValue quorum_memberof(const JSONRPCRequest& request)
     }
 
     UniValue result(UniValue::VARR);
+    const llmq::Context& llmq_ctx = EnsureLLMQContext(request.context);
 
-    for (const auto& type : llmq::CLLMQUtils::GetEnabledQuorumTypes(pindexTip)) {
+    for (const auto& type : llmq::CLLMQUtils::GetEnabledQuorumTypes(*llmq_ctx.quorumManager, pindexTip)) {
         const auto& llmq_params = llmq::GetLLMQParams(type);
         size_t count = llmq_params.signingActiveQuorumCount;
         if (scanQuorumsCount != -1) {
@@ -666,7 +669,9 @@ static UniValue quorum_rotationinfo(const JSONRPCRequest& request)
         ++idx;
     }
     LOCK(cs_main);
-    if (!BuildQuorumRotationInfo(cmd, quorumRotationInfoRet, strError)) {
+    
+    const llmq::Context& llmq_ctx = EnsureLLMQContext(request.context);
+    if (!BuildQuorumRotationInfo(llmq_ctx, cmd, quorumRotationInfoRet, strError)) {
         throw JSONRPCError(RPC_INVALID_REQUEST, strError);
     }
 

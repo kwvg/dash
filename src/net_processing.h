@@ -15,6 +15,8 @@
 class CTxMemPool;
 class ChainstateManager;
 
+namespace llmq { struct Context; }
+
 extern CCriticalSection cs_main;
 
 /** Default for -maxorphantxsize, maximum size in megabytes the orphan map can grow before entries are removed */
@@ -28,7 +30,7 @@ static const bool DEFAULT_PEERBLOCKFILTERS = false;
 
 class PeerLogicValidation final : public CValidationInterface, public NetEventsInterface {
 private:
-    NodeContext& m_node;
+    llmq::Context& m_ctx;
     CConnman* const connman;
     BanMan* const m_banman;
     ChainstateManager& m_chainman;
@@ -36,7 +38,7 @@ private:
 
     bool MaybeDiscourageAndDisconnect(CNode* pnode, bool enable_bip61) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 public:
-    PeerLogicValidation(NodeContext& node, CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman, CTxMemPool& pool, bool enable_bip61);
+    PeerLogicValidation(llmq::Context& ctx, CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman, CTxMemPool& pool, bool enable_bip61);
 
     /**
      * Overridden from CValidationInterface.

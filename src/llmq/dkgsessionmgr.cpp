@@ -26,9 +26,9 @@ static const std::string DB_VVEC = "qdkg_V";
 static const std::string DB_SKCONTRIB = "qdkg_S";
 static const std::string DB_ENC_CONTRIB = "qdkg_E";
 
-CDKGSessionManager::CDKGSessionManager(CConnman& _connman, std::shared_ptr<CBLSWorker> _blsWorker, CDKGDebugManager& dkgDebugMan, bool unitTests, bool fWipe) :
+CDKGSessionManager::CDKGSessionManager(CConnman& _connman, llmq::Context& _ctx, std::shared_ptr<CBLSWorker> _blsWorker, CDKGDebugManager& dkgDebugMan, bool unitTests, bool fWipe) :
         db(std::make_unique<CDBWrapper>(unitTests ? "" : (GetDataDir() / "llmq/dkgdb"), 1 << 20, unitTests, fWipe)),
-        blsWorker(std::move(_blsWorker)), connman(_connman), dkgDebugManager(dkgDebugMan)
+        blsWorker(std::move(_blsWorker)), connman(_connman), ctx(_ctx), dkgDebugManager(dkgDebugMan)
 {
     MigrateDKG();
 
@@ -38,7 +38,7 @@ CDKGSessionManager::CDKGSessionManager(CConnman& _connman, std::shared_ptr<CBLSW
         for (const auto i : irange::range(session_count)) {
             dkgSessionHandlers.emplace(std::piecewise_construct,
                                        std::forward_as_tuple(params.type, i),
-                                       std::forward_as_tuple(params, blsWorker, *this, connman, dkgDebugMan, i));
+                                       std::forward_as_tuple(params, *blsWorker, connman, ctx, i));
         }
     }
 }
@@ -225,7 +225,7 @@ void CDKGSessionManager::ProcessMessage(CNode* pfrom, const std::string& msg_typ
             return;
         }
 
-        if (!CLLMQUtils::IsQuorumTypeEnabled(llmqType, pQuorumBaseBlockIndex->pprev)) {
+        if (!CLLMQUtils::IsQuorumTypeEnabled(llmqType, *ctx.quorumManager, pQuorumBaseBlockIndex->pprev)) {
             LOCK(cs_main);
             LogPrintf("CDKGSessionManager -- llmqType [%d] quorums aren't active\n", uint8_t(llmqType));
             Misbehaving(pfrom->GetId(), 100);
@@ -376,7 +376,7 @@ void CDKGSessionManager::WriteEncryptedContributions(Consensus::LLMQType llmqTyp
 bool CDKGSessionManager::GetVerifiedContributions(Consensus::LLMQType llmqType, const CBlockIndex* pQuorumBaseBlockIndex, const std::vector<bool>& validMembers, std::vector<uint16_t>& memberIndexesRet, std::vector<BLSVerificationVectorPtr>& vvecsRet, BLSSecretKeyVector& skContributionsRet) const
 {
     LOCK(contributionsCacheCs);
-    auto members = CLLMQUtils::GetAllQuorumMembers(llmqType, pQuorumBaseBlockIndex);
+    auto members = CLLMQUtils::GetAllQuorumMembers(llmqType, *ctx.quorumManager, pQuorumBaseBlockIndex);
 
     memberIndexesRet.clear();
     vvecsRet.clear();
@@ -410,7 +410,7 @@ bool CDKGSessionManager::GetVerifiedContributions(Consensus::LLMQType llmqType, 
 
 bool CDKGSessionManager::GetEncryptedContributions(Consensus::LLMQType llmqType, const CBlockIndex* pQuorumBaseBlockIndex, const std::vector<bool>& validMembers, const uint256& nProTxHash, std::vector<CBLSIESEncryptedObject<CBLSSecretKey>>& vecRet) const
 {
-    auto members = CLLMQUtils::GetAllQuorumMembers(llmqType, pQuorumBaseBlockIndex);
+    auto members = CLLMQUtils::GetAllQuorumMembers(llmqType, *ctx.quorumManager, pQuorumBaseBlockIndex);
 
     vecRet.clear();
     vecRet.reserve(members.size());

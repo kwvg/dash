@@ -553,7 +553,7 @@ bool CSigningManager::GetRecoveredSigForGetData(const uint256& hash, CRecoveredS
     if (!db.GetRecoveredSigByHash(hash, ret)) {
         return false;
     }
-    if (!CLLMQUtils::IsQuorumActive(ret.getLlmqType(), ret.getQuorumHash())) {
+    if (!CLLMQUtils::IsQuorumActive(ret.getLlmqType(), quorumManager, ret.getQuorumHash())) {
         // we don't want to propagate sigs from inactive quorums
         return false;
     }
@@ -621,7 +621,7 @@ bool CSigningManager::PreVerifyRecoveredSig(const CRecoveredSig& recoveredSig, b
                   recoveredSig.getQuorumHash().ToString());
         return false;
     }
-    if (!CLLMQUtils::IsQuorumActive(llmqType, quorum->qc->quorumHash)) {
+    if (!CLLMQUtils::IsQuorumActive(llmqType, quorumManager, quorum->qc->quorumHash)) {
         return false;
     }
 
@@ -679,7 +679,7 @@ void CSigningManager::CollectPendingRecoveredSigsToVerify(
                     it = v.erase(it);
                     continue;
                 }
-                if (!CLLMQUtils::IsQuorumActive(llmqType, quorum->qc->quorumHash)) {
+                if (!CLLMQUtils::IsQuorumActive(llmqType, quorumManager, quorum->qc->quorumHash)) {
                     LogPrint(BCLog::LLMQ, "CSigningManager::%s -- quorum %s not active anymore, node=%d\n", __func__,
                               recSig->getQuorumHash().ToString(), nodeId);
                     it = v.erase(it);

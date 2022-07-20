@@ -13,11 +13,13 @@
 class ArgsManager;
 class BanMan;
 class CBLSWorker;
+class CEvoDB;
 class CConnman;
 class CScheduler;
 class CTxMemPool;
 class ChainstateManager;
 class PeerLogicValidation;
+struct NodeContext;
 namespace interfaces {
 class Chain;
 class ChainClient;
@@ -48,7 +50,7 @@ struct Context {
     //! Declare default constructor and destructor that are not inline, so code
     //! instantiating the llmq::Context struct doesn't need to #include class
     //! definitions for all the unique_ptr members.
-    Context();
+    Context(NodeContext& node, CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, bool unitTests, bool fWipe);
     ~Context();
 };
 }

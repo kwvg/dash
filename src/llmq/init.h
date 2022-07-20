@@ -13,6 +13,8 @@ class NodeContext;
 
 namespace llmq
 {
+struct Context;
+
 void DestroyLLMQSystem();
 
 // Manage scheduled tasks, threads, listeners etc.

@@ -291,8 +291,9 @@ static std::string SignAndSendSpecialTx(const JSONRPCRequest& request, const CMu
     {
     LOCK(cs_main);
 
+    const llmq::Context& llmq_ctx = EnsureLLMQContext(request.context);
     CValidationState state;
-    if (!CheckSpecialTx(CTransaction(tx), ::ChainActive().Tip(), state, ::ChainstateActive().CoinsTip(), true)) {
+    if (!CheckSpecialTx(llmq_ctx, CTransaction(tx), ::ChainActive().Tip(), state, ::ChainstateActive().CoinsTip(), true)) {
         throw std::runtime_error(FormatStateMessage(state));
     }
     } // cs_main

@@ -100,7 +100,7 @@ bool CheckCbTxMerkleRoots(const llmq::CQuorumBlockProcessor& quorumBlockProcesso
     return true;
 }
 
-bool CalcCbTxMerkleRootMNList(const CBlock& block, const CBlockIndex* pindexPrev, uint256& merkleRootRet, CValidationState& state, const CCoinsViewCache& view)
+bool CalcCbTxMerkleRootMNList(const CBlock& block, const CBlockIndex* pindexPrev, uint256& merkleRootRet, CValidationState& state, const CCoinsViewCache& view, const llmq::CQuorumManager& quorumManager)
 {
     LOCK(deterministicMNManager->cs);
 
@@ -112,7 +112,7 @@ bool CalcCbTxMerkleRootMNList(const CBlock& block, const CBlockIndex* pindexPrev
         int64_t nTime1 = GetTimeMicros();
 
         CDeterministicMNList tmpMNList;
-        if (!deterministicMNManager->BuildNewListFromBlock(block, pindexPrev, state, view, tmpMNList, false)) {
+        if (!deterministicMNManager->BuildNewListFromBlock(block, pindexPrev, state, view, quorumManager, tmpMNList, false)) {
             // pass the state returned by the function above
             return false;
         }

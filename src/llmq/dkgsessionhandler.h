@@ -10,14 +10,14 @@
 #include <net.h>
 
 #include <optional>
-#include "node/context.h"
+#include <node/context.h>
 
 class CBLSWorker;
 class CBlockIndex;
 
 namespace llmq
 {
-
+class Context;
 class CDKGSession;
 class CDKGSessionManager;
 
@@ -115,7 +115,7 @@ private:
     CConnman& connman;
     const int quorumIndex;
     CBLSWorker& blsWorker;
-    NodeContext& node;
+    llmq::Context& ctx;
 
     QuorumPhase phase GUARDED_BY(cs) {QuorumPhase::Idle};
     int currentHeight GUARDED_BY(cs) {-1};
@@ -131,13 +131,13 @@ private:
     CDKGPendingMessages pendingPrematureCommitments;
 
 public:
-    CDKGSessionHandler(const Consensus::LLMQParams& _params, CBLSWorker& _blsWorker, CConnman& _connman, NodeContext& _node, int _quorumIndex) :
+    CDKGSessionHandler(const Consensus::LLMQParams& _params, CBLSWorker& _blsWorker, CConnman& _connman, llmq::Context& _ctx, int _quorumIndex) :
             params(_params),
             blsWorker(_blsWorker),
             connman(_connman),
-            node(_node),
+            ctx(_ctx),
             quorumIndex(_quorumIndex),
-            curSession(std::make_unique<CDKGSession>(_params, _blsWorker, *node.quorumDKGSessionManager, *node.quorumDKGDebugManager, _connman)),
+            curSession(std::make_unique<CDKGSession>(_params, _blsWorker, *ctx.quorumDKGSessionManager, *ctx.quorumDKGDebugManager, _connman)),
             pendingContributions((size_t)_params.size * 2, MSG_QUORUM_CONTRIB), // we allow size*2 messages as we need to make sure we see bad behavior (double messages)
             pendingComplaints((size_t)_params.size * 2, MSG_QUORUM_COMPLAINT),
             pendingJustifications((size_t)_params.size * 2, MSG_QUORUM_JUSTIFICATION),

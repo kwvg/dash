@@ -26,26 +26,26 @@
 CCoinJoinServer coinJoinServer; // TODO deblogalize this!
 constexpr static CAmount DEFAULT_MAX_RAW_TX_FEE{COIN / 10};
 
-void CCoinJoinServer::ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, bool enable_bip61)
+void CCoinJoinServer::ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61)
 {
     if (!fMasternodeMode) return;
     if (!masternodeSync.IsBlockchainSynced()) return;
 
     if (msg_type == NetMsgType::DSACCEPT) {
-        ProcessDSACCEPT(pfrom, msg_type, vRecv, connman, enable_bip61);
+        ProcessDSACCEPT(pfrom, msg_type, vRecv, connman, instantSendManager, enable_bip61);
         return;
     } else if (msg_type == NetMsgType::DSQUEUE) {
-        ProcessDSQUEUE(pfrom, msg_type, vRecv, connman, enable_bip61);
+        ProcessDSQUEUE(pfrom, msg_type, vRecv, connman, instantSendManager, enable_bip61);
         return;
     } else if (msg_type == NetMsgType::DSVIN) {
-        ProcessDSVIN(pfrom, msg_type, vRecv, connman, enable_bip61);
+        ProcessDSVIN(pfrom, msg_type, vRecv, connman, instantSendManager, enable_bip61);
         return;
     } else if (msg_type == NetMsgType::DSSIGNFINALTX) {
-        ProcessDSSIGNFINALTX(pfrom, msg_type, vRecv, connman, enable_bip61);
+        ProcessDSSIGNFINALTX(pfrom, msg_type, vRecv, connman, instantSendManager, enable_bip61);
     }
 }
 
-void CCoinJoinServer::ProcessDSACCEPT(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, bool enable_bip61)
+void CCoinJoinServer::ProcessDSACCEPT(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61)
 {
     if (IsSessionReady()) {
         // too many users in this session already, reject new ones
@@ -97,8 +97,8 @@ void CCoinJoinServer::ProcessDSACCEPT(CNode* pfrom, const std::string& msg_type,
 
     PoolMessage nMessageID = MSG_NOERR;
 
-    bool fResult = nSessionID == 0 ? CreateNewSession(dsa, nMessageID, connman)
-            : AddUserToExistingSession(dsa, nMessageID);
+    bool fResult = nSessionID == 0 ? CreateNewSession(instantSendManager, dsa, nMessageID, connman)
+            : AddUserToExistingSession(instantSendManager, dsa, nMessageID);
     if (fResult) {
         LogPrint(BCLog::COINJOIN, "DSACCEPT -- is compatible, please submit!\n");
         PushStatus(pfrom, STATUS_ACCEPTED, nMessageID, connman);
@@ -110,7 +110,7 @@ void CCoinJoinServer::ProcessDSACCEPT(CNode* pfrom, const std::string& msg_type,
     }
 }
 
-void CCoinJoinServer::ProcessDSQUEUE(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, bool enable_bip61)
+void CCoinJoinServer::ProcessDSQUEUE(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61)
 {
     CCoinJoinQueue dsq;
     vRecv >> dsq;
@@ -166,7 +166,7 @@ void CCoinJoinServer::ProcessDSQUEUE(CNode* pfrom, const std::string& msg_type, 
     }
 }
 
-void CCoinJoinServer::ProcessDSVIN(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, bool enable_bip61)
+void CCoinJoinServer::ProcessDSVIN(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61)
 {
     //do we have enough users in the current session?
     if (!IsSessionReady()) {
@@ -183,7 +183,7 @@ void CCoinJoinServer::ProcessDSVIN(CNode* pfrom, const std::string& msg_type, CD
     PoolMessage nMessageID = MSG_NOERR;
 
     entry.addr = pfrom->addr;
-    if (AddEntry(connman, entry, nMessageID)) {
+    if (AddEntry(connman, instantSendManager, entry, nMessageID)) {
         PushStatus(pfrom, STATUS_ACCEPTED, nMessageID, connman);
         CheckPool(connman);
         LOCK(cs_coinjoin);
@@ -193,7 +193,7 @@ void CCoinJoinServer::ProcessDSVIN(CNode* pfrom, const std::string& msg_type, CD
     }
 }
 
-void CCoinJoinServer::ProcessDSSIGNFINALTX(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, bool enable_bip61)
+void CCoinJoinServer::ProcessDSSIGNFINALTX(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::CInstantSendManager& instantSendManager, bool enable_bip61)
 {
     std::vector<CTxIn> vecTxIn;
     vRecv >> vecTxIn;
@@ -542,7 +542,7 @@ bool CCoinJoinServer::IsInputScriptSigValid(const CTxIn& txin) const
 //
 // Add a client's transaction inputs/outputs to the pool
 //
-bool CCoinJoinServer::AddEntry(CConnman& connman, const CCoinJoinEntry& entry, PoolMessage& nMessageIDRet)
+bool CCoinJoinServer::AddEntry(CConnman& connman, const llmq::CInstantSendManager& instantSendManager, const CCoinJoinEntry& entry, PoolMessage& nMessageIDRet)
 {
     AssertLockNotHeld(cs_coinjoin);
     if (!fMasternodeMode) return false;
@@ -553,7 +553,7 @@ bool CCoinJoinServer::AddEntry(CConnman& connman, const CCoinJoinEntry& entry, P
         return false;
     }
 
-    if (!CCoinJoin::IsCollateralValid(*entry.txCollateral)) {
+    if (!CCoinJoin::IsCollateralValid(instantSendManager, *entry.txCollateral)) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::%s -- ERROR: collateral not valid!\n", __func__);
         nMessageIDRet = ERR_INVALID_COLLATERAL;
         return false;
@@ -587,7 +587,7 @@ bool CCoinJoinServer::AddEntry(CConnman& connman, const CCoinJoinEntry& entry, P
     }
 
     bool fConsumeCollateral{false};
-    if (!IsValidInOuts(vin, entry.vecTxOut, nMessageIDRet, &fConsumeCollateral)) {
+    if (!IsValidInOuts(instantSendManager, vin, entry.vecTxOut, nMessageIDRet, &fConsumeCollateral)) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::%s -- ERROR! IsValidInOuts() failed: %s\n", __func__, CCoinJoin::GetMessageByID(nMessageIDRet).translated);
         if (fConsumeCollateral) {
             ConsumeCollateral(connman, entry.txCollateral);
@@ -652,7 +652,7 @@ bool CCoinJoinServer::IsSignaturesComplete() const
     });
 }
 
-bool CCoinJoinServer::IsAcceptableDSA(const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet) const
+bool CCoinJoinServer::IsAcceptableDSA(llmq::CInstantSendManager& instantSendManager, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet) const
 {
     if (!fMasternodeMode) return false;
 
@@ -664,7 +664,7 @@ bool CCoinJoinServer::IsAcceptableDSA(const CCoinJoinAccept& dsa, PoolMessage& n
     }
 
     // check collateral
-    if (!fUnitTest && !CCoinJoin::IsCollateralValid(CTransaction(dsa.txCollateral))) {
+    if (!fUnitTest && !CCoinJoin::IsCollateralValid(instantSendManager, CTransaction(dsa.txCollateral))) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::%s -- collateral not valid!\n", __func__);
         nMessageIDRet = ERR_INVALID_COLLATERAL;
         return false;
@@ -673,7 +673,7 @@ bool CCoinJoinServer::IsAcceptableDSA(const CCoinJoinAccept& dsa, PoolMessage& n
     return true;
 }
 
-bool CCoinJoinServer::CreateNewSession(const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet, CConnman& connman)
+bool CCoinJoinServer::CreateNewSession(llmq::CInstantSendManager& instantSendManager, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet, CConnman& connman)
 {
     if (!fMasternodeMode || nSessionID != 0) return false;
 
@@ -684,7 +684,7 @@ bool CCoinJoinServer::CreateNewSession(const CCoinJoinAccept& dsa, PoolMessage& 
         return false;
     }
 
-    if (!IsAcceptableDSA(dsa, nMessageIDRet)) {
+    if (!IsAcceptableDSA(instantSendManager, dsa, nMessageIDRet)) {
         return false;
     }
 
@@ -712,11 +712,11 @@ bool CCoinJoinServer::CreateNewSession(const CCoinJoinAccept& dsa, PoolMessage& 
     return true;
 }
 
-bool CCoinJoinServer::AddUserToExistingSession(const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet)
+bool CCoinJoinServer::AddUserToExistingSession(llmq::CInstantSendManager& instantSendManager, const CCoinJoinAccept& dsa, PoolMessage& nMessageIDRet)
 {
     if (!fMasternodeMode || nSessionID == 0 || IsSessionReady()) return false;
 
-    if (!IsAcceptableDSA(dsa, nMessageIDRet)) {
+    if (!IsAcceptableDSA(instantSendManager, dsa, nMessageIDRet)) {
         return false;
     }
 

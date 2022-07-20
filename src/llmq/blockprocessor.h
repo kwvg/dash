@@ -24,9 +24,9 @@ extern CCriticalSection cs_main;
 
 namespace llmq
 {
-
 class CFinalCommitment;
 using CFinalCommitmentPtr = std::unique_ptr<CFinalCommitment>;
+class CQuorumManager;
 
 class CQuorumBlockProcessor
 {
@@ -48,7 +48,7 @@ public:
 
     void ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv);
 
-    bool ProcessBlock(const CBlock& block, const CBlockIndex* pindex, CValidationState& state, bool fJustCheck, bool fBLSChecks) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    bool ProcessBlock(const CBlock& block, const CBlockIndex* pindex, const CQuorumManager& quorumManager, CValidationState& state, bool fJustCheck, bool fBLSChecks) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
     bool UndoBlock(const CBlock& block, const CBlockIndex* pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     void AddMineableCommitment(const CFinalCommitment& fqc);
