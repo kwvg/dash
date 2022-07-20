@@ -4119,7 +4119,7 @@ bool ProcessMessage(llmq::Context& ctx, CNode* pfrom, const std::string& msg_typ
         masternodeSync.ProcessMessage(pfrom, msg_type, vRecv);
         governance.ProcessMessage(pfrom, msg_type, vRecv, *connman, enable_bip61);
         CMNAuth::ProcessMessage(pfrom, msg_type, vRecv, *connman);
-        ctx.quorumBlockProcessor->ProcessMessage(pfrom, msg_type, vRecv);
+        ctx.quorumBlockProcessor->ProcessMessage(pfrom, msg_type, vRecv. *ctx.quorumManager);
         ctx.quorumDKGSessionManager->ProcessMessage(pfrom, msg_type, vRecv);
         ctx.quorumManager->ProcessMessage(pfrom, msg_type, vRecv);
         ctx.quorumSigSharesManager->ProcessMessage(pfrom, msg_type, vRecv);

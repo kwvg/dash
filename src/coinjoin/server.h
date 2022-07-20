@@ -33,16 +33,16 @@ private:
     bool AddScriptSig(const CTxIn& txin) LOCKS_EXCLUDED(cs_coinjoin);
 
     /// Charge fees to bad actors (Charge clients a fee if they're abusive)
-    void ChargeFees(CConnman& connman) const LOCKS_EXCLUDED(cs_coinjoin);
+    void ChargeFees(CConnman& connman, llmq::Context& ctx) const LOCKS_EXCLUDED(cs_coinjoin);
     /// Rarely charge fees to pay miners
-    void ChargeRandomFees(CConnman& connman) const;
+    void ChargeRandomFees(CConnman& connman, llmq::Context& ctx) const;
     /// Consume collateral in cases when peer misbehaved
-    void ConsumeCollateral(CConnman& connman, const CTransactionRef& txref) const;
+    void ConsumeCollateral(CConnman& connman, const llmq::Context& ctx, const CTransactionRef& txref) const;
 
     /// Check for process
     void CheckPool(CConnman& connman, llmq::Context& ctx);
 
-    void CreateFinalTransaction(CConnman& connman) LOCKS_EXCLUDED(cs_coinjoin);
+    void CreateFinalTransaction(CConnman& connman, llmq::Context& ctx) LOCKS_EXCLUDED(cs_coinjoin);
     void CommitFinalTransaction(CConnman& connman, llmq::Context& ctx) LOCKS_EXCLUDED(cs_coinjoin);
 
     /// Is this nDenom and txCollateral acceptable?
@@ -81,7 +81,7 @@ public:
     void ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::Context& ctx, bool enable_bip61);
 
     bool HasTimedOut() const;
-    void CheckTimeout(CConnman& connman);
+    void CheckTimeout(CConnman& connman, llmq::Context& ctx);
     void CheckForCompleteQueue(CConnman& connman);
 
     void DoMaintenance(CConnman& connman, llmq::Context& ctx) const;

@@ -18,6 +18,7 @@ class CScheduler;
 
 namespace llmq
 {
+class CQuorumManager;
 
 class CDKGDebugMemberStatus
 {
@@ -72,7 +73,7 @@ public:
 public:
     CDKGDebugSessionStatus() : statusBitset(0) {}
 
-    UniValue ToJson(int quorumIndex, int detailLevel) const;
+    UniValue ToJson(CQuorumManager& quorumManager, int quorumIndex, int detailLevel) const;
 };
 
 class CDKGDebugStatus
@@ -84,7 +85,7 @@ public:
     //std::map<Consensus::LLMQType, CDKGDebugSessionStatus> sessions;
 
 public:
-    UniValue ToJson(int detailLevel) const;
+    UniValue ToJson(CQuorumManager& quorumManager, int detailLevel) const;
 };
 
 class CDKGDebugManager

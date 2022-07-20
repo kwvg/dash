@@ -46,7 +46,7 @@ public:
 
     bool UpgradeDB();
 
-    void ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv);
+    void ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CQuorumManager& quorumManager);
 
     bool ProcessBlock(const CBlock& block, const CBlockIndex* pindex, const CQuorumManager& quorumManager, CValidationState& state, bool fJustCheck, bool fBLSChecks) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
     bool UndoBlock(const CBlock& block, const CBlockIndex* pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
@@ -67,7 +67,7 @@ public:
     std::optional<const CBlockIndex*> GetLastMinedCommitmentsByQuorumIndexUntilBlock(Consensus::LLMQType llmqType, const CBlockIndex* pindex, int quorumIndex, size_t cycle) const;
 private:
     static bool GetCommitmentsFromBlock(const CBlock& block, const CBlockIndex* pindex, std::multimap<Consensus::LLMQType, CFinalCommitment>& ret, CValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
-    bool ProcessCommitment(int nHeight, const uint256& blockHash, const CFinalCommitment& qc, CValidationState& state, bool fJustCheck, bool fBLSChecks) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    bool ProcessCommitment(int nHeight, const uint256& blockHash, const CFinalCommitment& qc, CValidationState& state, const CQuorumManager& quorumManager, bool fJustCheck, bool fBLSChecks) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
     static bool IsMiningPhase(const Consensus::LLMQParams& llmqParams, int nHeight) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
     size_t GetNumCommitmentsRequired(const Consensus::LLMQParams& llmqParams, int nHeight) const EXCLUSIVE_LOCKS_REQUIRED(cs_main);
     static uint256 GetQuorumBlockHash(const Consensus::LLMQParams& llmqParams, int nHeight, int quorumIndex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);

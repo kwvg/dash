@@ -21,11 +21,11 @@ class CConnman;
 
 namespace llmq
 {
-
 class CFinalCommitment;
 class CDKGSession;
 class CDKGSessionManager;
 class CDKGPendingMessages;
+class CQuorumManager;
 
 class CDKGContribution
 {
@@ -326,7 +326,7 @@ public:
     void ReceiveMessage(const CDKGPrematureCommitment& qc, bool& retBan);
 
     // Phase 5: aggregate/finalize
-    std::vector<CFinalCommitment> FinalizeCommitments();
+    std::vector<CFinalCommitment> FinalizeCommitments(CQuorumManager& quorumManager);
 
     bool AreWeMember() const { return !myProTxHash.IsNull(); }
     void MarkBadMember(size_t idx);

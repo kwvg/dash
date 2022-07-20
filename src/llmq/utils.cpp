@@ -97,7 +97,7 @@ std::vector<CDeterministicMNCPtr> CLLMQUtils::GetAllQuorumMembers(Consensus::LLM
 
         quorumMembers = q[quorumIndex];
     } else {
-        quorumMembers = ComputeQuorumMembers(llmqType, quorumManager, pQuorumBaseBlockIndex);
+        quorumMembers = ComputeQuorumMembers(llmqType, pQuorumBaseBlockIndex);
     }
 
     LOCK(cs_members);
@@ -881,7 +881,7 @@ std::vector<Consensus::LLMQType> CLLMQUtils::GetEnabledQuorumTypes(const CBlockI
     return ret;
 }
 
-std::vector<std::reference_wrapper<const Consensus::LLMQParams>> CLLMQUtils::GetEnabledQuorumParams(const CBlockIndex* pindex, CQuorumManager& quorumManager)
+std::vector<std::reference_wrapper<const Consensus::LLMQParams>> CLLMQUtils::GetEnabledQuorumParams(const CBlockIndex* pindex, const CQuorumManager& quorumManager)
 {
     std::vector<std::reference_wrapper<const Consensus::LLMQParams>> ret;
     ret.reserve(Params().GetConsensus().llmqs.size());

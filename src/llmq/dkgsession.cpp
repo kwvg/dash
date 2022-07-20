@@ -1170,7 +1170,7 @@ void CDKGSession::ReceiveMessage(const CDKGPrematureCommitment& qc, bool& retBan
     logger.Batch("verified premature commitment. received=%d/%d, time=%d", receivedCount, members.size(), t1.count());
 }
 
-std::vector<CFinalCommitment> CDKGSession::FinalizeCommitments()
+std::vector<CFinalCommitment> CDKGSession::FinalizeCommitments(CQuorumManager& quorumManager)
 {
     if (!AreWeMember()) {
         return {};
@@ -1263,7 +1263,7 @@ std::vector<CFinalCommitment> CDKGSession::FinalizeCommitments()
         t2.stop();
 
         cxxtimer::Timer t3(true);
-        if (!fqc.Verify(m_quorum_base_block_index, true)) {
+        if (!fqc.Verify(m_quorum_base_block_index, quorumManager, true)) {
             logger.Batch("failed to verify final commitment");
             continue;
         }

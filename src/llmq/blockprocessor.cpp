@@ -40,7 +40,7 @@ CQuorumBlockProcessor::CQuorumBlockProcessor(CEvoDB &_evoDb, CConnman& _connman)
     CLLMQUtils::InitQuorumsCache(mapHasMinedCommitmentCache);
 }
 
-void CQuorumBlockProcessor::ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv)
+void CQuorumBlockProcessor::ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CQuorumManager& quorumManager)
 {
     if (msg_type != NetMsgType::QFCOMMITMENT) {
         return;
@@ -106,7 +106,7 @@ void CQuorumBlockProcessor::ProcessMessage(CNode* pfrom, const std::string& msg_
         }
     }
 
-    if (!qc.Verify(pQuorumBaseBlockIndex, true)) {
+    if (!qc.Verify(pQuorumBaseBlockIndex, quorumManager, true)) {
         LogPrint(BCLog::LLMQ, "CQuorumBlockProcessor::%s -- commitment for quorum %s:%d is not valid quorumIndex[%d] nversion[%d], peer=%d\n",
                  __func__, qc.quorumHash.ToString(),
                  uint8_t(qc.llmqType), qc.quorumIndex, qc.nVersion, pfrom->GetId());
@@ -166,7 +166,7 @@ bool CQuorumBlockProcessor::ProcessBlock(const CBlock& block, const CBlockIndex*
 
     for (const auto& p : qcs) {
         const auto& qc = p.second;
-        if (!ProcessCommitment(pindex->nHeight, blockHash, qc, state, fJustCheck, fBLSChecks)) {
+        if (!ProcessCommitment(pindex->nHeight, blockHash, qc, state, quorumManager, fJustCheck, fBLSChecks)) {
             LogPrintf("[ProcessBlock] failed h[%d] llmqType[%d] version[%d] quorumIndex[%d] quorumHash[%s]\n", pindex->nHeight, static_cast<int>(qc.llmqType), qc.nVersion, qc.quorumIndex, qc.quorumHash.ToString());
             return false;
         }
@@ -191,7 +191,7 @@ static std::tuple<std::string, Consensus::LLMQType, int, uint32_t> BuildInversed
     return std::make_tuple(DB_MINED_COMMITMENT_BY_INVERSED_HEIGHT_Q_INDEXED, llmqType, quorumIndex, htobe32(std::numeric_limits<uint32_t>::max() - nMinedHeight));
 }
 
-bool CQuorumBlockProcessor::ProcessCommitment(int nHeight, const uint256& blockHash, const CFinalCommitment& qc, CValidationState& state, bool fJustCheck, bool fBLSChecks)
+bool CQuorumBlockProcessor::ProcessCommitment(int nHeight, const uint256& blockHash, const CFinalCommitment& qc, CValidationState& state, const CQuorumManager& quorumManager, bool fJustCheck, bool fBLSChecks)
 {
     AssertLockHeld(cs_main);
 
@@ -239,7 +239,7 @@ bool CQuorumBlockProcessor::ProcessCommitment(int nHeight, const uint256& blockH
 
     const auto* pQuorumBaseBlockIndex = LookupBlockIndex(qc.quorumHash);
 
-    if (!qc.Verify(pQuorumBaseBlockIndex, fBLSChecks)) {
+    if (!qc.Verify(pQuorumBaseBlockIndex, quorumManager, fBLSChecks)) {
         LogPrint(BCLog::LLMQ, "CQuorumBlockProcessor::%s height=%d, type=%d, quorumIndex=%d, quorumHash=%s, signers=%s, validMembers=%d, quorumPublicKey=%s qc verify failed.\n", __func__,
                  nHeight, uint8_t(qc.llmqType), qc.quorumIndex, quorumHash.ToString(), qc.CountSigners(), qc.CountValidMembers(), qc.quorumPublicKey.ToString());
         return state.Invalid(ValidationInvalidReason::CONSENSUS, false, REJECT_INVALID, "bad-qc-invalid");

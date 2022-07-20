@@ -15,7 +15,7 @@
 namespace llmq
 {
 
-UniValue CDKGDebugSessionStatus::ToJson(int quorumIndex, int detailLevel) const
+UniValue CDKGDebugSessionStatus::ToJson(CQuorumManager& quorumManager, int quorumIndex, int detailLevel) const
 {
     UniValue ret(UniValue::VOBJ);
 
@@ -27,7 +27,7 @@ UniValue CDKGDebugSessionStatus::ToJson(int quorumIndex, int detailLevel) const
     if (detailLevel == 2) {
         const CBlockIndex* pindex = WITH_LOCK(cs_main, return LookupBlockIndex(quorumHash));
         if (pindex != nullptr) {
-            dmnMembers = CLLMQUtils::GetAllQuorumMembers(llmqType, pindex);
+            dmnMembers = CLLMQUtils::GetAllQuorumMembers(llmqType, quorumManager, pindex);
         }
     }
 
@@ -108,7 +108,7 @@ UniValue CDKGDebugSessionStatus::ToJson(int quorumIndex, int detailLevel) const
 
 CDKGDebugManager::CDKGDebugManager() = default;
 
-UniValue CDKGDebugStatus::ToJson(int detailLevel) const
+UniValue CDKGDebugStatus::ToJson(CQuorumManager& quorumManager, int detailLevel) const
 {
     UniValue ret(UniValue::VOBJ);
 
@@ -124,7 +124,7 @@ UniValue CDKGDebugStatus::ToJson(int detailLevel) const
         UniValue s(UniValue::VOBJ);
         s.pushKV("llmqType", std::string(GetLLMQParams(p.first.first).name));
         s.pushKV("quorumIndex", p.first.second);
-        s.pushKV("status", p.second.ToJson(p.first.second, detailLevel));
+        s.pushKV("status", p.second.ToJson(quorumManager, p.first.second, detailLevel));
 
         sessionsArrJson.push_back(s);
     }

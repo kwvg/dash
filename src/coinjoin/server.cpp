@@ -239,7 +239,7 @@ void CCoinJoinServer::CheckPool(CConnman& connman, llmq::Context& ctx)
     // If we have an entry for each collateral, then create final tx
     if (nState == POOL_STATE_ACCEPTING_ENTRIES && size_t(GetEntriesCount()) == vecSessionCollaterals.size()) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::CheckPool -- FINALIZE TRANSACTIONS\n");
-        CreateFinalTransaction(connman);
+        CreateFinalTransaction(connman, ctx);
         return;
     }
 
@@ -248,9 +248,9 @@ void CCoinJoinServer::CheckPool(CConnman& connman, llmq::Context& ctx)
     if (nState == POOL_STATE_ACCEPTING_ENTRIES && CCoinJoinServer::HasTimedOut()
             && GetEntriesCount() >= CCoinJoin::GetMinPoolParticipants()) {
         // Punish misbehaving participants
-        ChargeFees(connman);
+        ChargeFees(connman, ctx);
         // Try to complete this session ignoring the misbehaving ones
-        CreateFinalTransaction(connman);
+        CreateFinalTransaction(connman, ctx);
         return;
     }
 
@@ -262,7 +262,7 @@ void CCoinJoinServer::CheckPool(CConnman& connman, llmq::Context& ctx)
     }
 }
 
-void CCoinJoinServer::CreateFinalTransaction(CConnman& connman)
+void CCoinJoinServer::CreateFinalTransaction(CConnman& connman, llmq::Context& ctx)
 {
     AssertLockNotHeld(cs_coinjoin);
     LogPrint(BCLog::COINJOIN, "CCoinJoinServer::CreateFinalTransaction -- FINALIZE TRANSACTIONS\n");
@@ -334,7 +334,7 @@ void CCoinJoinServer::CommitFinalTransaction(CConnman& connman, llmq::Context& c
     RelayCompletedTransaction(MSG_SUCCESS, connman);
 
     // Randomly charge clients
-    ChargeRandomFees(connman);
+    ChargeRandomFees(connman, ctx);
 
     // Reset
     LogPrint(BCLog::COINJOIN, "CCoinJoinServer::CommitFinalTransaction -- COMPLETED -- RESETTING\n");
@@ -353,7 +353,7 @@ void CCoinJoinServer::CommitFinalTransaction(CConnman& connman, llmq::Context& c
 // transaction for the client to be able to enter the pool. This transaction is kept by the Masternode
 // until the transaction is either complete or fails.
 //
-void CCoinJoinServer::ChargeFees(CConnman& connman) const
+void CCoinJoinServer::ChargeFees(CConnman& connman, llmq::Context& ctx) const
 {
     AssertLockNotHeld(cs_coinjoin);
     if (!fMasternodeMode) return;
@@ -406,7 +406,7 @@ void CCoinJoinServer::ChargeFees(CConnman& connman) const
     if (nState == POOL_STATE_ACCEPTING_ENTRIES || nState == POOL_STATE_SIGNING) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::ChargeFees -- found uncooperative node (didn't %s transaction), charging fees: %s", /* Continued */
             (nState == POOL_STATE_SIGNING) ? "sign" : "send", vecOffendersCollaterals[0]->ToString());
-        ConsumeCollateral(connman, vecOffendersCollaterals[0]);
+        ConsumeCollateral(connman, ctx, vecOffendersCollaterals[0]);
     }
 }
 
@@ -422,22 +422,22 @@ void CCoinJoinServer::ChargeFees(CConnman& connman) const
     stop these kinds of attacks 1 in 10 successful transactions are charged. This
     adds up to a cost of 0.001DRK per transaction on average.
 */
-void CCoinJoinServer::ChargeRandomFees(CConnman& connman) const
+void CCoinJoinServer::ChargeRandomFees(CConnman& connman, llmq::Context& ctx) const
 {
     if (!fMasternodeMode) return;
 
     for (const auto& txCollateral : vecSessionCollaterals) {
         if (GetRandInt(100) > 10) return;
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::ChargeRandomFees -- charging random fees, txCollateral=%s", txCollateral->ToString()); /* Continued */
-        ConsumeCollateral(connman, txCollateral);
+        ConsumeCollateral(connman, ctx, txCollateral);
     }
 }
 
-void CCoinJoinServer::ConsumeCollateral(CConnman& connman, const CTransactionRef& txref) const
+void CCoinJoinServer::ConsumeCollateral(CConnman& connman, const llmq::Context& ctx, const CTransactionRef& txref) const
 {
     LOCK(cs_main);
     CValidationState validationState;
-    if (!AcceptToMemoryPool(mempool, validationState, txref, nullptr /* pfMissingInputs */, false /* bypass_limits */, 0 /* nAbsurdFee */)) {
+    if (!AcceptToMemoryPool(mempool, validationState, ctx, txref, nullptr /* pfMissingInputs */, false /* bypass_limits */, 0 /* nAbsurdFee */)) {
         LogPrint(BCLog::COINJOIN, "%s -- AcceptToMemoryPool failed\n", __func__);
     } else {
         connman.RelayTransaction(*txref);
@@ -459,7 +459,7 @@ bool CCoinJoinServer::HasTimedOut() const
 //
 // Check for extraneous timeout
 //
-void CCoinJoinServer::CheckTimeout(CConnman& connman)
+void CCoinJoinServer::CheckTimeout(CConnman& connman, llmq::Context& ctx)
 {
     if (!fMasternodeMode) return;
 
@@ -470,7 +470,7 @@ void CCoinJoinServer::CheckTimeout(CConnman& connman)
 
     LogPrint(BCLog::COINJOIN, "CCoinJoinServer::CheckTimeout -- %s timed out -- resetting\n",
         (nState == POOL_STATE_SIGNING) ? "Signing" : "Session");
-    ChargeFees(connman);
+    ChargeFees(connman, ctx);
     WITH_LOCK(cs_coinjoin, SetNull());
 }
 
@@ -562,7 +562,7 @@ bool CCoinJoinServer::AddEntry(CConnman& connman, const llmq::Context& ctx, cons
     if (entry.vecTxDSIn.size() > COINJOIN_ENTRY_MAX_SIZE) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::%s -- ERROR: too many inputs! %d/%d\n", __func__, entry.vecTxDSIn.size(), COINJOIN_ENTRY_MAX_SIZE);
         nMessageIDRet = ERR_MAXIMUM;
-        ConsumeCollateral(connman, entry.txCollateral);
+        ConsumeCollateral(connman, ctx, entry.txCollateral);
         return false;
     }
 
@@ -590,7 +590,7 @@ bool CCoinJoinServer::AddEntry(CConnman& connman, const llmq::Context& ctx, cons
     if (!IsValidInOuts(ctx, vin, entry.vecTxOut, nMessageIDRet, &fConsumeCollateral)) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::%s -- ERROR! IsValidInOuts() failed: %s\n", __func__, CCoinJoin::GetMessageByID(nMessageIDRet).translated);
         if (fConsumeCollateral) {
-            ConsumeCollateral(connman, entry.txCollateral);
+            ConsumeCollateral(connman, ctx, entry.txCollateral);
         }
         return false;
     }
@@ -871,7 +871,7 @@ void CCoinJoinServer::DoMaintenance(CConnman& connman, llmq::Context& ctx) const
 
     coinJoinServer.CheckForCompleteQueue(connman);
     coinJoinServer.CheckPool(connman, ctx);
-    coinJoinServer.CheckTimeout(connman);
+    coinJoinServer.CheckTimeout(connman, ctx);
 }
 
 void CCoinJoinServer::GetJsonInfo(UniValue& obj) const

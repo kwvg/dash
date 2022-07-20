@@ -184,17 +184,17 @@ static UniValue quorum_dkgstatus(const JSONRPCRequest& request)
     }
 
     NodeContext& node = EnsureNodeContext(request.context);
+    llmq::Context& llmq_ctx = EnsureLLMQContext(request.context);
 
     llmq::CDKGDebugStatus status;
     node.quorumDKGDebugManager->GetLocalDebugStatus(status);
 
-    auto ret = status.ToJson(detailLevel);
+    auto ret = status.ToJson(detailLevel, *ctx.quorumManager);
 
     CBlockIndex* pindexTip = WITH_LOCK(cs_main, return ::ChainActive().Tip());
     int tipHeight = pindexTip->nHeight;
 
     auto proTxHash = WITH_LOCK(activeMasternodeInfoCs, return activeMasternodeInfo.proTxHash);
-    const llmq::Context& llmq_ctx = EnsureLLMQContext(request.context);
 
     UniValue minableCommitments(UniValue::VARR);
     UniValue quorumArrConnections(UniValue::VARR);
