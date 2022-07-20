@@ -23,7 +23,7 @@
 
 #include <univalue.h>
 
-CCoinJoinServer coinJoinServer; // TODO deblogalize this!
+std::unique_ptr<CCoinJoinServer> coinJoinServer; // TODO deblogalize this!
 constexpr static CAmount DEFAULT_MAX_RAW_TX_FEE{COIN / 10};
 
 void CCoinJoinServer::ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, llmq::Context& ctx, bool enable_bip61)
@@ -869,9 +869,9 @@ void CCoinJoinServer::DoMaintenance(CConnman& connman, llmq::Context& ctx) const
 
     if (!masternodeSync.IsBlockchainSynced() || ShutdownRequested()) return;
 
-    coinJoinServer.CheckForCompleteQueue(connman);
-    coinJoinServer.CheckPool(connman, ctx);
-    coinJoinServer.CheckTimeout(connman, ctx);
+    coinJoinServer->CheckForCompleteQueue(connman);
+    coinJoinServer->CheckPool(connman, ctx);
+    coinJoinServer->CheckTimeout(connman, ctx);
 }
 
 void CCoinJoinServer::GetJsonInfo(UniValue& obj) const

@@ -2321,6 +2321,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     // ********************************************************* Step 10b: setup CoinJoin
 
+    coinJoinServer = std::make_unique<CCoinJoinServer>();
     g_wallet_init_interface.InitCoinJoinSettings();
 
     // ********************************************************* Step 10b: Load cache data

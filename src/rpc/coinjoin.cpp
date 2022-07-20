@@ -144,7 +144,7 @@ static UniValue getcoinjoininfo(const JSONRPCRequest& request)
     UniValue obj(UniValue::VOBJ);
 
     if (fMasternodeMode) {
-        coinJoinServer.GetJsonInfo(obj);
+        coinJoinServer->GetJsonInfo(obj);
         return obj;
     }
 

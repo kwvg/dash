@@ -14,7 +14,7 @@ class UniValue;
 namespace llmq { struct Context; }
 
 // The main object for accessing mixing
-extern CCoinJoinServer coinJoinServer;
+extern std::unique_ptr<CCoinJoinServer> coinJoinServer;
 
 /** Used to keep track of current status of mixing pool
  */
