@@ -316,18 +316,18 @@ public:
     void RemoveConflictingLock(const uint256& islockHash, const CInstantSendLock& islock);
 
     size_t GetInstantSendLockCount() const;
+
+    bool IsInstantSendEnabled() const;
+    /**
+     * If true, MN should sign all transactions, if false, MN should not sign
+     * transactions in mempool, but should sign txes included in a block. This
+     * allows ChainLocks to continue even while this spork is disabled.
+     */
+    bool IsInstantSendMempoolSigningEnabled() const;
+    bool RejectConflictingBlocks() const;
 };
 
 extern std::unique_ptr<CInstantSendManager> quorumInstantSendManager;
-
-bool IsInstantSendEnabled(const CSporkManager& sporkManager);
-/**
- * If true, MN should sign all transactions, if false, MN should not sign
- * transactions in mempool, but should sign txes included in a block. This
- * allows ChainLocks to continue even while this spork is disabled.
- */
-bool IsInstantSendMempoolSigningEnabled(const CSporkManager& sporkManager);
-bool RejectConflictingBlocks(const CSporkManager& sporkManager);
 
 } // namespace llmq
 

@@ -279,7 +279,7 @@ void CChainLocksHandler::TrySignChainTip()
     // considered safe when it is islocked or at least known since 10 minutes (from mempool or block). These checks are
     // performed for the tip (which we try to sign) and the previous 5 blocks. If a ChainLocked block is found on the
     // way down, we consider all TXs to be safe.
-    if (IsInstantSendEnabled(spork_manager) && RejectConflictingBlocks(spork_manager)) {
+    if (quorumInstantSendManager->IsInstantSendEnabled() && quorumInstantSendManager->RejectConflictingBlocks()) {
         const auto* pindexWalk = pindex;
         while (pindexWalk != nullptr) {
             if (pindex->nHeight - pindexWalk->nHeight > 5) {
@@ -438,14 +438,14 @@ CChainLocksHandler::BlockTxs::mapped_type CChainLocksHandler::GetBlockTxs(const 
 
 bool CChainLocksHandler::IsTxSafeForMining(const uint256& txid) const
 {
-    if (!RejectConflictingBlocks(spork_manager)) {
+    if (!quorumInstantSendManager->RejectConflictingBlocks()) {
         return true;
     }
     if (!isEnabled || !isEnforced) {
         return true;
     }
 
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!quorumInstantSendManager->IsInstantSendEnabled()) {
         return true;
     }
     if (quorumInstantSendManager->IsLocked(txid)) {

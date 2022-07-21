@@ -480,7 +480,7 @@ void CInstantSendManager::Stop()
 
 void CInstantSendManager::ProcessTx(const CTransaction& tx, bool fRetroactive, const Consensus::Params& params)
 {
-    if (!fMasternodeMode || !IsInstantSendEnabled(spork_manager) || !masternodeSync->IsBlockchainSynced()) {
+    if (!fMasternodeMode || !IsInstantSendEnabled() || !masternodeSync->IsBlockchainSynced()) {
         return;
     }
 
@@ -507,7 +507,7 @@ void CInstantSendManager::ProcessTx(const CTransaction& tx, bool fRetroactive, c
     // However, if we are processing a tx because it was included in a block we should
     // sign even if mempool IS signing is disabled. This allows a ChainLock to happen on this
     // block after we retroactively locked all transactions.
-    if (!IsInstantSendMempoolSigningEnabled(spork_manager) && !fRetroactive) return;
+    if (!IsInstantSendMempoolSigningEnabled() && !fRetroactive) return;
 
     if (!TrySignInputLocks(tx, fRetroactive, utils::GetInstantSendLLMQType(WITH_LOCK(cs_main, return ::ChainActive().Tip())), params)) {
         return;
@@ -635,7 +635,7 @@ bool CInstantSendManager::CheckCanLock(const COutPoint& outpoint, bool printDebu
 
 void CInstantSendManager::HandleNewRecoveredSig(const CRecoveredSig& recoveredSig)
 {
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!IsInstantSendEnabled()) {
         return;
     }
 
@@ -763,7 +763,7 @@ void CInstantSendManager::HandleNewInstantSendLockRecoveredSig(const llmq::CReco
 
 void CInstantSendManager::ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv)
 {
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!IsInstantSendEnabled()) {
         return;
     }
 
@@ -865,7 +865,7 @@ bool CInstantSendManager::ProcessPendingInstantSendLocks(bool deterministic)
     decltype(pendingInstantSendLocks) pend;
     bool fMoreWork{false};
 
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!IsInstantSendEnabled()) {
         return false;
     }
 
@@ -1131,7 +1131,7 @@ void CInstantSendManager::ProcessInstantSendLock(NodeId from, const uint256& has
 
 void CInstantSendManager::TransactionAddedToMempool(const CTransactionRef& tx)
 {
-    if (!IsInstantSendEnabled(spork_manager) || !masternodeSync->IsBlockchainSynced() || tx->vin.empty()) {
+    if (!IsInstantSendEnabled() || !masternodeSync->IsBlockchainSynced() || tx->vin.empty()) {
         return;
     }
 
@@ -1180,7 +1180,7 @@ void CInstantSendManager::TransactionRemovedFromMempool(const CTransactionRef& t
 
 void CInstantSendManager::BlockConnected(const std::shared_ptr<const CBlock>& pblock, const CBlockIndex* pindex, const std::vector<CTransactionRef>& vtxConflicted)
 {
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!IsInstantSendEnabled()) {
         return;
     }
 
@@ -1341,7 +1341,7 @@ void CInstantSendManager::UpdatedBlockTip(const CBlockIndex* pindexNew)
 
 void CInstantSendManager::HandleFullyConfirmedBlock(const CBlockIndex* pindex)
 {
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!IsInstantSendEnabled()) {
         return;
     }
 
@@ -1564,7 +1564,7 @@ void CInstantSendManager::ProcessPendingRetryLockTxs()
         return;
     }
 
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!IsInstantSendEnabled()) {
         return;
     }
 
@@ -1619,7 +1619,7 @@ void CInstantSendManager::ProcessPendingRetryLockTxs()
 
 bool CInstantSendManager::AlreadyHave(const CInv& inv) const
 {
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!IsInstantSendEnabled()) {
         return true;
     }
 
@@ -1629,7 +1629,7 @@ bool CInstantSendManager::AlreadyHave(const CInv& inv) const
 
 bool CInstantSendManager::GetInstantSendLockByHash(const uint256& hash, llmq::CInstantSendLock& ret) const
 {
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!IsInstantSendEnabled()) {
         return false;
     }
 
@@ -1654,7 +1654,7 @@ bool CInstantSendManager::GetInstantSendLockByHash(const uint256& hash, llmq::CI
 
 CInstantSendLockPtr CInstantSendManager::GetInstantSendLockByTxid(const uint256& txid) const
 {
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!IsInstantSendEnabled()) {
         return nullptr;
     }
 
@@ -1663,7 +1663,7 @@ CInstantSendLockPtr CInstantSendManager::GetInstantSendLockByTxid(const uint256&
 
 bool CInstantSendManager::IsLocked(const uint256& txHash) const
 {
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!IsInstantSendEnabled()) {
         return false;
     }
 
@@ -1672,7 +1672,7 @@ bool CInstantSendManager::IsLocked(const uint256& txHash) const
 
 bool CInstantSendManager::IsWaitingForTx(const uint256& txHash) const
 {
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!IsInstantSendEnabled()) {
         return false;
     }
 
@@ -1691,7 +1691,7 @@ bool CInstantSendManager::IsWaitingForTx(const uint256& txHash) const
 
 CInstantSendLockPtr CInstantSendManager::GetConflictingLock(const CTransaction& tx) const
 {
-    if (!IsInstantSendEnabled(spork_manager)) {
+    if (!IsInstantSendEnabled()) {
         return nullptr;
     }
 
@@ -1725,22 +1725,22 @@ void CInstantSendManager::WorkThreadMain()
     }
 }
 
-bool IsInstantSendEnabled(const CSporkManager& sporkManager)
+bool CInstantSendManager::IsInstantSendEnabled() const
 {
-    return !fReindex && !fImporting && sporkManager.IsSporkActive(SPORK_2_INSTANTSEND_ENABLED);
+    return !fReindex && !fImporting && spork_manager.IsSporkActive(SPORK_2_INSTANTSEND_ENABLED);
 }
 
-bool IsInstantSendMempoolSigningEnabled(const CSporkManager& sporkManager)
+bool CInstantSendManager::IsInstantSendMempoolSigningEnabled() const
 {
-    return !fReindex && !fImporting && sporkManager.GetSporkValue(SPORK_2_INSTANTSEND_ENABLED) == 0;
+    return !fReindex && !fImporting && spork_manager.GetSporkValue(SPORK_2_INSTANTSEND_ENABLED) == 0;
 }
 
-bool RejectConflictingBlocks(const CSporkManager& sporkManager)
+bool CInstantSendManager::RejectConflictingBlocks() const
 {
     if (!masternodeSync->IsBlockchainSynced()) {
         return false;
     }
-    if (!sporkManager.IsSporkActive(SPORK_3_INSTANTSEND_BLOCK_FILTERING)) {
+    if (!spork_manager.IsSporkActive(SPORK_3_INSTANTSEND_BLOCK_FILTERING)) {
         LogPrint(BCLog::INSTANTSEND, "%s: spork3 is off, skipping transaction locking checks\n", __func__);
         return false;
     }
