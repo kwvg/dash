@@ -79,10 +79,7 @@ class LLMQImpl : public LLMQ
 public:
     size_t getInstantSentLockCount() override
     {
-        if (!llmq::quorumInstantSendManager) {
-            return 0;
-        }
-        return llmq::quorumInstantSendManager->GetInstantSendLockCount();
+        return llmq::quorumInstantSendManager == nullptr ? 0 : llmq::quorumInstantSendManager->GetInstantSendLockCount();
     }
 };
 

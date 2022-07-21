@@ -18,7 +18,7 @@
 namespace llmq
 {
 
-CDKGSessionManager* quorumDKGSessionManager;
+std::unique_ptr<CDKGSessionManager> quorumDKGSessionManager;
 
 static const std::string DB_VVEC = "qdkg_V";
 static const std::string DB_SKCONTRIB = "qdkg_S";

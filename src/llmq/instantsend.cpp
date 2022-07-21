@@ -43,7 +43,7 @@ const int CInstantSendDb::CURRENT_VERSION;
 const uint8_t CInstantSendLock::islock_version;
 const uint8_t CInstantSendLock::isdlock_version;
 
-CInstantSendManager* quorumInstantSendManager;
+std::unique_ptr<CInstantSendManager> quorumInstantSendManager;
 
 uint256 CInstantSendLock::GetRequestId() const
 {

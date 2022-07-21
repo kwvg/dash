@@ -318,7 +318,7 @@ public:
     size_t GetInstantSendLockCount() const;
 };
 
-extern CInstantSendManager* quorumInstantSendManager;
+extern std::unique_ptr<CInstantSendManager> quorumInstantSendManager;
 
 bool IsInstantSendEnabled(const CSporkManager& sporkManager);
 /**
