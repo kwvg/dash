@@ -363,7 +363,8 @@ void PrepareShutdown(NodeContext& node)
         pdsNotificationInterface = nullptr;
     }
     if (fMasternodeMode) {
-        UnregisterValidationInterface(activeMasternodeManager);
+        UnregisterValidationInterface(activeMasternodeManager.get());
+        activeMasternodeManager.reset();
     }
 
     {
@@ -2316,16 +2317,16 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     if(fMasternodeMode) {
         // Create and register activeMasternodeManager, will init later in ThreadImport
-        activeMasternodeManager = new CActiveMasternodeManager(*node.connman);
-        RegisterValidationInterface(activeMasternodeManager);
+        activeMasternodeManager = std::make_unique<CActiveMasternodeManager>(*node.connman);
+        RegisterValidationInterface(activeMasternodeManager.get());
     }
 
     {
         LOCK(activeMasternodeInfoCs);
-        if (activeMasternodeInfo.blsKeyOperator == nullptr) {
+        if (!activeMasternodeInfo.blsKeyOperator) {
             activeMasternodeInfo.blsKeyOperator = std::make_unique<CBLSSecretKey>();
         }
-        if (activeMasternodeInfo.blsPubKeyOperator == nullptr) {
+        if (!activeMasternodeInfo.blsPubKeyOperator) {
             activeMasternodeInfo.blsPubKeyOperator = std::make_unique<CBLSPublicKey>();
         }
     }
