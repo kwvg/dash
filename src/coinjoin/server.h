@@ -74,7 +74,7 @@ private:
     void SetNull() EXCLUSIVE_LOCKS_REQUIRED(cs_coinjoin);
 
 public:
-    CCoinJoinServer(CConnman& _connman) :
+    explicit CCoinJoinServer(CConnman& _connman) :
         vecSessionCollaterals(),
         fUnitTest(false),
         connman(_connman) {};

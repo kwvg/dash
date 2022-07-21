@@ -154,7 +154,7 @@ private:
     CConnman& connman;
 
 public:
-    CCoinJoinClientQueueManager(CConnman& _connman) :
+    explicit CCoinJoinClientQueueManager(CConnman& _connman) :
         connman(_connman) {};
 
     void ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, bool enable_bip61) LOCKS_EXCLUDED(cs_vecqueue);

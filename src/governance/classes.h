@@ -148,7 +148,7 @@ public:
     CAmount GetPaymentsTotalAmount();
 
     bool IsValid(const CTransaction& txNew, int nBlockHeight, CAmount blockReward);
-    bool IsExpired(CGovernanceManager& governanceManager) const;
+    bool IsExpired(const CGovernanceManager& governanceManager) const;
 };
 
 #endif // BITCOIN_GOVERNANCE_CLASSES_H

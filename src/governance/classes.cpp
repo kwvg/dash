@@ -678,7 +678,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew, int nBlockHeight, CAmount b
     return true;
 }
 
-bool CSuperblock::IsExpired(CGovernanceManager& governanceManager) const
+bool CSuperblock::IsExpired(const CGovernanceManager& governanceManager) const
 {
     int nExpirationBlocks;
     // Executed triggers are kept for another superblock cycle (approximately 1 month),
