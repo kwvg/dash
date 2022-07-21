@@ -83,7 +83,7 @@ private:
 
 bool IsQuorumDKGEnabled(const CSporkManager& sporkManager);
 
-extern CDKGSessionManager* quorumDKGSessionManager;
+extern std::unique_ptr<CDKGSessionManager> quorumDKGSessionManager;
 
 } // namespace llmq
 

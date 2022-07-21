@@ -258,7 +258,7 @@ private:
     void StartQuorumDataRecoveryThread(const CQuorumCPtr pQuorum, const CBlockIndex* pIndex, uint16_t nDataMask) const;
 };
 
-extern CQuorumManager* quorumManager;
+extern std::unique_ptr<CQuorumManager> quorumManager;
 
 } // namespace llmq
 

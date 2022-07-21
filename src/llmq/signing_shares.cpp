@@ -23,7 +23,7 @@
 namespace llmq
 {
 
-CSigSharesManager* quorumSigSharesManager = nullptr;
+std::unique_ptr<CSigSharesManager> quorumSigSharesManager;
 
 void CSigShare::UpdateKey()
 {

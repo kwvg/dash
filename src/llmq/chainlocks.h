@@ -109,7 +109,7 @@ private:
     void Cleanup();
 };
 
-extern CChainLocksHandler* chainLocksHandler;
+extern std::unique_ptr<CChainLocksHandler> chainLocksHandler;
 
 bool AreChainLocksEnabled(const CSporkManager& sporkManager);
 

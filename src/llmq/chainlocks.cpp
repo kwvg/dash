@@ -21,7 +21,7 @@
 
 namespace llmq
 {
-CChainLocksHandler* chainLocksHandler;
+std::unique_ptr<CChainLocksHandler> chainLocksHandler;
 
 CChainLocksHandler::CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager) :
     scheduler(std::make_unique<CScheduler>()),
