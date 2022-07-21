@@ -153,7 +153,7 @@ static UniValue getcoinjoininfo(const JSONRPCRequest& request)
 
     CCoinJoinClientOptions::GetJsonInfo(obj);
 
-    obj.pushKV("queue_size", coinJoinClientQueueManager.GetQueueSize());
+    obj.pushKV("queue_size", coinJoinClientQueueManager->GetQueueSize());
 
     std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
     CWallet* const pwallet = wallet.get();

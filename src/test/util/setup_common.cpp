@@ -36,6 +36,9 @@
 #include <util/validation.h>
 
 #include <bls/bls.h>
+#ifdef ENABLE_WALLET
+#include <coinjoin/client.h>
+#endif // ENABLE_WALLET
 #include <coinjoin/coinjoin.h>
 #include <coinjoin/server.h>
 #include <evo/cbtx.h>
@@ -191,6 +194,9 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     }
 
     ::coinJoinServer = std::make_unique<CCoinJoinServer>(*m_node.connman);
+#ifdef ENABLE_WALLET
+    ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*m_node.connman);
+#endif // ENABLE_WALLET
 
     deterministicMNManager.reset(new CDeterministicMNManager(*evoDb, *m_node.connman));
     llmq::InitLLMQSystem(*evoDb, *m_node.mempool, *m_node.connman, true);
@@ -207,6 +213,9 @@ TestingSetup::~TestingSetup()
     StopScriptCheckWorkerThreads();
     GetMainSignals().FlushBackgroundCallbacks();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
+#ifdef ENABLE_WALLET
+    ::coinJoinClientQueueManager.reset();
+#endif // ENABLE_WALLET
     ::coinJoinServer.reset();
     m_node.connman.reset();
     m_node.banman.reset();

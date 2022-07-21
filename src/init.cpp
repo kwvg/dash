@@ -232,6 +232,9 @@ void PrepareShutdown(NodeContext& node)
     llmq::StopLLMQSystem();
 
     ::coinJoinServer.reset();
+#ifdef ENABLE_WALLET
+    ::coinJoinClientQueueManager.reset();
+#endif // ENABLE_WALLET
 
     // fRPCInWarmup should be `false` if we completed the loading sequence
     // before a shutdown request was received
@@ -2315,6 +2318,10 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     // ********************************************************* Step 10a: Setup CoinJoin
 
     ::coinJoinServer = std::make_unique<CCoinJoinServer>(*node.connman);
+#ifdef ENABLE_WALLET
+    ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*node.connman);
+#endif // ENABLE_WALLET
+
     g_wallet_init_interface.InitCoinJoinSettings();
 
     // ********************************************************* Step 10b: Load cache data
