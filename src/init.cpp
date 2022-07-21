@@ -231,6 +231,8 @@ void PrepareShutdown(NodeContext& node)
     StopHTTPServer();
     llmq::StopLLMQSystem();
 
+    ::coinJoinServer.reset();
+
     // fRPCInWarmup should be `false` if we completed the loading sequence
     // before a shutdown request was received
     std::string statusmessage;
@@ -2320,6 +2322,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     // ********************************************************* Step 10b: setup CoinJoin
 
+    ::coinJoinServer = std::make_unique<CCoinJoinServer>(*node.connman);
     g_wallet_init_interface.InitCoinJoinSettings();
 
     // ********************************************************* Step 10b: Load cache data
@@ -2385,7 +2388,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     }
 
     if (fMasternodeMode) {
-        node.scheduler->scheduleEvery(std::bind(&CCoinJoinServer::DoMaintenance, std::ref(coinJoinServer), std::ref(*node.connman)), 1 * 1000);
+        node.scheduler->scheduleEvery(std::bind(&CCoinJoinServer::DoMaintenance, std::ref(coinJoinServer)), 1 * 1000);
         node.scheduler->scheduleEvery(std::bind(&llmq::CDKGSessionManager::CleanupOldContributions, std::ref(*llmq::quorumDKGSessionManager)), 60 * 60 * 1000);
 #ifdef ENABLE_WALLET
     } else if(CCoinJoinClientOptions::IsEnabled()) {

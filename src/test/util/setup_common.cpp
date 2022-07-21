@@ -37,6 +37,7 @@
 
 #include <bls/bls.h>
 #include <coinjoin/coinjoin.h>
+#include <coinjoin/server.h>
 #include <evo/cbtx.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
@@ -189,6 +190,8 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
         m_node.connman->Init(options);
     }
 
+    ::coinJoinServer = std::make_unique<CCoinJoinServer>(*m_node.connman);
+
     deterministicMNManager.reset(new CDeterministicMNManager(*evoDb, *m_node.connman));
     llmq::InitLLMQSystem(*evoDb, *m_node.mempool, *m_node.connman, true);
 }
@@ -204,6 +207,7 @@ TestingSetup::~TestingSetup()
     StopScriptCheckWorkerThreads();
     GetMainSignals().FlushBackgroundCallbacks();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
+    ::coinJoinServer.reset();
     m_node.connman.reset();
     m_node.banman.reset();
     UnloadBlockIndex(m_node.mempool);

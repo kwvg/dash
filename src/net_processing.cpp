@@ -4113,7 +4113,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
             pair.second->ProcessMessage(pfrom, msg_type, vRecv, *connman, enable_bip61);
         }
 #endif // ENABLE_WALLET
-        coinJoinServer.ProcessMessage(pfrom, msg_type, vRecv, *connman, enable_bip61);
+        coinJoinServer->ProcessMessage(pfrom, msg_type, vRecv, enable_bip61);
         sporkManager.ProcessSporkMessages(pfrom, msg_type, vRecv, *connman);
         masternodeSync.ProcessMessage(pfrom, msg_type, vRecv);
         governance.ProcessMessage(pfrom, msg_type, vRecv, *connman, enable_bip61);
