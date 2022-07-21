@@ -36,6 +36,7 @@
 #include <util/validation.h>
 
 #include <bls/bls.h>
+#include <coinjoin/client.h>
 #include <coinjoin/coinjoin.h>
 #include <coinjoin/server.h>
 #include <evo/cbtx.h>
@@ -191,6 +192,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     }
 
     ::coinJoinServer = std::make_unique<CCoinJoinServer>(*m_node.connman);
+    ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*m_node.connman);
 
     deterministicMNManager.reset(new CDeterministicMNManager(*evoDb, *m_node.connman));
     llmq::InitLLMQSystem(*evoDb, *m_node.mempool, *m_node.connman, true);
@@ -207,6 +209,7 @@ TestingSetup::~TestingSetup()
     StopScriptCheckWorkerThreads();
     GetMainSignals().FlushBackgroundCallbacks();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
+    ::coinJoinClientQueueManager.reset();
     ::coinJoinServer.reset();
     m_node.connman.reset();
     m_node.banman.reset();

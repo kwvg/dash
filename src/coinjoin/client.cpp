@@ -29,10 +29,10 @@
 #include <univalue.h>
 
 std::map<const std::string, std::shared_ptr<CCoinJoinClientManager>> coinJoinClientManagers;
-CCoinJoinClientQueueManager coinJoinClientQueueManager;
+std::unique_ptr<CCoinJoinClientQueueManager> coinJoinClientQueueManager;
 
 
-void CCoinJoinClientQueueManager::ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, CConnman& connman, bool enable_bip61)
+void CCoinJoinClientQueueManager::ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, bool enable_bip61)
 {
     if (fMasternodeMode) return;
     if (!CCoinJoinClientOptions::IsEnabled()) return;
@@ -44,11 +44,11 @@ void CCoinJoinClientQueueManager::ProcessMessage(CNode* pfrom, const std::string
     }
 
     if (msg_type == NetMsgType::DSQUEUE) {
-        CCoinJoinClientQueueManager::ProcessDSQueue(pfrom, msg_type, vRecv, connman, enable_bip61);
+        CCoinJoinClientQueueManager::ProcessDSQueue(pfrom, msg_type, vRecv, enable_bip61);
     }
 }
 
-void CCoinJoinClientQueueManager::ProcessDSQueue(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman& connman, bool enable_bip61)
+void CCoinJoinClientQueueManager::ProcessDSQueue(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, bool enable_bip61)
 {
     CCoinJoinQueue dsq;
     vRecv >> dsq;
@@ -86,7 +86,7 @@ void CCoinJoinClientQueueManager::ProcessDSQueue(CNode* pfrom, const std::string
 
     // if the queue is ready, submit if we can
     if (dsq.fReady && ranges::any_of(coinJoinClientManagers,
-                                     [&dmn, &connman](const auto& pair){ return pair.second->TrySubmitDenominate(dmn->pdmnState->addr, connman); })) {
+                                     [this, &dmn](const auto& pair){ return pair.second->TrySubmitDenominate(dmn->pdmnState->addr, this->connman); })) {
         LogPrint(BCLog::COINJOIN, "DSQUEUE -- CoinJoin queue (%s) is ready on masternode %s\n", dsq.ToString(), dmn->pdmnState->addr.ToString());
         return;
     } else {
@@ -1020,7 +1020,7 @@ bool CCoinJoinClientSession::JoinExistingQueue(CAmount nBalanceNeedsAnonymized, 
 
     // Look through the queues and see if anything matches
     CCoinJoinQueue dsq;
-    while (coinJoinClientQueueManager.GetQueueItemAndTry(dsq)) {
+    while (coinJoinClientQueueManager->GetQueueItemAndTry(dsq)) {
         auto dmn = mnList.GetValidMNByCollateral(dsq.masternodeOutpoint);
 
         if (!dmn) {
@@ -1845,7 +1845,7 @@ void CCoinJoinClientManager::GetJsonInfo(UniValue& obj) const
 
 void DoCoinJoinMaintenance(CConnman& connman)
 {
-    coinJoinClientQueueManager.DoMaintenance();
+    coinJoinClientQueueManager->DoMaintenance();
     for (const auto& pair : coinJoinClientManagers) {
         pair.second->DoMaintenance(connman);
     }
