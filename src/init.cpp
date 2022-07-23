@@ -278,6 +278,7 @@ void PrepareShutdown(NodeContext& node)
 
     // After related databases and caches have been flushed, destroy pointers
     // and reset all to nullptr.
+    ::masternodeSync.reset();
     ::governance.reset();
     ::sporkManager.reset();
 
@@ -2333,6 +2334,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     // ********************************************************* Step 10b: setup CoinJoin
 
+    ::masternodeSync = std::make_unique<CMasternodeSync>(*node.connman);
     ::coinJoinServer = std::make_unique<CCoinJoinServer>(*node.connman);
     ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*node.connman);
     g_wallet_init_interface.InitCoinJoinSettings();
@@ -2391,7 +2393,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     // ********************************************************* Step 10c: schedule Dash-specific tasks
 
     node.scheduler->scheduleEvery(std::bind(&CNetFulfilledRequestManager::DoMaintenance, std::ref(netfulfilledman)), 60 * 1000);
-    node.scheduler->scheduleEvery(std::bind(&CMasternodeSync::DoMaintenance, std::ref(masternodeSync), std::ref(*node.connman)), 1 * 1000);
+    node.scheduler->scheduleEvery(std::bind(&CMasternodeSync::DoMaintenance, std::ref(*::masternodeSync)), 1 * 1000);
     node.scheduler->scheduleEvery(std::bind(&CMasternodeUtils::DoMaintenance, std::ref(*node.connman)), 60 * 1000);
     node.scheduler->scheduleEvery(std::bind(&CDeterministicMNManager::DoMaintenance, std::ref(*deterministicMNManager)), 10 * 1000);
 

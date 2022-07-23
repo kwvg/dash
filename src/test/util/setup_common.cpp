@@ -14,6 +14,7 @@
 #include <index/txindex.h>
 #include <init.h>
 #include <interfaces/chain.h>
+#include <masternode/sync.h>
 #include <miner.h>
 #include <net.h>
 #include <net_processing.h>
@@ -195,6 +196,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
 
     ::sporkManager = std::make_unique<CSporkManager>();
     ::governance = std::make_unique<CGovernanceManager>();
+    ::masternodeSync = std::make_unique<CMasternodeSync>(*m_node.connman);
     ::coinJoinServer = std::make_unique<CCoinJoinServer>(*m_node.connman);
     ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*m_node.connman);
 
@@ -215,6 +217,7 @@ TestingSetup::~TestingSetup()
     GetMainSignals().UnregisterBackgroundSignalScheduler();
     ::coinJoinClientQueueManager.reset();
     ::coinJoinServer.reset();
+    ::masternodeSync.reset();
     ::governance.reset();
     ::sporkManager.reset();
     m_node.connman.reset();

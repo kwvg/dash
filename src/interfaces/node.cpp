@@ -87,15 +87,15 @@ class MasternodeSyncImpl : public Masternode::Sync
 public:
     bool isSynced() override
     {
-        return masternodeSync.IsSynced();
+        return masternodeSync->IsSynced();
     }
     bool isBlockchainSynced() override
     {
-        return masternodeSync.IsBlockchainSynced();
+        return masternodeSync->IsBlockchainSynced();
     }
     std::string getSyncStatus() override
     {
-        return masternodeSync.GetSyncStatus();
+        return masternodeSync->GetSyncStatus();
     }
 };
 
