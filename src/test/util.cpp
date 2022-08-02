@@ -11,6 +11,7 @@
 #include <node/context.h>
 #include <pow.h>
 #include <script/standard.h>
+#include <spork.h>
 #include <validation.h>
 #include <util/check.h>
 #ifdef ENABLE_WALLET
@@ -73,7 +74,7 @@ std::shared_ptr<CBlock> PrepareBlock(const NodeContext& node, const CScript& coi
 {
     assert(node.mempool);
     auto block = std::make_shared<CBlock>(
-        BlockAssembler{*node.mempool, Params()}
+        BlockAssembler{*sporkManager, *node.mempool, Params()}
             .CreateNewBlock(coinbase_scriptPubKey)
             ->block);
 

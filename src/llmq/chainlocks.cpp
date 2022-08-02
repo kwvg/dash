@@ -23,9 +23,10 @@ namespace llmq
 {
 CChainLocksHandler* chainLocksHandler;
 
-CChainLocksHandler::CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman) :
+CChainLocksHandler::CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager) :
     scheduler(std::make_unique<CScheduler>()),
     mempool(_mempool), connman(_connman),
+    spork_manager(sporkManager),
     scheduler_thread(std::make_unique<std::thread>([&] { TraceThread("cl-schdlr", [&] { scheduler->serviceQueue(); }); }))
 {
 }
@@ -80,7 +81,7 @@ CChainLockSig CChainLocksHandler::GetBestChainLock() const
 
 void CChainLocksHandler::ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv)
 {
-    if (!AreChainLocksEnabled()) {
+    if (!AreChainLocksEnabled(spork_manager)) {
         return;
     }
 
@@ -211,7 +212,7 @@ void CChainLocksHandler::CheckActiveState()
     const bool fDIP0008Active = WITH_LOCK(cs_main, return (::ChainActive().Tip() != nullptr) && (::ChainActive().Tip()->pprev != nullptr) && ::ChainActive().Tip()->pprev->nHeight >= Params().GetConsensus().DIP0008Height);
 
     bool oldIsEnforced = isEnforced;
-    isEnabled = AreChainLocksEnabled();
+    isEnabled = AreChainLocksEnabled(spork_manager);
     isEnforced = (fDIP0008Active && isEnabled);
 
     if (!oldIsEnforced && isEnforced) {
@@ -278,7 +279,7 @@ void CChainLocksHandler::TrySignChainTip()
     // considered safe when it is islocked or at least known since 10 minutes (from mempool or block). These checks are
     // performed for the tip (which we try to sign) and the previous 5 blocks. If a ChainLocked block is found on the
     // way down, we consider all TXs to be safe.
-    if (IsInstantSendEnabled() && RejectConflictingBlocks()) {
+    if (IsInstantSendEnabled(spork_manager) && RejectConflictingBlocks(spork_manager)) {
         const auto* pindexWalk = pindex;
         while (pindexWalk != nullptr) {
             if (pindex->nHeight - pindexWalk->nHeight > 5) {
@@ -437,14 +438,14 @@ CChainLocksHandler::BlockTxs::mapped_type CChainLocksHandler::GetBlockTxs(const 
 
 bool CChainLocksHandler::IsTxSafeForMining(const uint256& txid) const
 {
-    if (!RejectConflictingBlocks()) {
+    if (!RejectConflictingBlocks(spork_manager)) {
         return true;
     }
     if (!isEnabled || !isEnforced) {
         return true;
     }
 
-    if (!IsInstantSendEnabled()) {
+    if (!IsInstantSendEnabled(spork_manager)) {
         return true;
     }
     if (quorumInstantSendManager->IsLocked(txid)) {
@@ -667,7 +668,7 @@ void CChainLocksHandler::Cleanup()
     lastCleanupTime = GetTimeMillis();
 }
 
-bool AreChainLocksEnabled()
+bool AreChainLocksEnabled(const CSporkManager& sporkManager)
 {
     return sporkManager.IsSporkActive(SPORK_19_CHAINLOCKS_ENABLED);
 }

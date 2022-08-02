@@ -17,6 +17,7 @@ class CGovernanceManager;
 class CGovernanceTriggerManager;
 class CGovernanceObject;
 class CGovernanceVote;
+class CSporkManager;
 
 extern CGovernanceManager governance;
 
@@ -380,6 +381,6 @@ private:
 
 };
 
-bool AreSuperblocksEnabled();
+bool AreSuperblocksEnabled(const CSporkManager& sporkManager);
 
 #endif // BITCOIN_GOVERNANCE_GOVERNANCE_H

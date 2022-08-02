@@ -543,12 +543,12 @@ static bool EvalSpork(Consensus::LLMQType llmqType, int64_t spork_value)
 
 bool CLLMQUtils::IsAllMembersConnectedEnabled(Consensus::LLMQType llmqType)
 {
-    return EvalSpork(llmqType, sporkManager.GetSporkValue(SPORK_21_QUORUM_ALL_CONNECTED));
+    return EvalSpork(llmqType, sporkManager->GetSporkValue(SPORK_21_QUORUM_ALL_CONNECTED));
 }
 
 bool CLLMQUtils::IsQuorumPoseEnabled(Consensus::LLMQType llmqType)
 {
-    return EvalSpork(llmqType, sporkManager.GetSporkValue(SPORK_23_QUORUM_POSE));
+    return EvalSpork(llmqType, sporkManager->GetSporkValue(SPORK_23_QUORUM_POSE));
 }
 
 bool CLLMQUtils::IsQuorumRotationEnabled(Consensus::LLMQType llmqType, const CBlockIndex* pindex)

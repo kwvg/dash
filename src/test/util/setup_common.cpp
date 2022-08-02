@@ -23,6 +23,7 @@
 #include <rpc/server.h>
 #include <script/sigcache.h>
 #include <streams.h>
+#include <spork.h>
 #include <txdb.h>
 #include <util/memory.h>
 #include <util/strencodings.h>
@@ -191,11 +192,12 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
         m_node.connman->Init(options);
     }
 
+    ::sporkManager = std::make_unique<CSporkManager>();
     ::coinJoinServer = std::make_unique<CCoinJoinServer>(*m_node.connman);
     ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*m_node.connman);
 
     deterministicMNManager.reset(new CDeterministicMNManager(*evoDb, *m_node.connman));
-    llmq::InitLLMQSystem(*evoDb, *m_node.mempool, *m_node.connman, true);
+    llmq::InitLLMQSystem(*evoDb, *m_node.mempool, *m_node.connman, *sporkManager, true);
 }
 
 TestingSetup::~TestingSetup()
@@ -211,6 +213,7 @@ TestingSetup::~TestingSetup()
     GetMainSignals().UnregisterBackgroundSignalScheduler();
     ::coinJoinClientQueueManager.reset();
     ::coinJoinServer.reset();
+    ::sporkManager.reset();
     m_node.connman.reset();
     m_node.banman.reset();
     UnloadBlockIndex(m_node.mempool);
@@ -275,7 +278,7 @@ CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransacti
 CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
-    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
+    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
     CBlock& block = pblocktemplate->block;
 
     std::vector<CTransactionRef> llmqCommitments;

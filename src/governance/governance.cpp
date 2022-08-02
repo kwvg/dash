@@ -1281,7 +1281,7 @@ void CGovernanceManager::RemoveInvalidVotes()
     lastMNListForVotingKeys = std::make_shared<CDeterministicMNList>(curMNList);
 }
 
-bool AreSuperblocksEnabled()
+bool AreSuperblocksEnabled(const CSporkManager& sporkManager)
 {
     return sporkManager.IsSporkActive(SPORK_9_SUPERBLOCKS_ENABLED);
 }
