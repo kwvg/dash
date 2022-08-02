@@ -20,6 +20,7 @@
 class CBlockIndex;
 class CChainParams;
 class CConnman;
+class CGovernanceManager;
 class CScript;
 class CSporkManager;
 
@@ -150,6 +151,7 @@ private:
     const CChainParams& chainparams;
     const CTxMemPool& m_mempool;
     const CSporkManager& spork_manager;
+    CGovernanceManager& governance_manager;
 
 public:
     struct Options {
@@ -158,8 +160,10 @@ public:
         CFeeRate blockMinFeeRate;
     };
 
-    explicit BlockAssembler(const CSporkManager& sporkManager, const CTxMemPool& mempool, const CChainParams& params);
-    explicit BlockAssembler(const CSporkManager& sporkManager, const CTxMemPool& mempool, const CChainParams& params, const Options& options);
+    explicit BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
+                            const CTxMemPool& mempool, const CChainParams& params);
+    explicit BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
+                            const CTxMemPool& mempool, const CChainParams& params, const Options& options);
 
     /** Construct a new block template with coinbase to scriptPubKeyIn */
     std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn);

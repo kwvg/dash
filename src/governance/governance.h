@@ -19,7 +19,7 @@ class CGovernanceObject;
 class CGovernanceVote;
 class CSporkManager;
 
-extern CGovernanceManager governance;
+extern std::unique_ptr<CGovernanceManager> governance;
 
 static constexpr int RATE_BUFFER_SIZE = 5;
 

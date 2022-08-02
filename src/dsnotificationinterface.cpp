@@ -71,7 +71,7 @@ void CDSNotificationInterface::UpdatedBlockTip(const CBlockIndex *pindexNew, con
     llmq::quorumManager->UpdatedBlockTip(pindexNew, fInitialDownload);
     llmq::quorumDKGSessionManager->UpdatedBlockTip(pindexNew, fInitialDownload);
 
-    if (!fDisableGovernance) governance.UpdatedBlockTip(pindexNew, connman);
+    if (!fDisableGovernance) governance->UpdatedBlockTip(pindexNew, connman);
 }
 
 void CDSNotificationInterface::TransactionAddedToMempool(const CTransactionRef& ptx, int64_t nAcceptTime)
@@ -111,7 +111,7 @@ void CDSNotificationInterface::BlockDisconnected(const std::shared_ptr<const CBl
 void CDSNotificationInterface::NotifyMasternodeListChanged(bool undo, const CDeterministicMNList& oldMNList, const CDeterministicMNListDiff& diff, CConnman& connman)
 {
     CMNAuth::NotifyMasternodeListChanged(undo, oldMNList, diff, connman);
-    governance.UpdateCachesAndClean();
+    governance->UpdateCachesAndClean();
 }
 
 void CDSNotificationInterface::NotifyChainLock(const CBlockIndex* pindex, const std::shared_ptr<const llmq::CChainLockSig>& clsig)

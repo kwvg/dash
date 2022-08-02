@@ -7,6 +7,7 @@
 #include <governance/classes.h>
 #include <index/txindex.h>
 #include <node/context.h>
+#include <governance/governance.h>
 #include <masternode/node.h>
 #include <masternode/payments.h>
 #include <net.h>
@@ -269,9 +270,9 @@ static std::string GetRequiredPaymentsString(int nBlockHeight, const CDeterminis
             strPayments += ", " + EncodeDestination(dest);
         }
     }
-    if (CSuperblockManager::IsSuperblockTriggered(nBlockHeight)) {
+    if (CSuperblockManager::IsSuperblockTriggered(*governance, nBlockHeight)) {
         std::vector<CTxOut> voutSuperblock;
-        if (!CSuperblockManager::GetSuperblockPayments(nBlockHeight, voutSuperblock)) {
+        if (!CSuperblockManager::GetSuperblockPayments(*governance, nBlockHeight, voutSuperblock)) {
             return strPayments + ", error";
         }
         std::string strSBPayees = "Unknown";
@@ -434,7 +435,7 @@ static UniValue masternode_payments(const JSONRPCRequest& request)
         std::vector<CTxOut> voutMasternodePayments, voutDummy;
         CMutableTransaction dummyTx;
         CAmount blockReward = nBlockFees + GetBlockSubsidy(pindex->pprev->nBits, pindex->pprev->nHeight, Params().GetConsensus());
-        FillBlockPayments(*sporkManager, dummyTx, pindex->nHeight, blockReward, voutMasternodePayments, voutDummy);
+        FillBlockPayments(*sporkManager, *governance, dummyTx, pindex->nHeight, blockReward, voutMasternodePayments, voutDummy);
 
         UniValue blockObj(UniValue::VOBJ);
         CAmount payedPerBlock{0};
