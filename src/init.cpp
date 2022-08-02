@@ -271,12 +271,16 @@ void PrepareShutdown(NodeContext& node)
         CFlatDB<CNetFulfilledRequestManager> flatdb4("netfulfilled.dat", "magicFulfilledCache");
         flatdb4.Dump(netfulfilledman);
         CFlatDB<CSporkManager> flatdb6("sporks.dat", "magicSporkCache");
-        flatdb6.Dump(sporkManager);
+        flatdb6.Dump(*::sporkManager);
         if (!fDisableGovernance) {
             CFlatDB<CGovernanceManager> flatdb3("governance.dat", "magicGovernanceCache");
             flatdb3.Dump(governance);
         }
     }
+
+    // After related databases and caches have been flushed, destroy pointers
+    // and reset all to nullptr.
+    ::sporkManager.reset();
 
     // After the threads that potentially access these pointers have been stopped,
     // destruct and reset all to nullptr.
@@ -1789,6 +1793,9 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     node.peer_logic.reset(new PeerLogicValidation(node.connman.get(), node.banman.get(), *node.scheduler, chainman, *node.mempool, args.GetBoolArg("-enablebip61", DEFAULT_ENABLE_BIP61)));
     RegisterValidationInterface(node.peer_logic.get());
 
+    assert(!::sporkManager);
+    ::sporkManager = std::make_unique<CSporkManager>();
+
     std::vector<std::string> vSporkAddresses;
     if (args.IsArgSet("-sporkaddr")) {
         vSporkAddresses = args.GetArgs("-sporkaddr");
@@ -1796,19 +1803,19 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
         vSporkAddresses = Params().SporkAddresses();
     }
     for (const auto& address: vSporkAddresses) {
-        if (!sporkManager.SetSporkAddress(address)) {
+        if (!::sporkManager->SetSporkAddress(address)) {
             return InitError(_("Invalid spork address specified with -sporkaddr"));
         }
     }
 
     int minsporkkeys = args.GetArg("-minsporkkeys", Params().MinSporkKeys());
-    if (!sporkManager.SetMinSporkKeys(minsporkkeys)) {
+    if (!::sporkManager->SetMinSporkKeys(minsporkkeys)) {
         return InitError(_("Invalid minimum number of spork signers specified with -minsporkkeys"));
     }
 
 
     if (args.IsArgSet("-sporkkey")) { // spork priv key
-        if (!sporkManager.SetPrivKey(args.GetArg("-sporkkey", ""))) {
+        if (!::sporkManager->SetPrivKey(args.GetArg("-sporkkey", ""))) {
             return InitError(_("Unable to sign spork message, wrong key?"));
         }
     }
@@ -1958,7 +1965,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     uiInterface.InitMessage(_("Loading sporks cache...").translated);
     CFlatDB<CSporkManager> flatdb6("sporks.dat", "magicSporkCache");
-    if (!flatdb6.Load(sporkManager)) {
+    if (!flatdb6.Load(*::sporkManager)) {
         return InitError(strprintf(_("Failed to load sporks cache from %s"), (GetDataDir() / "sporks.dat").string()));
     }
 
@@ -2036,7 +2043,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
                 llmq::quorumSnapshotManager.reset();
                 llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(*evoDb));
 
-                llmq::InitLLMQSystem(*evoDb, *node.mempool, *node.connman, false, fReset || fReindexChainState);
+                llmq::InitLLMQSystem(*evoDb, *node.mempool, *node.connman, *::sporkManager, false, fReset || fReindexChainState);
 
                 if (fReset) {
                     pblocktree->WriteReindexing(true);

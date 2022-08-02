@@ -1530,7 +1530,7 @@ bool static AlreadyHave(const CInv& inv, const CTxMemPool& mempool) EXCLUSIVE_LO
     case MSG_SPORK:
         {
             CSporkMessage spork;
-            return sporkManager.GetSporkByHash(inv.hash, spork);
+            return sporkManager->GetSporkByHash(inv.hash, spork);
         }
 
     case MSG_GOVERNANCE_OBJECT:
@@ -1819,7 +1819,7 @@ void static ProcessGetData(CNode* pfrom, const CChainParams& chainparams, CConnm
 
             if (!push && inv.type == MSG_SPORK) {
                 CSporkMessage spork;
-                if (sporkManager.GetSporkByHash(inv.hash, spork)) {
+                if (sporkManager->GetSporkByHash(inv.hash, spork)) {
                     connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::SPORK, spork));
                     push = true;
                 }
@@ -4114,14 +4114,14 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
         }
 #endif // ENABLE_WALLET
         coinJoinServer->ProcessMessage(pfrom, msg_type, vRecv, enable_bip61);
-        sporkManager.ProcessSporkMessages(pfrom, msg_type, vRecv, *connman);
+        sporkManager->ProcessSporkMessages(pfrom, msg_type, vRecv, *connman);
         masternodeSync.ProcessMessage(pfrom, msg_type, vRecv);
         governance.ProcessMessage(pfrom, msg_type, vRecv, *connman, enable_bip61);
         CMNAuth::ProcessMessage(pfrom, msg_type, vRecv, *connman);
         llmq::quorumBlockProcessor->ProcessMessage(pfrom, msg_type, vRecv);
         llmq::quorumDKGSessionManager->ProcessMessage(pfrom, msg_type, vRecv);
         llmq::quorumManager->ProcessMessage(pfrom, msg_type, vRecv);
-        llmq::quorumSigSharesManager->ProcessMessage(pfrom, msg_type, vRecv);
+        llmq::quorumSigSharesManager->ProcessMessage(pfrom, msg_type, vRecv, *sporkManager);
         llmq::quorumSigningManager->ProcessMessage(pfrom, msg_type, vRecv);
         llmq::chainLocksHandler->ProcessMessage(pfrom, msg_type, vRecv);
         llmq::quorumInstantSendManager->ProcessMessage(pfrom, msg_type, vRecv);

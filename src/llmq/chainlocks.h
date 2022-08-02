@@ -23,6 +23,7 @@ class CConnman;
 class CBlockIndex;
 class CScheduler;
 class CTxMemPool;
+class CSporkManager;
 
 namespace llmq
 {
@@ -38,6 +39,7 @@ class CChainLocksHandler : public CRecoveredSigsListener
 private:
     CConnman& connman;
     CTxMemPool& mempool;
+    CSporkManager& spork_manager;
     std::unique_ptr<CScheduler> scheduler;
     std::unique_ptr<std::thread> scheduler_thread;
     mutable CCriticalSection cs;
@@ -70,7 +72,7 @@ private:
     int64_t lastCleanupTime GUARDED_BY(cs) {0};
 
 public:
-    explicit CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman);
+    explicit CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager);
     ~CChainLocksHandler();
 
     void Start();
@@ -109,7 +111,7 @@ private:
 
 extern CChainLocksHandler* chainLocksHandler;
 
-bool AreChainLocksEnabled();
+bool AreChainLocksEnabled(const CSporkManager& sporkManager);
 
 } // namespace llmq
 

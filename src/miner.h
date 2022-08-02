@@ -21,6 +21,7 @@ class CBlockIndex;
 class CChainParams;
 class CConnman;
 class CScript;
+class CSporkManager;
 
 namespace Consensus { struct Params; };
 
@@ -148,6 +149,7 @@ private:
     int64_t nLockTimeCutoff;
     const CChainParams& chainparams;
     const CTxMemPool& m_mempool;
+    const CSporkManager& spork_manager;
 
 public:
     struct Options {
@@ -156,8 +158,8 @@ public:
         CFeeRate blockMinFeeRate;
     };
 
-    explicit BlockAssembler(const CTxMemPool& mempool, const CChainParams& params);
-    explicit BlockAssembler(const CTxMemPool& mempool, const CChainParams& params, const Options& options);
+    explicit BlockAssembler(const CSporkManager& sporkManager, const CTxMemPool& mempool, const CChainParams& params);
+    explicit BlockAssembler(const CSporkManager& sporkManager, const CTxMemPool& mempool, const CChainParams& params, const Options& options);
 
     /** Construct a new block template with coinbase to scriptPubKeyIn */
     std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn);
