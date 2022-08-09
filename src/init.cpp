@@ -365,7 +365,8 @@ void PrepareShutdown(NodeContext& node)
         pdsNotificationInterface = nullptr;
     }
     if (fMasternodeMode) {
-        UnregisterValidationInterface(activeMasternodeManager);
+        UnregisterValidationInterface(activeMasternodeManager.get());
+        activeMasternodeManager.reset();
     }
 
     {
@@ -1952,8 +1953,8 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     if (fMasternodeMode) {
         // Create and register activeMasternodeManager, will init later in ThreadImport
-        activeMasternodeManager = new CActiveMasternodeManager(*node.connman);
-        RegisterValidationInterface(activeMasternodeManager);
+        activeMasternodeManager = std::make_unique<CActiveMasternodeManager>(*node.connman);
+        RegisterValidationInterface(activeMasternodeManager.get());
     }
 
     uint64_t nMaxOutboundLimit = 0; //unlimited unless -maxuploadtarget is set
