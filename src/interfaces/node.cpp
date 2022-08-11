@@ -57,7 +57,7 @@ class EVOImpl : public EVO
 public:
     CDeterministicMNList getListAtChainTip() override
     {
-        return deterministicMNManager->GetListAtChainTip();
+        return deterministicMNManager == nullptr ? CDeterministicMNList() : deterministicMNManager->GetListAtChainTip();
     }
 };
 
