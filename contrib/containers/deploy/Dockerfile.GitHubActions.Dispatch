@@ -58,7 +58,7 @@ ENV GROUP_ID ${GROUP_ID:-1000}
 RUN groupadd -g ${GROUP_ID} dash && \
     useradd -u ${USER_ID} -g dash -s /bin/bash -m -d /home/dash dash  && \
     mkdir /home/dash/.dashcore && \
-    chown dash:dash -R /home/dash
+    chown ${USER_ID}:${GROUP_ID} -R /home/dash
 
 RUN apt-get update && \
     apt-get -y install --no-install-recommends \

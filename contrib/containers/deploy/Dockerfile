@@ -13,7 +13,7 @@ ENV GROUP_ID ${GROUP_ID:-1000}
 RUN groupadd -g ${GROUP_ID} dash
 RUN useradd -u ${USER_ID} -g dash -s /bin/bash -m -d /home/dash dash
 RUN mkdir /home/dash/.dashcore
-RUN chown dash:dash -R /home/dash
+RUN chown ${USER_ID}:${GROUP_ID} -R /home/dash
 
 COPY bin/* /usr/local/bin/
 

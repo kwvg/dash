@@ -106,10 +106,10 @@ RUN \
   mkdir -p /cache/ccache && \
   mkdir /cache/depends && \
   mkdir /cache/sdk-sources && \
-  chown $USER_ID:$GROUP_ID /src && \
-  chown $USER_ID:$GROUP_ID -R /src && \
-  chown $USER_ID:$GROUP_ID /cache && \
-  chown $USER_ID:$GROUP_ID -R /cache
+  chown ${USER_ID}:${GROUP_ID} /src && \
+  chown ${USER_ID}:${GROUP_ID} -R /src && \
+  chown ${USER_ID}:${GROUP_ID} /cache && \
+  chown ${USER_ID}:${GROUP_ID} -R /cache
 
 WORKDIR /src/dash
 
