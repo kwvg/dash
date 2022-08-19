@@ -53,7 +53,7 @@ ARG GROUP_ID=1000
 ENV USER_ID ${USER_ID}
 ENV GROUP_ID ${GROUP_ID}
 RUN groupadd -g ${GROUP_ID} dash
-RUN useradd -u ${USER_ID} -g dash -s /bin/bash -m -d /dash dash
+RUN useradd -u ${USER_ID} -g dash -s /bin/bash -m -d /home/dash dash
 
 # Packages needed for all target builds
 RUN apt-get update && apt-get install $APT_ARGS \
