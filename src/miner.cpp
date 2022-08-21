@@ -56,9 +56,11 @@ BlockAssembler::Options::Options() {
 }
 
 BlockAssembler::BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                               const CTxMemPool& mempool, const CChainParams& params, const Options& options)
+                               llmq::CQuorumBlockProcessor& quorumBlockProcessor, const CTxMemPool& mempool,
+                               const CChainParams& params, const Options& options)
     : spork_manager(sporkManager),
       governance_manager(governanceManager),
+      quorum_block_processor(quorumBlockProcessor),
       chainparams(params),
       m_mempool(mempool)
 {
@@ -85,8 +87,9 @@ static BlockAssembler::Options DefaultOptions()
 }
 
 BlockAssembler::BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                               const CTxMemPool& mempool, const CChainParams& params)
-    : BlockAssembler(sporkManager, governanceManager, mempool, params, DefaultOptions()) {}
+                               llmq::CQuorumBlockProcessor& quorumBlockProcessor, const CTxMemPool& mempool,
+                               const CChainParams& params)
+    : BlockAssembler(sporkManager, governanceManager, quorumBlockProcessor, mempool, params, DefaultOptions()) {}
 
 void BlockAssembler::resetBlock()
 {
@@ -146,9 +149,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     if (fDIP0003Active_context) {
         for (const Consensus::LLMQParams& params : llmq::utils::GetEnabledQuorumParams(pindexPrev)) {
             std::vector<CTransactionRef> vqcTx;
-            if (llmq::quorumBlockProcessor->GetMineableCommitmentsTx(params,
-                                                                     nHeight,
-                                                                     vqcTx)) {
+            if (quorum_block_processor.GetMineableCommitmentsTx(params,
+                                                                nHeight,
+                                                                vqcTx)) {
                 for (const auto& qcTx : vqcTx) {
                     pblock->vtx.emplace_back(qcTx);
                     pblocktemplate->vTxFees.emplace_back(0);
