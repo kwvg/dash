@@ -14,6 +14,10 @@
 class CTxMemPool;
 class ChainstateManager;
 
+namespace llmq {
+class CQuorumBlockProcessor;
+}
+
 extern CCriticalSection cs_main;
 
 /** Default for -maxorphantxsize, maximum size in megabytes the orphan map can grow before entries are removed */
@@ -31,10 +35,11 @@ private:
     BanMan* const m_banman;
     ChainstateManager& m_chainman;
     CTxMemPool& m_mempool;
+    llmq::CQuorumBlockProcessor& m_quorum_block_processor;
 
     bool MaybeDiscourageAndDisconnect(CNode* pnode, bool enable_bip61) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 public:
-    PeerLogicValidation(CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman, CTxMemPool& pool, bool enable_bip61);
+    PeerLogicValidation(CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman, CTxMemPool& pool, llmq::CQuorumBlockProcessor& quorum_block_processor, bool enable_bip61);
 
     /**
      * Overridden from CValidationInterface.
