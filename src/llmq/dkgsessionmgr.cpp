@@ -24,9 +24,9 @@ static const std::string DB_VVEC = "qdkg_V";
 static const std::string DB_SKCONTRIB = "qdkg_S";
 static const std::string DB_ENC_CONTRIB = "qdkg_E";
 
-CDKGSessionManager::CDKGSessionManager(CConnman& _connman, CBLSWorker& _blsWorker, CSporkManager& sporkManager, bool unitTests, bool fWipe) :
+CDKGSessionManager::CDKGSessionManager(CConnman& _connman, CBLSWorker& _blsWorker, CDKGDebugManager& _dkgDebugManager, CSporkManager& sporkManager, bool unitTests, bool fWipe) :
         db(std::make_unique<CDBWrapper>(unitTests ? "" : (GetDataDir() / "llmq/dkgdb"), 1 << 20, unitTests, fWipe)),
-        blsWorker(_blsWorker), connman(_connman), spork_manager(sporkManager)
+        blsWorker(_blsWorker), connman(_connman), dkgDebugManager(_dkgDebugManager), spork_manager(sporkManager)
 {
     if (!fMasternodeMode && !utils::IsWatchQuorumsEnabled()) {
         // Regular nodes do not care about any DKG internals, bail out
@@ -41,7 +41,7 @@ CDKGSessionManager::CDKGSessionManager(CConnman& _connman, CBLSWorker& _blsWorke
         for (const auto i : irange::range(session_count)) {
             dkgSessionHandlers.emplace(std::piecewise_construct,
                                        std::forward_as_tuple(params.type, i),
-                                       std::forward_as_tuple(params, blsWorker, *this, connman, i));
+                                       std::forward_as_tuple(params, blsWorker, *this, dkgDebugManager, connman, i));
         }
     }
 }
