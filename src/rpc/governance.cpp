@@ -723,7 +723,9 @@ static UniValue ListObjects(const std::string& strCachedSignal, const std::strin
 
     LOCK2(cs_main, governance->cs);
 
-    std::vector<CGovernanceObject> objs = governance->GetAllNewerThan(nStartTime);
+    std::vector<CGovernanceObject> objs;
+    governance->GetAllNewerThan(objs, nStartTime);
+
     governance->UpdateLastDiffTime(GetTime());
     // CREATE RESULTS FOR USER
 

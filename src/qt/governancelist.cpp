@@ -348,17 +348,16 @@ void GovernanceList::updateProposalList()
         proposalModel->setVotingParams(nAbsVoteReq);
 
         std::vector<CGovernanceObject> govObjList;
-        if (clientModel->getAllGovernanceObjects(govObjList)) {
-            std::vector<const Proposal*> newProposals;
-            for (const auto& govObj : govObjList) {
-                if (govObj.GetObjectType() != GOVERNANCE_OBJECT_PROPOSAL) {
-                    continue; // Skip triggers.
-                }
-
-                newProposals.emplace_back(new Proposal(govObj, proposalModel));
+        clientModel->getAllGovernanceObjects(govObjList);
+        std::vector<const Proposal*> newProposals;
+        for (const auto& govObj : govObjList) {
+            if (govObj.GetObjectType() != GOVERNANCE_OBJECT_PROPOSAL) {
+                continue; // Skip triggers.
             }
-            proposalModel->reconcile(newProposals);
+
+            newProposals.emplace_back(new Proposal(govObj, proposalModel));
         }
+        proposalModel->reconcile(newProposals);
     }
 
     // Schedule next update.

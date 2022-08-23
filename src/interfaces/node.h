@@ -53,7 +53,7 @@ class GOV
 {
 public:
     virtual ~GOV() {}
-    virtual bool getAllNewerThan(std::vector<CGovernanceObject> &obj, int64_t nMoreThanTime) = 0;
+    virtual void getAllNewerThan(std::vector<CGovernanceObject> &objs, int64_t nMoreThanTime) = 0;
 };
 
 //! Interface for the src/llmq part of a dash node (dashd process).
