@@ -10,6 +10,7 @@
 #include <consensus/params.h>
 #include <consensus/validation.h>
 #include <crypto/sha256.h>
+#include <governance/governance.h>
 #include <index/txindex.h>
 #include <init.h>
 #include <interfaces/chain.h>
@@ -195,6 +196,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     }
 
     ::sporkManager = std::make_unique<CSporkManager>();
+    ::governance = std::make_unique<CGovernanceManager>();
     ::coinJoinServer = std::make_unique<CCoinJoinServer>(*m_node.connman);
 #ifdef ENABLE_WALLET
     ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*m_node.connman);
@@ -219,6 +221,7 @@ TestingSetup::~TestingSetup()
     ::coinJoinClientQueueManager.reset();
 #endif // ENABLE_WALLET
     ::coinJoinServer.reset();
+    ::governance.reset();
     ::sporkManager.reset();
     m_node.connman.reset();
     m_node.banman.reset();
@@ -284,7 +287,7 @@ CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransacti
 CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
-    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
+    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
     CBlock& block = pblocktemplate->block;
 
     std::vector<CTransactionRef> llmqCommitments;

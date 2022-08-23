@@ -274,12 +274,13 @@ void PrepareShutdown(NodeContext& node)
         flatdb6.Dump(*::sporkManager);
         if (!fDisableGovernance) {
             CFlatDB<CGovernanceManager> flatdb3("governance.dat", "magicGovernanceCache");
-            flatdb3.Dump(governance);
+            flatdb3.Dump(*::governance);
         }
     }
 
     // After related databases and caches have been flushed, destroy pointers
     // and reset all to nullptr.
+    ::governance.reset();
     ::sporkManager.reset();
 
     // After the threads that potentially access these pointers have been stopped,
@@ -1793,6 +1794,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     node.peer_logic.reset(new PeerLogicValidation(node.connman.get(), node.banman.get(), *node.scheduler, chainman, *node.mempool, args.GetBoolArg("-enablebip61", DEFAULT_ENABLE_BIP61)));
     RegisterValidationInterface(node.peer_logic.get());
 
+    ::governance = std::make_unique<CGovernanceManager>();
     assert(!::sporkManager);
     ::sporkManager = std::make_unique<CSporkManager>();
 
@@ -2357,10 +2359,10 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     uiInterface.InitMessage(_("Loading governance cache...").translated);
     CFlatDB<CGovernanceManager> flatdb3(strDBName, "magicGovernanceCache");
     if (fLoadCacheFiles && !fDisableGovernance) {
-        if(!flatdb3.Load(governance)) {
+        if(!flatdb3.Load(*::governance)) {
             return InitError(strprintf(_("Failed to load governance cache from %s"), (pathDB / strDBName).string()));
         }
-        governance.InitOnLoad();
+        ::governance->InitOnLoad();
     } else {
         CGovernanceManager governanceTmp;
         if(!flatdb3.Dump(governanceTmp)) {
@@ -2390,7 +2392,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     node.scheduler->scheduleEvery(std::bind(&CDeterministicMNManager::DoMaintenance, std::ref(*deterministicMNManager)), 10 * 1000);
 
     if (!fDisableGovernance) {
-        node.scheduler->scheduleEvery(std::bind(&CGovernanceManager::DoMaintenance, std::ref(governance), std::ref(*node.connman)), 60 * 5 * 1000);
+        node.scheduler->scheduleEvery(std::bind(&CGovernanceManager::DoMaintenance, std::ref(*::governance), std::ref(*node.connman)), 60 * 5 * 1000);
     }
 
     if (fMasternodeMode) {

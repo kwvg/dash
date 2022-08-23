@@ -6,6 +6,7 @@
 
 #include <chainparams.h>
 #include <consensus/merkle.h>
+#include <governance/governance.h>
 #include <key_io.h>
 #include <miner.h>
 #include <node/context.h>
@@ -80,7 +81,7 @@ std::shared_ptr<CBlock> PrepareBlock(const NodeContext& node, const CScript& coi
 {
     assert(node.mempool);
     auto block = std::make_shared<CBlock>(
-        BlockAssembler{*sporkManager, *node.mempool, Params()}
+        BlockAssembler{*sporkManager, *governance, *node.mempool, Params()}
             .CreateNewBlock(coinbase_scriptPubKey)
             ->block);
 

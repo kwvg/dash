@@ -64,9 +64,13 @@ public:
 class GOVImpl : public GOV
 {
 public:
-    std::vector<CGovernanceObject> getAllNewerThan(int64_t nMoreThanTime) override
+    bool getAllNewerThan(std::vector<CGovernanceObject> &obj, int64_t nMoreThanTime) override
     {
-        return governance.GetAllNewerThan(nMoreThanTime);
+        if (governance != nullptr) {
+            obj = governance->GetAllNewerThan(nMoreThanTime);
+            return true;
+        }
+        return false;
     }
 };
 
