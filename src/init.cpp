@@ -82,7 +82,9 @@
 
 #include <evo/deterministicmns.h>
 #include <llmq/blockprocessor.h>
+#include <llmq/chainlocks.h>
 #include <llmq/init.h>
+#include <llmq/instantsend.h>
 #include <llmq/quorums.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/signing.h>
@@ -1933,7 +1935,10 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     }
 #endif
 
-    pdsNotificationInterface = new CDSNotificationInterface(*node.connman);
+    pdsNotificationInterface = new CDSNotificationInterface(
+        *node.connman, ::masternodeSync, ::deterministicMNManager, ::governance, llmq::chainLocksHandler,
+        llmq::quorumInstantSendManager, llmq::quorumManager, llmq::quorumDKGSessionManager
+    );
     RegisterValidationInterface(pdsNotificationInterface);
 
     if (fMasternodeMode) {
