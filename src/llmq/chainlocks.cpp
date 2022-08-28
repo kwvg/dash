@@ -24,10 +24,8 @@ namespace llmq
 {
 std::unique_ptr<CChainLocksHandler> chainLocksHandler;
 
-CChainLocksHandler::CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager) :
-    scheduler(std::make_unique<CScheduler>()),
-    mempool(_mempool), connman(_connman),
-    spork_manager(sporkManager),
+CChainLocksHandler::CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager, CSigningManager& _sigman) :
+    scheduler(std::make_unique<CScheduler>()), mempool(_mempool), connman(_connman), spork_manager(sporkManager), sigman(_sigman),
     scheduler_thread(std::make_unique<std::thread>([&] { TraceThread("cl-schdlr", [&] { scheduler->serviceQueue(); }); }))
 {
 }
@@ -40,7 +38,7 @@ CChainLocksHandler::~CChainLocksHandler()
 
 void CChainLocksHandler::Start()
 {
-    quorumSigningManager->RegisterRecoveredSigsListener(this);
+    sigman.RegisterRecoveredSigsListener(this);
     scheduler->scheduleEvery([&]() {
         CheckActiveState();
         EnforceBestChainLock();
@@ -52,7 +50,7 @@ void CChainLocksHandler::Start()
 void CChainLocksHandler::Stop()
 {
     scheduler->stop();
-    quorumSigningManager->UnregisterRecoveredSigsListener(this);
+    sigman.UnregisterRecoveredSigsListener(this);
 }
 
 bool CChainLocksHandler::AlreadyHave(const CInv& inv) const
@@ -336,7 +334,7 @@ void CChainLocksHandler::TrySignChainTip()
         lastSignedMsgHash = msgHash;
     }
 
-    quorumSigningManager->AsyncSignIfMember(Params().GetConsensus().llmqTypeChainLocks, *llmq::quorumSigSharesManager, requestId, msgHash);
+    sigman.AsyncSignIfMember(Params().GetConsensus().llmqTypeChainLocks, *llmq::quorumSigSharesManager, requestId, msgHash);
 }
 
 void CChainLocksHandler::TransactionAddedToMempool(const CTransactionRef& tx, int64_t nAcceptTime)
