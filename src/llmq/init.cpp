@@ -31,8 +31,8 @@ void InitLLMQSystem(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, CSpor
     quorumBlockProcessor = std::make_unique<CQuorumBlockProcessor>(evoDb, connman);
     quorumDKGSessionManager = std::make_unique<CDKGSessionManager>(connman, *blsWorker, sporkManager, unitTests, fWipe);
     quorumManager = std::make_unique<CQuorumManager>(evoDb, connman, *blsWorker, *quorumDKGSessionManager);
-    quorumSigSharesManager = std::make_unique<CSigSharesManager>(connman);
     quorumSigningManager = std::make_unique<CSigningManager>(connman, unitTests, fWipe);
+    quorumSigSharesManager = std::make_unique<CSigSharesManager>(connman);
     chainLocksHandler = std::make_unique<CChainLocksHandler>(mempool, connman, sporkManager);
     quorumInstantSendManager = std::make_unique<CInstantSendManager>(mempool, connman, sporkManager, unitTests, fWipe);
 
@@ -45,8 +45,8 @@ void DestroyLLMQSystem()
 {
     quorumInstantSendManager.reset();
     chainLocksHandler.reset();
-    quorumSigningManager.reset();
     quorumSigSharesManager.reset();
+    quorumSigningManager.reset();
     quorumManager.reset();
     quorumDKGSessionManager.reset();
     quorumBlockProcessor.reset();
