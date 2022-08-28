@@ -18,6 +18,7 @@ namespace llmq {
 class CDKGSessionManager;
 class CQuorumBlockProcessor;
 class CQuorumManager;
+class CSigningManager;
 class CSigSharesManager;
 } // namespace llmq
 
@@ -41,13 +42,14 @@ private:
     llmq::CDKGSessionManager& m_qdkgsman;
     llmq::CQuorumBlockProcessor& m_quorum_block_processor;
     llmq::CQuorumManager& m_qman;
+    llmq::CSigningManager& m_sigman;
     llmq::CSigSharesManager& m_shareman;
 
     bool MaybeDiscourageAndDisconnect(CNode* pnode, bool enable_bip61) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 public:
     PeerLogicValidation(CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman,
                         CTxMemPool& pool, llmq::CQuorumBlockProcessor& quorum_block_processor, llmq::CDKGSessionManager& qdkgsman,
-                        llmq::CQuorumManager& qman, llmq::CSigSharesManager& shareman, bool enable_bip61);
+                        llmq::CQuorumManager& qman, llmq::CSigSharesManager& shareman, llmq::CSigningManager& sigman, bool enable_bip61);
 
     /**
      * Overridden from CValidationInterface.

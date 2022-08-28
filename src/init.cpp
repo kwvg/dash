@@ -1782,7 +1782,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     node.peer_logic.reset(new PeerLogicValidation(
         node.connman.get(), node.banman.get(), *node.scheduler, chainman, *node.mempool, *llmq::quorumBlockProcessor,
-        *llmq::quorumDKGSessionManager, *llmq::quorumManager, *llmq::quorumSigSharesManager, args.GetBoolArg("-enablebip61", DEFAULT_ENABLE_BIP61))
+        *llmq::quorumDKGSessionManager, *llmq::quorumManager, *llmq::quorumSigSharesManager, *llmq::quorumSigningManager, args.GetBoolArg("-enablebip61", DEFAULT_ENABLE_BIP61))
     );
     RegisterValidationInterface(node.peer_logic.get());
 

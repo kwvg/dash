@@ -19,6 +19,7 @@
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/quorums.h>
 #include <llmq/signing_shares.h>
+#include <llmq/signing.h>
 #include <miner.h>
 #include <net.h>
 #include <net_processing.h>
@@ -185,7 +186,8 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     m_node.connman = MakeUnique<CConnman>(0x1337, 0x1337); // Deterministic randomness for tests.
     m_node.peer_logic = MakeUnique<PeerLogicValidation>(
         m_node.connman.get(), m_node.banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool,
-        *llmq::quorumBlockProcessor, *llmq::quorumDKGSessionManager, *llmq::quorumManager, *llmq::quorumSigSharesManager, false
+        *llmq::quorumBlockProcessor, *llmq::quorumDKGSessionManager, *llmq::quorumManager,
+        *llmq::quorumSigSharesManager, *llmq::quorumSigningManager, false
     );
     {
         CConnman::Options options;
