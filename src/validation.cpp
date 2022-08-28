@@ -1131,8 +1131,9 @@ void CoinsViews::InitCache()
     m_cacheview = MakeUnique<CCoinsViewCache>(&m_catcherview);
 }
 
-CChainState::CChainState(BlockManager& blockman, uint256 from_snapshot_blockhash)
+CChainState::CChainState(BlockManager& blockman, std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor, uint256 from_snapshot_blockhash)
     : m_blockman(blockman),
+      m_quorum_block_processor(quorum_block_processor),
       m_from_snapshot_blockhash(from_snapshot_blockhash) {}
 
 void CChainState::InitCoinsDB(
@@ -1615,6 +1616,7 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out)
 DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view)
 {
     AssertLockHeld(cs_main);
+    assert(m_quorum_block_processor);
 
     bool fDIP0003Active = pindex->nHeight >= Params().GetConsensus().DIP0003Height;
     if (fDIP0003Active && !evoDb->VerifyBestBlock(pindex->GetBlockHash())) {
@@ -1642,7 +1644,7 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
     std::vector<std::pair<CAddressUnspentKey, CAddressUnspentValue> > addressUnspentIndex;
     std::vector<std::pair<CSpentIndexKey, CSpentIndexValue> > spentIndex;
 
-    if (!UndoSpecialTxsInBlock(block, pindex)) {
+    if (!UndoSpecialTxsInBlock(block, pindex, *m_quorum_block_processor)) {
         return DISCONNECT_FAILED;
     }
 
@@ -1971,6 +1973,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     AssertLockHeld(cs_main);
     assert(pindex);
     assert(*pindex->phashBlock == block.GetHash());
+    assert(m_quorum_block_processor);
     int64_t nTimeStart = GetTimeMicros();
 
     // Check it again in case a previous version let a bad block in
@@ -2131,7 +2134,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     bool fDIP0001Active_context = pindex->nHeight >= Params().GetConsensus().DIP0001Height;
 
     // MUST process special txes before updating UTXO to ensure consistency between mempool and block processing
-    if (!ProcessSpecialTxsInBlock(block, pindex, state, view, fJustCheck, fScriptChecks)) {
+    if (!ProcessSpecialTxsInBlock(block, pindex, *m_quorum_block_processor, state, view, fJustCheck, fScriptChecks)) {
         return error("ConnectBlock(DASH): ProcessSpecialTxsInBlock for block %s failed with %s",
                      pindex->GetBlockHash().ToString(), FormatStateMessage(state));
     }
@@ -4731,6 +4734,8 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
 /** Apply the effects of a block on the utxo cache, ignoring that it may already have been applied. */
 bool CChainState::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs, const CChainParams& params)
 {
+    assert(m_quorum_block_processor);
+
     // TODO: merge with ConnectBlock
     CBlock block;
     if (!ReadBlockFromDisk(block, pindex, params.GetConsensus())) {
@@ -4739,7 +4744,7 @@ bool CChainState::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& i
 
     // MUST process special txes before updating UTXO to ensure consistency between mempool and block processing
     CValidationState state;
-    if (!ProcessSpecialTxsInBlock(block, pindex, state, inputs, false /*fJustCheck*/, false /*fScriptChecks*/)) {
+    if (!ProcessSpecialTxsInBlock(block, pindex, *m_quorum_block_processor, state, inputs, false /*fJustCheck*/, false /*fScriptChecks*/)) {
         return error("RollforwardBlock(DASH): ProcessSpecialTxsInBlock for block %s failed with %s",
             pindex->GetBlockHash().ToString(), FormatStateMessage(state));
     }
@@ -5528,7 +5533,7 @@ std::vector<CChainState*> ChainstateManager::GetAll()
     return out;
 }
 
-CChainState& ChainstateManager::InitializeChainstate(const uint256& snapshot_blockhash)
+CChainState& ChainstateManager::InitializeChainstate(std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor, const uint256& snapshot_blockhash)
 {
     bool is_snapshot = !snapshot_blockhash.IsNull();
     std::unique_ptr<CChainState>& to_modify =
@@ -5538,7 +5543,7 @@ CChainState& ChainstateManager::InitializeChainstate(const uint256& snapshot_blo
         throw std::logic_error("should not be overwriting a chainstate");
     }
 
-    to_modify.reset(new CChainState(m_blockman, snapshot_blockhash));
+    to_modify.reset(new CChainState(m_blockman, quorum_block_processor, snapshot_blockhash));
 
     // Snapshot chainstates and initial IBD chaintates always become active.
     if (is_snapshot || (!is_snapshot && !m_active_chainstate)) {

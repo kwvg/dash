@@ -34,6 +34,10 @@
 #include <utility>
 #include <vector>
 
+namespace llmq {
+class CQuorumBlockProcessor;
+} // namespace llmq
+
 class CChainState;
 class CBlockIndex;
 class CBlockTreeDB;
@@ -530,8 +534,11 @@ private:
     //! Manages the UTXO set, which is a reflection of the contents of `m_chain`.
     std::unique_ptr<CoinsViews> m_coins_views;
 
+    //! Dash
+    std::unique_ptr<llmq::CQuorumBlockProcessor>& m_quorum_block_processor;
+
 public:
-    explicit CChainState(BlockManager& blockman, uint256 from_snapshot_blockhash = uint256());
+    explicit CChainState(BlockManager& blockman, std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor, uint256 from_snapshot_blockhash = uint256());
 
     /**
      * Initialize the CoinsViews UTXO set database management data structures. The in-memory
@@ -843,7 +850,7 @@ public:
     //!
     //! @param[in] snapshot_blockhash   If given, signify that this chainstate
     //!                                 is based on a snapshot.
-    CChainState& InitializeChainstate(const uint256& snapshot_blockhash = uint256())
+    CChainState& InitializeChainstate(std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor, const uint256& snapshot_blockhash = uint256())
         EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     //! Get all chainstates currently being used.
