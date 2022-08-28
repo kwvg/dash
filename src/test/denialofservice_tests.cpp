@@ -9,6 +9,7 @@
 #include <llmq/blockprocessor.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/quorums.h>
+#include <llmq/signing_shares.h>
 #include <net.h>
 #include <net_processing.h>
 #include <script/sign.h>
@@ -83,7 +84,7 @@ BOOST_AUTO_TEST_CASE(outbound_slow_chain_eviction)
     auto connman = MakeUnique<CConnman>(0x1337, 0x1337);
     auto peerLogic = MakeUnique<PeerLogicValidation>(
         connman.get(), nullptr, *m_node.scheduler, *m_node.chainman, *m_node.mempool, *llmq::quorumBlockProcessor,
-        *llmq::quorumDKGSessionManager, *llmq::quorumManager, false
+        *llmq::quorumDKGSessionManager, *llmq::quorumManager, *llmq::quorumSigSharesManager, false
     );
 
     // Mock an outbound peer
@@ -157,7 +158,7 @@ BOOST_AUTO_TEST_CASE(stale_tip_peer_management)
     auto connman = MakeUnique<CConnmanTest>(0x1337, 0x1337);
     auto peerLogic = MakeUnique<PeerLogicValidation>(
         connman.get(), nullptr, *m_node.scheduler, *m_node.chainman, *m_node.mempool, *llmq::quorumBlockProcessor,
-        *llmq::quorumDKGSessionManager, *llmq::quorumManager, false
+        *llmq::quorumDKGSessionManager, *llmq::quorumManager, *llmq::quorumSigSharesManager, false
     );
 
     const Consensus::Params& consensusParams = Params().GetConsensus();
@@ -233,7 +234,7 @@ BOOST_AUTO_TEST_CASE(DoS_banning)
     auto connman = MakeUnique<CConnman>(0x1337, 0x1337);
     auto peerLogic = MakeUnique<PeerLogicValidation>(
         connman.get(), banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool, *llmq::quorumBlockProcessor,
-        *llmq::quorumDKGSessionManager, *llmq::quorumManager, false
+        *llmq::quorumDKGSessionManager, *llmq::quorumManager, *llmq::quorumSigSharesManager, false
     );
 
     banman->ClearBanned();
@@ -291,7 +292,7 @@ BOOST_AUTO_TEST_CASE(DoS_banscore)
     auto connman = MakeUnique<CConnman>(0x1337, 0x1337);
     auto peerLogic = MakeUnique<PeerLogicValidation>(
         connman.get(), banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool, *llmq::quorumBlockProcessor,
-        *llmq::quorumDKGSessionManager, *llmq::quorumManager, false
+        *llmq::quorumDKGSessionManager, *llmq::quorumManager, *llmq::quorumSigSharesManager, false
     );
 
     banman->ClearBanned();
@@ -341,7 +342,7 @@ BOOST_AUTO_TEST_CASE(DoS_bantime)
     auto connman = MakeUnique<CConnman>(0x1337, 0x1337);
     auto peerLogic = MakeUnique<PeerLogicValidation>(
         connman.get(), banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool, *llmq::quorumBlockProcessor,
-        *llmq::quorumDKGSessionManager, *llmq::quorumManager, false
+        *llmq::quorumDKGSessionManager, *llmq::quorumManager, *llmq::quorumSigSharesManager, false
     );
 
     banman->ClearBanned();

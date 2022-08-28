@@ -436,7 +436,7 @@ static UniValue quorum_sigs_cmd(const JSONRPCRequest& request)
             fSubmit = ParseBoolV(request.params[4], "submit");
         }
         if (fSubmit) {
-            return llmq::quorumSigningManager->AsyncSignIfMember(llmqType, id, msgHash, quorumHash);
+            return llmq::quorumSigningManager->AsyncSignIfMember(llmqType, *llmq::quorumSigSharesManager, id, msgHash, quorumHash);
         } else {
 
             llmq::CQuorumCPtr pQuorum;
