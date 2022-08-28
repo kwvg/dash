@@ -28,6 +28,7 @@ private:
     CConnman& connman;
     CSporkManager& spork_manager;
     CDKGDebugManager& dkgDebugManager;
+    CQuorumBlockProcessor& quorumBlockProcessor;
 
     //TODO name struct instead of std::pair
     std::map<std::pair<Consensus::LLMQType, int>, CDKGSessionHandler> dkgSessionHandlers;
@@ -52,7 +53,7 @@ private:
     mutable std::map<ContributionsCacheKey, ContributionsCacheEntry> contributionsCache GUARDED_BY(contributionsCacheCs);
 
 public:
-    CDKGSessionManager(CConnman& _connman, CBLSWorker& _blsWorker, CDKGDebugManager& _dkgDebugManager, CSporkManager& sporkManager, bool unitTests, bool fWipe);
+    CDKGSessionManager(CConnman& _connman, CBLSWorker& _blsWorker, CDKGDebugManager& _dkgDebugManager, CQuorumBlockProcessor& _quorumBlockProcessor, CSporkManager& sporkManager, bool unitTests, bool fWipe);
     ~CDKGSessionManager() = default;
 
     void StartThreads();

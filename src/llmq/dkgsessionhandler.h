@@ -19,6 +19,7 @@ namespace llmq
 class CDKGDebugManager;
 class CDKGSession;
 class CDKGSessionManager;
+class CQuorumBlockProcessor;
 
 enum class QuorumPhase {
     Initialized = 1,
@@ -114,6 +115,7 @@ private:
     CBLSWorker& blsWorker;
     CDKGSessionManager& dkgManager;
     CDKGDebugManager& dkgDebugManager;
+    CQuorumBlockProcessor& quorumBlockProcessor;
 
     QuorumPhase phase GUARDED_BY(cs) {QuorumPhase::Idle};
     int currentHeight GUARDED_BY(cs) {-1};
@@ -129,11 +131,13 @@ private:
     CDKGPendingMessages pendingPrematureCommitments;
 
 public:
-    CDKGSessionHandler(const Consensus::LLMQParams& _params, CBLSWorker& _blsWorker, CDKGSessionManager& _dkgManager, CDKGDebugManager& _dkgDebugManager, CConnman& _connman, int _quorumIndex) :
+    CDKGSessionHandler(const Consensus::LLMQParams& _params, CBLSWorker& _blsWorker, CDKGSessionManager& _dkgManager,
+                       CDKGDebugManager& _dkgDebugManager, CQuorumBlockProcessor& _quorumBlockProcessor, CConnman& _connman, int _quorumIndex) :
             params(_params),
             blsWorker(_blsWorker),
             dkgManager(_dkgManager),
             dkgDebugManager(_dkgDebugManager),
+            quorumBlockProcessor(_quorumBlockProcessor),
             connman(_connman),
             quorumIndex(_quorumIndex),
             curSession(std::make_unique<CDKGSession>(_params, _blsWorker, _dkgManager, _dkgDebugManager, _connman)),
