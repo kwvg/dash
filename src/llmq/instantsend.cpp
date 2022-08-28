@@ -566,7 +566,7 @@ bool CInstantSendManager::TrySignInputLocks(const CTransaction& tx, bool fRetroa
         WITH_LOCK(cs_inputReqests, inputRequestIds.emplace(id));
         LogPrint(BCLog::INSTANTSEND, "CInstantSendManager::%s -- txid=%s: trying to vote on input %s with id %s. fRetroactive=%d\n", __func__,
                  tx.GetHash().ToString(), in.prevout.ToStringShort(), id.ToString(), fRetroactive);
-        if (sigman.AsyncSignIfMember(llmqType, *llmq::quorumSigSharesManager, id, tx.GetHash(), {}, fRetroactive)) {
+        if (sigman.AsyncSignIfMember(llmqType, shareman, id, tx.GetHash(), {}, fRetroactive)) {
             LogPrint(BCLog::INSTANTSEND, "CInstantSendManager::%s -- txid=%s: voted on input %s with id %s\n", __func__,
                      tx.GetHash().ToString(), in.prevout.ToStringShort(), id.ToString());
         }
@@ -727,7 +727,7 @@ void CInstantSendManager::TrySignInstantSendLock(const CTransaction& tx)
         txToCreatingInstantSendLocks.emplace(tx.GetHash(), &e.first->second);
     }
 
-    sigman.AsyncSignIfMember(llmqType, *llmq::quorumSigSharesManager, id, tx.GetHash());
+    sigman.AsyncSignIfMember(llmqType, shareman, id, tx.GetHash());
 }
 
 void CInstantSendManager::HandleNewInstantSendLockRecoveredSig(const llmq::CRecoveredSig& recoveredSig)

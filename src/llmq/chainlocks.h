@@ -28,6 +28,7 @@ class CSporkManager;
 namespace llmq
 {
 class CSigningManager;
+class CSigSharesManager;
 
 class CChainLocksHandler : public CRecoveredSigsListener
 {
@@ -42,6 +43,7 @@ private:
     CTxMemPool& mempool;
     CSporkManager& spork_manager;
     CSigningManager& sigman;
+    CSigSharesManager& shareman;
     std::unique_ptr<CScheduler> scheduler;
     std::unique_ptr<std::thread> scheduler_thread;
     mutable CCriticalSection cs;
@@ -74,7 +76,7 @@ private:
     int64_t lastCleanupTime GUARDED_BY(cs) {0};
 
 public:
-    explicit CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager, CSigningManager& _sigman);
+    explicit CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager, CSigningManager& _sigman, CSigSharesManager& _shareman);
     ~CChainLocksHandler();
 
     void Start();

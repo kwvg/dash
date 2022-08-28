@@ -24,8 +24,8 @@ namespace llmq
 {
 std::unique_ptr<CChainLocksHandler> chainLocksHandler;
 
-CChainLocksHandler::CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager, CSigningManager& _sigman) :
-    scheduler(std::make_unique<CScheduler>()), mempool(_mempool), connman(_connman), spork_manager(sporkManager), sigman(_sigman),
+CChainLocksHandler::CChainLocksHandler(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager, CSigningManager& _sigman, CSigSharesManager& _shareman) :
+    scheduler(std::make_unique<CScheduler>()), mempool(_mempool), connman(_connman), spork_manager(sporkManager), sigman(_sigman), shareman(_shareman),
     scheduler_thread(std::make_unique<std::thread>([&] { TraceThread("cl-schdlr", [&] { scheduler->serviceQueue(); }); }))
 {
 }
@@ -334,7 +334,7 @@ void CChainLocksHandler::TrySignChainTip()
         lastSignedMsgHash = msgHash;
     }
 
-    sigman.AsyncSignIfMember(Params().GetConsensus().llmqTypeChainLocks, *llmq::quorumSigSharesManager, requestId, msgHash);
+    sigman.AsyncSignIfMember(Params().GetConsensus().llmqTypeChainLocks, shareman, requestId, msgHash);
 }
 
 void CChainLocksHandler::TransactionAddedToMempool(const CTransactionRef& tx, int64_t nAcceptTime)
