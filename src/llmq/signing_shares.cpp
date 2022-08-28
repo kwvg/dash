@@ -308,7 +308,7 @@ bool CSigSharesManager::ProcessMessageSigSesAnn(const CNode* pfrom, const CSigSe
 
     LogPrint(BCLog::LLMQ_SIGS, "CSigSharesManager::%s -- ann={%s}, node=%d\n", __func__, ann.ToString(), pfrom->GetId());
 
-    auto quorum = quorumManager->GetQuorum(llmqType, ann.getQuorumHash());
+    auto quorum = qman.GetQuorum(llmqType, ann.getQuorumHash());
     if (!quorum) {
         // TODO should we ban here?
         LogPrint(BCLog::LLMQ_SIGS, "CSigSharesManager::%s -- quorum %s not found, node=%d\n", __func__,
@@ -407,7 +407,7 @@ bool CSigSharesManager::ProcessMessageBatchedSigShares(const CNode* pfrom, const
         return true;
     }
 
-    if (bool ban{false}; !PreVerifyBatchedSigShares(sessionInfo, batchedSigShares, ban)) {
+    if (bool ban{false}; !PreVerifyBatchedSigShares(qman, sessionInfo, batchedSigShares, ban)) {
         return !ban;
     }
 
@@ -456,11 +456,11 @@ bool CSigSharesManager::ProcessMessageBatchedSigShares(const CNode* pfrom, const
 
 void CSigSharesManager::ProcessMessageSigShare(NodeId fromId, const CSigShare& sigShare)
 {
-    auto quorum = quorumManager->GetQuorum(sigShare.getLlmqType(), sigShare.getQuorumHash());
+    auto quorum = qman.GetQuorum(sigShare.getLlmqType(), sigShare.getQuorumHash());
     if (!quorum) {
         return;
     }
-    if (!utils::IsQuorumActive(sigShare.getLlmqType(), quorum->qc->quorumHash)) {
+    if (!utils::IsQuorumActive(sigShare.getLlmqType(), qman, quorum->qc->quorumHash)) {
         // quorum is too old
         return;
     }
@@ -505,11 +505,11 @@ void CSigSharesManager::ProcessMessageSigShare(NodeId fromId, const CSigShare& s
              sigShare.GetSignHash().ToString(), sigShare.getId().ToString(), sigShare.getMsgHash().ToString(), sigShare.getQuorumMember(), fromId);
 }
 
-bool CSigSharesManager::PreVerifyBatchedSigShares(const CSigSharesNodeState::SessionInfo& session, const CBatchedSigShares& batchedSigShares, bool& retBan)
+bool CSigSharesManager::PreVerifyBatchedSigShares(CQuorumManager& quorum_manager, const CSigSharesNodeState::SessionInfo& session, const CBatchedSigShares& batchedSigShares, bool& retBan)
 {
     retBan = false;
 
-    if (!utils::IsQuorumActive(session.llmqType, session.quorum->qc->quorumHash)) {
+    if (!utils::IsQuorumActive(session.llmqType, quorum_manager, session.quorum->qc->quorumHash)) {
         // quorum is too old
         return false;
     }
@@ -597,7 +597,7 @@ void CSigSharesManager::CollectPendingSigSharesToVerify(
                 continue;
             }
 
-            CQuorumCPtr quorum = quorumManager->GetQuorum(llmqType, sigShare.getQuorumHash());
+            CQuorumCPtr quorum = qman.GetQuorum(llmqType, sigShare.getQuorumHash());
             assert(quorum != nullptr);
             retQuorums.try_emplace(k, quorum);
         }
@@ -1257,8 +1257,8 @@ void CSigSharesManager::Cleanup()
 
     // Find quorums which became inactive
     for (auto it = quorums.begin(); it != quorums.end(); ) {
-        if (utils::IsQuorumActive(it->first.first, it->first.second)) {
-            it->second = quorumManager->GetQuorum(it->first.first, it->first.second);
+        if (utils::IsQuorumActive(it->first.first, qman, it->first.second)) {
+            it->second = qman.GetQuorum(it->first.first, it->first.second);
             ++it;
         } else {
             it = quorums.erase(it);

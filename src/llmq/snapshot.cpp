@@ -118,7 +118,7 @@ void CQuorumRotationInfo::ToJson(UniValue& obj) const
 }
 
 bool BuildQuorumRotationInfo(const CGetQuorumRotationInfo& request, CQuorumRotationInfo& response,
-                             CQuorumBlockProcessor& quorumBlockProcessor, std::string& errorRet)
+                             CQuorumManager& qman, CQuorumBlockProcessor& quorumBlockProcessor, std::string& errorRet)
 {
     AssertLockHeld(cs_main);
 
@@ -165,7 +165,7 @@ bool BuildQuorumRotationInfo(const CGetQuorumRotationInfo& request, CQuorumRotat
     }
 
     //Quorum rotation is enabled only for InstantSend atm.
-    Consensus::LLMQType llmqType = utils::GetInstantSendLLMQType(blockIndex);
+    Consensus::LLMQType llmqType = utils::GetInstantSendLLMQType(qman, blockIndex);
 
     // Since the returned quorums are in reversed order, the most recent one is at index 0
     const Consensus::LLMQParams& llmqParams = GetLLMQParams(llmqType);

@@ -4065,7 +4065,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
 
         llmq::CQuorumRotationInfo quorumRotationInfoRet;
         std::string strError;
-        if (BuildQuorumRotationInfo(cmd, quorumRotationInfoRet, quorum_block_processor, strError)) {
+        if (BuildQuorumRotationInfo(cmd, quorumRotationInfoRet, qman, quorum_block_processor, strError)) {
             connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::QUORUMROTATIONINFO, quorumRotationInfoRet));
         } else {
             strError = strprintf("getquorumrotationinfo failed for size(baseBlockHashes)=%d, blockRequestHash=%s. error=%s", cmd.baseBlockHashes.size(), cmd.blockRequestHash.ToString(), strError);
@@ -4130,7 +4130,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
         governance->ProcessMessage(pfrom, msg_type, vRecv, *connman, enable_bip61);
         CMNAuth::ProcessMessage(pfrom, msg_type, vRecv, *connman);
         quorum_block_processor.ProcessMessage(pfrom, msg_type, vRecv);
-        qdkgsman.ProcessMessage(pfrom, msg_type, vRecv);
+        qdkgsman.ProcessMessage(pfrom, qman, msg_type, vRecv);
         qman.ProcessMessage(pfrom, msg_type, vRecv);
         llmq::quorumSigSharesManager->ProcessMessage(pfrom, msg_type, vRecv, *sporkManager);
         llmq::quorumSigningManager->ProcessMessage(pfrom, msg_type, vRecv);
