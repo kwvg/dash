@@ -15,6 +15,7 @@ class CTxMemPool;
 class ChainstateManager;
 
 namespace llmq {
+class CChainLocksHandler;
 class CDKGSessionManager;
 class CQuorumBlockProcessor;
 class CQuorumManager;
@@ -44,12 +45,14 @@ private:
     llmq::CQuorumManager& m_qman;
     llmq::CSigningManager& m_sigman;
     llmq::CSigSharesManager& m_shareman;
+    llmq::CChainLocksHandler& m_clhandler;
 
     bool MaybeDiscourageAndDisconnect(CNode* pnode, bool enable_bip61) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 public:
     PeerLogicValidation(CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman,
                         CTxMemPool& pool, llmq::CQuorumBlockProcessor& quorum_block_processor, llmq::CDKGSessionManager& qdkgsman,
-                        llmq::CQuorumManager& qman, llmq::CSigSharesManager& shareman, llmq::CSigningManager& sigman, bool enable_bip61);
+                        llmq::CQuorumManager& qman, llmq::CSigSharesManager& shareman, llmq::CSigningManager& sigman,
+                        llmq::CChainLocksHandler& clhandler, bool enable_bip61);
 
     /**
      * Overridden from CValidationInterface.
