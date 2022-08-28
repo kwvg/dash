@@ -1268,8 +1268,12 @@ static bool BlockRequestAllowed(const CBlockIndex* pindex, const Consensus::Para
         (GetBlockProofEquivalentTime(*pindexBestHeader, *pindex, *pindexBestHeader, consensusParams) < STALE_RELAY_AGE_LIMIT);
 }
 
-PeerLogicValidation::PeerLogicValidation(CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman, CTxMemPool& pool, llmq::CQuorumBlockProcessor& quorum_block_processor, llmq::CDKGSessionManager& qdkgsman, bool enable_bip61)
-    : connman(connmanIn), m_banman(banman), m_chainman(chainman), m_mempool(pool), m_quorum_block_processor(quorum_block_processor), m_qdkgsman(qdkgsman), m_stale_tip_check_time(0), m_enable_bip61(enable_bip61) {
+PeerLogicValidation::PeerLogicValidation(CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman,
+                                         CTxMemPool& pool, llmq::CQuorumBlockProcessor& quorum_block_processor, llmq::CDKGSessionManager& qdkgsman,
+                                         llmq::CQuorumManager& qman, bool enable_bip61) :
+    connman(connmanIn), m_banman(banman), m_chainman(chainman), m_mempool(pool), m_quorum_block_processor(quorum_block_processor),
+    m_qdkgsman(qdkgsman), m_qman(qman), m_stale_tip_check_time(0), m_enable_bip61(enable_bip61)
+{
     // Initialize global variables that cannot be constructed at startup.
     recentRejects.reset(new CRollingBloomFilter(120000, 0.000001));
 
@@ -1466,7 +1470,7 @@ void PeerLogicValidation::BlockChecked(const CBlock& block, const CValidationSta
 
 
 bool static AlreadyHave(const CInv& inv, const CTxMemPool& mempool, const llmq::CQuorumBlockProcessor& quorum_block_processor,
-                        const llmq::CDKGSessionManager& qdkgsman) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+                        const llmq::CDKGSessionManager& qdkgsman, const llmq::CQuorumManager& qman) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     switch (inv.type)
     {
@@ -1750,9 +1754,9 @@ void static ProcessGetBlockData(CNode* pfrom, const CChainParams& chainparams, c
     }
 }
 
-void static ProcessGetData(CNode* pfrom, const CChainParams& chainparams, CConnman* connman,
-                           CTxMemPool& mempool, llmq::CQuorumBlockProcessor &quorum_block_processor,
-                           llmq::CDKGSessionManager& qdkgsman, const std::atomic<bool>& interruptMsgProc) LOCKS_EXCLUDED(cs_main)
+void static ProcessGetData(CNode* pfrom, const CChainParams& chainparams, CConnman* connman, CTxMemPool& mempool,
+                           llmq::CQuorumBlockProcessor &quorum_block_processor, llmq::CDKGSessionManager& qdkgsman,
+                           llmq::CQuorumManager& qman, const std::atomic<bool>& interruptMsgProc) LOCKS_EXCLUDED(cs_main)
 {
     AssertLockNotHeld(cs_main);
 
@@ -2507,7 +2511,8 @@ std::pair<bool /*ret*/, bool /*do_return*/> static ValidateDSTX(CCoinJoinBroadca
 bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, int64_t nTimeReceived,
                     const CChainParams& chainparams, ChainstateManager& chainman, CTxMemPool& mempool,
                     llmq::CQuorumBlockProcessor& quorum_block_processor, llmq::CDKGSessionManager& qdkgsman,
-                    CConnman* connman, BanMan* banman, const std::atomic<bool>& interruptMsgProc, bool enable_bip61)
+                    llmq::CQuorumManager& qman, CConnman* connman, BanMan* banman, const std::atomic<bool>& interruptMsgProc,
+                    bool enable_bip61)
 {
     LogPrint(BCLog::NET, "received: %s (%u bytes) peer=%d\n", SanitizeString(msg_type), vRecv.size(), pfrom->GetId());
     statsClient.inc("message.received." + SanitizeString(msg_type), 1.0f);
@@ -2998,7 +3003,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
             if (interruptMsgProc)
                 return true;
 
-            bool fAlreadyHave = AlreadyHave(inv, mempool, quorum_block_processor, qdkgsman);
+            bool fAlreadyHave = AlreadyHave(inv, mempool, quorum_block_processor, qdkgsman, qman);
             LogPrint(BCLog::NET, "got inv: %s  %s peer=%d\n", inv.ToString(), fAlreadyHave ? "have" : "new", pfrom->GetId());
             statsClient.inc(strprintf("message.received.inv_%s", inv.GetCommand()), 1.0f);
 
@@ -3082,7 +3087,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
         }
 
         pfrom->vRecvGetData.insert(pfrom->vRecvGetData.end(), vInv.begin(), vInv.end());
-        ProcessGetData(pfrom, chainparams, connman, mempool, quorum_block_processor, qdkgsman, interruptMsgProc);
+        ProcessGetData(pfrom, chainparams, connman, mempool, quorum_block_processor, qdkgsman, qman, interruptMsgProc);
         return true;
     }
 
@@ -3329,7 +3334,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
         bool fMissingInputs = false;
         CValidationState state;
 
-        if (!AlreadyHave(inv, mempool, quorum_block_processor, qdkgsman) && AcceptToMemoryPool(mempool, state, ptx, &fMissingInputs /* pfMissingInputs */,
+        if (!AlreadyHave(inv, mempool, quorum_block_processor, qdkgsman, qman) && AcceptToMemoryPool(mempool, state, ptx, &fMissingInputs /* pfMissingInputs */,
                 false /* bypass_limits */, 0 /* nAbsurdFee */)) {
             // Process custom txes, this changes AlreadyHave to "true"
             if (nInvType == MSG_DSTX) {
@@ -3375,11 +3380,11 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
                 for (const CTxIn& txin : tx.vin) {
                     CInv _inv(MSG_TX, txin.prevout.hash);
                     pfrom->AddInventoryKnown(_inv);
-                    if (!AlreadyHave(_inv, mempool, quorum_block_processor, qdkgsman)) RequestObject(State(pfrom->GetId()), _inv, current_time);
+                    if (!AlreadyHave(_inv, mempool, quorum_block_processor, qdkgsman, qman)) RequestObject(State(pfrom->GetId()), _inv, current_time);
                     // We don't know if the previous tx was a regular or a mixing one, try both
                     CInv _inv2(MSG_DSTX, txin.prevout.hash);
                     pfrom->AddInventoryKnown(_inv2);
-                    if (!AlreadyHave(_inv2, mempool, quorum_block_processor, qdkgsman)) RequestObject(State(pfrom->GetId()), _inv2, current_time);
+                    if (!AlreadyHave(_inv2, mempool, quorum_block_processor, qdkgsman, qman)) RequestObject(State(pfrom->GetId()), _inv2, current_time);
                 }
                 AddOrphanTx(ptx, pfrom->GetId());
 
@@ -3621,7 +3626,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
         } // cs_main
 
         if (fProcessBLOCKTXN)
-            return ProcessMessage(pfrom, NetMsgType::BLOCKTXN, blockTxnMsg, nTimeReceived, chainparams, chainman, mempool, quorum_block_processor, qdkgsman, connman, banman, interruptMsgProc, enable_bip61);
+            return ProcessMessage(pfrom, NetMsgType::BLOCKTXN, blockTxnMsg, nTimeReceived, chainparams, chainman, mempool, quorum_block_processor, qdkgsman, qman, connman, banman, interruptMsgProc, enable_bip61);
 
         if (fRevertToHeaderProcessing) {
             // Headers received from HB compact block peers are permitted to be
@@ -4126,7 +4131,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
         CMNAuth::ProcessMessage(pfrom, msg_type, vRecv, *connman);
         quorum_block_processor.ProcessMessage(pfrom, msg_type, vRecv);
         qdkgsman.ProcessMessage(pfrom, msg_type, vRecv);
-        llmq::quorumManager->ProcessMessage(pfrom, msg_type, vRecv);
+        qman.ProcessMessage(pfrom, msg_type, vRecv);
         llmq::quorumSigSharesManager->ProcessMessage(pfrom, msg_type, vRecv, *sporkManager);
         llmq::quorumSigningManager->ProcessMessage(pfrom, msg_type, vRecv);
         llmq::chainLocksHandler->ProcessMessage(pfrom, msg_type, vRecv);
@@ -4189,7 +4194,7 @@ bool PeerLogicValidation::ProcessMessages(CNode* pfrom, std::atomic<bool>& inter
     bool fMoreWork = false;
 
     if (!pfrom->vRecvGetData.empty())
-        ProcessGetData(pfrom, chainparams, connman, m_mempool, m_quorum_block_processor, m_qdkgsman, interruptMsgProc);
+        ProcessGetData(pfrom, chainparams, connman, m_mempool, m_quorum_block_processor, m_qdkgsman, m_qman, interruptMsgProc);
 
     if (!pfrom->orphan_work_set.empty()) {
         LOCK2(cs_main, g_cs_orphans);
@@ -4253,7 +4258,7 @@ bool PeerLogicValidation::ProcessMessages(CNode* pfrom, std::atomic<bool>& inter
     bool fRet = false;
     try
     {
-        fRet = ProcessMessage(pfrom, msg_type, vRecv, msg.m_time, chainparams, m_chainman, m_mempool, m_quorum_block_processor, m_qdkgsman, connman, m_banman, interruptMsgProc, m_enable_bip61);
+        fRet = ProcessMessage(pfrom, msg_type, vRecv, msg.m_time, chainparams, m_chainman, m_mempool, m_quorum_block_processor, m_qdkgsman, m_qman, connman, m_banman, interruptMsgProc, m_enable_bip61);
         if (interruptMsgProc)
             return false;
         if (!pfrom->vRecvGetData.empty())
@@ -5025,7 +5030,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                 state.m_object_download.m_object_in_flight.erase(inv);
                 continue;
             }
-            if (!AlreadyHave(inv, m_mempool, m_quorum_block_processor, m_qdkgsman)) {
+            if (!AlreadyHave(inv, m_mempool, m_quorum_block_processor, m_qdkgsman, m_qman)) {
                 // If this object was last requested more than GetObjectInterval ago,
                 // then request.
                 const auto last_request_time = GetObjectRequestTime(inv.hash);
