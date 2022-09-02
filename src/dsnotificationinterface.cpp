@@ -67,7 +67,7 @@ void CDSNotificationInterface::UpdatedBlockTip(const CBlockIndex *pindexNew, con
     if (fInitialDownload)
         return;
 
-    CCoinJoin::UpdatedBlockTip(pindexNew);
+    CCoinJoin::UpdatedBlockTip(pindexNew, *clhandler);
 #ifdef ENABLE_WALLET
     for (auto& pair : coinJoinClientManagers) {
         pair.second->UpdatedBlockTip(pindexNew);
@@ -126,5 +126,5 @@ void CDSNotificationInterface::NotifyMasternodeListChanged(bool undo, const CDet
 void CDSNotificationInterface::NotifyChainLock(const CBlockIndex* pindex, const std::shared_ptr<const llmq::CChainLockSig>& clsig)
 {
     isman->NotifyChainLock(pindex);
-    CCoinJoin::NotifyChainLock(pindex);
+    CCoinJoin::NotifyChainLock(pindex, *clhandler);
 }
