@@ -172,7 +172,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     pblocktree.reset(new CBlockTreeDB(1 << 20, true));
 
     m_node.chainman = &::g_chainman;
-    m_node.chainman->InitializeChainstate(llmq::chainLocksHandler, llmq::quorumBlockProcessor);
+    m_node.chainman->InitializeChainstate(llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor);
     ::ChainstateActive().InitCoinsDB(
         /* cache_size_bytes */ 1 << 23, /* in_memory */ true, /* should_wipe */ false);
     assert(!::ChainstateActive().CanFlushToDisk());

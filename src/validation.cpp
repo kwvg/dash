@@ -1133,10 +1133,12 @@ void CoinsViews::InitCache()
 
 CChainState::CChainState(BlockManager& blockman,
                          std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
+                         std::unique_ptr<llmq::CInstantSendManager>& isman,
                          std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
                          uint256 from_snapshot_blockhash)
     : m_blockman(blockman),
       m_clhandler(clhandler),
+      m_isman(isman),
       m_quorum_block_processor(quorum_block_processor),
       m_from_snapshot_blockhash(from_snapshot_blockhash) {}
 
@@ -1978,6 +1980,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     assert(pindex);
     assert(*pindex->phashBlock == block.GetHash());
     assert(m_clhandler);
+    assert(m_isman);
     assert(m_quorum_block_processor);
     int64_t nTimeStart = GetTimeMicros();
 
@@ -2315,16 +2318,16 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 
     // DASH : CHECK TRANSACTIONS FOR INSTANTSEND
 
-    if (llmq::quorumInstantSendManager->RejectConflictingBlocks()) {
+    if (m_isman->RejectConflictingBlocks()) {
         // Require other nodes to comply, send them some data in case they are missing it.
         for (const auto& tx : block.vtx) {
             // skip txes that have no inputs
             if (tx->vin.empty()) continue;
-            while (llmq::CInstantSendLockPtr conflictLock = llmq::quorumInstantSendManager->GetConflictingLock(*tx)) {
+            while (llmq::CInstantSendLockPtr conflictLock = m_isman->GetConflictingLock(*tx)) {
                 if (m_clhandler->HasChainLock(pindex->nHeight, pindex->GetBlockHash())) {
                     LogPrint(BCLog::ALL, "ConnectBlock(DASH): chain-locked transaction %s overrides islock %s\n",
                             tx->GetHash().ToString(), ::SerializeHash(*conflictLock).ToString());
-                    llmq::quorumInstantSendManager->RemoveConflictingLock(::SerializeHash(*conflictLock), *conflictLock);
+                    m_isman->RemoveConflictingLock(::SerializeHash(*conflictLock), *conflictLock);
                 } else {
                     // The node which relayed this should switch to correct chain.
                     // TODO: relay instantsend data/proof.
@@ -5539,6 +5542,7 @@ std::vector<CChainState*> ChainstateManager::GetAll()
 }
 
 CChainState& ChainstateManager::InitializeChainstate(std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
+                                                     std::unique_ptr<llmq::CInstantSendManager>& isman,
                                                      std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor, 
                                                      const uint256& snapshot_blockhash)
 {
@@ -5550,7 +5554,7 @@ CChainState& ChainstateManager::InitializeChainstate(std::unique_ptr<llmq::CChai
         throw std::logic_error("should not be overwriting a chainstate");
     }
 
-    to_modify.reset(new CChainState(m_blockman, clhandler, quorum_block_processor, snapshot_blockhash));
+    to_modify.reset(new CChainState(m_blockman, clhandler, isman, quorum_block_processor, snapshot_blockhash));
 
     // Snapshot chainstates and initial IBD chaintates always become active.
     if (is_snapshot || (!is_snapshot && !m_active_chainstate)) {
