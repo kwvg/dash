@@ -604,7 +604,7 @@ void CSigningManager::ProcessMessageRecoveredSig(CNode* pfrom, const std::shared
     pendingRecoveredSigs[pfrom->GetId()].emplace_back(recoveredSig);
 }
 
-bool CSigningManager::PreVerifyRecoveredSig(CQuorumManager& quorum_manager, const CRecoveredSig& recoveredSig, bool& retBan)
+bool CSigningManager::PreVerifyRecoveredSig(const CQuorumManager& quorum_manager, const CRecoveredSig& recoveredSig, bool& retBan)
 {
     retBan = false;
 
@@ -1043,7 +1043,7 @@ CQuorumCPtr CSigningManager::SelectQuorumForSigning(Consensus::LLMQType llmqType
     }
 }
 
-bool CSigningManager::VerifyRecoveredSig(Consensus::LLMQType llmqType, CQuorumManager& quorum_manager, int signedAtHeight, const uint256& id, const uint256& msgHash, const CBLSSignature& sig, const int signOffset)
+bool CSigningManager::VerifyRecoveredSig(Consensus::LLMQType llmqType, const CQuorumManager& quorum_manager, int signedAtHeight, const uint256& id, const uint256& msgHash, const CBLSSignature& sig, const int signOffset)
 {
     auto quorum = SelectQuorumForSigning(llmqType, quorum_manager, id, signedAtHeight, signOffset);
     if (!quorum) {

@@ -435,7 +435,7 @@ private:
     void ProcessMessageSigShare(NodeId fromId, const CSigShare& sigShare);
 
     static bool VerifySigSharesInv(Consensus::LLMQType llmqType, const CSigSharesInv& inv);
-    static bool PreVerifyBatchedSigShares(CQuorumManager& quorum_manager, const CSigSharesNodeState::SessionInfo& session, const CBatchedSigShares& batchedSigShares, bool& retBan);
+    static bool PreVerifyBatchedSigShares(const CQuorumManager& quorum_manager, const CSigSharesNodeState::SessionInfo& session, const CBatchedSigShares& batchedSigShares, bool& retBan);
 
     void CollectPendingSigSharesToVerify(size_t maxUniqueSessions,
             std::unordered_map<NodeId, std::vector<CSigShare>>& retSigShares,

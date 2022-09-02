@@ -131,7 +131,7 @@ CSimplifiedMNListDiff::CSimplifiedMNListDiff() = default;
 CSimplifiedMNListDiff::~CSimplifiedMNListDiff() = default;
 
 bool CSimplifiedMNListDiff::BuildQuorumsDiff(const CBlockIndex* baseBlockIndex, const CBlockIndex* blockIndex,
-                                            llmq::CQuorumBlockProcessor& quorum_block_processor)
+                                             const llmq::CQuorumBlockProcessor& quorum_block_processor)
 {
     auto baseQuorums = quorum_block_processor.GetMinedAndActiveCommitmentsUntilBlock(baseBlockIndex);
     auto quorums = quorum_block_processor.GetMinedAndActiveCommitmentsUntilBlock(blockIndex);
@@ -221,7 +221,7 @@ void CSimplifiedMNListDiff::ToJson(UniValue& obj, bool extended) const
 }
 
 bool BuildSimplifiedMNListDiff(const uint256& baseBlockHash, const uint256& blockHash, CSimplifiedMNListDiff& mnListDiffRet,
-                               llmq::CQuorumBlockProcessor& quorum_block_processor, std::string& errorRet, bool extended)
+                               const llmq::CQuorumBlockProcessor& quorum_block_processor, std::string& errorRet, bool extended)
 {
     AssertLockHeld(cs_main);
     mnListDiffRet = CSimplifiedMNListDiff();

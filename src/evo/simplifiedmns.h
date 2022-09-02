@@ -118,12 +118,12 @@ public:
     ~CSimplifiedMNListDiff();
 
     bool BuildQuorumsDiff(const CBlockIndex* baseBlockIndex, const CBlockIndex* blockIndex,
-                          llmq::CQuorumBlockProcessor& quorum_block_processor);
+                          const llmq::CQuorumBlockProcessor& quorum_block_processor);
 
     void ToJson(UniValue& obj, bool extended = false) const;
 };
 
 bool BuildSimplifiedMNListDiff(const uint256& baseBlockHash, const uint256& blockHash, CSimplifiedMNListDiff& mnListDiffRet,
-                               llmq::CQuorumBlockProcessor& quorum_block_processor, std::string& errorRet, bool extended = false);
+                               const llmq::CQuorumBlockProcessor& quorum_block_processor, std::string& errorRet, bool extended = false);
 
 #endif // BITCOIN_EVO_SIMPLIFIEDMNS_H

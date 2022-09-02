@@ -435,7 +435,7 @@ CChainLocksHandler::BlockTxs::mapped_type CChainLocksHandler::GetBlockTxs(const 
     return ret;
 }
 
-bool CChainLocksHandler::IsTxSafeForMining(CInstantSendManager& isman, const uint256& txid) const
+bool CChainLocksHandler::IsTxSafeForMining(const CInstantSendManager& isman, const uint256& txid) const
 {
     if (!isman.RejectConflictingBlocks()) {
         return true;

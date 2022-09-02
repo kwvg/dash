@@ -118,7 +118,7 @@ void CQuorumRotationInfo::ToJson(UniValue& obj) const
 }
 
 bool BuildQuorumRotationInfo(const CGetQuorumRotationInfo& request, CQuorumRotationInfo& response,
-                             CQuorumManager& qman, CQuorumBlockProcessor& quorumBlockProcessor, std::string& errorRet)
+                             const CQuorumManager& qman, const CQuorumBlockProcessor& quorumBlockProcessor, std::string& errorRet)
 {
     AssertLockHeld(cs_main);
 
