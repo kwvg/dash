@@ -27,6 +27,7 @@ class CSporkManager;
 
 namespace llmq
 {
+class CInstantSendManager;
 class CSigningManager;
 class CSigSharesManager;
 
@@ -101,7 +102,7 @@ public:
     bool HasChainLock(int nHeight, const uint256& blockHash) const;
     bool HasConflictingChainLock(int nHeight, const uint256& blockHash) const;
 
-    bool IsTxSafeForMining(const uint256& txid) const;
+    bool IsTxSafeForMining(CInstantSendManager& isman, const uint256& txid) const;
 
 private:
     // these require locks to be held already

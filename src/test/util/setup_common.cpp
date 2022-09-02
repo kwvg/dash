@@ -189,7 +189,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     m_node.peer_logic = MakeUnique<PeerLogicValidation>(
         m_node.connman.get(), m_node.banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool,
         *llmq::quorumBlockProcessor, *llmq::quorumDKGSessionManager, *llmq::quorumManager,
-        *llmq::quorumSigSharesManager, *llmq::quorumSigningManager, *llmq::chainLocksHandler, 
+        *llmq::quorumSigSharesManager, *llmq::quorumSigningManager, *llmq::chainLocksHandler,  
         *llmq::quorumInstantSendManager, false
     );
     {
@@ -302,7 +302,7 @@ CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransacti
 CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
-    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *llmq::chainLocksHandler, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
+    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *llmq::chainLocksHandler,  *llmq::quorumInstantSendManager, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
     CBlock& block = pblocktemplate->block;
 
     std::vector<CTransactionRef> llmqCommitments;

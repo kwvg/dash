@@ -435,19 +435,19 @@ CChainLocksHandler::BlockTxs::mapped_type CChainLocksHandler::GetBlockTxs(const 
     return ret;
 }
 
-bool CChainLocksHandler::IsTxSafeForMining(const uint256& txid) const
+bool CChainLocksHandler::IsTxSafeForMining(CInstantSendManager& isman, const uint256& txid) const
 {
-    if (!quorumInstantSendManager->RejectConflictingBlocks()) {
+    if (!isman.RejectConflictingBlocks()) {
         return true;
     }
     if (!isEnabled || !isEnforced) {
         return true;
     }
 
-    if (!quorumInstantSendManager->IsInstantSendEnabled()) {
+    if (!isman.IsInstantSendEnabled()) {
         return true;
     }
-    if (quorumInstantSendManager->IsLocked(txid)) {
+    if (isman.IsLocked(txid)) {
         return true;
     }
 
