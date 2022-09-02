@@ -18,6 +18,7 @@
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
 #include <llmq/dkgsessionmgr.h>
+#include <llmq/instantsend.h>
 #include <llmq/quorums.h>
 #include <llmq/signing_shares.h>
 #include <llmq/signing.h>
@@ -188,7 +189,8 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     m_node.peer_logic = MakeUnique<PeerLogicValidation>(
         m_node.connman.get(), m_node.banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool,
         *llmq::quorumBlockProcessor, *llmq::quorumDKGSessionManager, *llmq::quorumManager,
-        *llmq::quorumSigSharesManager, *llmq::quorumSigningManager, *llmq::chainLocksHandler, false
+        *llmq::quorumSigSharesManager, *llmq::quorumSigningManager, *llmq::chainLocksHandler, 
+        *llmq::quorumInstantSendManager, false
     );
     {
         CConnman::Options options;
