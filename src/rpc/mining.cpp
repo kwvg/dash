@@ -380,7 +380,7 @@ static UniValue generateblock(const JSONRPCRequest& request)
         LOCK(cs_main);
 
         CValidationState state;
-        if (!TestBlockValidity(state, chainparams, block, LookupBlockIndex(block.hashPrevBlock), false, false)) {
+        if (!TestBlockValidity(state, *llmq::chainLocksHandler, chainparams, block, LookupBlockIndex(block.hashPrevBlock), false, false)) {
             throw JSONRPCError(RPC_VERIFY_ERROR, strprintf("TestBlockValidity failed: %s", state.GetRejectReason()));
         }
     }
@@ -666,7 +666,7 @@ static UniValue getblocktemplate(const JSONRPCRequest& request)
             if (block.hashPrevBlock != pindexPrev->GetBlockHash())
                 return "inconclusive-not-best-prevblk";
             CValidationState state;
-            TestBlockValidity(state, Params(), block, pindexPrev, false, true);
+            TestBlockValidity(state, *llmq::chainLocksHandler, Params(), block, pindexPrev, false, true);
             return BIP22ValidationResult(state);
         }
 
