@@ -45,7 +45,6 @@ from .util import (
     get_datadir_path,
     hex_str_to_bytes,
     initialize_datadir,
-    p2p_port,
     set_node_times,
     set_timeout_scale,
     satoshi_round,
@@ -548,33 +547,24 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
     def _initialize_chain(self, extra_args=None):
         """Initialize a pre-mined blockchain for use by the test.
 
-        Create a cache of a 199-block-long chain (with wallet) for MAX_NODES
+        Create a cache of a 199-block-long chain
         Afterward, create num_nodes copies from the cache."""
 
+        CACHE_NODE_ID = 0  # Use node 0 to create the cache for all other nodes
+        cache_node_dir = get_datadir_path(self.options.cachedir, CACHE_NODE_ID)
         assert self.num_nodes <= MAX_NODES
-        create_cache = False
-        for i in range(MAX_NODES):
-            if not os.path.isdir(get_datadir_path(self.options.cachedir, i)):
-                create_cache = True
-                break
 
-        if create_cache:
-            self.log.debug("Creating data directories from cached datadir")
+        if not os.path.isdir(cache_node_dir):
+            self.log.debug("Creating cache directory {}".format(cache_node_dir))
 
-            # find and delete old cache directories if any exist
-            for i in range(MAX_NODES):
-                if os.path.isdir(get_datadir_path(self.options.cachedir, i)):
-                    shutil.rmtree(get_datadir_path(self.options.cachedir, i))
-
-            # Create cache directories, run dashds:
-            for i in range(MAX_NODES):
-                datadir = initialize_datadir(self.options.cachedir, i, self.chain)
-                args = [self.options.bitcoind, "-datadir=" + datadir, "-mocktime="+str(TIME_GENESIS_BLOCK), '-disablewallet']
-                if i > 0:
-                    args.append("-connect=127.0.0.1:" + str(p2p_port(0)))
-                if extra_args is not None:
-                    args.extend(extra_args)
-                self.nodes.append(TestNode(i, get_datadir_path(self.options.cachedir, i), chain=self.chain, extra_conf=["bind=127.0.0.1"], extra_args=[], extra_args_from_options=self.extra_args_from_options, rpchost=None,
+            initialize_datadir(self.options.cachedir, CACHE_NODE_ID)
+            self.nodes.append(
+                TestNode(
+                    CACHE_NODE_ID,
+                    cache_node_dir,
+                    extra_conf=["bind=127.0.0.1"],
+                    extra_args=['-disablewallet'],
+                    rpchost=None,
                     timewait=self.rpc_timeout,
                     bitcoind=self.options.bitcoind,
                     bitcoin_cli=self.options.bitcoincli,
@@ -582,12 +572,10 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
                     coverage_dir=None,
                     cwd=self.options.tmpdir,
                 ))
-                self.nodes[i].args = args
-                self.start_node(i)
+            self.start_node(CACHE_NODE_ID)
 
             # Wait for RPC connections to be ready
-            for node in self.nodes:
-                node.wait_for_rpc_connection()
+            self.nodes[CACHE_NODE_ID].wait_for_rpc_connection()
 
             # Create a 199-block-long chain; each of the 4 first nodes
             # gets 25 mature blocks and 25 immature.
@@ -596,30 +584,29 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
             # This is needed so that we are out of IBD when the test starts,
             # see the tip age check in IsInitialBlockDownload().
             for i in range(8):
-                self.nodes[0].generatetoaddress(25 if i != 7 else 24, self.nodes[i % 4].get_deterministic_priv_key().address)
-            self.sync_blocks()
+                self.nodes[CACHE_NODE_ID].generatetoaddress(
+                    nblocks=25 if i != 7 else 24,
+                    address=TestNode.PRIV_KEYS[i % 4].address,
+                )
 
-            for n in self.nodes:
-                assert_equal(n.getblockchaininfo()["blocks"], 199)
+            assert_equal(self.nodes[CACHE_NODE_ID].getblockchaininfo()["blocks"], 199)
 
-            # Shut them down, and clean up cache directories:
+            # Shut it down, and clean up cache directories:
             self.stop_nodes()
             self.nodes = []
 
-            def cache_path(n, *paths):
-                chain = get_chain_folder(get_datadir_path(self.options.cachedir, n), self.chain)
-                return os.path.join(get_datadir_path(self.options.cachedir, n), chain, *paths)
+            def cache_path(*paths):
+                return os.path.join(cache_node_dir, "regtest", *paths)
 
-            for i in range(MAX_NODES):
-                os.rmdir(cache_path(i, 'wallets'))  # Remove empty wallets dir
-                for entry in os.listdir(cache_path(i)):
+            os.rmdir(cache_path('wallets'))  # Remove empty wallets dir
+            for entry in os.listdir(cache_path()):
                     if entry not in ['chainstate', 'blocks', 'indexes', 'evodb', 'llmq', 'backups']:
-                        os.remove(cache_path(i, entry))
+                        os.remove(cache_path(entry))
 
         for i in range(self.num_nodes):
-            from_dir = get_datadir_path(self.options.cachedir, i)
+            self.log.debug("Copy cache directory {} to node {}".format(cache_node_dir, i))
             to_dir = get_datadir_path(self.options.tmpdir, i)
-            shutil.copytree(from_dir, to_dir)
+            shutil.copytree(cache_node_dir, to_dir)
             initialize_datadir(self.options.tmpdir, i, self.chain)  # Overwrite port/rpcport in dash.conf
 
     def _initialize_chain_clean(self):

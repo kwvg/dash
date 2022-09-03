@@ -131,22 +131,37 @@ class TestNode():
 
         self.p2ps = []
 
+    # derived using bip32 with derivation path m/0'/0' with extended private key
+    # tprv8exZFVJvSQuq2FexStkSkRo3rVr9wtohdmnLu6XKzKXU2NtUUBwgJhw1gpdrCWzvJxFAb3fwqKUpCJTn8W7eD5fvsViM4BnRjCf5rz5uugJ
+    AddressKeyPair = collections.namedtuple('AddressKeyPair', ['address', 'key'])
+    PRIV_KEYS = [
+            # address, privkey
+            AddressKeyPair('yU9xPBcdf2fFQ5bSm3U7iJsE6HxygeE8Ex', 'cRpe8ZJASgaCqqToKTwFTiNCeMamk3szUPr6ckbAXz8Lz8a3y5t4'),
+            AddressKeyPair('ySCqJD5M5w38i6TzpSyL1UEMkDqV7nsCr9', 'cW1VbSakTMZ5SucPb7LYfVhhdsEKK7b53vm2gp2qcFgV3nuWoFYi'),
+            AddressKeyPair('yUu5P1sFsSYD9C7rFu1ckYgzXmTaX7RvBb', 'cQcGmGGPCtZa6Gh7dRthCne1Aqt4ooMdNwgYciP5kb3X7PgBzRmM'),
+            AddressKeyPair('yguXgEGzZZ5DYuSgL2ERHk2TubF3UUNP8S', 'cNfbu6ArDbLucCDCYhh6vjhZ1H1xyjyQbagfLou2GyWWqprY6xg1'),
+            AddressKeyPair('yQPWpfRudUaTgYSi3etoiuu2LV7aFcJ9Ny', 'cPuntAXWRqg9hKpGCZekiVusVD1dUZ9CPUKjnzBaQRo8V5K9f68r'),
+            AddressKeyPair('yMnRQDQw5TGjRHJk4LE2F3ubaw9y1uVuYf', 'cTxWH9Hp8artHczmaLXqzbaP4n62Wzk8KPFxkymwRGTktLCAwe8D'),
+            AddressKeyPair('yfLRQLC1Hs3ghQEFRA2SpFiYqE6psqhbjG', 'cTyBMXLkASEpYdXGQqrsgWyXTejZJpa6B2R6iw9hpE7ZJbxaCQsb'),
+            AddressKeyPair('yPHSEPg6W7r32U6mgEaEF6frxQP46cb4X1', 'cQ3ax8cX3FAiwyFT9ehzVNNucwBb1dHD5NPb2rywYumgEuxF253r'),
+            AddressKeyPair('ygJSJcLNk2rmbSfzauZVuHuoxF9qeh8dQU', 'cN6V8mwknxDLWL4yQidHnVBct2eA8ckQuPXNr459KDF35gYtVosQ'),
+            AddressKeyPair('yXwnnEbHXQXaTPYUZwhEHPfrD3fvemx1Dg', 'cUrtLM4gEg6zgCLN4BcutVgCbJuybMeS6n8BzwZf9cW3q74ew8SE'),
+            AddressKeyPair('yPhbwQFZFuRjWuFfU33AH62C42c2nK7GoT', 'cSnE8DH83rLTqic3oJoVtmDPMEFiTCRVu1SbafC8WHxVT1AF4ooy'),
+            AddressKeyPair('yLuvt9XVfCA7aPtT26jA1mY5J2FLJzg8Z2', 'cR6vmLK1QuQ1SbGjHnw8FhXP9tT2pGT2Fbw6dtLyiMtdax5sVaWA'),
+            AddressKeyPair('yWUTDUfsH4kBhqwUFMcPSAwtNA1irPHFfo', 'cR2oKVeVGJeUKLhXqcQpB8rRnAhfuXf8uGmWVc86pXj35Coeof2C'),
+            AddressKeyPair('yZ9yAfGUYLFr9a8bE5R6PfZ5Ccg34a2Z5x', 'cUbFHKcfCystKTu4R9marMruNvpV7vdG98cJbQGLUGqBiKWigGSy'),
+            AddressKeyPair('ycLwTHe6rL4VMrjFSusq1HznjcY2eoA4xf', 'cVCgNrratDvF5KEwD3r1t3VzxUXZYZQyyvUHRxdfbz4rpUyeRLiM'),
+            AddressKeyPair('yY2hagVzAfhKT85mrrk49UDGv4yzUJRb9y', 'cUUBBzTwZL3fSMCegvGjWCvQ3nLdZjka2UbG9k7Q9G3EYikfLnv6'),
+            AddressKeyPair('yN4WTAww71p8rDMwUmmXRx356UAemkqefj', 'cSdFjgGarJj4dxtybsd2q8eV4CEUQDL3YLphkF9ct1imDmkruPWZ'),
+            AddressKeyPair('yfjtrcngnBatw5ZMojwPwCREJcEZXr3HQo', 'cTJmQx79JBaViHUXjPjiRque83mtWRNX8gvRVdxKep8CorRk7BYh'),
+            AddressKeyPair('yRDbaRZpCRDqFx3HntU5pSnxukyWuyBi9R', 'cTzBwhBRgHEhCHiFPAsgCUUA542hsWMHcvZ2twPyx1wwU3kKHL8F'),
+            AddressKeyPair('yiWUy23ai7FErZNtbH8BpzWvRwoWsW2c33', 'cNeE8qBqTEbLPVuJ5pQySkFsF4z3eqfhUp3YLLcCc6cak2SgjPNs'),
+        ]
+
     def get_deterministic_priv_key(self):
         """Return a deterministic priv key in base58, that only depends on the node's index"""
-        AddressKeyPair = collections.namedtuple('AddressKeyPair', ['address', 'key'])
-        PRIV_KEYS = [
-            # address , privkey
-            AddressKeyPair('yYdShjQSptFKitYLksFEUSwHe4hnbar5rf', 'cMfbiEsnG5b8Gwm6vEgfWvZLuXZNC4zsN2y7Es3An9xHRWRjmwgR'),
-            AddressKeyPair('yfTFJgvq65UZsb9RBbpdYAAzsJoCGXqH2w', 'cStuFACUD1N6JjKQxNLUQ443qJUtSzLitKKEkA8x6utxTPZTLUtA'),
-            AddressKeyPair('yU3w4VDjKhHiZpWszkUZVnFTS56AfgdfPV', 'cQb5yh2sTiG7dsxxbXHhWSBLMByYT7jY49A1kC7zKhgL9WNHysWW'),
-            AddressKeyPair('yYhzix2R5LiYnDixsUnF8XwBYGYpyeTgB4', 'cW9Gu6uU4KoZJQcdyUvjULNRg4C8srPJw1adhgdTZMr9YQdKHtcn'),
-            AddressKeyPair('yiQ3qLx5L1BW9XA6JAG7hC8UQDktcBCeYG', 'cSq7gHVC1QPsswyX2pE5C38UnWZXfCLr7XnkjnDwuZ68NkWp183T'),
-            AddressKeyPair('yUL8h8mR7aNDRsU5zhcDbpp6YtA6ieUtK2', 'cTk7hiDKgxZX3JSb37vywdYYjjJows4DQjEaxBJDGF6LC6GXvPKo'),
-            AddressKeyPair('yfy21e12jn3A3uDicNehCq486o9fMwJKMc', 'cMuko9rLDbtxCFWuBSrFgBDRSMxsLWKpJKScRGNuWKbhuQsnsjKT'),
-            AddressKeyPair('yURgENB3b2YRMWnbhKF7iGs3KoaVRVXsJr', 'cQhdjTMh57MaHCDk9FsWGPtftRMBUuhaYAtouWnetcewmBuSrLSM'),
-            AddressKeyPair('yYC9AxBEUs3ZZxfcQvj2LUF5PVxxtqaEs7', 'cQFueiiP13mfytV3Svoe4o4Ux79fRJvwuSgHapXsnBwrHod57EeL'),
-        ]
-        return PRIV_KEYS[self.index]
+        assert len(self.PRIV_KEYS) == MAX_NODES
+        return self.PRIV_KEYS[self.index]
 
     def _node_msg(self, msg: str) -> str:
         """Return a modified msg that identifies this node by its index as a debugging aid."""
