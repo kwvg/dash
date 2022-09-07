@@ -3141,8 +3141,12 @@ void CConnman::OpenMasternodeConnection(const CAddress &addrConnect, MasternodeP
     OpenNetworkConnection(addrConnect, false, nullptr, nullptr, ConnectionType::OUTBOUND_FULL_RELAY, MasternodeConn::IsConnection, probe);
 }
 
+Mutex NetEventsInterface::g_msgproc_mutex;
+
 void CConnman::ThreadMessageHandler()
 {
+    LOCK(NetEventsInterface::g_msgproc_mutex);
+
     int64_t nLastSendMessagesTimeMasternodes = 0;
 
     FastRandomContext rng;
@@ -3172,7 +3176,6 @@ void CConnman::ThreadMessageHandler()
                 return;
             // Send messages
             if (!fSkipSendMessagesForMasternodes || !pnode->m_masternode_connection) {
-                LOCK(pnode->cs_sendProcessing);
                 m_msgproc->SendMessages(pnode);
             }
 
