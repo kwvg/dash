@@ -670,7 +670,7 @@ static UniValue quorum_rotationinfo(const JSONRPCRequest& request)
         ++idx;
     }
     LOCK(cs_main);
-    if (!BuildQuorumRotationInfo(cmd, quorumRotationInfoRet, strError)) {
+    if (!BuildQuorumRotationInfo(cmd, quorumRotationInfoRet, *llmq::quorumBlockProcessor, strError)) {
         throw JSONRPCError(RPC_INVALID_REQUEST, strError);
     }
 

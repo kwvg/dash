@@ -15,6 +15,7 @@
 #include <init.h>
 #include <interfaces/chain.h>
 #include <masternode/sync.h>
+#include <llmq/blockprocessor.h>
 #include <miner.h>
 #include <net.h>
 #include <net_processing.h>
@@ -165,7 +166,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     pblocktree.reset(new CBlockTreeDB(1 << 20, true));
 
     m_node.chainman = &::g_chainman;
-    m_node.chainman->InitializeChainstate();
+    m_node.chainman->InitializeChainstate(llmq::quorumBlockProcessor);
     ::ChainstateActive().InitCoinsDB(
         /* cache_size_bytes */ 1 << 23, /* in_memory */ true, /* should_wipe */ false);
     assert(!::ChainstateActive().CanFlushToDisk());
@@ -179,7 +180,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     m_node.mempool->setSanityCheck(1.0);
     m_node.banman = MakeUnique<BanMan>(GetDataDir() / "banlist.dat", nullptr, DEFAULT_MISBEHAVING_BANTIME);
     m_node.connman = MakeUnique<CConnman>(0x1337, 0x1337); // Deterministic randomness for tests.
-    m_node.peer_logic = MakeUnique<PeerLogicValidation>(m_node.connman.get(), m_node.banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool, false);
+    m_node.peer_logic = MakeUnique<PeerLogicValidation>(m_node.connman.get(), m_node.banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool, llmq::quorumBlockProcessor, false);
     {
         CConnman::Options options;
         options.m_msgproc = m_node.peer_logic.get();
@@ -290,7 +291,7 @@ CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransacti
 CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
-    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
+    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
     CBlock& block = pblocktemplate->block;
 
     std::vector<CTransactionRef> llmqCommitments;
@@ -318,7 +319,7 @@ CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns,
         if (!CalcCbTxMerkleRootMNList(block, ::ChainActive().Tip(), cbTx.merkleRootMNList, state, ::ChainstateActive().CoinsTip())) {
             BOOST_ASSERT(false);
         }
-        if (!CalcCbTxMerkleRootQuorums(block, ::ChainActive().Tip(), cbTx.merkleRootQuorums, state)) {
+        if (!CalcCbTxMerkleRootQuorums(block, ::ChainActive().Tip(), *llmq::quorumBlockProcessor, cbTx.merkleRootQuorums, state)) {
             BOOST_ASSERT(false);
         }
         CMutableTransaction tmpTx{*block.vtx[0]};

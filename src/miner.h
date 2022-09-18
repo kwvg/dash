@@ -25,6 +25,9 @@ class CScript;
 class CSporkManager;
 
 namespace Consensus { struct Params; };
+namespace llmq {
+class CQuorumBlockProcessor;
+} // namespace llmq
 
 static const bool DEFAULT_PRINTPRIORITY = false;
 
@@ -152,6 +155,7 @@ private:
     const CTxMemPool& m_mempool;
     const CSporkManager& spork_manager;
     CGovernanceManager& governance_manager;
+    llmq::CQuorumBlockProcessor& quorum_block_processor;
 
 public:
     struct Options {
@@ -161,9 +165,11 @@ public:
     };
 
     explicit BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                            const CTxMemPool& mempool, const CChainParams& params);
+                            llmq::CQuorumBlockProcessor& quorumBlockProcessor, const CTxMemPool& mempool,
+                            const CChainParams& params);
     explicit BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                            const CTxMemPool& mempool, const CChainParams& params, const Options& options);
+                            llmq::CQuorumBlockProcessor& quorumBlockProcessor, const CTxMemPool& mempool,
+                            const CChainParams& params, const Options& options);
 
     /** Construct a new block template with coinbase to scriptPubKeyIn */
     std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn);

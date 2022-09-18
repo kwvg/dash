@@ -29,8 +29,8 @@ void InitLLMQSystem(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, CSpor
 
     quorumDKGDebugManager = std::make_unique<CDKGDebugManager>();
     quorumBlockProcessor = std::make_unique<CQuorumBlockProcessor>(evoDb, connman);
-    quorumDKGSessionManager = std::make_unique<CDKGSessionManager>(connman, *blsWorker, *quorumDKGDebugManager, sporkManager, unitTests, fWipe);
-    quorumManager = std::make_unique<CQuorumManager>(evoDb, connman, *blsWorker, *quorumDKGSessionManager);
+    quorumDKGSessionManager = std::make_unique<CDKGSessionManager>(connman, *blsWorker, *quorumDKGDebugManager, *quorumBlockProcessor, sporkManager, unitTests, fWipe);
+    quorumManager = std::make_unique<CQuorumManager>(evoDb, connman, *blsWorker, *quorumBlockProcessor, *quorumDKGSessionManager);
     quorumSigningManager = std::make_unique<CSigningManager>(connman, unitTests, fWipe);
     quorumSigSharesManager = std::make_unique<CSigSharesManager>(connman);
     chainLocksHandler = std::make_unique<CChainLocksHandler>(mempool, connman, sporkManager);

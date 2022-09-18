@@ -8,6 +8,7 @@
 #include <consensus/merkle.h>
 #include <governance/governance.h>
 #include <key_io.h>
+#include <llmq/blockprocessor.h>
 #include <miner.h>
 #include <node/context.h>
 #include <pow.h>
@@ -76,7 +77,7 @@ std::shared_ptr<CBlock> PrepareBlock(const NodeContext& node, const CScript& coi
 {
     assert(node.mempool);
     auto block = std::make_shared<CBlock>(
-        BlockAssembler{*sporkManager, *governance, *node.mempool, Params()}
+        BlockAssembler{*sporkManager, *governance, *llmq::quorumBlockProcessor, *node.mempool, Params()}
             .CreateNewBlock(coinbase_scriptPubKey)
             ->block);
 
