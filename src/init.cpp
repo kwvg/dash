@@ -1782,7 +1782,8 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     node.peer_logic.reset(new PeerLogicValidation(
         node.connman.get(), node.banman.get(), *node.scheduler, chainman, *node.mempool, llmq::quorumBlockProcessor,
-        llmq::quorumDKGSessionManager, llmq::quorumManager, llmq::quorumSigSharesManager, llmq::quorumSigningManager, args.GetBoolArg("-enablebip61", DEFAULT_ENABLE_BIP61))
+        llmq::quorumDKGSessionManager, llmq::quorumManager, llmq::quorumSigSharesManager, llmq::quorumSigningManager,
+        llmq::chainLocksHandler, args.GetBoolArg("-enablebip61", DEFAULT_ENABLE_BIP61))
     );
     RegisterValidationInterface(node.peer_logic.get());
 
@@ -2021,7 +2022,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
             try {
                 LOCK(cs_main);
-                chainman.InitializeChainstate(llmq::quorumBlockProcessor);
+                chainman.InitializeChainstate(llmq::chainLocksHandler, llmq::quorumBlockProcessor);
                 chainman.m_total_coinstip_cache = nCoinCacheUsage;
                 chainman.m_total_coinsdb_cache = nCoinDBCache;
 

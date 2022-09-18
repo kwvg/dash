@@ -26,6 +26,7 @@ class CSporkManager;
 
 namespace Consensus { struct Params; };
 namespace llmq {
+class CChainLocksHandler;
 class CQuorumBlockProcessor;
 } // namespace llmq
 
@@ -156,6 +157,7 @@ private:
     const CSporkManager& spork_manager;
     CGovernanceManager& governance_manager;
     llmq::CQuorumBlockProcessor& quorum_block_processor;
+    llmq::CChainLocksHandler& m_clhandler;
 
 public:
     struct Options {
@@ -165,11 +167,11 @@ public:
     };
 
     explicit BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                            llmq::CQuorumBlockProcessor& quorumBlockProcessor, const CTxMemPool& mempool,
-                            const CChainParams& params);
+                            llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
+                            const CTxMemPool& mempool, const CChainParams& params);
     explicit BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                            llmq::CQuorumBlockProcessor& quorumBlockProcessor, const CTxMemPool& mempool,
-                            const CChainParams& params, const Options& options);
+                            llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
+                            const CTxMemPool& mempool, const CChainParams& params, const Options& options);
 
     /** Construct a new block template with coinbase to scriptPubKeyIn */
     std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn);

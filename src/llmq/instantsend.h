@@ -22,6 +22,7 @@ class CSporkManager;
 
 namespace llmq
 {
+class CChainLocksHandler;
 class CQuorumManager;
 class CSigningManager;
 class CSigSharesManager;
@@ -205,6 +206,7 @@ private:
     CQuorumManager& qman;
     CSigningManager& sigman;
     CSigSharesManager& shareman;
+    CChainLocksHandler& clhandler;
 
     std::atomic<bool> fUpgradedDB{false};
 
@@ -253,8 +255,9 @@ private:
 
 public:
     explicit CInstantSendManager(CTxMemPool& _mempool, CConnman& _connman, CSporkManager& sporkManager, CQuorumManager& _qman,
-                                 CSigningManager& _sigman, CSigSharesManager& _shareman, bool unitTests, bool fWipe) :
-        db(unitTests, fWipe), mempool(_mempool), connman(_connman), spork_manager(sporkManager), qman(_qman), sigman(_sigman), shareman(_shareman)
+                                 CSigningManager& _sigman, CSigSharesManager& _shareman, CChainLocksHandler& _clhandler, bool unitTests, bool fWipe) :
+        db(unitTests, fWipe), mempool(_mempool), connman(_connman), spork_manager(sporkManager), qman(_qman), sigman(_sigman), shareman(_shareman),
+        clhandler(_clhandler)
     {
         workInterrupt.reset();
     }

@@ -16,6 +16,7 @@
 #include <interfaces/chain.h>
 #include <masternode/sync.h>
 #include <llmq/blockprocessor.h>
+#include <llmq/chainlocks.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/quorums.h>
 #include <llmq/signing_shares.h>
@@ -170,7 +171,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     pblocktree.reset(new CBlockTreeDB(1 << 20, true));
 
     m_node.chainman = &::g_chainman;
-    m_node.chainman->InitializeChainstate(llmq::quorumBlockProcessor);
+    m_node.chainman->InitializeChainstate(llmq::chainLocksHandler, llmq::quorumBlockProcessor);
     ::ChainstateActive().InitCoinsDB(
         /* cache_size_bytes */ 1 << 23, /* in_memory */ true, /* should_wipe */ false);
     assert(!::ChainstateActive().CanFlushToDisk());
@@ -187,7 +188,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     m_node.peer_logic = MakeUnique<PeerLogicValidation>(
         m_node.connman.get(), m_node.banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool,
         llmq::quorumBlockProcessor, llmq::quorumDKGSessionManager, llmq::quorumManager,
-        llmq::quorumSigSharesManager, llmq::quorumSigningManager, false
+        llmq::quorumSigSharesManager, llmq::quorumSigningManager, llmq::chainLocksHandler, false
     );
     {
         CConnman::Options options;
@@ -299,7 +300,7 @@ CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransacti
 CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
-    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
+    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *llmq::chainLocksHandler, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
     CBlock& block = pblocktemplate->block;
 
     std::vector<CTransactionRef> llmqCommitments;

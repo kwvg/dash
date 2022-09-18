@@ -56,13 +56,14 @@ BlockAssembler::Options::Options() {
 }
 
 BlockAssembler::BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                               llmq::CQuorumBlockProcessor& quorumBlockProcessor, const CTxMemPool& mempool,
-                               const CChainParams& params, const Options& options)
+                               llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
+                               const CTxMemPool& mempool, const CChainParams& params, const Options& options)
     : spork_manager(sporkManager),
       governance_manager(governanceManager),
       quorum_block_processor(quorumBlockProcessor),
       chainparams(params),
-      m_mempool(mempool)
+      m_mempool(mempool),
+      m_clhandler(clhandler)
 {
     blockMinFeeRate = options.blockMinFeeRate;
     // Limit size to between 1K and MaxBlockSize()-1K for sanity:
@@ -87,9 +88,9 @@ static BlockAssembler::Options DefaultOptions()
 }
 
 BlockAssembler::BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                               llmq::CQuorumBlockProcessor& quorumBlockProcessor, const CTxMemPool& mempool,
-                               const CChainParams& params)
-    : BlockAssembler(sporkManager, governanceManager, quorumBlockProcessor, mempool, params, DefaultOptions()) {}
+                               llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
+                               const CTxMemPool& mempool, const CChainParams& params)
+    : BlockAssembler(sporkManager, governanceManager, quorumBlockProcessor, clhandler, mempool, params, DefaultOptions()) {}
 
 void BlockAssembler::resetBlock()
 {
@@ -233,7 +234,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(*pblock->vtx[0]);
 
     CValidationState state;
-    if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {
+    if (!TestBlockValidity(state, m_clhandler, chainparams, *pblock, pindexPrev, false, false)) {
         throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
     }
     int64_t nTime2 = GetTimeMicros();
@@ -273,7 +274,7 @@ bool BlockAssembler::TestPackageTransactions(const CTxMemPool::setEntries& packa
     for (CTxMemPool::txiter it : package) {
         if (!IsFinalTx(it->GetTx(), nHeight, nLockTimeCutoff))
             return false;
-        if (!llmq::chainLocksHandler->IsTxSafeForMining(it->GetTx().GetHash())) {
+        if (!m_clhandler.IsTxSafeForMining(it->GetTx().GetHash())) {
             return false;
         }
     }
