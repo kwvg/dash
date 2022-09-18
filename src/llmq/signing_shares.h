@@ -28,6 +28,8 @@ using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 
 namespace llmq
 {
+class CSigningManager;
+
 // <signHash, quorumMember>
 using SigShareKey = std::pair<uint256, uint16_t>;
 
@@ -396,11 +398,12 @@ private:
 
     CConnman& connman;
     CQuorumManager& qman;
+    CSigningManager& sigman;
     int64_t lastCleanupTime{0};
     std::atomic<uint32_t> recoveredSigsCounter{0};
 
 public:
-    explicit CSigSharesManager(CConnman& _connman, CQuorumManager& _qman) : connman(_connman), qman(_qman)
+    explicit CSigSharesManager(CConnman& _connman, CQuorumManager& _qman, CSigningManager& _sigman) : connman(_connman), qman(_qman), sigman(_sigman)
     {
         workInterrupt.reset();
     };
