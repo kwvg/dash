@@ -1779,7 +1779,10 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     node.chainman = &g_chainman;
     ChainstateManager& chainman = *Assert(node.chainman);
 
-    node.peer_logic.reset(new PeerLogicValidation(node.connman.get(), node.banman.get(), *node.scheduler, chainman, *node.mempool, llmq::quorumBlockProcessor, args.GetBoolArg("-enablebip61", DEFAULT_ENABLE_BIP61)));
+    node.peer_logic.reset(new PeerLogicValidation(
+        node.connman.get(), node.banman.get(), *node.scheduler, chainman, *node.mempool,
+        llmq::quorumBlockProcessor, llmq::quorumDKGSessionManager, args.GetBoolArg("-enablebip61", DEFAULT_ENABLE_BIP61))
+    );
     RegisterValidationInterface(node.peer_logic.get());
 
     ::governance = std::make_unique<CGovernanceManager>();

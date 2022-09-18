@@ -15,6 +15,7 @@ class CTxMemPool;
 class ChainstateManager;
 
 namespace llmq {
+class CDKGSessionManager;
 class CQuorumBlockProcessor;
 }
 
@@ -35,11 +36,12 @@ private:
     BanMan* const m_banman;
     ChainstateManager& m_chainman;
     CTxMemPool& m_mempool;
+    std::unique_ptr<llmq::CDKGSessionManager>& m_qdkgsman;
     std::unique_ptr<llmq::CQuorumBlockProcessor>& m_quorum_block_processor;
 
     bool MaybeDiscourageAndDisconnect(CNode* pnode, bool enable_bip61) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 public:
-    PeerLogicValidation(CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman, CTxMemPool& pool, std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor, bool enable_bip61);
+    PeerLogicValidation(CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman, CTxMemPool& pool, std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor, std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman, bool enable_bip61);
 
     /**
      * Overridden from CValidationInterface.
