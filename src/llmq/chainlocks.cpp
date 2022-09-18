@@ -6,6 +6,7 @@
 #include <llmq/quorums.h>
 #include <llmq/instantsend.h>
 #include <llmq/utils.h>
+#include <llmq/signing_shares.h>
 
 #include <chain.h>
 #include <chainparams.h>
@@ -335,7 +336,7 @@ void CChainLocksHandler::TrySignChainTip()
         lastSignedMsgHash = msgHash;
     }
 
-    quorumSigningManager->AsyncSignIfMember(Params().GetConsensus().llmqTypeChainLocks, requestId, msgHash);
+    quorumSigningManager->AsyncSignIfMember(Params().GetConsensus().llmqTypeChainLocks, *llmq::quorumSigSharesManager, requestId, msgHash);
 }
 
 void CChainLocksHandler::TransactionAddedToMempool(const CTransactionRef& tx, int64_t nAcceptTime)

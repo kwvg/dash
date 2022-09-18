@@ -872,7 +872,7 @@ void CSigningManager::UnregisterRecoveredSigsListener(CRecoveredSigsListener* l)
     recoveredSigsListeners.erase(itRem, recoveredSigsListeners.end());
 }
 
-bool CSigningManager::AsyncSignIfMember(Consensus::LLMQType llmqType, const uint256& id, const uint256& msgHash, const uint256& quorumHash, bool allowReSign)
+bool CSigningManager::AsyncSignIfMember(Consensus::LLMQType llmqType, CSigSharesManager& shareman, const uint256& id, const uint256& msgHash, const uint256& quorumHash, bool allowReSign)
 {
     if (!fMasternodeMode || WITH_LOCK(activeMasternodeInfoCs, return activeMasternodeInfo.proTxHash.IsNull())) {
         return false;
@@ -931,9 +931,9 @@ bool CSigningManager::AsyncSignIfMember(Consensus::LLMQType llmqType, const uint
 
     if (allowReSign) {
         // make us re-announce all known shares (other nodes might have run into a timeout)
-        quorumSigSharesManager->ForceReAnnouncement(quorum, llmqType, id, msgHash);
+        shareman.ForceReAnnouncement(quorum, llmqType, id, msgHash);
     }
-    quorumSigSharesManager->AsyncSign(quorum, id, msgHash);
+    shareman.AsyncSign(quorum, id, msgHash);
 
     return true;
 }

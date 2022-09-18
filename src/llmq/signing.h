@@ -27,6 +27,7 @@ namespace llmq
 class CQuorum;
 using CQuorumCPtr = std::shared_ptr<const CQuorum>;
 class CQuorumManager;
+class CSigSharesManager;
 
 // Keep recovered signatures for a week. This is a "-maxrecsigsage" option default.
 static constexpr int64_t DEFAULT_MAX_RECOVERED_SIGS_AGE{60 * 60 * 24 * 7};
@@ -212,7 +213,7 @@ public:
     void RegisterRecoveredSigsListener(CRecoveredSigsListener* l);
     void UnregisterRecoveredSigsListener(CRecoveredSigsListener* l);
 
-    bool AsyncSignIfMember(Consensus::LLMQType llmqType, const uint256& id, const uint256& msgHash, const uint256& quorumHash = uint256(), bool allowReSign = false);
+    bool AsyncSignIfMember(Consensus::LLMQType llmqType, CSigSharesManager& shareman, const uint256& id, const uint256& msgHash, const uint256& quorumHash = uint256(), bool allowReSign = false);
     bool HasRecoveredSig(Consensus::LLMQType llmqType, const uint256& id, const uint256& msgHash) const;
     bool HasRecoveredSigForId(Consensus::LLMQType llmqType, const uint256& id) const;
     bool HasRecoveredSigForSession(const uint256& signHash) const;

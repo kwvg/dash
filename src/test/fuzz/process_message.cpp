@@ -22,6 +22,7 @@
 #include <llmq/blockprocessor.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/quorums.h>
+#include <llmq/signing_shares.h>
 
 #include <algorithm>
 #include <atomic>
@@ -36,7 +37,7 @@
 #include <string>
 #include <vector>
 
-bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, int64_t nTimeReceived, const CChainParams& chainparams, ChainstateManager& chainman, CTxMemPool& mempool, llmq::CQuorumBlockProcessor& quorum_block_processor, llmq::CDKGSessionManager& qdkgsman, llmq::CQuorumManager& qman, CConnman* connman, BanMan* banman, const std::atomic<bool>& interruptMsgProc, bool enable_bip61);
+bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, int64_t nTimeReceived, const CChainParams& chainparams, ChainstateManager& chainman, CTxMemPool& mempool, llmq::CQuorumBlockProcessor& quorum_block_processor, llmq::CDKGSessionManager& qdkgsman, llmq::CQuorumManager& qman, llmq::CSigSharesManager& shareman, CConnman* connman, BanMan* banman, const std::atomic<bool>& interruptMsgProc, bool enable_bip61);
 
 namespace {
 
@@ -94,7 +95,7 @@ void test_one_input(const std::vector<uint8_t>& buffer)
     p2p_node.SetSendVersion(PROTOCOL_VERSION);
     g_setup->m_node.peer_logic->InitializeNode(&p2p_node);
     try {
-        (void)ProcessMessage(&p2p_node, random_message_type, random_bytes_data_stream, GetTimeMillis(), Params(), *g_setup->m_node.chainman, *g_setup->m_node.mempool, *llmq::quorumBlockProcessor, *llmq::quorumDKGSessionManager, *llmq::quorumManager, g_setup->m_node.connman.get(), g_setup->m_node.banman.get(), std::atomic<bool>{false}, true);
+        (void)ProcessMessage(&p2p_node, random_message_type, random_bytes_data_stream, GetTimeMillis(), Params(), *g_setup->m_node.chainman, *g_setup->m_node.mempool, *llmq::quorumBlockProcessor, *llmq::quorumDKGSessionManager, *llmq::quorumManager, *llmq::quorumSigSharesManager, g_setup->m_node.connman.get(), g_setup->m_node.banman.get(), std::atomic<bool>{false}, true);
     } catch (const std::ios_base::failure& e) {
         const std::string exception_message{e.what()};
         const auto p = EXPECTED_DESERIALIZATION_EXCEPTIONS.find(exception_message);
