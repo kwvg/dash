@@ -31,10 +31,10 @@ void InitLLMQSystem(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, CSpor
     quorumBlockProcessor = std::make_unique<CQuorumBlockProcessor>(evoDb, connman);
     quorumDKGSessionManager = std::make_unique<CDKGSessionManager>(connman, *blsWorker, *quorumDKGDebugManager, *quorumBlockProcessor, sporkManager, unitTests, fWipe);
     quorumManager = std::make_unique<CQuorumManager>(evoDb, connman, *blsWorker, *quorumBlockProcessor, *quorumDKGSessionManager);
-    quorumSigningManager = std::make_unique<CSigningManager>(connman, unitTests, fWipe);
-    quorumSigSharesManager = std::make_unique<CSigSharesManager>(connman);
+    quorumSigningManager = std::make_unique<CSigningManager>(connman, *quorumManager, unitTests, fWipe);
+    quorumSigSharesManager = std::make_unique<CSigSharesManager>(connman, *quorumManager);
     chainLocksHandler = std::make_unique<CChainLocksHandler>(mempool, connman, sporkManager);
-    quorumInstantSendManager = std::make_unique<CInstantSendManager>(mempool, connman, sporkManager, unitTests, fWipe);
+    quorumInstantSendManager = std::make_unique<CInstantSendManager>(mempool, connman, sporkManager, *quorumManager, unitTests, fWipe);
 
     // NOTE: we use this only to wipe the old db, do NOT use it for anything else
     // TODO: remove it in some future version

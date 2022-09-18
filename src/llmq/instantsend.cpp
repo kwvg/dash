@@ -509,7 +509,7 @@ void CInstantSendManager::ProcessTx(const CTransaction& tx, bool fRetroactive, c
     // block after we retroactively locked all transactions.
     if (!IsInstantSendMempoolSigningEnabled() && !fRetroactive) return;
 
-    if (!TrySignInputLocks(tx, fRetroactive, utils::GetInstantSendLLMQType(WITH_LOCK(cs_main, return ::ChainActive().Tip())), params)) {
+    if (!TrySignInputLocks(tx, fRetroactive, utils::GetInstantSendLLMQType(qman, WITH_LOCK(cs_main, return ::ChainActive().Tip())), params)) {
         return;
     }
 
@@ -683,7 +683,7 @@ void CInstantSendManager::HandleNewInputLockRecoveredSig(const CRecoveredSig& re
 
 void CInstantSendManager::TrySignInstantSendLock(const CTransaction& tx)
 {
-    const auto llmqType = utils::GetInstantSendLLMQType(WITH_LOCK(cs_main, return ::ChainActive().Tip()));
+    const auto llmqType = utils::GetInstantSendLLMQType(qman, WITH_LOCK(cs_main, return ::ChainActive().Tip()));
 
     for (const auto& in : tx.vin) {
         auto id = ::SerializeHash(std::make_pair(INPUTLOCK_REQUESTID_PREFIX, in.prevout));
@@ -852,7 +852,7 @@ bool CInstantSendManager::PreVerifyInstantSendLock(const llmq::CInstantSendLock&
 bool CInstantSendManager::ProcessPendingInstantSendLocks()
 {
     const CBlockIndex* pBlockIndexTip = WITH_LOCK(cs_main, return ::ChainActive().Tip());
-    if (pBlockIndexTip && utils::GetInstantSendLLMQType(pBlockIndexTip) == Params().GetConsensus().llmqTypeDIP0024InstantSend) {
+    if (pBlockIndexTip && utils::GetInstantSendLLMQType(qman, pBlockIndexTip) == Params().GetConsensus().llmqTypeDIP0024InstantSend) {
         // Don't short circuit. Try to process deterministic and not deterministic islocks
         return ProcessPendingInstantSendLocks(true) & ProcessPendingInstantSendLocks(false);
     } else {
@@ -971,7 +971,7 @@ std::unordered_set<uint256, StaticSaltedHasher> CInstantSendManager::ProcessPend
             }
         }
 
-        auto quorum = llmq::CSigningManager::SelectQuorumForSigning(llmqType, id, nSignHeight, signOffset);
+        auto quorum = llmq::CSigningManager::SelectQuorumForSigning(llmqType, qman, id, nSignHeight, signOffset);
         if (!quorum) {
             // should not happen, but if one fails to select, all others will also fail to select
             return {};
