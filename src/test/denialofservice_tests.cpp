@@ -10,6 +10,7 @@
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
 #include <llmq/dkgsessionmgr.h>
+#include <llmq/instantsend.h>
 #include <llmq/quorums.h>
 #include <llmq/signing_shares.h>
 #include <llmq/signing.h>
@@ -89,7 +90,7 @@ BOOST_AUTO_TEST_CASE(outbound_slow_chain_eviction)
     auto peerLogic = MakeUnique<PeerLogicValidation>(
         connman.get(), nullptr, *m_node.scheduler, *m_node.chainman, *m_node.mempool, llmq::quorumBlockProcessor,
         llmq::quorumDKGSessionManager, llmq::quorumManager, llmq::quorumSigSharesManager, llmq::quorumSigningManager,
-        llmq::chainLocksHandler, false
+        llmq::chainLocksHandler, llmq::quorumInstantSendManager, false
     );
 
     // Mock an outbound peer
@@ -164,7 +165,7 @@ BOOST_AUTO_TEST_CASE(stale_tip_peer_management)
     auto peerLogic = MakeUnique<PeerLogicValidation>(
         connman.get(), nullptr, *m_node.scheduler, *m_node.chainman, *m_node.mempool, llmq::quorumBlockProcessor,
         llmq::quorumDKGSessionManager, llmq::quorumManager, llmq::quorumSigSharesManager, llmq::quorumSigningManager,
-        llmq::chainLocksHandler, false
+        llmq::chainLocksHandler, llmq::quorumInstantSendManager, false
     );
 
     const Consensus::Params& consensusParams = Params().GetConsensus();
@@ -241,7 +242,7 @@ BOOST_AUTO_TEST_CASE(DoS_banning)
     auto peerLogic = MakeUnique<PeerLogicValidation>(
         connman.get(), banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool, llmq::quorumBlockProcessor,
         llmq::quorumDKGSessionManager, llmq::quorumManager, llmq::quorumSigSharesManager, llmq::quorumSigningManager,
-        llmq::chainLocksHandler, false
+        llmq::chainLocksHandler, llmq::quorumInstantSendManager, false
     );
 
     banman->ClearBanned();
@@ -300,7 +301,7 @@ BOOST_AUTO_TEST_CASE(DoS_banscore)
     auto peerLogic = MakeUnique<PeerLogicValidation>(
         connman.get(), banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool, llmq::quorumBlockProcessor,
         llmq::quorumDKGSessionManager, llmq::quorumManager, llmq::quorumSigSharesManager, llmq::quorumSigningManager,
-        llmq::chainLocksHandler, false
+        llmq::chainLocksHandler, llmq::quorumInstantSendManager, false
     );
 
     banman->ClearBanned();
@@ -351,7 +352,7 @@ BOOST_AUTO_TEST_CASE(DoS_bantime)
     auto peerLogic = MakeUnique<PeerLogicValidation>(
         connman.get(), banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool, llmq::quorumBlockProcessor,
         llmq::quorumDKGSessionManager, llmq::quorumManager, llmq::quorumSigSharesManager, llmq::quorumSigningManager,
-        llmq::chainLocksHandler, false
+        llmq::chainLocksHandler, llmq::quorumInstantSendManager, false
     );
 
     banman->ClearBanned();

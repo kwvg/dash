@@ -17,6 +17,7 @@ class ChainstateManager;
 namespace llmq {
 class CChainLocksHandler;
 class CDKGSessionManager;
+class CInstantSendManager;
 class CQuorumBlockProcessor;
 class CQuorumManager;
 class CSigningManager;
@@ -46,13 +47,15 @@ private:
     std::unique_ptr<llmq::CSigningManager>& m_sigman;
     std::unique_ptr<llmq::CSigSharesManager>& m_shareman;
     std::unique_ptr<llmq::CChainLocksHandler>& m_clhandler;
+    std::unique_ptr<llmq::CInstantSendManager>& m_isman;
 
     bool MaybeDiscourageAndDisconnect(CNode* pnode, bool enable_bip61) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 public:
     PeerLogicValidation(CConnman* connmanIn, BanMan* banman, CScheduler &scheduler, ChainstateManager& chainman, CTxMemPool& pool,
                         std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor, std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
                         std::unique_ptr<llmq::CQuorumManager>& qman, std::unique_ptr<llmq::CSigSharesManager>& shareman,
-                        std::unique_ptr<llmq::CSigningManager>& sigman, std::unique_ptr<llmq::CChainLocksHandler>& clhandler, bool enable_bip61);
+                        std::unique_ptr<llmq::CSigningManager>& sigman, std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
+                        std::unique_ptr<llmq::CInstantSendManager>& isman, bool enable_bip61);
 
     /**
      * Overridden from CValidationInterface.

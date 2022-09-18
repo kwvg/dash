@@ -36,6 +36,7 @@
 
 namespace llmq {
 class CChainLocksHandler;
+class CInstantSendManager;
 class CQuorumBlockProcessor;
 } // namespace llmq
 
@@ -536,12 +537,14 @@ private:
     std::unique_ptr<CoinsViews> m_coins_views;
 
     //! Dash
-    std::unique_ptr<llmq::CQuorumBlockProcessor>& m_quorum_block_processor;
     std::unique_ptr<llmq::CChainLocksHandler>& m_clhandler;
+    std::unique_ptr<llmq::CInstantSendManager>& m_isman;
+    std::unique_ptr<llmq::CQuorumBlockProcessor>& m_quorum_block_processor;
 
 public:
     explicit CChainState(BlockManager& blockman,
                          std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
+                         std::unique_ptr<llmq::CInstantSendManager>& isman,
                          std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
                          uint256 from_snapshot_blockhash = uint256());
 
@@ -856,6 +859,7 @@ public:
     //! @param[in] snapshot_blockhash   If given, signify that this chainstate
     //!                                 is based on a snapshot.
     CChainState& InitializeChainstate(std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
+                                      std::unique_ptr<llmq::CInstantSendManager>& isman,
                                       std::unique_ptr<llmq::CQuorumBlockProcessor>& quorum_block_processor,
                                       const uint256& snapshot_blockhash = uint256()) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 

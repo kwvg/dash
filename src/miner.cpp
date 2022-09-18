@@ -28,6 +28,7 @@
 #include <governance/governance.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
+#include <llmq/instantsend.h>
 #include <llmq/utils.h>
 #include <masternode/payments.h>
 #include <spork.h>
@@ -57,13 +58,14 @@ BlockAssembler::Options::Options() {
 
 BlockAssembler::BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
                                llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
-                               const CTxMemPool& mempool, const CChainParams& params, const Options& options)
+                               llmq::CInstantSendManager& isman, const CTxMemPool& mempool, const CChainParams& params, const Options& options)
     : spork_manager(sporkManager),
       governance_manager(governanceManager),
       quorum_block_processor(quorumBlockProcessor),
       chainparams(params),
       m_mempool(mempool),
-      m_clhandler(clhandler)
+      m_clhandler(clhandler),
+      m_isman(isman)
 {
     blockMinFeeRate = options.blockMinFeeRate;
     // Limit size to between 1K and MaxBlockSize()-1K for sanity:
@@ -89,8 +91,8 @@ static BlockAssembler::Options DefaultOptions()
 
 BlockAssembler::BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
                                llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
-                               const CTxMemPool& mempool, const CChainParams& params)
-    : BlockAssembler(sporkManager, governanceManager, quorumBlockProcessor, clhandler, mempool, params, DefaultOptions()) {}
+                               llmq::CInstantSendManager& isman, const CTxMemPool& mempool, const CChainParams& params)
+    : BlockAssembler(sporkManager, governanceManager, quorumBlockProcessor, clhandler, isman, mempool, params, DefaultOptions()) {}
 
 void BlockAssembler::resetBlock()
 {
@@ -274,7 +276,7 @@ bool BlockAssembler::TestPackageTransactions(const CTxMemPool::setEntries& packa
     for (CTxMemPool::txiter it : package) {
         if (!IsFinalTx(it->GetTx(), nHeight, nLockTimeCutoff))
             return false;
-        if (!m_clhandler.IsTxSafeForMining(it->GetTx().GetHash())) {
+        if (!m_clhandler.IsTxSafeForMining(m_isman, it->GetTx().GetHash())) {
             return false;
         }
     }
