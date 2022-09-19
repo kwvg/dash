@@ -528,7 +528,7 @@ void CRecoveredSigsDb::CleanupOldVotes(int64_t maxAge)
 
 //////////////////
 
-CSigningManager::CSigningManager(CConnman& _connman, CQuorumManager& _qman, bool fMemory, bool fWipe) :
+CSigningManager::CSigningManager(CConnman& _connman, const CQuorumManager& _qman, bool fMemory, bool fWipe) :
     db(fMemory, fWipe), connman(_connman), qman(_qman)
 {
 }

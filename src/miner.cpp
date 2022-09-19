@@ -57,7 +57,7 @@ BlockAssembler::Options::Options() {
 }
 
 BlockAssembler::BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                               llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
+                               const llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
                                llmq::CInstantSendManager& isman, const CTxMemPool& mempool, const CChainParams& params, const Options& options)
     : spork_manager(sporkManager),
       governance_manager(governanceManager),
@@ -90,7 +90,7 @@ static BlockAssembler::Options DefaultOptions()
 }
 
 BlockAssembler::BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                               llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
+                               const llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
                                llmq::CInstantSendManager& isman, const CTxMemPool& mempool, const CChainParams& params)
     : BlockAssembler(sporkManager, governanceManager, quorumBlockProcessor, clhandler, isman, mempool, params, DefaultOptions()) {}
 

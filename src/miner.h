@@ -157,7 +157,7 @@ private:
     const CTxMemPool& m_mempool;
     const CSporkManager& spork_manager;
     CGovernanceManager& governance_manager;
-    llmq::CQuorumBlockProcessor& quorum_block_processor;
+    const llmq::CQuorumBlockProcessor& quorum_block_processor;
     llmq::CChainLocksHandler& m_clhandler;
     llmq::CInstantSendManager& m_isman;
 
@@ -169,10 +169,10 @@ public:
     };
 
     explicit BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                            llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
+                            const llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
                             llmq::CInstantSendManager& isman, const CTxMemPool& mempool, const CChainParams& params);
     explicit BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                            llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
+                            const llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
                             llmq::CInstantSendManager& isman, const CTxMemPool& mempool, const CChainParams& params, const Options& options);
 
     /** Construct a new block template with coinbase to scriptPubKeyIn */

@@ -397,7 +397,7 @@ private:
     FastRandomContext rnd GUARDED_BY(cs);
 
     CConnman& connman;
-    CQuorumManager& qman;
+    const CQuorumManager& qman;
     CSigningManager& sigman;
     int64_t lastCleanupTime{0};
     std::atomic<uint32_t> recoveredSigsCounter{0};

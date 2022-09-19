@@ -378,7 +378,7 @@ private:
     static Mutex cs_mapdstx;
     static std::map<uint256, CCoinJoinBroadcastTx> mapDSTX GUARDED_BY(cs_mapdstx);
 
-    static void CheckDSTXes(const CBlockIndex* pindex, llmq::CChainLocksHandler& clhandler) LOCKS_EXCLUDED(cs_mapdstx);
+    static void CheckDSTXes(const CBlockIndex* pindex, const llmq::CChainLocksHandler& clhandler) LOCKS_EXCLUDED(cs_mapdstx);
 
 public:
     static constexpr std::array<CAmount, 5> GetStandardDenominations() { return vecStandardDenominations; }
@@ -481,8 +481,8 @@ public:
     static void AddDSTX(const CCoinJoinBroadcastTx& dstx) LOCKS_EXCLUDED(cs_mapdstx);
     static CCoinJoinBroadcastTx GetDSTX(const uint256& hash) LOCKS_EXCLUDED(cs_mapdstx);
 
-    static void UpdatedBlockTip(const CBlockIndex* pindex, llmq::CChainLocksHandler& clhandler);
-    static void NotifyChainLock(const CBlockIndex* pindex, llmq::CChainLocksHandler& clhandler);
+    static void UpdatedBlockTip(const CBlockIndex* pindex, const llmq::CChainLocksHandler& clhandler);
+    static void NotifyChainLock(const CBlockIndex* pindex, const llmq::CChainLocksHandler& clhandler);
 
     static void UpdateDSTXConfirmedHeight(const CTransactionRef& tx, int nHeight);
     static void TransactionAddedToMempool(const CTransactionRef& tx) LOCKS_EXCLUDED(cs_mapdstx);

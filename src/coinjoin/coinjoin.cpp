@@ -440,7 +440,7 @@ CCoinJoinBroadcastTx CCoinJoin::GetDSTX(const uint256& hash)
     return (it == mapDSTX.end()) ? CCoinJoinBroadcastTx() : it->second;
 }
 
-void CCoinJoin::CheckDSTXes(const CBlockIndex* pindex, llmq::CChainLocksHandler& clhandler)
+void CCoinJoin::CheckDSTXes(const CBlockIndex* pindex, const llmq::CChainLocksHandler& clhandler)
 {
     AssertLockNotHeld(cs_mapdstx);
     LOCK(cs_mapdstx);
@@ -455,14 +455,14 @@ void CCoinJoin::CheckDSTXes(const CBlockIndex* pindex, llmq::CChainLocksHandler&
     LogPrint(BCLog::COINJOIN, "CCoinJoin::CheckDSTXes -- mapDSTX.size()=%llu\n", mapDSTX.size());
 }
 
-void CCoinJoin::UpdatedBlockTip(const CBlockIndex* pindex, llmq::CChainLocksHandler& clhandler)
+void CCoinJoin::UpdatedBlockTip(const CBlockIndex* pindex, const llmq::CChainLocksHandler& clhandler)
 {
     if (pindex && masternodeSync->IsBlockchainSynced()) {
         CheckDSTXes(pindex, clhandler);
     }
 }
 
-void CCoinJoin::NotifyChainLock(const CBlockIndex* pindex, llmq::CChainLocksHandler& clhandler)
+void CCoinJoin::NotifyChainLock(const CBlockIndex* pindex, const llmq::CChainLocksHandler& clhandler)
 {
     if (pindex && masternodeSync->IsBlockchainSynced()) {
         CheckDSTXes(pindex, clhandler);

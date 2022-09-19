@@ -165,7 +165,7 @@ void CDKGSessionManager::UpdatedBlockTip(const CBlockIndex* pindexNew, bool fIni
     }
 }
 
-void CDKGSessionManager::ProcessMessage(CNode* pfrom, CQuorumManager& quorum_manager, const std::string& msg_type, CDataStream& vRecv)
+void CDKGSessionManager::ProcessMessage(CNode* pfrom, const CQuorumManager& quorum_manager, const std::string& msg_type, CDataStream& vRecv)
 {
     static Mutex cs_indexedQuorumsCache;
     static std::map<Consensus::LLMQType, unordered_lru_cache<uint256, int, StaticSaltedHasher>> indexedQuorumsCache GUARDED_BY(cs_indexedQuorumsCache);

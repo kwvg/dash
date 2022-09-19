@@ -166,7 +166,7 @@ private:
 
     CConnman& connman;
     CRecoveredSigsDb db;
-    CQuorumManager& qman;
+    const CQuorumManager& qman;
 
     // Incoming and not verified yet
     std::unordered_map<NodeId, std::list<std::shared_ptr<const CRecoveredSig>>> pendingRecoveredSigs GUARDED_BY(cs);
@@ -179,7 +179,7 @@ private:
     std::vector<CRecoveredSigsListener*> recoveredSigsListeners GUARDED_BY(cs);
 
 public:
-    CSigningManager(CConnman& _connman, CQuorumManager& _qman, bool fMemory, bool fWipe);
+    CSigningManager(CConnman& _connman, const CQuorumManager& _qman, bool fMemory, bool fWipe);
 
     bool AlreadyHave(const CInv& inv) const;
     bool GetRecoveredSigForGetData(const uint256& hash, CRecoveredSig& ret) const;
