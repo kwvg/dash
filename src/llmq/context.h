@@ -35,7 +35,7 @@ struct LLMQContext {
     void Start();
     void Stop();
 
-    CBLSWorker* bls_worker{nullptr};
+    std::shared_ptr<CBLSWorker> bls_worker;
     llmq::CDKGDebugManager* dkg_debugman{nullptr};
     llmq::CQuorumBlockProcessor* quorum_block_processor{nullptr};
     llmq::CDKGSessionManager* qdkgsman{nullptr};
