@@ -84,7 +84,7 @@
 #include <evo/deterministicmns.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
-#include <llmq/init.h>
+#include <llmq/context.h>
 #include <llmq/instantsend.h>
 #include <llmq/quorums.h>
 #include <llmq/dkgsessionmgr.h>
@@ -203,7 +203,9 @@ void Interrupt(NodeContext& node)
     InterruptRPC();
     InterruptREST();
     InterruptTorControl();
-    llmq::InterruptLLMQSystem();
+    if (node.llmq_ctx) {
+        node.llmq_ctx->Interrupt();
+    }
     InterruptMapPort();
     if (node.connman)
         node.connman->Interrupt();
@@ -233,7 +235,7 @@ void PrepareShutdown(NodeContext& node)
     StopREST();
     StopRPC();
     StopHTTPServer();
-    llmq::StopLLMQSystem();
+    if (node.llmq_ctx) node.llmq_ctx->Stop();
 
     ::coinJoinServer.reset();
 #ifdef ENABLE_WALLET
@@ -347,7 +349,9 @@ void PrepareShutdown(NodeContext& node)
             }
         }
         pblocktree.reset();
-        llmq::DestroyLLMQSystem();
+        if (node.llmq_ctx) {
+            node.llmq_ctx.reset();
+        }
         llmq::quorumSnapshotManager.reset();
         deterministicMNManager.reset();
         evoDb.reset();
@@ -2027,7 +2031,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
                 // fails if it's still open from the previous loop. Close it first:
                 pblocktree.reset();
                 pblocktree.reset(new CBlockTreeDB(nBlockTreeDBCache, false, fReset));
-                llmq::DestroyLLMQSystem();
+
                 // Same logic as above with pblocktree
                 evoDb.reset();
                 evoDb.reset(new CEvoDB(nEvoDbCache, false, fReset || fReindexChainState));
@@ -2035,8 +2039,8 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
                 deterministicMNManager.reset(new CDeterministicMNManager(*evoDb, *node.connman));
                 llmq::quorumSnapshotManager.reset();
                 llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(*evoDb));
-
-                llmq::InitLLMQSystem(*evoDb, *node.mempool, *node.connman, *::sporkManager, false, fReset || fReindexChainState);
+                node.llmq_ctx.reset();
+                node.llmq_ctx.reset(new LLMQContext(*evoDb, *node.mempool, *node.connman, *::sporkManager, false, fReset || fReindexChainState));
 
                 if (fReset) {
                     pblocktree->WriteReindexing(true);
@@ -2400,7 +2404,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         node.scheduler->scheduleEvery(std::bind(&PeriodicStats, std::ref(*node.args)), nStatsPeriod * 1000);
     }
 
-    llmq::StartLLMQSystem();
+    node.llmq_ctx->Start();
 
     // ********************************************************* Step 11: import blocks
 
