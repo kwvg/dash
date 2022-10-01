@@ -54,7 +54,7 @@
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
 #include <evo/specialtx.h>
-#include <llmq/init.h>
+#include <llmq/context.h>
 #include <llmq/snapshot.h>
 
 const std::function<std::string(const char*)> G_TRANSLATION_FUN = nullptr;
@@ -206,7 +206,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
 #endif // ENABLE_WALLET
 
     deterministicMNManager.reset(new CDeterministicMNManager(*evoDb, *m_node.connman));
-    llmq::InitLLMQSystem(*evoDb, *m_node.mempool, *m_node.connman, *sporkManager, true);
+    m_node.llmq_ctx = std::make_unique<LLMQContext>(*evoDb, *m_node.mempool, *m_node.connman, *sporkManager, true, false);
 
     CValidationState state;
     if (!ActivateBestChain(state, chainparams)) {
@@ -223,8 +223,8 @@ TestingSetup::~TestingSetup()
 {
     m_node.scheduler->stop();
     deterministicMNManager.reset();
-    llmq::InterruptLLMQSystem();
-    llmq::StopLLMQSystem();
+    m_node.llmq_ctx->Interrupt();
+    m_node.llmq_ctx->Stop();
     threadGroup.interrupt_all();
     threadGroup.join_all();
     StopScriptCheckWorkerThreads();
@@ -243,7 +243,7 @@ TestingSetup::~TestingSetup()
     m_node.mempool = nullptr;
     m_node.args = nullptr;
     m_node.scheduler.reset();
-    llmq::DestroyLLMQSystem();
+    m_node.llmq_ctx.reset();
     m_node.chainman->Reset();
     m_node.chainman = nullptr;
     pblocktree.reset();
