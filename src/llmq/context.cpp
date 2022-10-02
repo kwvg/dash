@@ -23,7 +23,6 @@ LLMQContext::LLMQContext(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, 
 
     /* Context aliases to globals used by the LLMQ system */
     quorum_block_processor = llmq::quorumBlockProcessor.get();
-    qdkgsman = llmq::quorumDKGSessionManager.get();
     qman = llmq::quorumManager.get();
     sigman = llmq::quorumSigningManager.get();
     shareman = llmq::quorumSigSharesManager.get();
@@ -37,7 +36,6 @@ LLMQContext::~LLMQContext() {
     shareman = nullptr;
     sigman = nullptr;
     qman = nullptr;
-    qdkgsman = nullptr;
     quorum_block_processor = nullptr;
 
     Destroy();
@@ -48,8 +46,8 @@ void LLMQContext::Create(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, 
 
     dkg_debugman = std::make_unique<llmq::CDKGDebugManager>();
     llmq::quorumBlockProcessor = std::make_unique<llmq::CQuorumBlockProcessor>(evoDb, connman);
-    llmq::quorumDKGSessionManager = std::make_unique<llmq::CDKGSessionManager>(connman, *bls_worker, *dkg_debugman, *llmq::quorumBlockProcessor, sporkManager, unitTests, fWipe);
-    llmq::quorumManager = std::make_unique<llmq::CQuorumManager>(evoDb, connman, *bls_worker, *llmq::quorumBlockProcessor, *llmq::quorumDKGSessionManager);
+    qdkgsman = std::make_unique<llmq::CDKGSessionManager>(connman, *bls_worker, *dkg_debugman, *llmq::quorumBlockProcessor, sporkManager, unitTests, fWipe);
+    llmq::quorumManager = std::make_unique<llmq::CQuorumManager>(evoDb, connman, *bls_worker, *llmq::quorumBlockProcessor, *qdkgsman);
     llmq::quorumSigningManager = std::make_unique<llmq::CSigningManager>(connman, *llmq::quorumManager, unitTests, fWipe);
     llmq::quorumSigSharesManager = std::make_unique<llmq::CSigSharesManager>(connman, *llmq::quorumManager, *llmq::quorumSigningManager);
     llmq::chainLocksHandler = std::make_unique<llmq::CChainLocksHandler>(mempool, connman, sporkManager, *llmq::quorumSigningManager, *llmq::quorumSigSharesManager);
@@ -66,7 +64,7 @@ void LLMQContext::Destroy() {
     llmq::quorumSigSharesManager.reset();
     llmq::quorumSigningManager.reset();
     llmq::quorumManager.reset();
-    llmq::quorumDKGSessionManager.reset();
+    qdkgsman.reset();
     llmq::quorumBlockProcessor.reset();
     dkg_debugman.reset();
     bls_worker.reset();
@@ -89,8 +87,8 @@ void LLMQContext::Start() {
     if (bls_worker != nullptr) {
         bls_worker->Start();
     }
-    if (llmq::quorumDKGSessionManager != nullptr) {
-        llmq::quorumDKGSessionManager->StartThreads();
+    if (qdkgsman != nullptr) {
+        qdkgsman->StartThreads();
     }
     if (llmq::quorumManager != nullptr) {
         llmq::quorumManager->Start();
@@ -121,8 +119,8 @@ void LLMQContext::Stop() {
     if (llmq::quorumManager != nullptr) {
         llmq::quorumManager->Stop();
     }
-    if (llmq::quorumDKGSessionManager != nullptr) {
-        llmq::quorumDKGSessionManager->StopThreads();
+    if (qdkgsman != nullptr) {
+        qdkgsman->StopThreads();
     }
     if (bls_worker != nullptr) {
         bls_worker->Stop();
