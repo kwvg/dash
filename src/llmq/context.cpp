@@ -22,7 +22,6 @@ LLMQContext::LLMQContext(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, 
     Create(evoDb, mempool, connman, sporkManager, unitTests, fWipe);
 
     /* Context aliases to globals used by the LLMQ system */
-    dkg_debugman = llmq::quorumDKGDebugManager.get();
     quorum_block_processor = llmq::quorumBlockProcessor.get();
     qdkgsman = llmq::quorumDKGSessionManager.get();
     qman = llmq::quorumManager.get();
@@ -40,7 +39,6 @@ LLMQContext::~LLMQContext() {
     qman = nullptr;
     qdkgsman = nullptr;
     quorum_block_processor = nullptr;
-    dkg_debugman = nullptr;
 
     Destroy();
 }
@@ -48,9 +46,9 @@ LLMQContext::~LLMQContext() {
 void LLMQContext::Create(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkManager, bool unitTests, bool fWipe) {
     bls_worker = std::make_shared<CBLSWorker>();
 
-    llmq::quorumDKGDebugManager = std::make_unique<llmq::CDKGDebugManager>();
+    dkg_debugman = std::make_unique<llmq::CDKGDebugManager>();
     llmq::quorumBlockProcessor = std::make_unique<llmq::CQuorumBlockProcessor>(evoDb, connman);
-    llmq::quorumDKGSessionManager = std::make_unique<llmq::CDKGSessionManager>(connman, *bls_worker, *llmq::quorumDKGDebugManager, *llmq::quorumBlockProcessor, sporkManager, unitTests, fWipe);
+    llmq::quorumDKGSessionManager = std::make_unique<llmq::CDKGSessionManager>(connman, *bls_worker, *dkg_debugman, *llmq::quorumBlockProcessor, sporkManager, unitTests, fWipe);
     llmq::quorumManager = std::make_unique<llmq::CQuorumManager>(evoDb, connman, *bls_worker, *llmq::quorumBlockProcessor, *llmq::quorumDKGSessionManager);
     llmq::quorumSigningManager = std::make_unique<llmq::CSigningManager>(connman, *llmq::quorumManager, unitTests, fWipe);
     llmq::quorumSigSharesManager = std::make_unique<llmq::CSigSharesManager>(connman, *llmq::quorumManager, *llmq::quorumSigningManager);
@@ -70,7 +68,7 @@ void LLMQContext::Destroy() {
     llmq::quorumManager.reset();
     llmq::quorumDKGSessionManager.reset();
     llmq::quorumBlockProcessor.reset();
-    llmq::quorumDKGDebugManager.reset();
+    dkg_debugman.reset();
     bls_worker.reset();
     {
         LOCK(llmq::cs_llmq_vbc);
