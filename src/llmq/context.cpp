@@ -43,6 +43,7 @@ void LLMQContext::Create(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, 
     bls_worker = std::make_shared<CBLSWorker>();
 
     dkg_debugman = std::make_unique<llmq::CDKGDebugManager>();
+    qsnapman = std::make_unique<llmq::CQuorumSnapshotManager>(evoDb);
     llmq::quorumBlockProcessor = std::make_unique<llmq::CQuorumBlockProcessor>(evoDb, connman);
     qdkgsman = std::make_unique<llmq::CDKGSessionManager>(connman, *bls_worker, *dkg_debugman, *llmq::quorumBlockProcessor, sporkManager, unitTests, fWipe);
     llmq::quorumManager = std::make_unique<llmq::CQuorumManager>(evoDb, connman, *bls_worker, *llmq::quorumBlockProcessor, *qdkgsman);
@@ -64,6 +65,7 @@ void LLMQContext::Destroy() {
     llmq::quorumManager.reset();
     qdkgsman.reset();
     llmq::quorumBlockProcessor.reset();
+    qsnapman.reset();
     dkg_debugman.reset();
     bls_worker.reset();
     {

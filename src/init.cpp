@@ -352,7 +352,6 @@ void PrepareShutdown(NodeContext& node)
         if (node.llmq_ctx) {
             node.llmq_ctx.reset();
         }
-        llmq::quorumSnapshotManager.reset();
         deterministicMNManager.reset();
         evoDb.reset();
     }
@@ -2034,8 +2033,6 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
                 evoDb.reset(new CEvoDB(nEvoDbCache, false, fReset || fReindexChainState));
                 deterministicMNManager.reset();
                 deterministicMNManager.reset(new CDeterministicMNManager(*evoDb, *node.connman));
-                llmq::quorumSnapshotManager.reset();
-                llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(*evoDb));
                 node.llmq_ctx.reset();
                 node.llmq_ctx.reset(new LLMQContext(*evoDb, *node.mempool, *node.connman, *::sporkManager, false, fReset || fReindexChainState));
 

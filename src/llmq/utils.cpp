@@ -200,28 +200,26 @@ std::vector<std::vector<CDeterministicMNCPtr>> ComputeQuorumMembersByQuarterRota
     return quorumMembers;
 }
 
-PreviousQuorumQuarters GetPreviousQuorumQuarterMembers(const Consensus::LLMQParams& llmqParams,
-                                                                   const CBlockIndex* pBlockHMinusCIndex,
-                                                                   const CBlockIndex* pBlockHMinus2CIndex,
-                                                                   const CBlockIndex* pBlockHMinus3CIndex,
-                                                                   int nHeight)
+PreviousQuorumQuarters GetPreviousQuorumQuarterMembers(const Consensus::LLMQParams& llmqParams, const CQuorumSnapshotManager& qsnapman,
+                                                       const CBlockIndex* pBlockHMinusCIndex, const CBlockIndex* pBlockHMinus2CIndex,
+                                                       const CBlockIndex* pBlockHMinus3CIndex, int nHeight)
 {
     auto nQuorums = size_t(llmqParams.signingActiveQuorumCount);
     PreviousQuorumQuarters quarters(nQuorums);
 
-    std::optional<llmq::CQuorumSnapshot> quSnapshotHMinusC = quorumSnapshotManager->GetSnapshotForBlock(llmqParams.type, pBlockHMinusCIndex);
+    std::optional<llmq::CQuorumSnapshot> quSnapshotHMinusC = qsnapman.GetSnapshotForBlock(llmqParams.type, pBlockHMinusCIndex);
     if (quSnapshotHMinusC.has_value()) {
         quarters.quarterHMinusC = GetQuorumQuarterMembersBySnapshot(llmqParams, pBlockHMinusCIndex, quSnapshotHMinusC.value(), nHeight);
         //TODO Check if it is triggered from outside (P2P, block validation). Throwing an exception is probably a wiser choice
         //assert (!quarterHMinusC.empty());
 
-        std::optional<llmq::CQuorumSnapshot> quSnapshotHMinus2C = quorumSnapshotManager->GetSnapshotForBlock(llmqParams.type, pBlockHMinus2CIndex);
+        std::optional<llmq::CQuorumSnapshot> quSnapshotHMinus2C = qsnapman.GetSnapshotForBlock(llmqParams.type, pBlockHMinus2CIndex);
         if (quSnapshotHMinus2C.has_value()) {
             quarters.quarterHMinus2C = GetQuorumQuarterMembersBySnapshot(llmqParams, pBlockHMinus2CIndex, quSnapshotHMinus2C.value(), nHeight);
             //TODO Check if it is triggered from outside (P2P, block validation). Throwing an exception is probably a wiser choice
             //assert (!quarterHMinusC.empty());
 
-            std::optional<llmq::CQuorumSnapshot> quSnapshotHMinus3C = quorumSnapshotManager->GetSnapshotForBlock(llmqParams.type, pBlockHMinus3CIndex);
+            std::optional<llmq::CQuorumSnapshot> quSnapshotHMinus3C = qsnapman.GetSnapshotForBlock(llmqParams.type, pBlockHMinus3CIndex);
             if (quSnapshotHMinus3C.has_value()) {
                 quarters.quarterHMinus3C = GetQuorumQuarterMembersBySnapshot(llmqParams, pBlockHMinus3CIndex, quSnapshotHMinus3C.value(), nHeight);
                 //TODO Check if it is triggered from outside (P2P, block validation). Throwing an exception is probably a wiser choice
@@ -234,8 +232,9 @@ PreviousQuorumQuarters GetPreviousQuorumQuarterMembers(const Consensus::LLMQPara
 }
 
 std::vector<std::vector<CDeterministicMNCPtr>> BuildNewQuorumQuarterMembers(const Consensus::LLMQParams& llmqParams,
-                                                                                        const CBlockIndex* pQuorumBaseBlockIndex,
-                                                                                        const PreviousQuorumQuarters& previousQuarters)
+                                                                            const CQuorumSnapshotManager& qsnapman,
+                                                                            const CBlockIndex* pQuorumBaseBlockIndex,
+                                                                            const PreviousQuorumQuarters& previousQuarters)
 {
     auto nQuorums = size_t(llmqParams.signingActiveQuorumCount);
     std::vector<std::vector<CDeterministicMNCPtr>> quarterQuorumMembers(nQuorums);
@@ -353,7 +352,7 @@ std::vector<std::vector<CDeterministicMNCPtr>> BuildNewQuorumQuarterMembers(cons
 
     BuildQuorumSnapshot(llmqParams, allMns, MnsUsedAtH, sortedCombinedMnsList, quorumSnapshot, pQuorumBaseBlockIndex->nHeight, skipList, pQuorumBaseBlockIndex);
 
-    quorumSnapshotManager->StoreSnapshotForBlock(llmqParams.type, pQuorumBaseBlockIndex, quorumSnapshot);
+    qsnapman.StoreSnapshotForBlock(llmqParams.type, pQuorumBaseBlockIndex, quorumSnapshot);
 
     return quarterQuorumMembers;
 }
