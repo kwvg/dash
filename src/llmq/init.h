@@ -5,6 +5,8 @@
 #ifndef BITCOIN_LLMQ_INIT_H
 #define BITCOIN_LLMQ_INIT_H
 
+#include <memory>
+
 class CConnman;
 class CDBWrapper;
 class CEvoDB;
@@ -15,7 +17,7 @@ namespace llmq
 {
 
 // Init/destroy LLMQ globals
-void InitLLMQSystem(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkManager, bool unitTests, bool fWipe = false);
+void InitLLMQSystem(std::shared_ptr<CEvoDB>& evoDb, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkManager, bool unitTests, bool fWipe = false);
 void DestroyLLMQSystem();
 
 // Manage scheduled tasks, threads, listeners etc.
