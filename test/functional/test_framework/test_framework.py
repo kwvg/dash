@@ -893,6 +893,31 @@ class DashTestFramework(BitcoinTestFramework):
                 self.sync_blocks()
         self.sync_blocks()
 
+    def activate_basic_bls(self, expected_activation_height=None):
+        self.log.info("Wait for basic bls activation")
+
+        # mine blocks in batches
+        batch_size = 30
+        if expected_activation_height is not None:
+            height = self.nodes[0].getblockcount()
+            while height - expected_activation_height > batch_size:
+                self.bump_mocktime(batch_size)
+                self.nodes[0].generate(batch_size)
+                height += batch_size
+                self.sync_blocks()
+            assert height - expected_activation_height < batch_size
+            blocks_left = height - expected_activation_height - 1
+            self.bump_mocktime(blocks_left)
+            self.nodes[0].generate(blocks_left)
+            self.sync_blocks()
+            assert self.nodes[0].getblockchaininfo()['bip9_softforks']['blsbasicscheme']['status'] != 'active'
+
+        while self.nodes[0].getblockchaininfo()['bip9_softforks']['blsbasicscheme']['status'] != 'active':
+            self.bump_mocktime(batch_size)
+            self.nodes[0].generate(batch_size)
+            self.sync_blocks()
+        self.sync_blocks()
+
     def activate_dip0024(self, expected_activation_height=None):
         self.log.info("Wait for dip0024 activation")
 
