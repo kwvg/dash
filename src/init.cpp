@@ -1786,9 +1786,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     ChainstateManager& chainman = *Assert(node.chainman);
 
     node.peer_logic.reset(new PeerLogicValidation(
-        node.connman.get(), node.banman.get(), *node.scheduler, chainman, *node.mempool, llmq::quorumBlockProcessor,
-        llmq::quorumDKGSessionManager, llmq::quorumManager, llmq::quorumSigSharesManager, llmq::quorumSigningManager,
-        llmq::chainLocksHandler, llmq::quorumInstantSendManager, args.GetBoolArg("-enablebip61", DEFAULT_ENABLE_BIP61))
+        node.connman.get(), node.banman.get(), *node.scheduler, chainman, *node.mempool, node.llmq_ctx, args.GetBoolArg("-enablebip61", DEFAULT_ENABLE_BIP61))
     );
     RegisterValidationInterface(node.peer_logic.get());
 
@@ -1947,8 +1945,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 #endif
 
     pdsNotificationInterface = new CDSNotificationInterface(
-        *node.connman, ::masternodeSync, ::deterministicMNManager, ::governance, llmq::chainLocksHandler,
-        llmq::quorumInstantSendManager, llmq::quorumManager, llmq::quorumDKGSessionManager
+        *node.connman, ::masternodeSync, ::deterministicMNManager, ::governance, node.llmq_ctx
     );
     RegisterValidationInterface(pdsNotificationInterface);
 
