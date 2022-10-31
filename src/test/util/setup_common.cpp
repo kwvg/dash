@@ -186,10 +186,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     m_node.banman = std::make_unique<BanMan>(GetDataDir() / "banlist.dat", nullptr, DEFAULT_MISBEHAVING_BANTIME);
     m_node.connman = std::make_unique<CConnman>(0x1337, 0x1337); // Deterministic randomness for tests.
     m_node.peer_logic = std::make_unique<PeerLogicValidation>(
-        m_node.connman.get(), m_node.banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool,
-        llmq::quorumBlockProcessor, llmq::quorumDKGSessionManager, llmq::quorumManager,
-        llmq::quorumSigSharesManager, llmq::quorumSigningManager, llmq::chainLocksHandler,
-        llmq::quorumInstantSendManager, false
+        m_node.connman.get(), m_node.banman.get(), *m_node.scheduler, *m_node.chainman, *m_node.mempool, m_node.llmq_ctx, false
     );
     {
         CConnman::Options options;
