@@ -19,6 +19,7 @@ class CBlockIndex;
 class CTxMemPool;
 class ChainstateManager;
 class UniValue;
+struct LLMQContext;
 struct NodeContext;
 
 static constexpr int NUM_GETBLOCKSTATS_PERCENTILES = 5;
@@ -50,6 +51,7 @@ UniValue blockheaderToJSON(const CBlockIndex* tip, const CBlockIndex* blockindex
 void CalculatePercentilesBySize(CAmount result[NUM_GETBLOCKSTATS_PERCENTILES], std::vector<std::pair<CAmount, int64_t>>& scores, int64_t total_size);
 
 NodeContext& EnsureNodeContext(const CoreContext& context);
+LLMQContext& EnsureLLMQContext(const CoreContext& context);
 CTxMemPool& EnsureMemPool(const CoreContext& context);
 ChainstateManager& EnsureChainman(const CoreContext& context);
 

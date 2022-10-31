@@ -16,6 +16,7 @@
 #include <index/blockfilterindex.h>
 #include <index/txindex.h>
 #include <key_io.h>
+#include <llmq/context.h>
 #include <node/coinstats.h>
 #include <node/context.h>
 #include <node/utxo_snapshot.h>
@@ -87,6 +88,15 @@ ChainstateManager& EnsureChainman(const CoreContext& context)
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Node chainman not found");
     }
     return *node.chainman;
+}
+
+LLMQContext& EnsureLLMQContext(const CoreContext& context)
+{
+    NodeContext& node = EnsureNodeContext(context);
+    if (!node.llmq_ctx) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Node LLMQ context not found");
+    }
+    return *node.llmq_ctx;
 }
 
 /* Calculate the difficulty for a given block index.

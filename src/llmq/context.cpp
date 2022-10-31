@@ -25,9 +25,30 @@ std::shared_ptr<CBLSWorker> blsWorker;
 
 LLMQContext::LLMQContext(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkManager, bool unitTests, bool fWipe) {
     Create(evoDb, mempool, connman, sporkManager, unitTests, fWipe);
+
+    /* Context aliases to globals used by the LLMQ system */
+    bls_worker = llmq::blsWorker.get();
+    dkg_debugman = llmq::quorumDKGDebugManager.get();
+    quorum_block_processor = llmq::quorumBlockProcessor.get();
+    qdkgsman = llmq::quorumDKGSessionManager.get();
+    qman = llmq::quorumManager.get();
+    sigman = llmq::quorumSigningManager.get();
+    shareman = llmq::quorumSigSharesManager.get();
+    clhandler = llmq::chainLocksHandler.get();
+    isman = llmq::quorumInstantSendManager.get();
 }
 
 LLMQContext::~LLMQContext() {
+    isman = nullptr;
+    clhandler = nullptr;
+    shareman = nullptr;
+    sigman = nullptr;
+    qman = nullptr;
+    qdkgsman = nullptr;
+    quorum_block_processor = nullptr;
+    dkg_debugman = nullptr;
+    bls_worker = nullptr;
+
     Destroy();
 }
 

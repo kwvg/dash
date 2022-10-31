@@ -5,11 +5,25 @@
 #ifndef BITCOIN_LLMQ_CONTEXT_H
 #define BITCOIN_LLMQ_CONTEXT_H
 
+#include <memory>
+
+class CBLSWorker;
 class CConnman;
 class CDBWrapper;
 class CEvoDB;
 class CTxMemPool;
 class CSporkManager;
+
+namespace llmq {
+class CDKGDebugManager;
+class CQuorumBlockProcessor;
+class CDKGSessionManager;
+class CQuorumManager;
+class CSigSharesManager;
+class CSigningManager;
+class CChainLocksHandler;
+class CInstantSendManager;
+}
 
 struct LLMQContext {
     LLMQContext(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkManager, bool unitTests, bool fWipe);
@@ -20,6 +34,16 @@ struct LLMQContext {
     void Interrupt();
     void Start();
     void Stop();
+
+    CBLSWorker* bls_worker{nullptr};
+    llmq::CDKGDebugManager* dkg_debugman{nullptr};
+    llmq::CQuorumBlockProcessor* quorum_block_processor{nullptr};
+    llmq::CDKGSessionManager* qdkgsman{nullptr};
+    llmq::CQuorumManager* qman{nullptr};
+    llmq::CSigningManager* sigman{nullptr};
+    llmq::CSigSharesManager* shareman{nullptr};
+    llmq::CChainLocksHandler* clhandler{nullptr};
+    llmq::CInstantSendManager* isman{nullptr};
 };
 
 #endif // BITCOIN_LLMQ_CONTEXT_H
