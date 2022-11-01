@@ -25,7 +25,6 @@ LLMQContext::LLMQContext(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, 
     quorum_block_processor = llmq::quorumBlockProcessor.get();
     qman = llmq::quorumManager.get();
     sigman = llmq::quorumSigningManager.get();
-    shareman = llmq::quorumSigSharesManager.get();
     clhandler = llmq::chainLocksHandler.get();
     isman = llmq::quorumInstantSendManager.get();
 }
@@ -33,7 +32,6 @@ LLMQContext::LLMQContext(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, 
 LLMQContext::~LLMQContext() {
     isman = nullptr;
     clhandler = nullptr;
-    shareman = nullptr;
     sigman = nullptr;
     qman = nullptr;
     quorum_block_processor = nullptr;
@@ -49,9 +47,9 @@ void LLMQContext::Create(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, 
     qdkgsman = std::make_unique<llmq::CDKGSessionManager>(connman, *bls_worker, *dkg_debugman, *llmq::quorumBlockProcessor, sporkManager, unitTests, fWipe);
     llmq::quorumManager = std::make_unique<llmq::CQuorumManager>(evoDb, connman, *bls_worker, *llmq::quorumBlockProcessor, *qdkgsman);
     llmq::quorumSigningManager = std::make_unique<llmq::CSigningManager>(connman, *llmq::quorumManager, unitTests, fWipe);
-    llmq::quorumSigSharesManager = std::make_unique<llmq::CSigSharesManager>(connman, *llmq::quorumManager, *llmq::quorumSigningManager);
-    llmq::chainLocksHandler = std::make_unique<llmq::CChainLocksHandler>(mempool, connman, sporkManager, *llmq::quorumSigningManager, *llmq::quorumSigSharesManager);
-    llmq::quorumInstantSendManager = std::make_unique<llmq::CInstantSendManager>(mempool, connman, sporkManager, *llmq::quorumManager, *llmq::quorumSigningManager, *llmq::quorumSigSharesManager, *llmq::chainLocksHandler, unitTests, fWipe);
+    shareman = std::make_unique<llmq::CSigSharesManager>(connman, *llmq::quorumManager, *llmq::quorumSigningManager);
+    llmq::chainLocksHandler = std::make_unique<llmq::CChainLocksHandler>(mempool, connman, sporkManager, *llmq::quorumSigningManager, *shareman);
+    llmq::quorumInstantSendManager = std::make_unique<llmq::CInstantSendManager>(mempool, connman, sporkManager, *llmq::quorumManager, *llmq::quorumSigningManager, *shareman, *llmq::chainLocksHandler, unitTests, fWipe);
 
     // NOTE: we use this only to wipe the old db, do NOT use it for anything else
     // TODO: remove it in some future version
@@ -61,7 +59,7 @@ void LLMQContext::Create(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, 
 void LLMQContext::Destroy() {
     llmq::quorumInstantSendManager.reset();
     llmq::chainLocksHandler.reset();
-    llmq::quorumSigSharesManager.reset();
+    shareman.reset();
     llmq::quorumSigningManager.reset();
     llmq::quorumManager.reset();
     qdkgsman.reset();
@@ -75,8 +73,8 @@ void LLMQContext::Destroy() {
 }
 
 void LLMQContext::Interrupt() {
-    if (llmq::quorumSigSharesManager != nullptr) {
-        llmq::quorumSigSharesManager->InterruptWorkerThread();
+    if (shareman != nullptr) {
+        shareman->InterruptWorkerThread();
     }
     if (llmq::quorumInstantSendManager != nullptr) {
         llmq::quorumInstantSendManager->InterruptWorkerThread();
@@ -93,9 +91,9 @@ void LLMQContext::Start() {
     if (llmq::quorumManager != nullptr) {
         llmq::quorumManager->Start();
     }
-    if (llmq::quorumSigSharesManager != nullptr) {
-        llmq::quorumSigSharesManager->RegisterAsRecoveredSigsListener();
-        llmq::quorumSigSharesManager->StartWorkerThread();
+    if (shareman != nullptr) {
+        shareman->RegisterAsRecoveredSigsListener();
+        shareman->StartWorkerThread();
     }
     if (llmq::chainLocksHandler != nullptr) {
         llmq::chainLocksHandler->Start();
@@ -112,9 +110,9 @@ void LLMQContext::Stop() {
     if (llmq::chainLocksHandler != nullptr) {
         llmq::chainLocksHandler->Stop();
     }
-    if (llmq::quorumSigSharesManager != nullptr) {
-        llmq::quorumSigSharesManager->StopWorkerThread();
-        llmq::quorumSigSharesManager->UnregisterAsRecoveredSigsListener();
+    if (shareman != nullptr) {
+        shareman->StopWorkerThread();
+        shareman->UnregisterAsRecoveredSigsListener();
     }
     if (llmq::quorumManager != nullptr) {
         llmq::quorumManager->Stop();
