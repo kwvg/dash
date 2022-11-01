@@ -50,7 +50,7 @@ BlockAssembler MinerTestingSetup::AssemblerForTest(const CChainParams& params)
 
     options.nBlockMaxSize = DEFAULT_BLOCK_MAX_SIZE;
     options.blockMinFeeRate = blockMinFeeRate;
-    return BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *llmq::chainLocksHandler,  *llmq::quorumInstantSendManager, g_evoDb, *m_node.mempool, params, options);
+    return BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *llmq::chainLocksHandler,  *llmq::quorumInstantSendManager, m_node.evodb, *m_node.mempool, params, options);
 }
 
 constexpr static struct {

@@ -131,10 +131,10 @@ BasicTestingSetup::BasicTestingSetup(const std::string& chainName, const std::ve
     m_node.chain = interfaces::MakeChain(m_node);
     g_wallet_init_interface.Construct(m_node);
     fCheckBlockIndex = true;
-    g_evoDb = std::make_shared<CEvoDB>(1 << 20, true, true);
+    m_node.evodb = std::make_shared<CEvoDB>(1 << 20, true, true);
     connman = std::make_unique<CConnman>(0x1337, 0x1337);
-    deterministicMNManager.reset(new CDeterministicMNManager(g_evoDb, *connman));
-    llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(g_evoDb));
+    deterministicMNManager.reset(new CDeterministicMNManager(m_node.evodb, *connman));
+    llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(m_node.evodb));
     static bool noui_connected = false;
     if (!noui_connected) {
         noui_connect();
@@ -147,7 +147,7 @@ BasicTestingSetup::~BasicTestingSetup()
     connman.reset();
     llmq::quorumSnapshotManager.reset();
     deterministicMNManager.reset();
-    g_evoDb.reset();
+    m_node.evodb.reset();
 
     LogInstance().DisconnectTestLogger();
     fs::remove_all(m_path_root);
@@ -173,7 +173,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     pblocktree.reset(new CBlockTreeDB(1 << 20, true));
 
     m_node.chainman = &::g_chainman;
-    m_node.chainman->InitializeChainstate(llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor, g_evoDb);
+    m_node.chainman->InitializeChainstate(llmq::chainLocksHandler, llmq::quorumInstantSendManager, llmq::quorumBlockProcessor, m_node.evodb);
     ::ChainstateActive().InitCoinsDB(
         /* cache_size_bytes */ 1 << 23, /* in_memory */ true, /* should_wipe */ false);
     assert(!::ChainstateActive().CanFlushToDisk());
@@ -207,8 +207,8 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*m_node.connman);
 #endif // ENABLE_WALLET
 
-    deterministicMNManager.reset(new CDeterministicMNManager(g_evoDb, *m_node.connman));
-    llmq::InitLLMQSystem(g_evoDb, *m_node.mempool, *m_node.connman, *sporkManager, true);
+    deterministicMNManager.reset(new CDeterministicMNManager(m_node.evodb, *m_node.connman));
+    llmq::InitLLMQSystem(m_node.evodb, *m_node.mempool, *m_node.connman, *sporkManager, true);
 
     CValidationState state;
     if (!ActivateBestChain(state, chainparams)) {
@@ -303,7 +303,7 @@ CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransacti
 CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
-    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *llmq::chainLocksHandler, *llmq::quorumInstantSendManager, g_evoDb, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
+    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *llmq::chainLocksHandler, *llmq::quorumInstantSendManager, m_node.evodb, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
     CBlock& block = pblocktemplate->block;
 
     std::vector<CTransactionRef> llmqCommitments;
