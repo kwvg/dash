@@ -22,9 +22,6 @@
 
 namespace llmq
 {
-
-std::unique_ptr<CSigSharesManager> quorumSigSharesManager;
-
 void CSigShare::UpdateKey()
 {
     key.first = this->buildSignHash();
