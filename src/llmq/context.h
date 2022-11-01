@@ -17,6 +17,7 @@ class CSporkManager;
 namespace llmq {
 class CDKGDebugManager;
 class CQuorumBlockProcessor;
+class CQuorumSnapshotManager;
 class CDKGSessionManager;
 class CQuorumManager;
 class CSigSharesManager;
@@ -39,6 +40,7 @@ struct LLMQContext {
     std::unique_ptr<llmq::CDKGDebugManager> dkg_debugman;
     std::unique_ptr<llmq::CDKGSessionManager> qdkgsman;
     std::unique_ptr<llmq::CSigSharesManager> shareman;
+    std::unique_ptr<llmq::CQuorumSnapshotManager> qsnapman;
 
     llmq::CQuorumBlockProcessor* quorum_block_processor{nullptr};
     llmq::CQuorumManager* qman{nullptr};
