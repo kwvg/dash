@@ -39,10 +39,10 @@ struct LLMQContext {
     std::unique_ptr<llmq::CDKGDebugManager> dkg_debugman;
     std::unique_ptr<llmq::CDKGSessionManager> qdkgsman;
     std::unique_ptr<llmq::CSigSharesManager> shareman;
+    std::unique_ptr<llmq::CSigningManager> sigman;
 
     llmq::CQuorumBlockProcessor* quorum_block_processor{nullptr};
     llmq::CQuorumManager* qman{nullptr};
-    llmq::CSigningManager* sigman{nullptr};
     llmq::CChainLocksHandler* clhandler{nullptr};
     llmq::CInstantSendManager* isman{nullptr};
 };
