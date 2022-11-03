@@ -10,6 +10,6 @@
 #include <univalue.h>
 
 /** Generate blocks (mine) */
-UniValue generateBlocks(const CTxMemPool& mempool, std::shared_ptr<CReserveScript> coinbaseScript, int nGenerate, uint64_t nMaxTries, bool keepScript);
+UniValue generateBlocks(ChainstateManager& chainman, const CTxMemPool& mempool, CEvoDB& evodb, std::shared_ptr<CReserveScript> coinbaseScript, int nGenerate, uint64_t nMaxTries, bool keepScript);
 
 #endif

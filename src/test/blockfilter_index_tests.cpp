@@ -68,7 +68,7 @@ CBlock BuildChainTestingSetup::CreateBlock(const CBlockIndex* prev,
     const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
-    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *llmq::chainLocksHandler, *llmq::quorumInstantSendManager, m_node.evodb, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
+    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *llmq::chainLocksHandler, *llmq::quorumInstantSendManager, *m_node.evodb, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
     CBlock& block = pblocktemplate->block;
     block.hashPrevBlock = prev->GetBlockHash();
     block.nTime = prev->nTime + 1;

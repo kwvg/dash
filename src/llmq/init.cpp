@@ -23,7 +23,7 @@ namespace llmq
 
 std::shared_ptr<CBLSWorker> blsWorker;
 
-void InitLLMQSystem(std::shared_ptr<CEvoDB>& evoDb, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkManager, bool unitTests, bool fWipe)
+void InitLLMQSystem(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkManager, bool unitTests, bool fWipe)
 {
     blsWorker = std::make_shared<CBLSWorker>();
 

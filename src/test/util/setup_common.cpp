@@ -133,8 +133,8 @@ BasicTestingSetup::BasicTestingSetup(const std::string& chainName, const std::ve
     fCheckBlockIndex = true;
     m_node.evodb = std::make_shared<CEvoDB>(1 << 20, true, true);
     connman = std::make_unique<CConnman>(0x1337, 0x1337);
-    deterministicMNManager.reset(new CDeterministicMNManager(m_node.evodb, *connman));
-    llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(m_node.evodb));
+    deterministicMNManager.reset(new CDeterministicMNManager(*m_node.evodb, *connman));
+    llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(*m_node.evodb));
     static bool noui_connected = false;
     if (!noui_connected) {
         noui_connect();
@@ -207,8 +207,8 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*m_node.connman);
 #endif // ENABLE_WALLET
 
-    deterministicMNManager.reset(new CDeterministicMNManager(m_node.evodb, *m_node.connman));
-    llmq::InitLLMQSystem(m_node.evodb, *m_node.mempool, *m_node.connman, *sporkManager, true);
+    deterministicMNManager.reset(new CDeterministicMNManager(*m_node.evodb, *m_node.connman));
+    llmq::InitLLMQSystem(*m_node.evodb, *m_node.mempool, *m_node.connman, *sporkManager, true);
 
     CValidationState state;
     if (!ActivateBestChain(state, chainparams)) {
@@ -303,7 +303,7 @@ CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransacti
 CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
 {
     const CChainParams& chainparams = Params();
-    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *llmq::chainLocksHandler, *llmq::quorumInstantSendManager, m_node.evodb, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
+    std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(*sporkManager, *governance, *llmq::quorumBlockProcessor, *llmq::chainLocksHandler, *llmq::quorumInstantSendManager, *m_node.evodb, *m_node.mempool, chainparams).CreateNewBlock(scriptPubKey);
     CBlock& block = pblocktemplate->block;
 
     std::vector<CTransactionRef> llmqCommitments;

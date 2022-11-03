@@ -17,7 +17,7 @@ namespace llmq
 {
 
 // Init/destroy LLMQ globals
-void InitLLMQSystem(std::shared_ptr<CEvoDB>& evoDb, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkManager, bool unitTests, bool fWipe = false);
+void InitLLMQSystem(CEvoDB& evoDb, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkManager, bool unitTests, bool fWipe = false);
 void DestroyLLMQSystem();
 
 // Manage scheduled tasks, threads, listeners etc.
