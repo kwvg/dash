@@ -255,7 +255,7 @@ after_success:
         FILE_ENV="./ci/test/00_setup_env_native_asan.sh"
 
     - stage: test
-      name: 'x86_64 Linux  [GOAL: install]  [bionic]  [no wallet]'
+      name: 'x86_64 Linux  [GOAL: install]  [bionic]  [no depends, only system libs, sanitizers: fuzzer,address,undefined]'
       env: >-
         FILE_ENV="./ci/test/00_setup_env_native_fuzz.sh"
 
@@ -265,6 +265,7 @@ after_success:
         FILE_ENV="./ci/test/00_setup_env_native_fuzz_with_valgrind.sh"
 
     - stage: test
+      name: 'x86_64 Linux  [GOAL: install]  [bionic]  [no wallet]'
       env: >-
         FILE_ENV="./ci/test/00_setup_env_native_nowallet.sh"
 
