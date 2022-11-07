@@ -10,7 +10,7 @@ PASS_ARGS="$*"
 
 source ./ci/dash/matrix.sh
 
-if [ "$RUN_INTEGRATION_TESTS" != "true" ]; then
+if [ "$RUN_FUNCTIONAL_TESTS" != "true" ]; then
   echo "Skipping integration tests"
   exit 0
 fi
