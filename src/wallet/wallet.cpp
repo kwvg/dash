@@ -112,7 +112,8 @@ bool AddWallet(const std::shared_ptr<CWallet>& wallet)
     assert(wallet);
     std::vector<std::shared_ptr<CWallet>>::const_iterator i = std::find(vpwallets.begin(), vpwallets.end(), wallet);
     if (i != vpwallets.end()) return false;
-    coinJoinClientManagers.emplace(std::make_pair(wallet->GetName(), std::make_shared<CCoinJoinClientManager>(*wallet, ::masternodeSync)));
+    if (!wallet->chain().getMemPool()) return false;
+    coinJoinClientManagers.emplace(std::make_pair(wallet->GetName(), std::make_shared<CCoinJoinClientManager>(*wallet->chain().getMemPool(), *wallet, ::masternodeSync)));
     vpwallets.push_back(wallet);
     g_wallet_init_interface.InitCoinJoinSettings();
     return true;
@@ -1199,7 +1200,7 @@ void CWallet::TransactionRemovedFromMempool(const CTransactionRef &ptx, MemPoolR
     }
 }
 
-void CWallet::BlockConnected(const CBlock& block, const std::vector<CTransactionRef>& vtxConflicted, int height)
+void CWallet::BlockConnected(const CBlock& block, int height)
 {
     const uint256& block_hash = block.GetHash();
     LOCK(cs_wallet);
@@ -1210,9 +1211,6 @@ void CWallet::BlockConnected(const CBlock& block, const std::vector<CTransaction
         CWalletTx::Confirmation confirm(CWalletTx::Status::CONFIRMED, height, block_hash, index);
         SyncTransaction(block.vtx[index], confirm);
         TransactionRemovedFromMempool(block.vtx[index], MemPoolRemovalReason::MANUAL);
-    }
-    for (const CTransactionRef& ptx : vtxConflicted) {
-        TransactionRemovedFromMempool(ptx, MemPoolRemovalReason::MANUAL);
     }
 
     // reset cache to make sure no longer immature coins are included

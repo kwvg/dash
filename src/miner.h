@@ -23,6 +23,7 @@ class CConnman;
 class CGovernanceManager;
 class CScript;
 class CSporkManager;
+class NodeContext;
 
 namespace Consensus { struct Params; };
 namespace llmq {
@@ -169,12 +170,11 @@ public:
         CFeeRate blockMinFeeRate;
     };
 
-    explicit BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                            const llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
-                            llmq::CInstantSendManager& isman, CEvoDB& evoDb, const CTxMemPool& mempool, const CChainParams& params);
-    explicit BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager,
-                            const llmq::CQuorumBlockProcessor& quorumBlockProcessor, llmq::CChainLocksHandler& clhandler,
-                            llmq::CInstantSendManager& isman, CEvoDB& evoDb, const CTxMemPool& mempool, const CChainParams& params, const Options& options);
+    explicit BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager, const CTxMemPool& mempool,
+                            const NodeContext& node_context, const CChainParams& params);
+
+    explicit BlockAssembler(const CSporkManager& sporkManager, CGovernanceManager& governanceManager, const CTxMemPool& mempool,
+                            const NodeContext& node_context, const CChainParams& params, const Options& options);
 
     /** Construct a new block template with coinbase to scriptPubKeyIn */
     std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn);

@@ -7,6 +7,7 @@
 #include <node/context.h>
 #include <streams.h>
 #include <util/translation.h>
+#include <validation.h>
 #include <wallet/salvage.h>
 #include <wallet/wallet.h>
 #include <wallet/walletdb.h>
@@ -131,6 +132,7 @@ bool RecoverDatabaseFile(const fs::path& file_path, bilingual_str& error, std::v
     }
 
     NodeContext node;
+    node.mempool = std::make_unique<CTxMemPool>(&::feeEstimator);
     auto chain = interfaces::MakeChain(node);
     DbTxn* ptxn = env->TxnBegin();
     CWallet dummyWallet(chain.get(), "", CreateDummyWalletDatabase());

@@ -1287,7 +1287,7 @@ PeerLogicValidation::PeerLogicValidation(CConnman* connmanIn, BanMan* banman, CS
  * Evict orphan txn pool entries (EraseOrphanTx) based on a newly connected
  * block. Also save the time of the last tip update.
  */
-void PeerLogicValidation::BlockConnected(const std::shared_ptr<const CBlock>& pblock, const CBlockIndex* pindex, const std::vector<CTransactionRef>& vtxConflicted)
+void PeerLogicValidation::BlockConnected(const std::shared_ptr<const CBlock>& pblock, const CBlockIndex* pindex)
 {
     {
         LOCK2(cs_main, g_cs_orphans);
@@ -2480,7 +2480,7 @@ std::string RejectCodeToString(const unsigned char code)
     return "";
 }
 
-std::pair<bool /*ret*/, bool /*do_return*/> static ValidateDSTX(CCoinJoinBroadcastTx dstx, uint256 hashTx)
+std::pair<bool /*ret*/, bool /*do_return*/> static ValidateDSTX(CTxMemPool& mempool, CCoinJoinBroadcastTx dstx, uint256 hashTx)
 {
     if (!dstx.IsValidStructure()) {
         LogPrint(BCLog::COINJOIN, "DSTX -- Invalid DSTX structure: %s\n", hashTx.ToString());
@@ -3295,7 +3295,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
         if (nInvType == MSG_DSTX) {
            // Validate DSTX and return bRet if we need to return from here
            uint256 hashTx = tx.GetHash();
-           const auto& [bRet, bDoReturn] = ValidateDSTX(dstx, hashTx);
+           const auto& [bRet, bDoReturn] = ValidateDSTX(mempool, dstx, hashTx);
            if (bDoReturn) {
                return bRet;
            }
@@ -4766,7 +4766,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                     }
                     // Topologically and fee-rate sort the inventory we send for privacy and priority reasons.
                     // A heap is used so that not all items need sorting if only a few are being sent.
-                    CompareInvMempoolOrder compareInvMempoolOrder(&mempool);
+                    CompareInvMempoolOrder compareInvMempoolOrder(&m_mempool);
                     std::make_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
                     // No reason to drain out at many times the network's capacity,
                     // especially since we have many peers and some will draw much shorter delays.
@@ -4784,7 +4784,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                             continue;
                         }
                         // Not in the mempool anymore? don't bother sending it.
-                        auto txinfo = mempool.info(hash);
+                        auto txinfo = m_mempool.info(hash);
                         if (!txinfo.tx) {
                             continue;
                         }

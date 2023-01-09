@@ -20,6 +20,7 @@ class CCoinJoinClientQueueManager;
 
 class CConnman;
 class CNode;
+class CTxMemPool;
 
 class UniValue;
 class CMasternodeSync;
@@ -114,7 +115,7 @@ private:
     void CompletedTransaction(PoolMessage nMessageID);
 
     /// As a client, check and sign the final transaction
-    bool SignFinalTransaction(const CTransaction& finalTransactionNew, CNode& peer, CConnman& connman) LOCKS_EXCLUDED(cs_coinjoin);
+    bool SignFinalTransaction(const CTxMemPool& mempool, const CTransaction& finalTransactionNew, CNode& peer, CConnman& connman) LOCKS_EXCLUDED(cs_coinjoin);
 
     void RelayIn(const CCoinJoinEntry& entry, CConnman& connman) const;
 
@@ -126,7 +127,7 @@ public:
     {
     }
 
-    void ProcessMessage(CNode& peer, std::string_view msg_type, CDataStream& vRecv, CConnman& connman);
+    void ProcessMessage(const CTxMemPool& mempool, CNode& peer, std::string_view msg_type, CDataStream& vRecv, CConnman& connman);
 
     void UnlockCoins();
 
@@ -137,7 +138,7 @@ public:
     bool GetMixingMasternodeInfo(CDeterministicMNCPtr& ret) const;
 
     /// Passively run mixing in the background according to the configuration in settings
-    bool DoAutomaticDenominating(CConnman& connman, bool fDryRun = false) LOCKS_EXCLUDED(cs_coinjoin);
+    bool DoAutomaticDenominating(CTxMemPool& mempool, CConnman& connman, bool fDryRun = false) LOCKS_EXCLUDED(cs_coinjoin);
 
     /// As a client, submit part of a future mixing transaction to a Masternode to start the process
     bool SubmitDenominate(CConnman& connman);
@@ -187,6 +188,7 @@ private:
     bilingual_str strAutoDenomResult;
 
     CWallet& mixingWallet;
+    CTxMemPool& mempool;
 
     // Keep track of current block height
     int nCachedBlockHeight{0};
@@ -204,8 +206,10 @@ public:
     CCoinJoinClientManager(CCoinJoinClientManager const&) = delete;
     CCoinJoinClientManager& operator=(CCoinJoinClientManager const&) = delete;
 
-    explicit CCoinJoinClientManager(CWallet& wallet, const std::unique_ptr<CMasternodeSync>& mn_sync) :
-        mixingWallet(wallet), m_mn_sync(mn_sync) {}
+    explicit CCoinJoinClientManager(CTxMemPool& mempool, CWallet& wallet, const std::unique_ptr<CMasternodeSync>& mn_sync) :
+        mixingWallet(wallet),
+        mempool(mempool),
+        m_mn_sync(mn_sync) {}
 
     void ProcessMessage(CNode& peer, std::string_view msg_type, CDataStream& vRecv, CConnman& connman) LOCKS_EXCLUDED(cs_deqsessions);
 

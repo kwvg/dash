@@ -132,12 +132,12 @@ void CCoinJoinClientManager::ProcessMessage(CNode& peer, std::string_view msg_ty
         AssertLockNotHeld(cs_deqsessions);
         LOCK(cs_deqsessions);
         for (auto& session : deqSessions) {
-            session.ProcessMessage(peer, msg_type, vRecv, connman);
+            session.ProcessMessage(mempool, peer, msg_type, vRecv, connman);
         }
     }
 }
 
-void CCoinJoinClientSession::ProcessMessage(CNode& peer, std::string_view msg_type, CDataStream& vRecv, CConnman& connman)
+void CCoinJoinClientSession::ProcessMessage(const CTxMemPool& mempool, CNode& peer, std::string_view msg_type, CDataStream& vRecv, CConnman& connman)
 {
     if (fMasternodeMode) return;
     if (!CCoinJoinClientOptions::IsEnabled()) return;
@@ -172,7 +172,7 @@ void CCoinJoinClientSession::ProcessMessage(CNode& peer, std::string_view msg_ty
         LogPrint(BCLog::COINJOIN, "DSFINALTX -- txNew %s", txNew.ToString()); /* Continued */
 
         // check to see if input is spent already? (and probably not confirmed)
-        SignFinalTransaction(txNew, peer, connman);
+        SignFinalTransaction(mempool, txNew, peer, connman);
 
     } else if (msg_type == NetMsgType::DSCOMPLETE) {
         if (!mixingMasternode) return;
@@ -518,7 +518,7 @@ void CCoinJoinClientSession::ProcessPoolStateUpdate(CCoinJoinStatusUpdate psssup
 // check it to make sure it's what we want, then sign it if we agree.
 // If we refuse to sign, it's possible we'll be charged collateral
 //
-bool CCoinJoinClientSession::SignFinalTransaction(const CTransaction& finalTransactionNew, CNode& peer, CConnman& connman)
+bool CCoinJoinClientSession::SignFinalTransaction(const CTxMemPool& mempool, const CTransaction& finalTransactionNew, CNode& peer, CConnman& connman)
 {
     if (!CCoinJoinClientOptions::IsEnabled()) return false;
 
@@ -547,7 +547,7 @@ bool CCoinJoinClientSession::SignFinalTransaction(const CTransaction& finalTrans
 
     // Make sure all inputs/outputs are valid
     PoolMessage nMessageID{MSG_NOERR};
-    if (!IsValidInOuts(finalMutableTransaction.vin, finalMutableTransaction.vout, nMessageID, nullptr)) {
+    if (!IsValidInOuts(mempool, finalMutableTransaction.vin, finalMutableTransaction.vout, nMessageID, nullptr)) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::%s -- ERROR! IsValidInOuts() failed: %s\n", __func__, CCoinJoin::GetMessageByID(nMessageID).translated);
         UnlockCoins();
         keyHolderStorage.ReturnAll();
@@ -735,7 +735,7 @@ bool CCoinJoinClientManager::CheckAutomaticBackup()
 //
 // Passively run mixing in the background to mix funds based on the given configuration.
 //
-bool CCoinJoinClientSession::DoAutomaticDenominating(CConnman& connman, bool fDryRun)
+bool CCoinJoinClientSession::DoAutomaticDenominating(CTxMemPool& mempool, CConnman& connman, bool fDryRun)
 {
     if (fMasternodeMode) return false; // no client-side mixing on masternodes
     if (nState != POOL_STATE_IDLE) return false;
@@ -888,7 +888,7 @@ bool CCoinJoinClientSession::DoAutomaticDenominating(CConnman& connman, bool fDr
                 return false;
             }
         } else {
-            if (!CCoinJoin::IsCollateralValid(CTransaction(txMyCollateral))) {
+            if (!CCoinJoin::IsCollateralValid(mempool, CTransaction(txMyCollateral))) {
                 LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::DoAutomaticDenominating -- invalid collateral, recreating...\n");
                 if (!CreateCollateralTransaction(txMyCollateral, strReason)) {
                     LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::DoAutomaticDenominating -- create collateral error: %s\n", strReason);
@@ -957,7 +957,7 @@ bool CCoinJoinClientManager::DoAutomaticDenominating(CConnman& connman, bool fDr
             return false;
         }
 
-        fResult &= session.DoAutomaticDenominating(connman, fDryRun);
+        fResult &= session.DoAutomaticDenominating(mempool, connman, fDryRun);
     }
 
     return fResult;
