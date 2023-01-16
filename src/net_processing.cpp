@@ -1768,6 +1768,64 @@ void static ProcessGetBlockData(CNode* pfrom, const CChainParams& chainparams, c
     }
 }
 
+//! Determine whether or not a peer can request a transaction, and return it (or nullptr if not found or not allowed).
+CTransactionRef static FindTxForGetData(CNode* peer, const uint256& txid, const std::chrono::seconds mempool_req, const std::chrono::seconds longlived_mempool_time) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+{
+    // Check if the requested transaction is so recent that we're just
+    // about to announce it to the peer; if so, they certainly shouldn't
+    // know we already have it.
+    {
+        LOCK(peer->m_tx_relay->cs_tx_inventory);
+        if (peer->m_tx_relay->setInventoryTxToSend.count(txid)) return {};
+    }
+
+    // Look up transaction in relay pool
+    auto mi = mapRelay.find(txid);
+    if (mi != mapRelay.end()) return mi->second;
+
+    auto txinfo = mempool.info(txid);
+    if (txinfo.tx) {
+        // To protect privacy, do not answer getdata using the mempool when
+        // that TX couldn't have been INVed in reply to a MEMPOOL request,
+        // or when it's too recent to have expired from mapRelay.
+        if ((mempool_req.count() && txinfo.m_time <= mempool_req) || txinfo.m_time <= longlived_mempool_time) {
+            return txinfo.tx;
+        }
+    }
+
+    return {};
+}
+
+//! Determine whether or not a peer can request a coinjoin transaction, and return it (or nullptr if not found or not allowed).
+CCoinJoinBroadcastTxRef static FindDstxForGetData(CNode* peer, const uint256& txid, const std::chrono::seconds mempool_req, const std::chrono::seconds longlived_mempool_time) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+{
+    // Check if the requested transaction is so recent that we're just
+    // about to announce it to the peer; if so, they certainly shouldn't
+    // know we already have it.
+    {
+        LOCK(peer->m_tx_relay->cs_tx_inventory);
+        if (peer->m_tx_relay->setInventoryTxToSend.count(txid)) return {};
+    }
+
+    auto dstx = CCoinJoin::GetDSTX(txid);
+
+    // Look up transaction in relay pool
+    auto mi = mapRelay.find(txid);
+    if (mi != mapRelay.end()) return MakeCoinJoinBroadcastTxRef(std::move(dstx));
+
+    auto txinfo = mempool.info(txid);
+    if (txinfo.tx) {
+        // To protect privacy, do not answer getdata using the mempool when
+        // that DSTX couldn't have been INVed in reply to a MEMPOOL request,
+        // or when it's too recent to have expired from mapRelay.
+        if ((mempool_req.count() && txinfo.m_time <= mempool_req) || txinfo.m_time <= longlived_mempool_time) {
+            return MakeCoinJoinBroadcastTxRef(std::move(dstx));
+        }
+    }
+
+    return {};
+}
+
 void static ProcessGetData(CNode* pfrom, const CChainParams& chainparams, CConnman* connman, CTxMemPool& mempool,
                            LLMQContext& llmq_ctx, const std::atomic<bool>& interruptMsgProc) LOCKS_EXCLUDED(cs_main)
 {
@@ -1806,43 +1864,19 @@ void static ProcessGetData(CNode* pfrom, const CChainParams& chainparams, CConnm
 
             // Send stream from relay memory
             bool push = false;
-            if (inv.type == MSG_TX || inv.type == MSG_DSTX) {
-                CCoinJoinBroadcastTx dstx;
-                if (inv.type == MSG_DSTX) {
-                    dstx = CCoinJoin::GetDSTX(inv.hash);
-                }
-                auto mi = mapRelay.find(inv.hash);
-                if (mi != mapRelay.end()) {
-                    if (dstx) {
-                        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::DSTX, dstx));
-                    } else {
-                        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::TX, *mi->second));
-                    }
-                    push = true;
-                } else {
-                    auto txinfo = mempool.info(inv.hash);
-                    // To protect privacy, do not answer getdata using the mempool when
-                    // that TX couldn't have been INVed in reply to a MEMPOOL request,
-                    // or when it's too recent to have expired from mapRelay.
-                    if (txinfo.tx && (
-                         (mempool_req.count() && txinfo.m_time <= mempool_req)
-                          || (txinfo.m_time <= longlived_mempool_time)))
-                    {
-                        if (dstx) {
-                            connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::DSTX, dstx));
-                        } else {
-                            connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::TX, *txinfo.tx));
-                        }
-                        push = true;
-                    }
-                }
-            }
 
-            if (push) {
-                // We interpret fulfilling a GETDATA for a transaction as a
-                // successful initial broadcast and remove it from our
-                // unbroadcast set.
+            auto dstx = FindDstxForGetData(pfrom, inv.hash, mempool_req, longlived_mempool_time);
+            if (!push && dstx) {
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::DSTX, *dstx));
                 mempool.RemoveUnbroadcastTx(inv.hash);
+                push = true;
+            }
+            
+            auto tx = FindTxForGetData(pfrom, inv.hash, mempool_req, longlived_mempool_time);
+            if (!push && tx) {
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::TX, *tx));
+                mempool.RemoveUnbroadcastTx(inv.hash);
+                push = true;
             }
 
             if (!push && inv.type == MSG_SPORK) {

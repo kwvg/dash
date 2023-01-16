@@ -326,6 +326,10 @@ public:
     [[nodiscard]] bool IsValidStructure() const;
 };
 
+typedef std::shared_ptr<const CCoinJoinBroadcastTx> CCoinJoinBroadcastTxRef;
+static inline CCoinJoinBroadcastTxRef MakeCoinJoinBroadcastTxRef() { return std::make_shared<const CCoinJoinBroadcastTx>(); }
+template <typename Tx> static inline CCoinJoinBroadcastTxRef MakeCoinJoinBroadcastTxRef(Tx&& txIn) { return std::make_shared<const CCoinJoinBroadcastTx>(std::forward<Tx>(txIn)); }
+
 // base class
 class CCoinJoinBaseSession
 {
