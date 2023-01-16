@@ -16,7 +16,7 @@ struct LLMQContext;
 class CDSNotificationInterface : public CValidationInterface
 {
 public:
-    explicit CDSNotificationInterface(CConnman& _connman,
+    explicit CDSNotificationInterface(CConnman& _connman, CTxMemPool& _mempool,
                                       std::unique_ptr<CMasternodeSync>& _mn_sync, std::unique_ptr<CDeterministicMNManager>& _dmnman,
                                       std::unique_ptr<CGovernanceManager>& _govman, std::unique_ptr<LLMQContext>& _llmq_ctx);
     virtual ~CDSNotificationInterface() = default;
@@ -39,6 +39,7 @@ protected:
 
 private:
     CConnman& connman;
+    CTxMemPool& mempool;
 
     std::unique_ptr<CMasternodeSync>& m_mn_sync;
     std::unique_ptr<CDeterministicMNManager>& dmnman;

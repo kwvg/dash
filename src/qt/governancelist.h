@@ -24,6 +24,7 @@ class GovernanceList;
 }
 
 class CDeterministicMNList;
+class CTxMemPool;
 class ClientModel;
 class ProposalModel;
 
@@ -60,6 +61,7 @@ private:
     Q_OBJECT
 
     const CGovernanceObject govObj;
+    CTxMemPool& mempool;
     QString m_title;
     QDateTime m_startDate;
     QDateTime m_endDate;
@@ -67,7 +69,7 @@ private:
     QString m_url;
 
 public:
-    explicit Proposal(const CGovernanceObject& _govObj, QObject* parent = nullptr);
+    explicit Proposal(const CGovernanceObject& _govObj, CTxMemPool& _mempool, QObject* parent = nullptr);
     QString title() const;
     QString hash() const;
     QDateTime startDate() const;

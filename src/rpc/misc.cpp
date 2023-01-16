@@ -681,7 +681,8 @@ static UniValue getaddressmempool(const JSONRPCRequest& request)
 
     std::vector<std::pair<CMempoolAddressDeltaKey, CMempoolAddressDelta> > indexes;
 
-    if (!mempool.getAddressIndex(addresses, indexes)) {
+    NodeContext& node = EnsureNodeContext(request.context);
+    if (!node.mempool->getAddressIndex(addresses, indexes)) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "No information available for address");
     }
 
@@ -1049,7 +1050,8 @@ static UniValue getspentinfo(const JSONRPCRequest& request)
     CSpentIndexKey key(txid, outputIndex);
     CSpentIndexValue value;
 
-    if (!GetSpentIndex(key, value)) {
+    NodeContext& node = EnsureNodeContext(request.context);
+    if (!GetSpentIndex(*node.mempool, key, value)) {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Unable to get spent info");
     }
 

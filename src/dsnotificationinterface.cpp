@@ -21,10 +21,10 @@
 #include <llmq/instantsend.h>
 #include <llmq/quorums.h>
 
-CDSNotificationInterface::CDSNotificationInterface(CConnman& _connman,
+CDSNotificationInterface::CDSNotificationInterface(CConnman& _connman, CTxMemPool& _mempool,
     std::unique_ptr<CMasternodeSync>& _mn_sync, std::unique_ptr<CDeterministicMNManager>& _dmnman,
     std::unique_ptr<CGovernanceManager>& _govman, std::unique_ptr<LLMQContext>& _llmq_ctx
-) : connman(_connman), m_mn_sync(_mn_sync), dmnman(_dmnman), govman(_govman), llmq_ctx(_llmq_ctx) {}
+) : connman(_connman), mempool(_mempool), m_mn_sync(_mn_sync), dmnman(_dmnman), govman(_govman), llmq_ctx(_llmq_ctx) {}
 
 void CDSNotificationInterface::InitializeCurrentBlockTip()
 {
@@ -79,7 +79,7 @@ void CDSNotificationInterface::UpdatedBlockTip(const CBlockIndex *pindexNew, con
     llmq_ctx->qman->UpdatedBlockTip(pindexNew, fInitialDownload);
     llmq_ctx->qdkgsman->UpdatedBlockTip(pindexNew, fInitialDownload);
 
-    if (!fDisableGovernance) govman->UpdatedBlockTip(pindexNew, connman);
+    if (!fDisableGovernance) govman->UpdatedBlockTip(pindexNew, connman, mempool);
 }
 
 void CDSNotificationInterface::TransactionAddedToMempool(const CTransactionRef& ptx, int64_t nAcceptTime)
@@ -119,7 +119,7 @@ void CDSNotificationInterface::BlockDisconnected(const std::shared_ptr<const CBl
 void CDSNotificationInterface::NotifyMasternodeListChanged(bool undo, const CDeterministicMNList& oldMNList, const CDeterministicMNListDiff& diff, CConnman& connman)
 {
     CMNAuth::NotifyMasternodeListChanged(undo, oldMNList, diff, connman);
-    govman->UpdateCachesAndClean();
+    govman->UpdateCachesAndClean(&mempool);
 }
 
 void CDSNotificationInterface::NotifyChainLock(const CBlockIndex* pindex, const std::shared_ptr<const llmq::CChainLockSig>& clsig)

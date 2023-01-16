@@ -988,7 +988,7 @@ static void ThreadImport(ChainstateManager& chainman, std::vector<fs::path> vImp
     ::mempool.SetIsLoaded(!ShutdownRequested());
 }
 
-void PeriodicStats(ArgsManager& args)
+void PeriodicStats(ArgsManager& args, CTxMemPool& mempool)
 {
     assert(args.GetBoolArg("-statsenabled", DEFAULT_STATSD_ENABLE));
     CCoinsStats stats;
@@ -1947,7 +1947,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 #endif
 
     pdsNotificationInterface = new CDSNotificationInterface(
-        *node.connman, ::masternodeSync, ::deterministicMNManager, ::governance, node.llmq_ctx
+        *node.connman, *node.mempool, ::masternodeSync, ::deterministicMNManager, ::governance, node.llmq_ctx
     );
     RegisterValidationInterface(pdsNotificationInterface);
 
@@ -2324,7 +2324,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     // ********************************************************* Step 10a: Setup CoinJoin
 
-    ::coinJoinServer = std::make_unique<CCoinJoinServer>(*node.connman, ::masternodeSync);
+    ::coinJoinServer = std::make_unique<CCoinJoinServer>(*node.connman, *node.mempool, ::masternodeSync);
 #ifdef ENABLE_WALLET
     ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*node.connman, ::masternodeSync);
 #endif // ENABLE_WALLET
@@ -2390,7 +2390,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     node.scheduler->scheduleEvery(std::bind(&CDeterministicMNManager::DoMaintenance, std::ref(*deterministicMNManager)), 10 * 1000);
 
     if (!fDisableGovernance) {
-        node.scheduler->scheduleEvery(std::bind(&CGovernanceManager::DoMaintenance, std::ref(*::governance), std::ref(*node.connman)), 60 * 5 * 1000);
+        node.scheduler->scheduleEvery(std::bind(&CGovernanceManager::DoMaintenance, std::ref(*::governance), std::ref(*node.connman), std::ref(*node.mempool)), 60 * 5 * 1000);
     }
 
     if (fMasternodeMode) {
@@ -2398,13 +2398,13 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         node.scheduler->scheduleEvery(std::bind(&llmq::CDKGSessionManager::CleanupOldContributions, std::ref(*node.llmq_ctx->qdkgsman)), 60 * 60 * 1000);
 #ifdef ENABLE_WALLET
     } else if(CCoinJoinClientOptions::IsEnabled()) {
-        node.scheduler->scheduleEvery(std::bind(&DoCoinJoinMaintenance, std::ref(*node.connman)), 1 * 1000);
+        node.scheduler->scheduleEvery(std::bind(&DoCoinJoinMaintenance, std::ref(*node.connman), std::ref(*node.mempool)), 1 * 1000);
 #endif // ENABLE_WALLET
     }
 
     if (args.GetBoolArg("-statsenabled", DEFAULT_STATSD_ENABLE)) {
         int nStatsPeriod = std::min(std::max((int)args.GetArg("-statsperiod", DEFAULT_STATSD_PERIOD), MIN_STATSD_PERIOD), MAX_STATSD_PERIOD);
-        node.scheduler->scheduleEvery(std::bind(&PeriodicStats, std::ref(*node.args)), nStatsPeriod * 1000);
+        node.scheduler->scheduleEvery(std::bind(&PeriodicStats, std::ref(*node.args), std::ref(*node.mempool)), nStatsPeriod * 1000);
     }
 
     node.llmq_ctx->Start();

@@ -10,6 +10,8 @@
 #include <coins.h>
 #include <evo/deterministicmns.h>
 #include <netbase.h>
+#include <node/context.h>
+#include <validation.h>
 #include <qt/clientmodel.h>
 #include <qt/guiutil.h>
 
@@ -26,9 +28,10 @@
 /// Proposal wrapper
 ///
 
-Proposal::Proposal(const CGovernanceObject& _govObj, QObject* parent) :
+Proposal::Proposal(const CGovernanceObject& _govObj, CTxMemPool& _mempool, QObject* parent) :
     QObject(parent),
-    govObj(_govObj)
+    govObj(_govObj),
+    mempool(_mempool)
 {
     UniValue prop_data;
     if (prop_data.read(govObj.GetDataAsPlainString())) {
@@ -70,7 +73,7 @@ bool Proposal::isActive() const
 {
     LOCK(cs_main);
     std::string strError;
-    return govObj.IsValidLocally(strError, false);
+    return govObj.IsValidLocally(mempool, strError, false);
 }
 
 QString Proposal::votingStatus(const int nAbsVoteReq) const
@@ -359,7 +362,7 @@ void GovernanceList::updateProposalList()
                 continue; // Skip triggers.
             }
 
-            newProposals.emplace_back(new Proposal(govObj, proposalModel));
+            newProposals.emplace_back(new Proposal(govObj, *clientModel->node().context()->mempool, proposalModel));
         }
         proposalModel->reconcile(newProposals);
     }

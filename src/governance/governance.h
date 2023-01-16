@@ -12,6 +12,7 @@
 class CBloomFilter;
 class CBlockIndex;
 class CInv;
+class CTxMemPool;
 
 class CGovernanceManager;
 class CGovernanceTriggerManager;
@@ -233,9 +234,9 @@ public:
     void SyncSingleObjVotes(CNode& peer, const uint256& nProp, const CBloomFilter& filter, CConnman& connman);
     void SyncObjects(CNode& peer, CConnman& connman) const;
 
-    void ProcessMessage(CNode& peer, std::string_view msg_type, CDataStream& vRecv, CConnman& connman);
+    void ProcessMessage(CNode& peer, CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv, CConnman& connman);
 
-    void DoMaintenance(CConnman& connman);
+    void DoMaintenance(CConnman& connman, CTxMemPool& mempool);
 
     CGovernanceObject* FindGovernanceObject(const uint256& nHash);
 
@@ -243,11 +244,11 @@ public:
     std::vector<CGovernanceVote> GetCurrentVotes(const uint256& nParentHash, const COutPoint& mnCollateralOutpointFilter) const;
     void GetAllNewerThan(std::vector<CGovernanceObject>& objs, int64_t nMoreThanTime) const;
 
-    void AddGovernanceObject(CGovernanceObject& govobj, CConnman& connman, const CNode* pfrom = nullptr);
+    void AddGovernanceObject(CGovernanceObject& govobj, CConnman& connman, CTxMemPool& mempool, const CNode* pfrom = nullptr);
 
-    void UpdateCachesAndClean();
+    void UpdateCachesAndClean(CTxMemPool* mempool);
 
-    void CheckAndRemove() { UpdateCachesAndClean(); }
+    void CheckAndRemove() { UpdateCachesAndClean(nullptr); }
 
     void Clear()
     {
@@ -298,7 +299,7 @@ public:
             >> *lastMNListForVotingKeys;
     }
 
-    void UpdatedBlockTip(const CBlockIndex* pindex, CConnman& connman);
+    void UpdatedBlockTip(const CBlockIndex* pindex, CConnman& connman, CTxMemPool& mempool);
     int64_t GetLastDiffTime() const { return nTimeLastDiff; }
     void UpdateLastDiffTime(int64_t nTimeIn) { nTimeLastDiff = nTimeIn; }
 
@@ -336,7 +337,7 @@ public:
         return fOK;
     }
 
-    void CheckPostponedObjects(CConnman& connman);
+    void CheckPostponedObjects(CConnman& connman, CTxMemPool& mempool);
 
     bool AreRateChecksEnabled() const
     {

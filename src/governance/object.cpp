@@ -441,22 +441,22 @@ UniValue CGovernanceObject::ToJson() const
     return obj;
 }
 
-void CGovernanceObject::UpdateLocalValidity()
+void CGovernanceObject::UpdateLocalValidity(CTxMemPool& mempool)
 {
     AssertLockHeld(cs_main);
     // THIS DOES NOT CHECK COLLATERAL, THIS IS CHECKED UPON ORIGINAL ARRIVAL
-    fCachedLocalValidity = IsValidLocally(strLocalValidityError, false);
+    fCachedLocalValidity = IsValidLocally(mempool, strLocalValidityError, false);
 }
 
 
-bool CGovernanceObject::IsValidLocally(std::string& strError, bool fCheckCollateral) const
+bool CGovernanceObject::IsValidLocally(CTxMemPool& mempool, std::string& strError, bool fCheckCollateral) const
 {
     bool fMissingConfirmations = false;
 
-    return IsValidLocally(strError, fMissingConfirmations, fCheckCollateral);
+    return IsValidLocally(mempool, strError, fMissingConfirmations, fCheckCollateral);
 }
 
-bool CGovernanceObject::IsValidLocally(std::string& strError, bool& fMissingConfirmations, bool fCheckCollateral) const
+bool CGovernanceObject::IsValidLocally(CTxMemPool& mempool, std::string& strError, bool& fMissingConfirmations, bool fCheckCollateral) const
 {
     AssertLockHeld(cs_main);
 
@@ -478,7 +478,7 @@ bool CGovernanceObject::IsValidLocally(std::string& strError, bool& fMissingConf
             strError = strprintf("Invalid proposal data, error messages: %s", validator.GetErrorMessages());
             return false;
         }
-        if (fCheckCollateral && !IsCollateralValid(strError, fMissingConfirmations)) {
+        if (fCheckCollateral && !IsCollateralValid(mempool, strError, fMissingConfirmations)) {
             strError = "Invalid proposal collateral";
             return false;
         }
@@ -528,10 +528,10 @@ CAmount CGovernanceObject::GetMinCollateralFee(bool fork_active) const
     }
 }
 
-bool CGovernanceObject::IsCollateralValid(std::string& strError, bool& fMissingConfirmations) const
+bool CGovernanceObject::IsCollateralValid(CTxMemPool& mempool, std::string& strError, bool& fMissingConfirmations) const
 {
     AssertLockHeld(cs_main);
-    AssertLockHeld(::mempool.cs); // because of GetTransaction
+    AssertLockHeld(mempool.cs); // because of GetTransaction
 
     strError = "";
     fMissingConfirmations = false;

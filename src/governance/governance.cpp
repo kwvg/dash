@@ -87,7 +87,7 @@ bool CGovernanceManager::SerializeVoteForHash(const uint256& nHash, CDataStream&
     return cmapVoteToObject.Get(nHash, pGovobj) && pGovobj->GetVoteFile().SerializeVoteToStream(nHash, ss);
 }
 
-void CGovernanceManager::ProcessMessage(CNode& peer, std::string_view msg_type, CDataStream& vRecv, CConnman& connman)
+void CGovernanceManager::ProcessMessage(CNode& peer, CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv, CConnman& connman)
 {
     if (fDisableGovernance) return;
     if (::masternodeSync == nullptr || !::masternodeSync->IsBlockchainSynced()) return;
@@ -143,7 +143,7 @@ void CGovernanceManager::ProcessMessage(CNode& peer, std::string_view msg_type, 
             return;
         }
 
-        LOCK2(cs_main, ::mempool.cs); // Lock mempool because of GetTransaction deep inside
+        LOCK2(cs_main, mempool.cs); // Lock mempool because of GetTransaction deep inside
         LOCK(cs);
 
         if (mapObjects.count(nHash) || mapPostponedObjects.count(nHash) || mapErasedGovernanceObjects.count(nHash)) {
@@ -162,7 +162,7 @@ void CGovernanceManager::ProcessMessage(CNode& peer, std::string_view msg_type, 
         // CHECK OBJECT AGAINST LOCAL BLOCKCHAIN
 
         bool fMissingConfirmations = false;
-        bool fIsValid = govobj.IsValidLocally(strError, fMissingConfirmations, true);
+        bool fIsValid = govobj.IsValidLocally(mempool, strError, fMissingConfirmations, true);
 
         if (fRateCheckBypassed && fIsValid && !MasternodeRateCheck(govobj, true)) {
             LogPrint(BCLog::GOBJECT, "MNGOVERNANCEOBJECT -- masternode rate check failed (after signature verification) - %s - (current block height %d)\n", strHash, nCachedBlockHeight);
@@ -182,7 +182,7 @@ void CGovernanceManager::ProcessMessage(CNode& peer, std::string_view msg_type, 
             return;
         }
 
-        AddGovernanceObject(govobj, connman, &peer);
+        AddGovernanceObject(govobj, connman, mempool, &peer);
     }
 
     // A NEW GOVERNANCE OBJECT VOTE HAS ARRIVED
@@ -254,7 +254,7 @@ void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj, CConnman& c
     }
 }
 
-void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, CConnman& connman, const CNode* pfrom)
+void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, CConnman& connman, CTxMemPool& mempool, const CNode* pfrom)
 {
     uint256 nHash = govobj.GetHash();
     std::string strHash = nHash.ToString();
@@ -263,13 +263,13 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, CConnman
 
     govobj.UpdateSentinelVariables(); //this sets local vars in object
 
-    LOCK2(cs_main, ::mempool.cs); // Lock mempool because of GetTransaction deep inside
+    LOCK2(cs_main, mempool.cs); // Lock mempool because of GetTransaction deep inside
     LOCK(cs);
     std::string strError;
 
     // MAKE SURE THIS OBJECT IS OK
 
-    if (!govobj.IsValidLocally(strError, true)) {
+    if (!govobj.IsValidLocally(mempool, strError, true)) {
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::AddGovernanceObject -- invalid governance object - %s - (nCachedBlockHeight %d) \n", strError, nCachedBlockHeight);
         return;
     }
@@ -312,16 +312,16 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, CConnman
     GetMainSignals().NotifyGovernanceObject(std::make_shared<const CGovernanceObject>(govobj));
 }
 
-void CGovernanceManager::UpdateCachesAndClean()
+void CGovernanceManager::UpdateCachesAndClean(CTxMemPool* mempool)
 {
     // Return on initial sync, spammed the debug.log and provided no use
-    if (::masternodeSync == nullptr || !::masternodeSync->IsBlockchainSynced()) return;
+    if (mempool == nullptr || ::masternodeSync == nullptr || !::masternodeSync->IsBlockchainSynced()) return;
 
     LogPrint(BCLog::GOBJECT, "CGovernanceManager::UpdateCachesAndClean\n");
 
     std::vector<uint256> vecDirtyHashes = mmetaman.GetAndClearDirtyGovernanceObjectHashes();
 
-    LOCK2(cs_main, ::mempool.cs); // Lock mempool because of GetTransaction deep inside
+    LOCK2(cs_main, mempool->cs); // Lock mempool because of GetTransaction deep inside
     LOCK(cs);
 
     for (const uint256& nHash : vecDirtyHashes) {
@@ -354,7 +354,7 @@ void CGovernanceManager::UpdateCachesAndClean()
         // IF CACHE IS NOT DIRTY, WHY DO THIS?
         if (pObj->IsSetDirtyCache()) {
             // UPDATE LOCAL VALIDITY AGAINST CRYPTO DATA
-            pObj->UpdateLocalValidity();
+            pObj->UpdateLocalValidity(*mempool);
 
             // UPDATE SENTINEL SIGNALING VARIABLES
             pObj->UpdateSentinelVariables();
@@ -503,7 +503,7 @@ struct sortProposalsByVotes {
     }
 };
 
-void CGovernanceManager::DoMaintenance(CConnman& connman)
+void CGovernanceManager::DoMaintenance(CConnman& connman, CTxMemPool& mempool)
 {
     if (fDisableGovernance) return;
     if (::masternodeSync == nullptr || !::masternodeSync->IsSynced()) return;
@@ -514,7 +514,7 @@ void CGovernanceManager::DoMaintenance(CConnman& connman)
     RequestOrphanObjects(connman);
 
     // CHECK AND REMOVE - REPROCESS GOVERNANCE OBJECTS
-    UpdateCachesAndClean();
+    UpdateCachesAndClean(&mempool);
 }
 
 bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
@@ -832,11 +832,11 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
     return fOk;
 }
 
-void CGovernanceManager::CheckPostponedObjects(CConnman& connman)
+void CGovernanceManager::CheckPostponedObjects(CConnman& connman, CTxMemPool& mempool)
 {
     if (!::masternodeSync->IsSynced()) return;
 
-    LOCK2(cs_main, ::mempool.cs); // Lock mempool because of GetTransaction deep inside
+    LOCK2(cs_main, mempool.cs); // Lock mempool because of GetTransaction deep inside
     LOCK(cs);
 
     // Check postponed proposals
@@ -848,9 +848,9 @@ void CGovernanceManager::CheckPostponedObjects(CConnman& connman)
 
         std::string strError;
         bool fMissingConfirmations;
-        if (govobj.IsCollateralValid(strError, fMissingConfirmations)) {
-            if (govobj.IsValidLocally(strError, false)) {
-                AddGovernanceObject(govobj, connman);
+        if (govobj.IsCollateralValid(mempool, strError, fMissingConfirmations)) {
+            if (govobj.IsValidLocally(mempool, strError, false)) {
+                AddGovernanceObject(govobj, connman, mempool);
             } else {
                 LogPrint(BCLog::GOBJECT, "CGovernanceManager::CheckPostponedObjects -- %s invalid\n", nHash.ToString());
             }
@@ -1167,7 +1167,7 @@ UniValue CGovernanceManager::ToJson() const
     return jsonObj;
 }
 
-void CGovernanceManager::UpdatedBlockTip(const CBlockIndex* pindex, CConnman& connman)
+void CGovernanceManager::UpdatedBlockTip(const CBlockIndex* pindex, CConnman& connman, CTxMemPool& mempool)
 {
     // Note this gets called from ActivateBestChain without cs_main being held
     // so it should be safe to lock our mutex here without risking a deadlock
@@ -1185,7 +1185,7 @@ void CGovernanceManager::UpdatedBlockTip(const CBlockIndex* pindex, CConnman& co
         RemoveInvalidVotes();
     }
 
-    CheckPostponedObjects(connman);
+    CheckPostponedObjects(connman, mempool);
 
     CSuperblockManager::ExecuteBestSuperblock(*this, pindex->nHeight);
 }

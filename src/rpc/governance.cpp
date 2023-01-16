@@ -202,10 +202,11 @@ static UniValue gobject_prepare(const JSONRPCRequest& request)
 
     LOCK(wallet->cs_wallet);
 
+    const NodeContext& node = EnsureNodeContext(request.context);
     {
         LOCK(cs_main);
         std::string strError = "";
-        if (!govobj.IsValidLocally(strError, false))
+        if (!govobj.IsValidLocally(*node.mempool, strError, false))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Governance object is not valid - " + govobj.GetHash().ToString() + " - " + strError);
     }
 
@@ -378,14 +379,15 @@ static UniValue gobject_submit(const JSONRPCRequest& request)
     std::string strHash = govobj.GetHash().ToString();
 
     bool fMissingConfirmations;
+    const NodeContext& node = EnsureNodeContext(request.context);
     {
         if (g_txindex) {
             g_txindex->BlockUntilSyncedToCurrentChain();
         }
 
-        LOCK2(cs_main, ::mempool.cs);
+        LOCK2(cs_main, node.mempool->cs);
         std::string strError;
-        if (!govobj.IsValidLocally(strError, fMissingConfirmations, true) && !fMissingConfirmations) {
+        if (!govobj.IsValidLocally(*node.mempool, strError, fMissingConfirmations, true) && !fMissingConfirmations) {
             LogPrintf("gobject(submit) -- Object submission rejected because object is not valid - hash = %s, strError = %s\n", strHash, strError);
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Governance object is not valid - " + strHash + " - " + strError);
         }
@@ -400,12 +402,11 @@ static UniValue gobject_submit(const JSONRPCRequest& request)
 
     LogPrintf("gobject(submit) -- Adding locally created governance object - %s\n", strHash);
 
-    const NodeContext& node = EnsureNodeContext(request.context);
     if (fMissingConfirmations) {
         governance->AddPostponedObject(govobj);
         govobj.Relay(*node.connman);
     } else {
-        governance->AddGovernanceObject(govobj, *node.connman);
+        governance->AddGovernanceObject(govobj, *node.connman, *node.mempool);
     }
 
     return govobj.GetHash().ToString();
@@ -707,7 +708,7 @@ static UniValue gobject_vote_alias(const JSONRPCRequest& request)
 }
 #endif
 
-static UniValue ListObjects(const std::string& strCachedSignal, const std::string& strType, int nStartTime)
+static UniValue ListObjects(const JSONRPCRequest& request, const std::string& strCachedSignal, const std::string& strType, int nStartTime)
 {
     UniValue objResult(UniValue::VOBJ);
 
@@ -724,6 +725,8 @@ static UniValue ListObjects(const std::string& strCachedSignal, const std::strin
 
     governance->UpdateLastDiffTime(GetTime());
     // CREATE RESULTS FOR USER
+
+    const NodeContext& node = EnsureNodeContext(request.context);
 
     for (const auto& govObj : objs) {
         if (strCachedSignal == "valid" && !govObj.IsSetCachedValid()) continue;
@@ -754,7 +757,7 @@ static UniValue ListObjects(const std::string& strCachedSignal, const std::strin
 
         // REPORT VALIDITY AND CACHING FLAGS FOR VARIOUS SETTINGS
         std::string strError = "";
-        bObj.pushKV("fBlockchainValidity",  govObj.IsValidLocally(strError, false));
+        bObj.pushKV("fBlockchainValidity",  govObj.IsValidLocally(*node.mempool, strError, false));
         bObj.pushKV("IsValidReason",  strError.c_str());
         bObj.pushKV("fCachedValid",  govObj.IsSetCachedValid());
         bObj.pushKV("fCachedFunding",  govObj.IsSetCachedFunding());
@@ -798,7 +801,7 @@ static UniValue gobject_list(const JSONRPCRequest& request)
     if (strType != "proposals" && strType != "triggers" && strType != "all")
         return "Invalid type, should be 'proposals', 'triggers' or 'all'";
 
-    return ListObjects(strCachedSignal, strType, 0);
+    return ListObjects(request, strCachedSignal, strType, 0);
 }
 
 static void gobject_diff_help(const JSONRPCRequest& request)
@@ -832,7 +835,7 @@ static UniValue gobject_diff(const JSONRPCRequest& request)
     if (strType != "proposals" && strType != "triggers" && strType != "all")
         return "Invalid type, should be 'proposals', 'triggers' or 'all'";
 
-    return ListObjects(strCachedSignal, strType, governance->GetLastDiffTime());
+    return ListObjects(request, strCachedSignal, strType, governance->GetLastDiffTime());
 }
 
 static void gobject_get_help(const JSONRPCRequest& request)
@@ -916,7 +919,9 @@ static UniValue gobject_get(const JSONRPCRequest& request)
 
     // --
     std::string strError = "";
-    objResult.pushKV("fLocalValidity",  pGovObj->IsValidLocally(strError, false));
+    const NodeContext& node = EnsureNodeContext(request.context);
+    objResult.pushKV("fLocalValidity",  pGovObj->IsValidLocally(*node.mempool, strError, false));
+
     objResult.pushKV("IsValidReason",  strError.c_str());
     objResult.pushKV("fCachedValid",  pGovObj->IsSetCachedValid());
     objResult.pushKV("fCachedFunding",  pGovObj->IsSetCachedFunding());

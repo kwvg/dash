@@ -2514,7 +2514,7 @@ std::string RejectCodeToString(const unsigned char code)
     return "";
 }
 
-std::pair<bool /*ret*/, bool /*do_return*/> static ValidateDSTX(CCoinJoinBroadcastTx& dstx, uint256 hashTx)
+std::pair<bool /*ret*/, bool /*do_return*/> static ValidateDSTX(CTxMemPool& mempool, CCoinJoinBroadcastTx& dstx, uint256 hashTx)
 {
     if (!dstx.IsValidStructure()) {
         LogPrint(BCLog::COINJOIN, "DSTX -- Invalid DSTX structure: %s\n", hashTx.ToString());
@@ -3344,7 +3344,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
         if (nInvType == MSG_DSTX) {
            // Validate DSTX and return bRet if we need to return from here
            uint256 hashTx = tx.GetHash();
-           const auto& [bRet, bDoReturn] = ValidateDSTX(dstx, hashTx);
+           const auto& [bRet, bDoReturn] = ValidateDSTX(mempool, dstx, hashTx);
            if (bDoReturn) {
                return bRet;
            }
@@ -4135,13 +4135,13 @@ bool ProcessMessage(CNode* pfrom, const std::string& msg_type, CDataStream& vRec
 #ifdef ENABLE_WALLET
         coinJoinClientQueueManager->ProcessMessage(*pfrom, msg_type, vRecv);
         for (auto& pair : coinJoinClientManagers) {
-            pair.second->ProcessMessage(*pfrom, msg_type, vRecv, *connman);
+            pair.second->ProcessMessage(*pfrom, msg_type, vRecv, *connman, mempool);
         }
 #endif // ENABLE_WALLET
         coinJoinServer->ProcessMessage(*pfrom, msg_type, vRecv);
         sporkManager->ProcessSporkMessages(*pfrom, msg_type, vRecv, *connman);
         ::masternodeSync->ProcessMessage(*pfrom, msg_type, vRecv);
-        governance->ProcessMessage(*pfrom, msg_type, vRecv, *connman);
+        governance->ProcessMessage(*pfrom, mempool, msg_type, vRecv, *connman);
         CMNAuth::ProcessMessage(*pfrom, msg_type, vRecv, *connman);
         llmq_ctx.quorum_block_processor->ProcessMessage(*pfrom, msg_type, vRecv);
         llmq_ctx.qdkgsman->ProcessMessage(pfrom, *llmq_ctx.qman, msg_type, vRecv);
@@ -4815,7 +4815,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                     }
                     // Topologically and fee-rate sort the inventory we send for privacy and priority reasons.
                     // A heap is used so that not all items need sorting if only a few are being sent.
-                    CompareInvMempoolOrder compareInvMempoolOrder(&mempool);
+                    CompareInvMempoolOrder compareInvMempoolOrder(&m_mempool);
                     std::make_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
                     // No reason to drain out at many times the network's capacity,
                     // especially since we have many peers and some will draw much shorter delays.
@@ -4833,7 +4833,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                             continue;
                         }
                         // Not in the mempool anymore? don't bother sending it.
-                        auto txinfo = mempool.info(hash);
+                        auto txinfo = m_mempool.info(hash);
                         if (!txinfo.tx) {
                             continue;
                         }
