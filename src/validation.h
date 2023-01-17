@@ -200,7 +200,7 @@ void StopScriptCheckWorkerThreads();
  * @param[out] hashBlock       The hash of block_index, if the tx was found via block_index
  * @returns                    The tx if found, otherwise nullptr
  */
-CTransactionRef GetTransaction(const CBlockIndex* const block_index, const CTxMemPool* const mempool, const uint256& hash, const Consensus::Params& consensusParams, uint256& hashBlock);
+CTransactionRef GetTransaction(const CBlockIndex* const block_index, const CTxMemPool* mempool, const uint256& hash, const Consensus::Params& consensusParams, uint256& hashBlock);
 /**
  * Find the best known block, and make it the tip of the block chain
  *
@@ -313,7 +313,7 @@ public:
 };
 
 bool GetTimestampIndex(const unsigned int &high, const unsigned int &low, std::vector<uint256> &hashes);
-bool GetSpentIndex(CSpentIndexKey &key, CSpentIndexValue &value);
+bool GetSpentIndex(CTxMemPool& mempool, CSpentIndexKey &key, CSpentIndexValue &value);
 bool GetAddressIndex(uint160 addressHash, int type,
                      std::vector<std::pair<CAddressIndexKey, CAmount> > &addressIndex,
                      int start = 0, int end = 0);

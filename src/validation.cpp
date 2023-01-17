@@ -891,7 +891,7 @@ bool GetAddressUnspent(uint160 addressHash, int type,
     return true;
 }
 
-CTransactionRef GetTransaction(const CBlockIndex* const block_index, const CTxMemPool* const mempool, const uint256& hash, const Consensus::Params& consensusParams, uint256& hashBlock)
+CTransactionRef GetTransaction(const CBlockIndex* const block_index, const CTxMemPool* mempool, const uint256& hash, const Consensus::Params& consensusParams, uint256& hashBlock)
 {
     LOCK(cs_main);
 
