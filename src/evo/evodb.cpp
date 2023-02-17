@@ -35,7 +35,7 @@ void CEvoDBScopedCommitter::Rollback()
 }
 
 CEvoDB::CEvoDB(const util::DbWrapperParams& db_params) :
-    db{util::MakeDbWrapper({db_params.path / "evodb", db_params.memory, db_params.wipe, /*cache_size=*/64 << 20})}
+    db{util::MakeDbWrapper({db_params.path / "evodb", db_params.memory, db_params.wipe, /*cache_size=*/64 << 20, db_params.options})}
 {
     transaction_contexts.emplace(EvoDbIdentity::NORMAL, std::make_unique<TransactionContext>(*db));
 }

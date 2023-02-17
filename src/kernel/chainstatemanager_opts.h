@@ -6,6 +6,8 @@
 #define BITCOIN_KERNEL_CHAINSTATEMANAGER_OPTS_H
 
 #include <arith_uint256.h>
+#include <dbwrapper.h>
+#include <txdb.h>
 #include <uint256.h>
 #include <util/time.h>
 
@@ -30,6 +32,7 @@ namespace kernel {
  */
 struct ChainstateManagerOpts {
     const CChainParams& chainparams;
+    fs::path datadir;
     std::optional<bool> check_block_index{};
     bool checkpoints_enabled{DEFAULT_CHECKPOINTS_ENABLED};
     //! If set, it will override the minimum work we will assume exists on some valid chain.
@@ -44,6 +47,9 @@ struct ChainstateManagerOpts {
     //! Dash: sync state gating superblock enforcement; must stay valid while
     //! blocks are connected. Unset counts as not synced, so nothing is enforced.
     const CMasternodeSync* mn_sync{nullptr};
+    DBOptions block_tree_db{};
+    DBOptions coins_db{};
+    CoinsViewOptions coins_view{};
 };
 
 } // namespace kernel
