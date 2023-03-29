@@ -12,6 +12,10 @@
 import unittest
 
 from .script import hash160, hash256, CScript
+from test_framework.script_util import (
+    keyhash_to_p2pkh_script,
+    scripthash_to_p2sh_script,
+)
 
 # Note unlike in bitcoin, this address isn't bech32 since we don't (at this time) support bech32.
 ADDRESS_BCRT1_UNSPENDABLE = 'yVg3NBUHNEhgDceqwVUjsZHreC5PBHnUo9'
@@ -97,6 +101,18 @@ def check_script(script):
     if (type(script) is bytes or type(script) is CScript):
         return script
     assert False
+
+
+def address_to_scriptpubkey(address):
+    """Converts a given address to the corresponding output script (scriptPubKey)."""
+    payload, version = base58_to_byte(address)
+    if version == 140:  # testnet pubkey hash
+        return keyhash_to_p2pkh_script(payload)
+    elif version == 19:  # testnet script hash
+        return scripthash_to_p2sh_script(payload)
+    # TODO: also support other address formats
+    else:
+        assert False
 
 
 class TestFrameworkScript(unittest.TestCase):
