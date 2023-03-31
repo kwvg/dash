@@ -486,14 +486,14 @@ def run_tests(*, test_list, src_dir, build_dir, tmpdir, jobs=1, retries=3, retry
 
     max_len_name = len(max(test_list, key=len))
     test_count = len(test_list)
-    for i in range(test_count):
-        test_result, testdir, stdout, stderr = job_queue.get_next()
-        test_results.append(test_result)
-        done_str = "{}/{} - {}{}{}".format(i + 1, test_count, BOLD[1], test_result.name, BOLD[0])
+
+    def run_test(test_result, testdir, stdout, stderr):
         if test_result.status == "Passed":
             logging.debug("%s passed, Duration: %s s" % (done_str, test_result.time))
+            return True
         elif test_result.status == "Skipped":
             logging.debug("%s skipped" % (done_str))
+            return True
         else:
             print("%s failed, Duration: %s s\n" % (done_str, test_result.time))
             print(BOLD[1] + 'stdout:\n' + BOLD[0] + stdout + '\n')
@@ -509,10 +509,15 @@ def run_tests(*, test_list, src_dir, build_dir, tmpdir, jobs=1, retries=3, retry
                     combined_logs_args += ['--color']
                 combined_logs, _ = subprocess.Popen(combined_logs_args, universal_newlines=True, stdout=subprocess.PIPE).communicate()
                 print("\n".join(deque(combined_logs.splitlines(), combined_logs_len)))
+            return False
 
-            if failfast:
-                logging.debug("Early exiting after test failure")
-                break
+    for i in range(test_count):
+        test_result, testdir, stdout, stderr = job_queue.get_next()
+        done_str = "{}/{} - {}{}{}".format(i + 1, test_count, BOLD[1], test_result.name, BOLD[0])
+        test_status = run_test(test_result, testdir, stdout, stderr)
+        if failfast and not test_status:
+            logging.debug("Early exiting after test failure")
+            break
 
     print_results(test_results, max_len_name, (int(time.time() - start_time)))
 
