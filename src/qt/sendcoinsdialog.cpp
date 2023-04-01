@@ -506,8 +506,9 @@ void SendCoinsDialog::presentPSBT(PartiallySignedTransaction& psbtx)
     ssTx << psbtx;
     GUIUtil::setClipboard(EncodeBase64(ssTx.str()).c_str());
     QMessageBox msgBox;
-    msgBox.setText("Unsigned Transaction");
-    msgBox.setInformativeText("The PSBT has been copied to the clipboard. You can also save it.");
+    //: Caption of "PSBT has been copied" messagebox
+    msgBox.setText(tr("Unsigned Transaction", "PSBT copied"));
+    msgBox.setInformativeText(tr("The PSBT has been copied to the clipboard. You can also save it."));
     msgBox.setStandardButtons(QMessageBox::Save | QMessageBox::Discard);
     msgBox.setDefaultButton(QMessageBox::Discard);
     switch (msgBox.exec()) {
@@ -535,7 +536,8 @@ void SendCoinsDialog::presentPSBT(PartiallySignedTransaction& psbtx)
         std::ofstream out{filename.toLocal8Bit().data(), std::ofstream::out | std::ofstream::binary};
         out << ssTx.str();
         out.close();
-        Q_EMIT message(tr("PSBT saved"), "PSBT saved to disk", CClientUIInterface::MSG_INFORMATION);
+        //: Popup message when a PSBT has been saved to a file
+        Q_EMIT message(tr("PSBT saved"), tr("PSBT saved to disk"), CClientUIInterface::MSG_INFORMATION);
         break;
     }
     case QMessageBox::Discard:
@@ -555,12 +557,14 @@ bool SendCoinsDialog::signWithExternalSigner(PartiallySignedTransaction& psbtx, 
     }
     if (err == TransactionError::EXTERNAL_SIGNER_NOT_FOUND) {
         //: "External signer" means using devices such as hardware wallets.
-        QMessageBox::critical(nullptr, tr("External signer not found"), "External signer not found");
+        const QString msg = tr("External signer not found");
+        QMessageBox::critical(nullptr, msg, msg);
         return false;
     }
     if (err == TransactionError::EXTERNAL_SIGNER_FAILED) {
         //: "External signer" means using devices such as hardware wallets.
-        QMessageBox::critical(nullptr, tr("External signer failure"), "External signer failure");
+        const QString msg = tr("External signer failure");
+        QMessageBox::critical(nullptr, msg, msg);
         return false;
     }
     if (err != TransactionError::OK) {
@@ -937,7 +941,7 @@ void SendCoinsDialog::updateFeeMinimizedLabel()
     if (ui->radioSmartFee->isChecked())
         ui->labelFeeMinimized->setText(ui->labelSmartFee->text());
     else {
-        ui->labelFeeMinimized->setText(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), ui->customFee->value()) + "/kB");
+        ui->labelFeeMinimized->setText(tr("%1/kB").arg(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), ui->customFee->value())));
     }
 }
 
@@ -971,7 +975,7 @@ void SendCoinsDialog::updateSmartFeeLabel()
     FeeReason reason;
     CFeeRate feeRate = CFeeRate(model->wallet().getMinimumFee(1000, *m_coin_control, &returned_target, &reason));
 
-    ui->labelSmartFee->setText(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), feeRate.GetFeePerK()) + "/kB");
+    ui->labelSmartFee->setText(tr("%1/kB").arg(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), feeRate.GetFeePerK())));
 
     if (reason == FeeReason::FALLBACK) {
         ui->labelSmartFee2->show(); // (Smart fee not initialized yet. This usually takes a few blocks...)
