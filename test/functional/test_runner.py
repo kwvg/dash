@@ -487,7 +487,7 @@ def run_tests(*, test_list, src_dir, build_dir, tmpdir, jobs=1, retries=3, retry
     max_len_name = len(max(test_list, key=len))
     test_count = len(test_list)
 
-    def run_test(test_result, testdir, stdout, stderr):
+    def run_test(test_result, testdir, stdout, stderr, attempt, limit):
         if test_result.status == "Passed":
             logging.debug("%s passed, Duration: %s s" % (done_str, test_result.time))
             return True
@@ -495,26 +495,39 @@ def run_tests(*, test_list, src_dir, build_dir, tmpdir, jobs=1, retries=3, retry
             logging.debug("%s skipped" % (done_str))
             return True
         else:
-            print("%s failed, Duration: %s s\n" % (done_str, test_result.time))
-            print(BOLD[1] + 'stdout:\n' + BOLD[0] + stdout + '\n')
-            print(BOLD[1] + 'stderr:\n' + BOLD[0] + stderr + '\n')
-            if combined_logs_len and os.path.isdir(testdir):
-                # Print the final `combinedlogslen` lines of the combined logs
-                print('{}Combine the logs and print the last {} lines ...{}'.format(BOLD[1], combined_logs_len, BOLD[0]))
-                print('\n============')
-                print('{}Combined log for {}:{}'.format(BOLD[1], testdir, BOLD[0]))
-                print('============\n')
-                combined_logs_args = [sys.executable, os.path.join(tests_dir, 'combine_logs.py'), testdir]
-                if BOLD[0]:
-                    combined_logs_args += ['--color']
-                combined_logs, _ = subprocess.Popen(combined_logs_args, universal_newlines=True, stdout=subprocess.PIPE).communicate()
-                print("\n".join(deque(combined_logs.splitlines(), combined_logs_len)))
+            if limit > 1:
+                logging.debug("%s failed at attempt %s of %s, Duration: %s s\n" % (done_str, attempt, limit, test_result.time))
+            if limit == attempt:
+                print("%s failed, Duration: %s s\n" % (done_str, test_result.time))
+                print(BOLD[1] + 'stdout:\n' + BOLD[0] + stdout + '\n')
+                print(BOLD[1] + 'stderr:\n' + BOLD[0] + stderr + '\n')
+                if combined_logs_len and os.path.isdir(testdir):
+                    # Print the final `combinedlogslen` lines of the combined logs
+                    print('{}Combine the logs and print the last {} lines ...{}'.format(BOLD[1], combined_logs_len, BOLD[0]))
+                    print('\n============')
+                    print('{}Combined log for {}:{}'.format(BOLD[1], testdir, BOLD[0]))
+                    print('============\n')
+                    combined_logs_args = [sys.executable, os.path.join(tests_dir, 'combine_logs.py'), testdir]
+                    if BOLD[0]:
+                        combined_logs_args += ['--color']
+                    combined_logs, _ = subprocess.Popen(combined_logs_args, universal_newlines=True, stdout=subprocess.PIPE).communicate()
+                    print("\n".join(deque(combined_logs.splitlines(), combined_logs_len)))
+            else:
+                time.sleep(retry_sleep)
             return False
 
     for i in range(test_count):
         test_result, testdir, stdout, stderr = job_queue.get_next()
         done_str = "{}/{} - {}{}{}".format(i + 1, test_count, BOLD[1], test_result.name, BOLD[0])
-        test_status = run_test(test_result, testdir, stdout, stderr)
+        retry_limit = retries if test_result.name in NONDETERMINISTIC_SCRIPTS else 1
+        test_status = False
+        for itx in range(retry_limit):
+            test_status = run_test(test_result, testdir, stdout, stderr, itx + 1, retry_limit)
+            # Only append result if test either passes or fails till retry_limit, pushing only
+            # the result of the last attempt to test_results.
+            if test_status or retry_limit == itx + 1:
+                test_results.append(test_result)
+                break
         if failfast and not test_status:
             logging.debug("Early exiting after test failure")
             break
