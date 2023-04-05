@@ -308,6 +308,8 @@ def main():
     parser.add_argument('--tmpdirprefix', '-t', default=tempfile.gettempdir(), help="Root directory for datadirs")
     parser.add_argument('--failfast', '-F', action='store_true', help='stop execution after the first test failure')
     parser.add_argument('--filter', help='filter scripts to run by regular expression')
+    parser.add_argument('--retries', '-r', type=int, default=3, help='how many reattempts should be allowed for the non-deterministic test suite. Default=3.')
+    parser.add_argument('--sleep', '-s', type=int, default=15, help='how many seconds should the test sleep before reattempting (in seconds). Default=15.')
 
     args, unknown_args = parser.parse_known_args()
     if not args.ansi:
@@ -413,6 +415,8 @@ def main():
         build_dir=config["environment"]["BUILDDIR"],
         tmpdir=tmpdir,
         jobs=args.jobs,
+        retries=args.retries,
+        retry_sleep=args.sleep,
         enable_coverage=args.coverage,
         args=passon_args,
         combined_logs_len=args.combinedlogslen,
@@ -421,7 +425,7 @@ def main():
         use_term_control=args.ansi,
     )
 
-def run_tests(*, test_list, src_dir, build_dir, tmpdir, jobs=1, enable_coverage=False, args=None, combined_logs_len=0,failfast=False, runs_ci=False, use_term_control):
+def run_tests(*, test_list, src_dir, build_dir, tmpdir, jobs=1, retries=3, retry_sleep=15, enable_coverage=False, args=None, combined_logs_len=0,failfast=False, runs_ci=False, use_term_control):
     args = args or []
 
     # Warn if dashd is already running
