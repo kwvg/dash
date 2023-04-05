@@ -81,11 +81,32 @@ EXTENDED_SCRIPTS = [
     'feature_dbcrash.py',
 ]
 
-BASE_SCRIPTS = [
+NONDETERMINISTIC_SCRIPTS = [
     # Scripts that are run by default.
     # Longest test should go first, to favor running tests in parallel
     'feature_dip3_deterministicmns.py', # NOTE: needs dash_hash to pass
     'feature_llmq_data_recovery.py',
+    # vv Tests less than 2m vv
+    'feature_dip3_v19.py',
+    'feature_llmq_signing.py', # NOTE: needs dash_hash to pass
+    'feature_llmq_signing.py --spork21', # NOTE: needs dash_hash to pass
+    'feature_llmq_chainlocks.py', # NOTE: needs dash_hash to pass
+    'feature_llmq_rotation.py', # NOTE: needs dash_hash to pass
+    'feature_llmq_connections.py', # NOTE: needs dash_hash to pass
+    'feature_llmq_hpmn.py', # NOTE: needs dash_hash to pass
+    'feature_llmq_simplepose.py', # NOTE: needs dash_hash to pass
+    'feature_llmq_is_cl_conflicts.py', # NOTE: needs dash_hash to pass
+    'feature_llmq_is_migration.py', # NOTE: needs dash_hash to pass
+    'feature_llmq_is_retroactive.py', # NOTE: needs dash_hash to pass
+    'feature_llmq_dkgerrors.py', # NOTE: needs dash_hash to pass
+    'feature_dip4_coinbasemerkleroots.py', # NOTE: needs dash_hash to pass
+    # vv Tests less than 30s vv
+    'feature_dip0020_activation.py',
+]
+
+BASE_SCRIPTS = [
+    # Scripts that are run by default.
+    # Longest test should go first, to favor running tests in parallel
     'wallet_hd.py',
     'wallet_backup.py',
     # vv Tests less than 5m vv
@@ -106,19 +127,6 @@ BASE_SCRIPTS = [
     'wallet_dump.py',
     'wallet_listtransactions.py',
     'feature_multikeysporks.py',
-    'feature_dip3_v19.py',
-    'feature_llmq_signing.py', # NOTE: needs dash_hash to pass
-    'feature_llmq_signing.py --spork21', # NOTE: needs dash_hash to pass
-    'feature_llmq_chainlocks.py', # NOTE: needs dash_hash to pass
-    'feature_llmq_rotation.py', # NOTE: needs dash_hash to pass
-    'feature_llmq_connections.py', # NOTE: needs dash_hash to pass
-    'feature_llmq_hpmn.py', # NOTE: needs dash_hash to pass
-    'feature_llmq_simplepose.py', # NOTE: needs dash_hash to pass
-    'feature_llmq_is_cl_conflicts.py', # NOTE: needs dash_hash to pass
-    'feature_llmq_is_migration.py', # NOTE: needs dash_hash to pass
-    'feature_llmq_is_retroactive.py', # NOTE: needs dash_hash to pass
-    'feature_llmq_dkgerrors.py', # NOTE: needs dash_hash to pass
-    'feature_dip4_coinbasemerkleroots.py', # NOTE: needs dash_hash to pass
     # vv Tests less than 60s vv
     'p2p_sendheaders.py', # NOTE: needs dash_hash to pass
     'p2p_sendheaders_compressed.py', # NOTE: needs dash_hash to pass
@@ -243,7 +251,6 @@ BASE_SCRIPTS = [
     'wallet_create_tx.py',
     'p2p_fingerprint.py',
     'rpc_platform_filter.py',
-    'feature_dip0020_activation.py',
     'feature_uacomment.py',
     'wallet_coinbase_category.py',
     'feature_filelock.py',
@@ -269,8 +276,8 @@ BASE_SCRIPTS = [
     # Put them in a random line within the section that fits their approximate run-time
 ]
 
-# Place EXTENDED_SCRIPTS first since it has the 3 longest running tests
-ALL_SCRIPTS = EXTENDED_SCRIPTS + BASE_SCRIPTS
+# Place NONDETERMINISTIC_SCRIPTS first since it has the 3 longest running tests
+ALL_SCRIPTS = NONDETERMINISTIC_SCRIPTS + EXTENDED_SCRIPTS + BASE_SCRIPTS
 
 NON_SCRIPTS = [
     # These are python files that live in the functional tests directory, but are not test scripts.
