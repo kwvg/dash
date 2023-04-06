@@ -100,8 +100,14 @@ NONDETERMINISTIC_SCRIPTS = [
     'feature_llmq_is_retroactive.py', # NOTE: needs dash_hash to pass
     'feature_llmq_dkgerrors.py', # NOTE: needs dash_hash to pass
     'feature_dip4_coinbasemerkleroots.py', # NOTE: needs dash_hash to pass
+    # vv Tests less than 60s vv
+    'wallet_listreceivedby.py',
     # vv Tests less than 30s vv
     'feature_dip0020_activation.py',
+    'interface_zmq_dash.py',
+    'mempool_unbroadcast.py',
+    'p2p_addrv2_relay.py',
+    'rpc_net.py',
 ]
 
 BASE_SCRIPTS = [
@@ -133,7 +139,6 @@ BASE_SCRIPTS = [
     'wallet_importmulti.py',
     'mempool_limit.py',
     'rpc_txoutproof.py',
-    'wallet_listreceivedby.py',
     'wallet_abandonconflict.py',
     'feature_csv_activation.py',
     'rpc_rawtransaction.py',
@@ -143,7 +148,6 @@ BASE_SCRIPTS = [
     'rpc_quorum.py',
     'wallet_keypool_topup.py',
     'feature_fee_estimation.py',
-    'interface_zmq_dash.py',
     'interface_zmq.py',
     'interface_bitcoin_cli.py',
     'mempool_resurrect.py',
@@ -170,7 +174,6 @@ BASE_SCRIPTS = [
     'rpc_whitelist.py',
     'feature_proxy.py',
     'rpc_signrawtransaction.py',
-    'p2p_addrv2_relay.py',
     'wallet_groups.py',
     'p2p_disconnect_ban.py',
     'feature_addressindex.py',
@@ -181,7 +184,6 @@ BASE_SCRIPTS = [
     'rpc_deprecated.py',
     'wallet_disable.py',
     'p2p_getdata.py',
-    'rpc_net.py',
     'wallet_keypool.py',
     'wallet_keypool_hd.py',
     'p2p_mempool.py',
@@ -258,7 +260,6 @@ BASE_SCRIPTS = [
     'p2p_blockfilters.py',
     'feature_asmap.py',
     'feature_includeconf.py',
-    'mempool_unbroadcast.py',
     'rpc_deriveaddresses.py',
     'rpc_deriveaddresses.py --usecli',
     'rpc_scantxoutset.py',
