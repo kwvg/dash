@@ -109,7 +109,7 @@ private:
 class CCoinJoinClientSession : public CCoinJoinBaseSession
 {
 private:
-    CWallet& mixingWallet;
+    CWallet& m_wallet;
     CJClientManager& m_clientman;
     CCoinJoinClientManager& m_manager;
 
@@ -162,7 +162,7 @@ private:
 
 public:
     explicit CCoinJoinClientSession(CWallet& pwallet, CJClientManager& clientman, const CMasternodeSync& mn_sync) :
-        mixingWallet(pwallet), m_clientman(clientman), m_manager(*Assert(clientman.Get(pwallet))), m_mn_sync(mn_sync) {}
+        m_wallet(pwallet), m_clientman(clientman), m_manager(*Assert(clientman.Get(pwallet))), m_mn_sync(mn_sync) {}
 
     void ProcessMessage(CNode& peer, PeerManager& peerman, CConnman& connman, const CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv);
 
@@ -210,7 +210,7 @@ public:
 class CCoinJoinClientManager
 {
 private:
-    CWallet& mixingWallet;
+    CWallet& m_wallet;
     CJClientManager& m_clientman;
 
     const CMasternodeSync& m_mn_sync;
@@ -245,7 +245,7 @@ public:
     CCoinJoinClientManager& operator=(CCoinJoinClientManager const&) = delete;
 
     explicit CCoinJoinClientManager(CWallet& wallet, CJClientManager& clientman, const CMasternodeSync& mn_sync) :
-        mixingWallet(wallet), m_clientman(clientman), m_mn_sync(mn_sync) {}
+        m_wallet(wallet), m_clientman(clientman), m_mn_sync(mn_sync) {}
 
     void ProcessMessage(CNode& peer, PeerManager& peerman, CConnman& connman, const CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv) LOCKS_EXCLUDED(cs_deqsessions);
 
