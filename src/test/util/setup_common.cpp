@@ -316,10 +316,14 @@ void TestChainSetup::mineBlocks(int num_blocks)
     }
 }
 
-CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
+CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey, CChainState* chainstate)
 {
+    if (!chainstate) {
+        chainstate = &Assert(m_node.chainman)->ActiveChainstate();
+    }
+
     const CChainParams& chainparams = Params();
-    auto block = CreateBlock(txns, scriptPubKey);
+    auto block = CreateBlock(txns, scriptPubKey, *chainstate);
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     Assert(m_node.chainman)->ProcessNewBlock(chainparams, shared_pblock, true, nullptr);
@@ -327,13 +331,13 @@ CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransacti
     return block;
 }
 
-CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CKey& scriptKey)
+CBlock TestChainSetup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CKey& scriptKey, CChainState* chainstate)
 {
     CScript scriptPubKey = CScript() <<  ToByteVector(coinbaseKey.GetPubKey()) << OP_CHECKSIG;
     return CreateAndProcessBlock(txns, scriptPubKey);
 }
 
-CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)
+CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey, CChainState& chainstate)
 {
     const CChainParams& chainparams = Params();
     CTxMemPool empty_pool;
@@ -392,10 +396,10 @@ CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns,
     return result;
 }
 
-CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CKey& scriptKey)
+CBlock TestChainSetup::CreateBlock(const std::vector<CMutableTransaction>& txns, const CKey& scriptKey, CChainState& chainstate)
 {
     CScript scriptPubKey = CScript() <<  ToByteVector(coinbaseKey.GetPubKey()) << OP_CHECKSIG;
-    return CreateBlock(txns, scriptPubKey);
+    return CreateBlock(txns, scriptPubKey, chainstate);
 }
 
 TestChainSetup::~TestChainSetup()

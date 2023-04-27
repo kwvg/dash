@@ -119,13 +119,17 @@ struct TestChainSetup : public RegTestingSetup
      * scriptPubKey, and try to add it to the current chain.
      */
     CBlock CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns,
-                                 const CScript& scriptPubKey);
+                                 const CScript& scriptPubKey,
+                                 CChainState* chainstate = nullptr);
     CBlock CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns,
-                                 const CKey& scriptKey);
+                                 const CKey& scriptKey,
+                                 CChainState* chainstate = nullptr);
     CBlock CreateBlock(const std::vector<CMutableTransaction>& txns,
-                       const CScript& scriptPubKey);
+                       const CScript& scriptPubKey,
+                       CChainState& chainstate);
     CBlock CreateBlock(const std::vector<CMutableTransaction>& txns,
-                       const CKey& scriptKey);
+                       const CKey& scriptKey,
+                       CChainState& chainstate);
 
     //! Mine a series of new blocks on the active chain.
     void mineBlocks(int num_blocks);

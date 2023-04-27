@@ -246,7 +246,7 @@ void FuncDIP3Activation(TestChainSetup& setup)
     int nHeight = ::ChainActive().Height();
 
     // We start one block before DIP3 activation, so mining a block with a DIP3 transaction should fail
-    auto block = std::make_shared<CBlock>(setup.CreateBlock(txns, setup.coinbaseKey));
+    auto block = std::make_shared<CBlock>(setup.CreateBlock(txns, setup.coinbaseKey, Assert(setup.m_node.chainman)->ActiveChainstate()));
     Assert(setup.m_node.chainman)->ProcessNewBlock(Params(), block, true, nullptr);
     BOOST_CHECK_EQUAL(::ChainActive().Height(), nHeight);
     BOOST_ASSERT(block->GetHash() != ::ChainActive().Tip()->GetBlockHash());
@@ -256,7 +256,7 @@ void FuncDIP3Activation(TestChainSetup& setup)
     setup.CreateAndProcessBlock({}, setup.coinbaseKey);
     BOOST_CHECK_EQUAL(::ChainActive().Height(), nHeight + 1);
     // Mining a block with a DIP3 transaction should succeed now
-    block = std::make_shared<CBlock>(setup.CreateBlock(txns, setup.coinbaseKey));
+    block = std::make_shared<CBlock>(setup.CreateBlock(txns, setup.coinbaseKey, Assert(setup.m_node.chainman)->ActiveChainstate()));
     BOOST_ASSERT(Assert(setup.m_node.chainman)->ProcessNewBlock(Params(), block, true, nullptr));
     deterministicMNManager->UpdatedBlockTip(::ChainActive().Tip());
     BOOST_CHECK_EQUAL(::ChainActive().Height(), nHeight + 2);
@@ -471,7 +471,7 @@ void FuncTestMempoolReorg(TestChainSetup& setup)
     FundTransaction(tx_collateral, utxos, scriptCollateral, dmn_types::Regular.collat_amount, setup.coinbaseKey);
     SignTransaction(*(setup.m_node.mempool), tx_collateral, setup.coinbaseKey);
 
-    auto block = std::make_shared<CBlock>(setup.CreateBlock({tx_collateral}, setup.coinbaseKey));
+    auto block = std::make_shared<CBlock>(setup.CreateBlock({tx_collateral}, setup.coinbaseKey, Assert(setup.m_node.chainman)->ActiveChainstate()));
     BOOST_ASSERT(Assert(setup.m_node.chainman)->ProcessNewBlock(Params(), block, true, nullptr));
     deterministicMNManager->UpdatedBlockTip(::ChainActive().Tip());
     BOOST_CHECK_EQUAL(::ChainActive().Height(), nHeight + 1);
@@ -602,7 +602,7 @@ void FuncVerifyDB(TestChainSetup& setup)
     FundTransaction(tx_collateral, utxos, scriptCollateral, dmn_types::Regular.collat_amount, setup.coinbaseKey);
     SignTransaction(*(setup.m_node.mempool), tx_collateral, setup.coinbaseKey);
 
-    auto block = std::make_shared<CBlock>(setup.CreateBlock({tx_collateral}, setup.coinbaseKey));
+    auto block = std::make_shared<CBlock>(setup.CreateBlock({tx_collateral}, setup.coinbaseKey, Assert(setup.m_node.chainman)->ActiveChainstate()));
     BOOST_ASSERT(Assert(setup.m_node.chainman)->ProcessNewBlock(Params(), block, true, nullptr));
     deterministicMNManager->UpdatedBlockTip(::ChainActive().Tip());
     BOOST_CHECK_EQUAL(::ChainActive().Height(), nHeight + 1);
@@ -634,7 +634,7 @@ void FuncVerifyDB(TestChainSetup& setup)
 
     auto tx_reg_hash = tx_reg.GetHash();
 
-    block = std::make_shared<CBlock>(setup.CreateBlock({tx_reg}, setup.coinbaseKey));
+    block = std::make_shared<CBlock>(setup.CreateBlock({tx_reg}, setup.coinbaseKey, Assert(setup.m_node.chainman)->ActiveChainstate()));
     BOOST_ASSERT(Assert(setup.m_node.chainman)->ProcessNewBlock(Params(), block, true, nullptr));
     deterministicMNManager->UpdatedBlockTip(::ChainActive().Tip());
     BOOST_CHECK_EQUAL(::ChainActive().Height(), nHeight + 2);
@@ -646,7 +646,7 @@ void FuncVerifyDB(TestChainSetup& setup)
     collateral_utxos.emplace(payload.collateralOutpoint, std::make_pair(1, 1000));
     auto proUpRevTx = CreateProUpRevTx(*(setup.m_node.mempool), collateral_utxos, tx_reg_hash, operatorKey, collateralKey);
 
-    block = std::make_shared<CBlock>(setup.CreateBlock({proUpRevTx}, setup.coinbaseKey));
+    block = std::make_shared<CBlock>(setup.CreateBlock({proUpRevTx}, setup.coinbaseKey, Assert(setup.m_node.chainman)->ActiveChainstate()));
     BOOST_ASSERT(Assert(setup.m_node.chainman)->ProcessNewBlock(Params(), block, true, nullptr));
     deterministicMNManager->UpdatedBlockTip(::ChainActive().Tip());
     BOOST_CHECK_EQUAL(::ChainActive().Height(), nHeight + 3);
