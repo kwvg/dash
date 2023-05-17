@@ -12,5 +12,6 @@ export DEP_OPTS="NO_UPNP=1 DEBUG=1"
 export TEST_RUNNER_EXTRA="--extended --exclude feature_pruning,feature_dbcrash,wallet_multiwallet.py" # Temporarily suppress ASan heap-use-after-free (see issue #14163)
 export GOAL="install"
 export BITCOIN_CONFIG="--enable-zmq --enable-reduce-exports --enable-crash-hooks --with-sanitizers=thread"
+export BITCOIN_CONFIG="${BITCOIN_CONFIG} CC=clang-15 CXX=clang++-15 CXXFLAGS=-Werror=thread-safety"
 export CPPFLAGS="-DDEBUG_LOCKORDER -DENABLE_DASH_DEBUG -DARENA_DEBUG"
 export PYZMQ=true
