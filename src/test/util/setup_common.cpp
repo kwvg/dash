@@ -226,6 +226,7 @@ BasicTestingSetup::BasicTestingSetup(const std::string& chainName, const std::ve
     }
 
     bls::bls_legacy_scheme.store(true);
+    node::g_indexes_ready_to_sync = true;
 }
 
 BasicTestingSetup::~BasicTestingSetup()
