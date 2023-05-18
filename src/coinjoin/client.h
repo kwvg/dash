@@ -193,12 +193,13 @@ class CCoinJoinClientQueueManager : public CCoinJoinBaseManager
 {
 private:
     CConnman& connman;
+    CJClientManager& m_clientman;
     const CMasternodeSync& m_mn_sync;
     mutable Mutex cs_ProcessDSQueue;
 
 public:
-    explicit CCoinJoinClientQueueManager(CConnman& _connman, const CMasternodeSync& mn_sync) :
-        connman(_connman), m_mn_sync(mn_sync) {};
+    explicit CCoinJoinClientQueueManager(CConnman& _connman, CJClientManager& clientman, const CMasternodeSync& mn_sync) :
+        connman(_connman), m_clientman(clientman), m_mn_sync(mn_sync) {};
 
     void ProcessMessage(const CNode& peer, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv) LOCKS_EXCLUDED(cs_vecqueue);
     void ProcessDSQueue(const CNode& peer, PeerManager& peerman, CDataStream& vRecv);
@@ -280,7 +281,5 @@ public:
 
     void GetJsonInfo(UniValue& obj) const LOCKS_EXCLUDED(cs_deqsessions);
 };
-
-void DoCoinJoinMaintenance(CBlockPolicyEstimator& fee_estimator);
 
 #endif // BITCOIN_COINJOIN_CLIENT_H

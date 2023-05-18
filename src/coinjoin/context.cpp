@@ -26,7 +26,7 @@ CJContext::CJContext(CChainState& chainstate, CConnman& connman, CTxMemPool& mem
         [&]() -> CCoinJoinClientQueueManager* const {
             if (relay_txes) {
                 assert(::coinJoinClientQueueManager == nullptr);
-                ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(connman, mn_sync);
+                ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(connman, *clientman, mn_sync);
                 return ::coinJoinClientQueueManager.get();
             }
             return nullptr;

@@ -98,7 +98,7 @@ void CCoinJoinClientQueueManager::ProcessDSQueue(const CNode& peer, PeerManager&
         }
 
         // if the queue is ready, submit if we can
-        if (dsq.fReady && ranges::any_of(coinJoinClientManagers->raw(),
+        if (dsq.fReady && ranges::any_of(m_clientman.raw(),
                                          [this, &dmn](const auto &pair) {
                                              return pair.second->TrySubmitDenominate(dmn->pdmnState->addr,
                                                                                      this->connman);
@@ -123,7 +123,7 @@ void CCoinJoinClientQueueManager::ProcessDSQueue(const CNode& peer, PeerManager&
             LogPrint(BCLog::COINJOIN, "DSQUEUE -- new CoinJoin queue (%s) from masternode %s\n", dsq.ToString(),
                      dmn->pdmnState->addr.ToString());
 
-            ranges::any_of(coinJoinClientManagers->raw(),
+            ranges::any_of(m_clientman.raw(),
                            [&dsq](const auto &pair) { return pair.second->MarkAlreadyJoinedQueueAsTried(dsq); });
 
             WITH_LOCK(cs_vecqueue, vecCoinJoinQueue.push_back(dsq));
@@ -1878,16 +1878,6 @@ void CCoinJoinClientManager::GetJsonInfo(UniValue& obj) const
         }
     }
     obj.pushKV("sessions",  arrSessions);
-}
-
-void DoCoinJoinMaintenance(CBlockPolicyEstimator& fee_estimator)
-{
-    if (coinJoinClientQueueManager != nullptr) {
-        coinJoinClientQueueManager->DoMaintenance();
-    }
-    if (coinJoinClientManagers != nullptr) {
-        coinJoinClientManagers->DoMaintenance(fee_estimator);
-    }
 }
 
 void CJClientManager::Add(CWallet& wallet) {
