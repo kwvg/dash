@@ -70,6 +70,8 @@
 #define MICRO 0.000001
 #define MILLI 0.001
 
+#define DISABLE_HASH_VERIFICATION 1
+
 /** Maximum kilobytes for transactions to store for processing during reorg */
 static const unsigned int MAX_DISCONNECTED_TX_POOL_SIZE = 20000;
 /** The pre-allocation chunk size for blk?????.dat files (since 0.8) */
@@ -959,9 +961,11 @@ bool ReadBlockFromDisk(CBlock& block, const FlatFilePos& pos, const Consensus::P
         return error("%s: Deserialize or I/O error - %s at %s", __func__, e.what(), pos.ToString());
     }
 
+#ifdef DISABLE_HASH_VERIFICATION
     // Check the header
     if (!CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
+#endif // DISABLE_HASH_VERIFICATION
 
     return true;
 }
@@ -976,9 +980,11 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 
     if (!ReadBlockFromDisk(block, blockPos, consensusParams))
         return false;
+#ifdef DISABLE_HASH_VERIFICATION
     if (block.GetHash() != pindex->GetBlockHash())
         return error("ReadBlockFromDisk(CBlock&, CBlockIndex*): GetHash() doesn't match index for %s at %s",
                 pindex->ToString(), pindex->GetBlockPos().ToString());
+#endif // DISABLE_HASH_VERIFICATION
     return true;
 }
 
@@ -3709,9 +3715,11 @@ static bool FindUndoPos(CValidationState &state, int nFile, FlatFilePos &pos, un
 
 static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true)
 {
+#ifdef DISABLE_HASH_VERIFICATION
     // Check proof of work matches claimed amount
     if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         return state.Invalid(ValidationInvalidReason::BLOCK_INVALID_HEADER, false, REJECT_INVALID, "high-hash", "proof of work failed");
+#endif // DISABLE_HASH_VERIFICATION
 
     // Check DevNet
     if (!consensusParams.hashDevnetGenesisBlock.IsNull() &&

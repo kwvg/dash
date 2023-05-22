@@ -12,6 +12,8 @@
 
 #include <math.h>
 
+#define DISABLE_HASH_VERIFICATION 1
+
 unsigned int static KimotoGravityWell(const CBlockIndex* pindexLast, const Consensus::Params& params) {
     const CBlockIndex *BlockLastSolved = pindexLast;
     const CBlockIndex *BlockReading = pindexLast;
@@ -231,6 +233,7 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)
 {
+#ifdef DISABLE_HASH_VERIFICATION
     bool fNegative;
     bool fOverflow;
     arith_uint256 bnTarget;
@@ -245,5 +248,6 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
     if (UintToArith256(hash) > bnTarget)
         return false;
 
+#endif // DISABLE_HASH_VERIFICATION
     return true;
 }

@@ -16,6 +16,8 @@
 
 #include <stdint.h>
 
+#define DISABLE_HASH_VERIFICATION 1
+
 static const char DB_COIN = 'C';
 static const char DB_COINS = 'c';
 static const char DB_BLOCK_FILES = 'f';
@@ -399,8 +401,10 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
 
+#ifdef DISABLE_HASH_VERIFICATION
                 if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, consensusParams))
                     return error("%s: CheckProofOfWork failed: %s", __func__, pindexNew->ToString());
+#endif // DISABLE_HASH_VERIFICATION
 
                 pcursor->Next();
             } else {
