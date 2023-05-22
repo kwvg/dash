@@ -557,7 +557,7 @@ extern "C" void __real___cxa_free_exception(void * thrown_exception)
     static auto f = (void(*)(void*))dlsym(RTLD_NEXT, "__cxa_free_exception");
     return f(thrown_exception);
 }
-#if defined(__clang__)
+#if defined(__clang__) && defined(__APPLE__)
 extern "C" void __attribute__((noreturn)) __real___assert_rtn(const char *function, const char *file, int line, const char *assertion)
 {
     static auto f = (void(__attribute__((noreturn)) *) (const char*, const char*, int, const char*))dlsym(RTLD_NEXT, "__assert_rtn");
@@ -622,7 +622,7 @@ static __attribute__((noinline)) crash_info GetCrashInfoFromAssertion(const char
     return ci;
 }
 
-#if defined(__clang__)
+#if defined(__clang__) && defined(__APPLE__)
 extern "C" void __attribute__((noinline)) WRAPPED_NAME(__assert_rtn)(const char *function, const char *file, int line, const char *assertion)
 {
     auto ci = GetCrashInfoFromAssertion(assertion, file, line, function);
