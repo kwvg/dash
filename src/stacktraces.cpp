@@ -536,12 +536,9 @@ static std::map<void*, std::shared_ptr<std::vector<uint64_t>>> g_stacktraces;
 
 #if CRASH_HOOKS_WRAPPED_CXX_ABI
 // These come in through -Wl,-wrap
-// It only works on GCC
 extern "C" void* __real___cxa_allocate_exception(size_t thrown_size);
 extern "C" void __real___cxa_free_exception(void * thrown_exception);
-#if __clang__
-#error not supported on WIN32 (no dlsym support)
-#elif WIN32
+#if WIN32
 extern "C" void __real__assert(const char *assertion, const char *file, unsigned int line);
 extern "C" void __real__wassert(const wchar_t *assertion, const wchar_t *file, unsigned int line);
 #else
