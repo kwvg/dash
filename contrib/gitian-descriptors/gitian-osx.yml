@@ -1,9 +1,9 @@
 ---
 name: "dash-osx-20"
 enable_cache: true
-distro: "ubuntu"
+distro: "debian"
 suites:
-- "focal"
+- "buster"
 architectures:
 - "amd64"
 packages:
