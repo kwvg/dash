@@ -1,8 +1,8 @@
 ---
 name: "dash-dmg-signer"
-distro: "ubuntu"
+distro: "debian"
 suites:
-- "focal"
+- "buster"
 architectures:
 - "amd64"
 packages:
