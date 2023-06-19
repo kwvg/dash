@@ -1,4 +1,4 @@
-image: "ubuntu:focal"
+image: "debian:buster"
 
 variables:
   DOCKER_DRIVER: overlay2

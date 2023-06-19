@@ -1,4 +1,4 @@
-FROM ubuntu:focal
+FROM debian:buster
 
 # Needed to prevent tzdata hanging while expecting user input
 ENV DEBIAN_FRONTEND="noninteractive" TZ="Europe/London"
@@ -61,7 +61,7 @@ RUN useradd -u ${USER_ID} -g dash -s /bin/bash -m -d /home/dash dash
 RUN apt-get update && apt-get install $APT_ARGS \
     bc \
     gawk \
-    g++-9-multilib \
+    g++-8-multilib \
     g++-arm-linux-gnueabihf \
     g++-mingw-w64-x86-64 \
     jq \
@@ -73,7 +73,7 @@ RUN apt-get update && apt-get install $APT_ARGS \
     python3-zmq \
     parallel \
     valgrind \
-    wine-stable \
+    wine \
     wine32 \
     wine64 \
     xorriso

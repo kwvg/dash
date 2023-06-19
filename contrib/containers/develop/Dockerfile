@@ -1,6 +1,6 @@
 # syntax = edrevo/dockerfile-plus
 
-FROM ubuntu:focal
+FROM debian:buster
 
 INCLUDE+ ci/Dockerfile
 
