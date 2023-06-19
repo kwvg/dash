@@ -13,7 +13,7 @@ if ENABLE_MAN
 SUBDIRS += doc/man
 endif
 .PHONY: deploy FORCE
-.INTERMEDIATE: $(OSX_TEMP_ISO) $(COVERAGE_INFO)
+.INTERMEDIATE: $(COVERAGE_INFO)
 
 export PYTHONPATH
 
@@ -35,7 +35,6 @@ space := $(empty) $(empty)
 OSX_APP=Dash-Qt.app
 OSX_VOLNAME = $(subst $(space),-,$(PACKAGE_NAME))
 OSX_DMG = $(OSX_VOLNAME).dmg
-OSX_TEMP_ISO = $(OSX_DMG:.dmg=).temp.iso
 OSX_BACKGROUND_IMAGE=$(top_srcdir)/contrib/macdeploy/background.tiff
 OSX_DEPLOY_SCRIPT=$(top_srcdir)/contrib/macdeploy/macdeployqtplus
 OSX_INSTALLER_ICONS=$(top_srcdir)/src/qt/res/icons/dash.icns
@@ -132,11 +131,8 @@ $(APP_DIST_DIR)/Applications:
 
 $(APP_DIST_EXTRAS): $(APP_DIST_DIR)/$(OSX_APP)/Contents/MacOS/Dash-Qt
 
-$(OSX_TEMP_ISO): $(APP_DIST_EXTRAS)
+$(OSX_DMG): deploydir
 	$(XORRISOFS) -D -l -V "$(OSX_VOLNAME)" -no-pad -r -dir-mode 0755 -o $@ $(APP_DIST_DIR) -- $(if $(SOURCE_DATE_EPOCH),-volume_date all_file_dates =$(SOURCE_DATE_EPOCH))
-
-$(OSX_DMG): $(OSX_TEMP_ISO)
-	$(DMG) dmg "$<" "$@"
 
 $(APP_DIST_DIR)/.background/background.tiff:
 	$(MKDIR_P) $(@D)
@@ -148,7 +144,6 @@ $(APP_DIST_DIR)/$(OSX_APP)/Contents/MacOS/Dash-Qt: $(OSX_APP_BUILT) $(OSX_PACKAG
 deploydir: $(APP_DIST_EXTRAS)
 endif !BUILD_DARWIN
 
-appbundle: $(OSX_APP_BUILT)
 deploy: $(OSX_DMG)
 endif
 

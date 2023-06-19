@@ -604,8 +604,6 @@ parse, modify and abstract ELF, PE and MachO formats.")
         bzip2
         gzip
         xz
-        zlib
-        (list zlib "static")
         ;; Build tools
         gnu-make
         libtool-2.4.7
