@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.3
-FROM ubuntu:focal
+FROM debian:buster-backports
 LABEL maintainer="Dash Developers <dev@dash.org>"
 LABEL description="Dockerised DashCore"
 
