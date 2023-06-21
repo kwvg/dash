@@ -1,0 +1,15 @@
+# syntax = edrevo/dockerfile-plus
+
+FROM alpine:3.17
+
+INCLUDE+ Dockerfile.base
+
+ENV PATH /root/.local/bin:$PATH
+RUN mkdir -p /root/.local/bin
+
+COPY ./extras/motd.txt   /etc/motd
+COPY ./extras/entrypoint /root/.local/bin/entrypoint
+COPY ./extras/guix-check /root/.local/bin/guix-check
+COPY ./extras/guix-start /root/.local/bin/guix-start
+
+ENTRYPOINT ["/root/.local/bin/entrypoint"]

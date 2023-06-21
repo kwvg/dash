@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+export LC_ALL=C
+set -e -o pipefail
+
+# Read instructions
+cat /etc/motd
+
+# Start the Guix daemon
+/root/.config/guix/current/bin/guix-daemon \
+  --build-users-group='guixbuild' \
+  --substitute-urls='https://bordeaux.guix.gnu.org https://ci.guix.gnu.org' < /dev/null 2>&1 |
+  tee /var/log/guix.log > /dev/null &
+
+# Hand over control
+exec bash

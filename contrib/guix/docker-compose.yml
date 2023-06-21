@@ -1,0 +1,19 @@
+# Note: Using 'docker compose up' will leave you hanging, you need
+#       to use 'docker compose run guix-alpine' to drop into an
+#       interactive shell
+
+version: "3.9"
+services:
+  guix-alpine:
+    network_mode: host
+    build:
+      context: '.'
+      dockerfile: './Dockerfile.local'
+    tty: true         # Equivalent to -t
+    stdin_open: true  # Equivalent to -i
+    privileged: true  # Needed for Guix to run properly
+    volumes:
+      - "../..:/dash:rw"
+      - "guix-alpine-cache:/root/.cache/guix:rw"
+volumes:
+  guix-alpine-cache:
