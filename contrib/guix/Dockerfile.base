@@ -9,6 +9,8 @@ RUN apk --no-cache --update add \
       make \
       shadow
 
+SHELL ["/bin/bash", "-c"]
+
 ARG guix_download_path=ftp://ftp.gnu.org/gnu/guix
 ARG guix_version=1.4.0
 ARG guix_checksum_aarch64=72d807392889919940b7ec9632c45a259555e6b0942ea7bfd131101e08ebfcf4
