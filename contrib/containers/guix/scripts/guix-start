@@ -25,7 +25,7 @@ then
 fi
 
 cd "${WORKSPACE_PATH}"
-git status >> /dev/null
 git config --global --add safe.directory "${WORKSPACE_PATH}"
+git status >> /dev/null
 
 ./contrib/guix/guix-build
