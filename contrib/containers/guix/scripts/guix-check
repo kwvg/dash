@@ -2,7 +2,18 @@
 
 set -eo pipefail
 
-cd /src/dash
+if [[ -n "${1}" ]]; then
+    WORKSPACE_PATH="$1"
+else
+    WORKSPACE_PATH="/src/dash"
+fi
+
+if [[ ! -d "$WORKSPACE_PATH" ]]; then
+    echo "$0: $WORKSPACE_PATH is not a valid directory, exiting!"
+    exit 1
+fi
+
+cd "$WORKSPACE_PATH"
 COMMIT_ID="$(git rev-parse --short=12 HEAD)"
 
 printf "\nBinaries:\n\n"
