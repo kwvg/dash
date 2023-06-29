@@ -1,4 +1,4 @@
-base: ubuntu:focal
+base: debian:buster-backports
 language: c++
 engine: libFuzzer
 environment:

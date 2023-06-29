@@ -42,7 +42,7 @@ export RUN_SECURITY_TESTS=${RUN_SECURITY_TESTS:-false}
 export RUN_FUZZ_TESTS=${RUN_FUZZ_TESTS:-false}
 export RUN_SYMBOL_TESTS=${RUN_SYMBOL_TESTS:-true}
 export CONTAINER_NAME=${CONTAINER_NAME:-ci_unnamed}
-export DOCKER_NAME_TAG=${DOCKER_NAME_TAG:-ubuntu:focal}
+export DOCKER_NAME_TAG=${DOCKER_NAME_TAG:-debian:buster-backports}
 # Randomize test order.
 # See https://www.boost.org/doc/libs/1_71_0/libs/test/doc/html/boost_test/utf_reference/rt_param_reference/random.html
 export BOOST_TEST_RANDOM=${BOOST_TEST_RANDOM:-1}
