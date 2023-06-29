@@ -49,15 +49,6 @@ ARG DASH_HASH_VERSION=1.4.0
 RUN git clone --depth 1 --no-tags --branch=${DASH_HASH_VERSION} https://github.com/dashpay/dash_hash
 RUN cd dash_hash && pip3 install -r requirements.txt .
 
-ARG USER_ID=1000
-ARG GROUP_ID=1000
-
-# add user with specified (or default) user/group ids
-ENV USER_ID ${USER_ID}
-ENV GROUP_ID ${GROUP_ID}
-RUN groupadd -g ${GROUP_ID} dash
-RUN useradd -u ${USER_ID} -g dash -s /bin/bash -m -d /home/dash dash
-
 # Packages needed for all target builds
 RUN apt-get update && apt-get install $APT_ARGS \
     bc \
