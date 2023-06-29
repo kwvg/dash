@@ -1,3 +1,5 @@
+# syntax = edrevo/dockerfile-plus
+
 FROM ubuntu:focal
 
 # Needed to prevent tzdata hanging while expecting user input
@@ -110,4 +112,3 @@ RUN cd /tmp && \
     chmod +x llvm.sh && \
     /tmp/llvm.sh ${LLVM_VERSION} && \
     rm -rf /tmp/llvm.sh
-
