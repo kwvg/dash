@@ -10,6 +10,7 @@ INCLUDE+ ci/common/Dockerfile.finish
 USER root
 
 # Make development environment more standalone
+ENV APT_ARGS="-y --no-install-recommends --no-upgrade"
 RUN apt-get update && \
     apt-get install $APT_ARGS \
     apt-cacher-ng \
