@@ -1,6 +1,6 @@
-# syntax = edrevo/dockerfile-plus
+# syntax = docker/dockerfile:1.5
 
-FROM ubuntu:focal
+FROM base_image
 
 ENV APT_ARGS="-y --no-install-recommends --no-upgrade"
 

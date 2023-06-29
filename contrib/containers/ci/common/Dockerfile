@@ -1,6 +1,6 @@
-# syntax = edrevo/dockerfile-plus
+# syntax = docker/dockerfile:1.5
 
-FROM ubuntu:focal
+FROM base_image
 
 # Needed to prevent tzdata hanging while expecting user input
 ENV DEBIAN_FRONTEND="noninteractive" TZ="Europe/London"

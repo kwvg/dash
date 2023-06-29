@@ -1,9 +1,6 @@
-# syntax = edrevo/dockerfile-plus
+# syntax = docker/dockerfile:1.5
 
-FROM ubuntu:focal
-
-INCLUDE+ ci/common/Dockerfile
-INCLUDE+ ci/common/Dockerfile.finish
+FROM base_image
 
 # The inherited Dockerfile switches to non-privileged context and we've
 # just started configuring this image, give us root access

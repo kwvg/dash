@@ -1,6 +1,6 @@
-# syntax = edrevo/dockerfile-plus
+# syntax = docker/dockerfile:1.5
 
-FROM ubuntu:focal
+FROM base_image
 
 ARG USER_ID=1000
 ARG GROUP_ID=1000
