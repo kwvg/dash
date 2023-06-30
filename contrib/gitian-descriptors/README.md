@@ -26,7 +26,7 @@ Once you've got the right hardware and software:
 
     # Create base images
     cd gitian-builder
-    bin/make-base-vm --suite buster --arch amd64
+    bin/make-base-vm --distro debian --suite buster --arch amd64
     cd ..
 
     # Get inputs (see doc/release-process.md for exact inputs needed and where to get them)
