@@ -1,5 +1,5 @@
 # Note: Using 'docker compose up' will leave you hanging, you need
-#       to use 'docker compose run guix_ubuntu' to drop into an
+#       to use 'docker compose run guix_debian' to drop into an
 #       interactive shell
 
 FROM debian:buster-backports
@@ -65,7 +65,7 @@ RUN groupadd --system guixbuild && \
 # Create unprivileged user
 ARG USER_ID=1000 \
     GROUP_ID=1000 \
-    USERNAME=ubuntu
+    USERNAME=debian
 RUN groupadd -g ${GROUP_ID} ${USERNAME} && \
     useradd -u ${USER_ID} -g ${USERNAME} -s /bin/bash -m -d /home/${USERNAME} ${USERNAME}
 
