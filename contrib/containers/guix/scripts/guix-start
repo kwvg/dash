@@ -28,4 +28,4 @@ cd "${WORKSPACE_PATH}"
 git config --global --add safe.directory "${WORKSPACE_PATH}"
 git status >> /dev/null
 
-SUBSTITUTE_URLS="http://24.199.108.240 https://bordeaux.guix.gnu.org https://ci.guix.gnu.org" ./contrib/guix/guix-build
+ADDITIONAL_GUIX_COMMON_FLAGS="--max-jobs=$(nproc --all)" SUBSTITUTE_URLS="http://24.199.108.240 https://bordeaux.guix.gnu.org https://ci.guix.gnu.org" ./contrib/guix/guix-build
