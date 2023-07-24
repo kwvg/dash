@@ -24,11 +24,17 @@ dnl make the compilation flags quiet unless V=1 is used
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 dnl Compiler checks (here before libtool).
+if test "x${CFLAGS+set}" = "xset"; then
+  CFLAGS_overridden=yes
+else
+  CFLAGS_overridden=no
+fi
 if test "x${CXXFLAGS+set}" = "xset"; then
   CXXFLAGS_overridden=yes
 else
   CXXFLAGS_overridden=no
 fi
+
 AC_PROG_CXX
 
 AM_PROG_CC_C_O
@@ -58,23 +64,64 @@ AC_PATH_TOOL(STRIP, strip)
 
 AM_PROG_AS
 
-AC_ARG_ENABLE(tests,
-  [AS_HELP_STRING([--disable-tests],
-  [do not compile tests (default is to compile)])],
+AC_ARG_ENABLE([tests],
+  [AS_HELP_STRING([--enable-tests],
+  [Compile with tests [default=yes]])],
   [use_tests=$enableval],
   [use_tests=yes])
 
-AC_ARG_ENABLE(bench,
-  [AS_HELP_STRING([--disable-bench],
-  [do not compile benchmarks (default is to compile)])],
+AC_ARG_ENABLE([bench],
+  [AS_HELP_STRING([--enable-bench],
+  [Compile with benchmarks [default=yes]])],
   [use_bench=$enableval],
   [use_bench=yes])
 
 AC_ARG_ENABLE([hardening],
-  [AS_HELP_STRING([--disable-hardening],
-  [do not attempt to harden the resulting executables (default is to harden when possible)])],
+  [AS_HELP_STRING([--enable-hardening],
+  [Enable hardening flags and arguments [default=auto]])],
   [use_hardening=$enableval],
   [use_hardening=auto])
+
+AC_ARG_ENABLE([optimizations],
+  [AS_HELP_STRING([--enable-optimizations],
+  [Enable compiler and library optimizations [default=yes]])],
+  [use_optimizations=$enableval],
+  [use_optimizations=yes])
+
+AC_ARG_ENABLE([debug],
+  [AS_HELP_STRING([--enable-debug],
+  [Build with debugging support [default=no]])],
+  [use_debug=$enableval],
+  [use_debug=no])
+
+if [[[ "$use_debug" == "yes" || "$use_optimizations" == "no" ]]]; then
+  dnl Clear default -g -O2 flags
+  if test x"$CFLAGS_overridden" = x"no"; then
+    CFLAGS=""
+  fi
+  if test x"$CXXFLAGS_overridden" = x"no"; then
+    CXXFLAGS=""
+  fi
+
+  dnl Disable optimizations
+  AX_CHECK_COMPILE_FLAG([-O0], [[DEBUG_FLAGS="$DEBUG_FLAGS -O0"]])
+
+  if [[[ "$use_debug" == "yes" ]]]; then
+    dnl Prefer -g3, fall back to -g if that is unavailable.
+    AX_CHECK_COMPILE_FLAG(
+      [-g3],
+      [[DEBUG_FLAGS="$DEBUG_FLAGS -g3"]],
+      [AX_CHECK_COMPILE_FLAG([-g],[[DEBUG_FLAGS="$DEBUG_FLAGS -g"]])])
+
+    AX_CHECK_COMPILE_FLAG([-ftrapv],[DEBUG_FLAGS="$DEBUG_FLAGS -ftrapv"])
+  else
+    dnl Reintroduce -g flag deleted during C(XX)FLAGS reset
+    AX_CHECK_COMPILE_FLAG([-g],[[DEBUG_FLAGS="$DEBUG_FLAGS -g"]])
+
+    dnl -ftrapv and -fwrapv conflict, so we only set this if use_debug=no
+    AX_CHECK_COMPILE_FLAG([-fwrapv],[DEBUG_FLAGS="$DEBUG_FLAGS -fwrapv"])
+  fi
+fi
 
 dnl Define enum mappings for relic config
 AC_DEFINE([RLC_VERSION], ["0.5.0"], [Relic Version])
@@ -114,6 +161,9 @@ AC_ARG_WITH([backend],
 )
 
 if test x"$want_backend" = x"auto"; then
+if test x"$use_optimizations" = x"no"; then
+  want_backend=easy
+else
   GMP_CHECK
   if test x"$has_gmp" = x"yes"; then
     case $host in
@@ -134,6 +184,7 @@ if test x"$want_backend" = x"auto"; then
   else
     want_backend=easy
   fi
+fi
 else
   case $want_backend in
   gmp)
@@ -257,20 +308,14 @@ AC_DEFINE([BRUCH],   [6], [Hardware-friendly inversion by Brunner-Curiger-Hofste
 AC_DEFINE([CTAIA],   [7], [Constant-time version of almost inverse.])
 AC_DEFINE([LOWER],   [8], [Use implementation provided by the lower layer.])
 
-dnl Define relic switches
-AC_ARG_ENABLE([debug],
-  [AS_HELP_STRING([--enable-debug],
-  [Build with debugging support (default is no)])],
-  [use_debug=$enableval],
-  [use_debug=no])
-
-if test x$use_debug = xyes; then
+if test x"$use_debug" = x"yes"; then
   AC_DEFINE([DEBUG],   [1], [Define this symbol if debugging support is enabled])
 fi
 
+dnl Define relic switches
 AC_ARG_ENABLE([profiling],
   [AS_HELP_STRING([--enable-profiling],
-  [Build with profiling support (default is no)])],
+  [Build with profiling support [default=no]])],
   [use_profiling=$enableval],
   [use_profiling=no])
 
@@ -280,7 +325,7 @@ fi
 
 AC_ARG_ENABLE([check],
   [AS_HELP_STRING([--enable-check],
-  [Build with error-checking support (default is no)])],
+  [Build with error-checking support [default=no]])],
   [use_check=$enableval],
   [use_check=no])
 
@@ -290,7 +335,7 @@ fi
 
 AC_ARG_ENABLE([verbs],
   [AS_HELP_STRING([--enable-verbs],
-  [Build with detailed error messages (default is no)])],
+  [Build with detailed error messages [default=no]])],
   [use_verbs=$enableval],
   [use_verbs=no])
 
@@ -300,7 +345,7 @@ fi
 
 AC_ARG_ENABLE([overhead],
   [AS_HELP_STRING([--enable-overhead],
-  [Build with overhead estimation (default is no)])],
+  [Build with overhead estimation [default=no]])],
   [use_overhead=$enableval],
   [use_overhead=no])
 
@@ -310,7 +355,7 @@ fi
 
 AC_ARG_ENABLE([quiet],
   [AS_HELP_STRING([--enable-quiet],
-  [Build with printing disabled (default is yes)])],
+  [Build with printing disabled [default=yes]])],
   [use_quiet=$enableval],
   [use_quiet=yes])
 
@@ -320,7 +365,7 @@ fi
 
 AC_ARG_ENABLE([color],
   [AS_HELP_STRING([--enable-color],
-  [Build with colored output support (default is yes)])],
+  [Build with colored output support [default=yes]])],
   [use_color=$enableval],
   [use_color=yes])
 
@@ -330,7 +375,7 @@ fi
 
 AC_ARG_ENABLE([big_endian],
   [AS_HELP_STRING([--enable-big-endian],
-  [Build with big-endian support (default is no)])],
+  [Build with big-endian support [default=no]])],
   [use_big_endian=$enableval],
   [use_big_endian=no])
 
@@ -340,48 +385,40 @@ fi
 
 use_pkgconfig=yes
 
-case $host_cpu in
-  x86_64)
-    dnl Support for AMD64 (also known as x86_64 on some platforms) processors
-    CPU_ARCH="x64"
-    AC_DEFINE([ARCH], [X64], [Architecture.])
-    AC_DEFINE([WSIZE], [64], [Size of word in this architecture.])
-    ;;
-  aarch*)
-    dnl Relic doesn't support aarch64 yet, set CPU_ARCH to none.
-    dnl Support for 64-bit ARM processors
-    CPU_ARCH="none"
-    AC_DEFINE([ARCH], [ARM], [Architecture.])
-    AC_DEFINE([WSIZE], [64], [Size of word in this architecture.])
-    ;;
-  i?86)
-    dnl Support for Intel x86 processors
-    CPU_ARCH="x86"
-    AC_DEFINE([ARCH], [X86], [Architecture.])
-    AC_DEFINE([WSIZE], [32], [Size of word in this architecture.])
-    ;;
-  arm*)
-    dnl Support for 32-bit native ARM processors
-    CPU_ARCH="arm"
-    AC_DEFINE([ARCH], [ARM], [Architecture.])
-    AC_DEFINE([WSIZE], [32], [Size of word in this architecture.])
-    ;;
-  *32*)
-    dnl Support for an undefined 32-bit architecture
-    CPU_ARCH="none"
-    AC_DEFINE([ARCH], [RELIC_NONE], [Architecture.])
-    AC_DEFINE([WSIZE], [32], [Size of word in this architecture.])
-    ;;
-  *64*)
-    dnl Support for an undefined 64-bit architecture
-    CPU_ARCH="none"
-    AC_DEFINE([ARCH], [RELIC_NONE], [Architecture.])
-    AC_DEFINE([WSIZE], [64], [Size of word in this architecture.])
-    ;;
-  *)
-    AC_MSG_ERROR([Unable to determine host architecture, may not be supported!])
-    ;;
-esac
+if [[[ "$host_cpu" == x86_64 && "$use_optimizations" == "yes" ]]]; then
+  dnl Support for AMD64 (also known as x86_64 on some platforms) processors
+  CPU_ARCH="x64"
+  AC_DEFINE([ARCH], [X64], [Architecture.])
+  AC_DEFINE([WSIZE], [64], [Size of word in this architecture.])
+elif [[[ "$host_cpu" == aarch* && "$use_optimizations" == "yes" ]]]; then
+  dnl Relic doesn't support aarch64 yet, set CPU_ARCH to none.
+  dnl Support for 64-bit ARM processors
+  CPU_ARCH="none"
+  AC_DEFINE([ARCH], [ARM], [Architecture.])
+  AC_DEFINE([WSIZE], [64], [Size of word in this architecture.])
+elif [[[ "$host_cpu" == i?86 && "$use_optimizations" == "yes" ]]]; then
+  dnl Support for Intel x86 processors
+  CPU_ARCH="x86"
+  AC_DEFINE([ARCH], [X86], [Architecture.])
+  AC_DEFINE([WSIZE], [32], [Size of word in this architecture.])
+elif [[[ "$host_cpu" == arm* && "$use_optimizations" == "yes" ]]]; then
+  dnl Support for 32-bit native ARM processors
+  CPU_ARCH="arm"
+  AC_DEFINE([ARCH], [ARM], [Architecture.])
+  AC_DEFINE([WSIZE], [32], [Size of word in this architecture.])
+elif [[[ "$host_cpu" == *64* ]]]; then
+  dnl Support for an undefined 64-bit architecture
+  CPU_ARCH="none"
+  AC_DEFINE([ARCH], [RELIC_NONE], [Architecture.])
+  AC_DEFINE([WSIZE], [64], [Size of word in this architecture.])
+elif [[[ "$host_cpu" == *32* || "$host_cpu" == arm* || "$host_cpu" == i?86 ]]]; then
+  dnl Support for an undefined 32-bit architecture
+  CPU_ARCH="none"
+  AC_DEFINE([ARCH], [RELIC_NONE], [Architecture.])
+  AC_DEFINE([WSIZE], [32], [Size of word in this architecture.])
+else
+  AC_MSG_ERROR([Unable to determine host architecture, may not be supported!])
+fi
 
 case $host in
   *darwin*)
@@ -615,19 +652,19 @@ AC_SEARCH_LIBS([clock_gettime],[rt])
 
 if test "$TARGET_OS" != "windows"; then
   dnl All windows code is PIC, forcing it on just adds useless compile warnings
-  AX_CHECK_COMPILE_FLAG([-fPIC], [PIC_FLAGS="-fPIC"])
+  AX_CHECK_COMPILE_FLAG([-fPIC], [HARDENED_FLAGS="$HARDENED_FLAGS -fPIC"])
 fi
 
 dnl All versions of gcc that we commonly use for building are subject to bug
 dnl https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90348. To work around that, set
 dnl -fstack-reuse=none for all gcc builds. (Only gcc understands this flag)
-AX_CHECK_COMPILE_FLAG([-fstack-reuse=none], [HARDENED_CXXFLAGS="$HARDENED_CXXFLAGS -fstack-reuse=none"])
+AX_CHECK_COMPILE_FLAG([-fstack-reuse=none], [HARDENED_FLAGS="$HARDENED_FLAGS -fstack-reuse=none"])
 if test "$use_hardening" != "no"; then
   use_hardening=yes
-  AX_CHECK_COMPILE_FLAG([-Wstack-protector], [HARDENED_CXXFLAGS="$HARDENED_CXXFLAGS -Wstack-protector"])
-  AX_CHECK_COMPILE_FLAG([-fstack-protector-all], [HARDENED_CXXFLAGS="$HARDENED_CXXFLAGS -fstack-protector-all"])
+  AX_CHECK_COMPILE_FLAG([-Wstack-protector], [HARDENED_FLAGS="$HARDENED_FLAGS -Wstack-protector"])
+  AX_CHECK_COMPILE_FLAG([-fstack-protector-all], [HARDENED_FLAGS="$HARDENED_FLAGS -fstack-protector-all"])
 
-  AX_CHECK_COMPILE_FLAG([-fcf-protection=full], [HARDENED_CXXFLAGS="$HARDENED_CXXFLAGS -fcf-protection=full"])
+  AX_CHECK_COMPILE_FLAG([-fcf-protection=full], [HARDENED_FLAGS="$HARDENED_FLAGS -fcf-protection=full"])
 
   case $host in
     *mingw*)
@@ -635,7 +672,7 @@ if test "$use_hardening" != "no"; then
       dnl See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90458 for more details.
       ;;
     *)
-      AX_CHECK_COMPILE_FLAG([-fstack-clash-protection], [HARDENED_CXXFLAGS="$HARDENED_CXXFLAGS -fstack-clash-protection"], [], [])
+      AX_CHECK_COMPILE_FLAG([-fstack-clash-protection], [HARDENED_FLAGS="$HARDENED_FLAGS -fstack-clash-protection"], [], [])
       ;;
   esac
 
@@ -646,7 +683,7 @@ if test "$use_hardening" != "no"; then
   AX_CHECK_LINK_FLAG([-Wl,-z,relro], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,-z,relro"], [], [])
   AX_CHECK_LINK_FLAG([-Wl,-z,now], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,-z,now"], [], [])
   AX_CHECK_LINK_FLAG([-Wl,-z,separate-code], [HARDENED_LDFLAGS="$HARDENED_LDFLAGS -Wl,-z,separate-code"], [], [])
-  AX_CHECK_LINK_FLAG([-fPIE -pie], [PIE_FLAGS="-fPIE"; HARDENED_LDFLAGS="$HARDENED_LDFLAGS -pie"], [], [])
+  AX_CHECK_LINK_FLAG([-fPIE -pie], [HARDENED_FLAGS="$HARDENED_FLAGS -fPIE"; HARDENED_LDFLAGS="$HARDENED_LDFLAGS -pie"], [], [])
 
   case $host in
     *mingw*)
@@ -753,21 +790,20 @@ AM_CONDITIONAL(WITH_FBX, test 1 -eq 1)
 AM_CONDITIONAL([USE_TESTS], [test x$BUILD_TEST = xyes])
 AM_CONDITIONAL([USE_BENCH], [test x$BUILD_BENCH = xyes])
 AM_CONDITIONAL([HARDEN], [test "$use_hardening" = "yes"])
+AM_CONDITIONAL([OPTIMIZE], [test "$use_optimizations" = "yes"])
 
 AM_CONDITIONAL([ARITH_EASY], [test "$want_backend" = "easy"])
 AM_CONDITIONAL([ARITH_GMP], [test "$want_backend" = "gmp"])
 
 AC_SUBST(CPU_ARCH)
+AC_SUBST(DEBUG_FLAGS)
 AC_SUBST(RAND_PATH, hashd)
 AC_SUBST(RELIC_CPPFLAGS)
 AC_SUBST(WARN_CFLAGS)
 AC_SUBST(NOWARN_CFLAGS)
 AC_SUBST(LIBTOOL_APP_LDFLAGS)
-AC_SUBST(HARDENED_CXXFLAGS)
-AC_SUBST(HARDENED_CPPFLAGS)
+AC_SUBST(HARDENED_FLAGS)
 AC_SUBST(HARDENED_LDFLAGS)
-AC_SUBST(PIC_FLAGS)
-AC_SUBST(PIE_FLAGS)
 AC_SUBST(CORE_LDFLAGS)
 AC_SUBST(CORE_CPPFLAGS)
 AC_SUBST(CORE_CXXFLAGS)
