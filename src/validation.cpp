@@ -1113,7 +1113,7 @@ NOTE:   unlike bitcoin we are using PREVIOUS block height here,
         might be a good idea to change this to use prev bits
         but current height to avoid confusion.
 */
-CAmount GetBlockSubsidy(int nPrevBits, int nPrevHeight, const CChainParams& params, bool fSuperblockPartOnly)
+static CAmount GetBaseSubsidy(int nPrevBits, int nPrevHeight, const CChainParams& params)
 {
     double dDiff;
     CAmount nSubsidyBase;
@@ -1145,7 +1145,12 @@ CAmount GetBlockSubsidy(int nPrevBits, int nPrevHeight, const CChainParams& para
         else if(nSubsidyBase < 5) nSubsidyBase = 5;
     }
 
-    CAmount nSubsidy = nSubsidyBase * COIN;
+    return nSubsidyBase * COIN;
+}
+
+CAmount GetBlockSubsidy(int nPrevBits, int nPrevHeight, const CChainParams& params, bool fSuperblockPartOnly)
+{
+    CAmount nSubsidy = GetBaseSubsidy(nPrevBits, nPrevHeight, params);
     const Consensus::Params& consensusParams = params.GetConsensus();
 
     // yearly decline of production by ~7.1% per year, projected ~18M coins max by year 2050+.
