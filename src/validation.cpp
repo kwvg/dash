@@ -1164,6 +1164,12 @@ CAmount GetBlockSubsidy(int nPrevBits, int nPrevHeight, const CChainParams& para
     return fSuperblockPartOnly ? nSuperblockPart : nSubsidy - nSuperblockPart;
 }
 
+CAmount GetBlockSubsidy(const CBlockIndex* pindexPrev, const CChainParams& params, bool fSuperblockPartOnly)
+{
+    if (pindexPrev == nullptr) return params.GenesisBlock().vtx[0]->GetValueOut();
+    return GetBlockSubsidy(pindexPrev->nBits, pindexPrev->nHeight, params, fSuperblockPartOnly);
+}
+
 CAmount GetMasternodePayment(int nHeight, CAmount blockValue, int nReallocActivationHeight)
 {
     CAmount ret = blockValue/5; // start at 20%
@@ -2402,7 +2408,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     // DASH : MODIFIED TO CHECK MASTERNODE PAYMENTS AND SUPERBLOCKS
 
     // TODO: resync data (both ways?) and try to reprocess this block later.
-    CAmount blockReward = nFees + GetBlockSubsidy(pindex->pprev->nBits, pindex->pprev->nHeight, m_params);
+    CAmount blockReward = nFees + GetBlockSubsidy(pindex->pprev, m_params);
     std::string strError = "";
 
     int64_t nTime5_2 = GetTimeMicros(); nTimeSubsidy += nTime5_2 - nTime5_1;
