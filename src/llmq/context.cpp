@@ -19,13 +19,13 @@
 #include <llmq/utils.h>
 #include <masternode/sync.h>
 
-LLMQContext::LLMQContext(CEvoDB& evo_db, CTxMemPool& mempool, CConnman& connman, CSporkManager& sporkman,
+LLMQContext::LLMQContext(CChainState& chainstate, CConnman& connman, CEvoDB& evo_db, CTxMemPool& mempool, CSporkManager& sporkman,
                          const std::unique_ptr<PeerManager>& peerman, bool unit_tests, bool wipe) :
     bls_worker{std::make_shared<CBLSWorker>()},
     dkg_debugman{std::make_unique<llmq::CDKGDebugManager>()},
     quorum_block_processor{[&]() -> llmq::CQuorumBlockProcessor* const {
         assert(llmq::quorumBlockProcessor == nullptr);
-        llmq::quorumBlockProcessor = std::make_unique<llmq::CQuorumBlockProcessor>(evo_db, connman, peerman);
+        llmq::quorumBlockProcessor = std::make_unique<llmq::CQuorumBlockProcessor>(chainstate, connman, evo_db, peerman);
         return llmq::quorumBlockProcessor.get();
     }()},
     qdkgsman{std::make_unique<llmq::CDKGSessionManager>(connman, *bls_worker, *dkg_debugman, *quorum_block_processor, sporkman, peerman, unit_tests, wipe)},

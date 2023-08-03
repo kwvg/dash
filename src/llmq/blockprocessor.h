@@ -17,9 +17,10 @@
 #include <optional>
 
 class BlockValidationState;
-class CNode;
+class CChainState;
 class CConnman;
 class CEvoDB;
+class CNode;
 class PeerManager;
 
 extern RecursiveMutex cs_main;
@@ -35,6 +36,7 @@ class CQuorumBlockProcessor
 private:
     CEvoDB& m_evoDb;
     CConnman& connman;
+    CChainState& m_chainstate;
 
     const std::unique_ptr<PeerManager>& m_peerman;
 
@@ -46,7 +48,7 @@ private:
     mutable std::map<Consensus::LLMQType, unordered_lru_cache<uint256, bool, StaticSaltedHasher>> mapHasMinedCommitmentCache GUARDED_BY(minableCommitmentsCs);
 
 public:
-    explicit CQuorumBlockProcessor(CEvoDB& _evoDb, CConnman& _connman, const std::unique_ptr<PeerManager>& peerman);
+    explicit CQuorumBlockProcessor(CChainState& chainstate, CConnman& _connman, CEvoDB& evoDb, const std::unique_ptr<PeerManager>& peerman);
 
     bool UpgradeDB();
 

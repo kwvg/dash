@@ -1941,7 +1941,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
                 llmq::quorumSnapshotManager.reset();
                 llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(*node.evodb));
                 node.llmq_ctx.reset();
-                node.llmq_ctx.reset(new LLMQContext(*node.evodb, *node.mempool, *node.connman, *::sporkManager, node.peerman, false, fReset || fReindexChainState));
+                node.llmq_ctx.reset(new LLMQContext(Assert(node.chainman)->ActiveChainstate(), *node.connman, *node.evodb, *node.mempool, *::sporkManager, node.peerman, false, fReset || fReindexChainState));
 
                 if (fReset) {
                     pblocktree->WriteReindexing(true);
