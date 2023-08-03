@@ -208,7 +208,7 @@ CTransactionRef GetTransaction(const CBlockIndex* const block_index, const CTxMe
 double ConvertBitsToDouble(unsigned int nBits);
 CAmount GetBlockSubsidy(int nPrevBits, int nPrevHeight, const CChainParams& params, bool fSuperblockPartOnly = false);
 CAmount GetBlockSubsidy(const CBlockIndex* pindexPrev, const CChainParams& params, bool fSuperblockPartOnly = false);
-CAmount GetMasternodePayment(int nHeight, CAmount blockValue, int nReallocActivationHeight = std::numeric_limits<int>::max() /* not activated */);
+CAmount GetMasternodePayment(int nHeight, CAmount blockValue, const Consensus::Params& consensusParams, int nReallocActivationHeight = std::numeric_limits<int>::max() /* not activated */);
 
 /** Guess verification progress (as a fraction between 0.0=genesis and 1.0=current tip). */
 double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex* pindex);

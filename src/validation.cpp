@@ -1175,12 +1175,12 @@ CAmount GetBlockSubsidy(const CBlockIndex* pindexPrev, const CChainParams& param
     return GetBlockSubsidy(pindexPrev->nBits, pindexPrev->nHeight, params, fSuperblockPartOnly);
 }
 
-CAmount GetMasternodePayment(int nHeight, CAmount blockValue, int nReallocActivationHeight)
+CAmount GetMasternodePayment(int nHeight, CAmount blockValue, const Consensus::Params& consensusParams, int nReallocActivationHeight)
 {
     CAmount ret = blockValue/5; // start at 20%
 
-    int nMNPIBlock = Params().GetConsensus().nMasternodePaymentsIncreaseBlock;
-    int nMNPIPeriod = Params().GetConsensus().nMasternodePaymentsIncreasePeriod;
+    int nMNPIBlock = consensusParams.nMasternodePaymentsIncreaseBlock;
+    int nMNPIPeriod = consensusParams.nMasternodePaymentsIncreasePeriod;
 
                                                                       // mainnet:
     if(nHeight > nMNPIBlock)                  ret += blockValue / 20; // 158000 - 25.0% - 2014-10-24
@@ -1198,7 +1198,7 @@ CAmount GetMasternodePayment(int nHeight, CAmount blockValue, int nReallocActiva
         return ret;
     }
 
-    int nSuperblockCycle = Params().GetConsensus().nSuperblockCycle;
+    int nSuperblockCycle = consensusParams.nSuperblockCycle;
     // Actual realocation starts in the cycle next to one activation happens in
     int nReallocStart = nReallocActivationHeight - nReallocActivationHeight % nSuperblockCycle + nSuperblockCycle;
 
