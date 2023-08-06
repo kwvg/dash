@@ -99,6 +99,7 @@ void DashTestSetup(NodeContext& node)
 {
     CChainState& chainstate = Assert(node.chainman)->ActiveChainstate();
 
+    ::coinJoinServer = std::make_unique<CCoinJoinServer>(chainstate, *node.connman, *node.mempool, *::masternodeSync);
     ::deterministicMNManager = std::make_unique<CDeterministicMNManager>(chainstate, *node.connman, *node.evodb);
     node.llmq_ctx = std::make_unique<LLMQContext>(chainstate, *node.connman, *node.evodb, *sporkManager, *node.mempool, node.peerman, true, false);
 }
@@ -109,6 +110,7 @@ void DashTestSetupClose(NodeContext& node)
     node.llmq_ctx->Stop();
     node.llmq_ctx.reset();
     ::deterministicMNManager.reset();
+    ::coinJoinServer.reset();
 }
 
 BasicTestingSetup::BasicTestingSetup(const std::string& chainName, const std::vector<const char*>& extra_args)
@@ -199,7 +201,6 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
     ::sporkManager = std::make_unique<CSporkManager>();
     ::governance = std::make_unique<CGovernanceManager>();
     ::masternodeSync = std::make_unique<CMasternodeSync>(*m_node.connman);
-    ::coinJoinServer = std::make_unique<CCoinJoinServer>(*m_node.mempool, *m_node.connman, *::masternodeSync);
 #ifdef ENABLE_WALLET
     ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*m_node.connman, *::masternodeSync);
 #endif // ENABLE_WALLET
@@ -222,7 +223,6 @@ ChainTestingSetup::~ChainTestingSetup()
 #ifdef ENABLE_WALLET
     ::coinJoinClientQueueManager.reset();
 #endif // ENABLE_WALLET
-    ::coinJoinServer.reset();
     ::masternodeSync.reset();
     ::governance.reset();
     ::sporkManager.reset();
