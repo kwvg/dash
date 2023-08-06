@@ -139,7 +139,6 @@ BasicTestingSetup::BasicTestingSetup(const std::string& chainName, const std::ve
     fCheckBlockIndex = true;
     m_node.evodb = std::make_unique<CEvoDB>(1 << 20, true, true);
     connman = std::make_unique<CConnman>(0x1337, 0x1337, *m_node.addrman);
-    deterministicMNManager.reset(new CDeterministicMNManager(*m_node.evodb, *connman));
     llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(*m_node.evodb));
     creditPoolManager = std::make_unique<CCreditPoolManager>(*m_node.evodb);
     static bool noui_connected = false;
@@ -154,7 +153,6 @@ BasicTestingSetup::~BasicTestingSetup()
 {
     connman.reset();
     llmq::quorumSnapshotManager.reset();
-    deterministicMNManager.reset();
     creditPoolManager.reset();
     m_node.evodb.reset();
 
