@@ -220,7 +220,6 @@ ChainTestingSetup::~ChainTestingSetup()
     m_node.connman.reset();
     m_node.addrman.reset();
     m_node.args = nullptr;
-    m_node.banman.reset();
     UnloadBlockIndex(m_node.mempool.get(), *m_node.chainman);
     m_node.mempool.reset();
     m_node.scheduler.reset();
@@ -262,6 +261,13 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
     if (!::ChainstateActive().ActivateBestChain(state)) {
         throw std::runtime_error(strprintf("ActivateBestChain failed. (%s)", state.ToString()));
     }
+}
+
+TestingSetup::~TestingSetup()
+{
+    m_node.connman->Stop();
+    m_node.peerman.reset();
+    m_node.banman.reset();
 }
 
 TestChainSetup::TestChainSetup(int num_blocks, const std::vector<const char*>& extra_args)
