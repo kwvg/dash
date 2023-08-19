@@ -7,6 +7,7 @@
 
 #include <coinjoin/util.h>
 #include <coinjoin/coinjoin.h>
+#include <util/check.h>
 #include <util/translation.h>
 
 #include <atomic>
@@ -110,6 +111,7 @@ class CCoinJoinClientSession : public CCoinJoinBaseSession
 private:
     CWallet& mixingWallet;
     CJClientManager& m_clientman;
+    CCoinJoinClientManager& m_manager;
 
     const CMasternodeSync& m_mn_sync;
 
@@ -160,7 +162,7 @@ private:
 
 public:
     explicit CCoinJoinClientSession(CWallet& pwallet, CJClientManager& clientman, const CMasternodeSync& mn_sync) :
-        mixingWallet(pwallet), m_clientman(clientman), m_mn_sync(mn_sync) {}
+        mixingWallet(pwallet), m_clientman(clientman), m_manager(*Assert(clientman.Get(pwallet))), m_mn_sync(mn_sync) {}
 
     void ProcessMessage(CNode& peer, PeerManager& peerman, CConnman& connman, const CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv);
 

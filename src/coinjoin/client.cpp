@@ -672,9 +672,8 @@ void CCoinJoinClientSession::CompletedTransaction(PoolMessage nMessageID)
 {
     if (fMasternodeMode) return;
 
-    auto manager = m_clientman.Get(mixingWallet);
-    if (nMessageID == MSG_SUCCESS && manager != nullptr) {
-        manager->UpdatedSuccessBlock();
+    if (nMessageID == MSG_SUCCESS) {
+        m_manager.UpdatedSuccessBlock();
         keyHolderStorage.KeepAll();
         WalletCJLogPrint(mixingWallet, "CompletedTransaction -- success\n");
     } else {
@@ -1087,12 +1086,7 @@ bool CCoinJoinClientSession::JoinExistingQueue(CAmount nBalanceNeedsAnonymized, 
             continue;
         }
 
-        auto manager = m_clientman.Get(mixingWallet);
-        if (manager == nullptr) {
-            LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::JoinExistingQueue -- client manager for wallet %s does not exist\n", mixingWallet.GetName());
-            continue;
-        }
-        manager->AddUsedMasternode(dsq.masternodeOutpoint);
+        m_manager.AddUsedMasternode(dsq.masternodeOutpoint);
 
         if (connman.IsMasternodeOrDisconnectRequested(dmn->pdmnState->addr)) {
             WalletCJLogPrint(mixingWallet, "CCoinJoinClientSession::JoinExistingQueue -- skipping masternode connection, addr=%s\n", dmn->pdmnState->addr.ToString());
@@ -1135,20 +1129,14 @@ bool CCoinJoinClientSession::StartNewQueue(CAmount nBalanceNeedsAnonymized, CCon
 
     // otherwise, try one randomly
     while (nTries < 10) {
-        auto manager = m_clientman.Get(mixingWallet);
-        if (manager == nullptr) {
-            LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::StartNewQueue -- client manager for wallet %s does not exist\n", mixingWallet.GetName());
-            return false;
-        }
-
-        auto dmn = manager->GetRandomNotUsedMasternode();
+        auto dmn = m_manager.GetRandomNotUsedMasternode();
         if (!dmn) {
             strAutoDenomResult = _("Can't find random Masternode.");
             WalletCJLogPrint(mixingWallet, "CCoinJoinClientSession::StartNewQueue -- %s\n", strAutoDenomResult.original);
             return false;
         }
 
-        manager->AddUsedMasternode(dmn->collateralOutpoint);
+        m_manager.AddUsedMasternode(dmn->collateralOutpoint);
 
         // skip next mn payments winners
         if (dmn->pdmnState->nLastPaidHeight + nWeightedMnCount < mnList.GetHeight() + WinnersToSkip()) {
@@ -1524,12 +1512,7 @@ bool CCoinJoinClientSession::MakeCollateralAmounts(const CBlockPolicyEstimator& 
         return false;
     }
 
-    auto manager = m_clientman.Get(mixingWallet);
-    if (manager == nullptr) {
-        LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::%s -- client manager for wallet %s does not exist: %s\n", __func__, mixingWallet.GetName());
-        return false;
-    }
-    manager->UpdatedSuccessBlock();
+    m_manager.UpdatedSuccessBlock();
 
     WalletCJLogPrint(mixingWallet, "CCoinJoinClientSession::%s -- txid: %s\n", __func__, strResult.original);
 
@@ -1806,12 +1789,7 @@ bool CCoinJoinClientSession::CreateDenominated(CBlockPolicyEstimator& fee_estima
     }
 
     // use the same nCachedLastSuccessBlock as for DS mixing to prevent race
-    auto manager = m_clientman.Get(mixingWallet);
-    if (manager == nullptr) {
-        LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::%s -- client manager for wallet %s does not exist: %s\n", __func__, mixingWallet.GetName());
-        return false;
-    }
-    manager->UpdatedSuccessBlock();
+    m_manager.UpdatedSuccessBlock();
 
     WalletCJLogPrint(mixingWallet, "CCoinJoinClientSession::%s -- txid: %s\n", __func__, strResult.original);
 
