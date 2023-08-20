@@ -28,7 +28,6 @@
 #include <univalue.h>
 
 std::unique_ptr<CJClientManager> coinJoinClientManagers;
-std::unique_ptr<CCoinJoinClientQueueManager> coinJoinClientQueueManager;
 
 void CCoinJoinClientQueueManager::ProcessMessage(const CNode& peer, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv)
 {
@@ -981,7 +980,7 @@ bool CCoinJoinClientManager::DoAutomaticDenominating(CConnman& connman, CBlockPo
     AssertLockNotHeld(cs_deqsessions);
     LOCK(cs_deqsessions);
     if (int(deqSessions.size()) < CCoinJoinClientOptions::GetSessions()) {
-        deqSessions.emplace_back(m_wallet, m_clientman, m_mn_sync);
+        deqSessions.emplace_back(m_wallet, m_clientman, m_mn_sync, m_queueman);
     }
     for (auto& session : deqSessions) {
         if (!CheckAutomaticBackup()) return false;
@@ -1051,14 +1050,14 @@ static int WinnersToSkip()
 bool CCoinJoinClientSession::JoinExistingQueue(CAmount nBalanceNeedsAnonymized, CConnman& connman)
 {
     if (!CCoinJoinClientOptions::IsEnabled()) return false;
-    if (coinJoinClientQueueManager == nullptr) return false;
+    if (m_queueman == nullptr) return false;
 
     const auto mnList = deterministicMNManager->GetListAtChainTip();
     const int nWeightedMnCount = mnList.GetValidWeightedMNsCount();
 
     // Look through the queues and see if anything matches
     CCoinJoinQueue dsq;
-    while (coinJoinClientQueueManager->GetQueueItemAndTry(dsq)) {
+    while (m_queueman->GetQueueItemAndTry(dsq)) {
         auto dmn = mnList.GetValidMNByCollateral(dsq.masternodeOutpoint);
 
         if (!dmn) {
@@ -1883,7 +1882,7 @@ void CCoinJoinClientManager::GetJsonInfo(UniValue& obj) const
 void CJClientManager::Add(CWallet& wallet) {
     m_wallet_manager_map.emplace(
         wallet.GetName(),
-        std::make_unique<CCoinJoinClientManager>(wallet, *this, m_mn_sync)
+        std::make_unique<CCoinJoinClientManager>(wallet, *this, m_mn_sync, m_queueman)
     );
 }
 

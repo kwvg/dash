@@ -146,9 +146,9 @@ static UniValue getcoinjoininfo(const JSONRPCRequest& request)
             }.Check(request);
 
     UniValue obj(UniValue::VOBJ);
+    const NodeContext& node = EnsureAnyNodeContext(request.context);
 
     if (fMasternodeMode) {
-        const NodeContext& node = EnsureAnyNodeContext(request.context);
         node.cj_ctx->server->GetJsonInfo(obj);
         return obj;
     }
@@ -156,7 +156,7 @@ static UniValue getcoinjoininfo(const JSONRPCRequest& request)
 #ifdef ENABLE_WALLET
     CCoinJoinClientOptions::GetJsonInfo(obj);
 
-    obj.pushKV("queue_size", coinJoinClientQueueManager->GetQueueSize());
+    obj.pushKV("queue_size", node.cj_ctx->queueman->GetQueueSize());
 
     std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
     if (!wallet) {

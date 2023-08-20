@@ -33,9 +33,6 @@ using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 // The main object for accessing mixing
 extern std::unique_ptr<CJClientManager> coinJoinClientManagers;
 
-// The object to track mixing queues
-extern std::unique_ptr<CCoinJoinClientQueueManager> coinJoinClientQueueManager;
-
 class CPendingDsaRequest
 {
 private:
@@ -75,8 +72,9 @@ public:
 
 class CJClientManager {
 public:
-    CJClientManager(CConnman& connman, CTxMemPool& mempool, const CMasternodeSync& mn_sync)
-        : m_connman(connman), m_mempool(mempool), m_mn_sync(mn_sync) {}
+    CJClientManager(CConnman& connman, CTxMemPool& mempool, const CMasternodeSync& mn_sync,
+                    const std::unique_ptr<CCoinJoinClientQueueManager>& queueman)
+        : m_connman(connman), m_mempool(mempool), m_mn_sync(mn_sync), m_queueman(queueman) {}
     ~CJClientManager() {
         for (auto& pair : m_wallet_manager_map) {
             pair.second.reset();
@@ -103,6 +101,8 @@ private:
     CTxMemPool& m_mempool;
 
     const CMasternodeSync& m_mn_sync;
+    const std::unique_ptr<CCoinJoinClientQueueManager>& m_queueman;
+
     std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>> m_wallet_manager_map;
 };
 
@@ -114,6 +114,7 @@ private:
     CCoinJoinClientManager& m_manager;
 
     const CMasternodeSync& m_mn_sync;
+    const std::unique_ptr<CCoinJoinClientQueueManager>& m_queueman;
 
     std::vector<COutPoint> vecOutPointLocked;
 
@@ -161,8 +162,9 @@ private:
     void SetNull() EXCLUSIVE_LOCKS_REQUIRED(cs_coinjoin);
 
 public:
-    explicit CCoinJoinClientSession(CWallet& pwallet, CJClientManager& clientman, const CMasternodeSync& mn_sync) :
-        m_wallet(pwallet), m_clientman(clientman), m_manager(*Assert(clientman.Get(pwallet))), m_mn_sync(mn_sync) {}
+    explicit CCoinJoinClientSession(CWallet& pwallet, CJClientManager& clientman, const CMasternodeSync& mn_sync,
+                                    const std::unique_ptr<CCoinJoinClientQueueManager>& queueman) :
+        m_wallet(pwallet), m_clientman(clientman), m_manager(*Assert(clientman.Get(pwallet))), m_mn_sync(mn_sync), m_queueman(queueman) {}
 
     void ProcessMessage(CNode& peer, PeerManager& peerman, CConnman& connman, const CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv);
 
@@ -215,6 +217,7 @@ private:
     CJClientManager& m_clientman;
 
     const CMasternodeSync& m_mn_sync;
+    const std::unique_ptr<CCoinJoinClientQueueManager>& m_queueman;
 
     // Keep track of the used Masternodes
     std::vector<COutPoint> vecMasternodesUsed;
@@ -245,8 +248,9 @@ public:
     CCoinJoinClientManager(CCoinJoinClientManager const&) = delete;
     CCoinJoinClientManager& operator=(CCoinJoinClientManager const&) = delete;
 
-    explicit CCoinJoinClientManager(CWallet& wallet, CJClientManager& clientman, const CMasternodeSync& mn_sync) :
-        m_wallet(wallet), m_clientman(clientman), m_mn_sync(mn_sync) {}
+    explicit CCoinJoinClientManager(CWallet& wallet, CJClientManager& clientman, const CMasternodeSync& mn_sync,
+                                    const std::unique_ptr<CCoinJoinClientQueueManager>& queueman) :
+        m_wallet(wallet), m_clientman(clientman), m_mn_sync(mn_sync), m_queueman(queueman) {}
 
     void ProcessMessage(CNode& peer, PeerManager& peerman, CConnman& connman, const CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv) LOCKS_EXCLUDED(cs_deqsessions);
 
