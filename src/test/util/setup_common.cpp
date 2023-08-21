@@ -188,7 +188,6 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
     ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*m_node.connman, *::masternodeSync);
 #endif // ENABLE_WALLET
 
-    deterministicMNManager.reset(new CDeterministicMNManager(*m_node.evodb, *m_node.connman));
     m_node.creditPoolManager = std::make_unique<CCreditPoolManager>(*m_node.evodb);
 
     // Start script-checking threads. Set g_parallel_script_checks to true so they are used.
@@ -200,7 +199,6 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
 ChainTestingSetup::~ChainTestingSetup()
 {
     m_node.scheduler->stop();
-    deterministicMNManager.reset();
     m_node.creditPoolManager.reset();
     StopScriptCheckWorkerThreads();
     GetMainSignals().FlushBackgroundCallbacks();
@@ -251,6 +249,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
         m_node.connman->Init(options);
     }
 
+    ::deterministicMNManager = std::make_unique<CDeterministicMNManager>(Assert(m_node.chainman)->ActiveChainstate(), *m_node.connman, *m_node.evodb);
     m_node.llmq_ctx = std::make_unique<LLMQContext>(Assert(m_node.chainman)->ActiveChainstate(), *m_node.connman, *m_node.evodb, *sporkManager, *m_node.mempool, m_node.peerman, true, false);
 
     BlockValidationState state;
@@ -264,6 +263,7 @@ TestingSetup::~TestingSetup()
     m_node.llmq_ctx->Interrupt();
     m_node.llmq_ctx->Stop();
     m_node.llmq_ctx.reset();
+    ::deterministicMNManager.reset();
     m_node.connman->Stop();
     m_node.peerman.reset();
     m_node.banman.reset();

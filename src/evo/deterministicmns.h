@@ -24,9 +24,10 @@
 #include <unordered_map>
 #include <utility>
 
-class CConnman;
 class CBlock;
 class CBlockIndex;
+class CChainState;
+class CConnman;
 class TxValidationState;
 
 extern RecursiveMutex cs_main;
@@ -580,16 +581,17 @@ private:
     // Main thread has indicated we should perform cleanup up to this height
     std::atomic<int> to_cleanup {0};
 
-    CEvoDB& m_evoDb;
+    CChainState& m_chainstate;
     CConnman& connman;
+    CEvoDB& m_evoDb;
 
     std::unordered_map<uint256, CDeterministicMNList, StaticSaltedHasher> mnListsCache GUARDED_BY(cs);
     std::unordered_map<uint256, CDeterministicMNListDiff, StaticSaltedHasher> mnListDiffsCache GUARDED_BY(cs);
     const CBlockIndex* tipIndex GUARDED_BY(cs) {nullptr};
 
 public:
-    explicit CDeterministicMNManager(CEvoDB& evoDb, CConnman& _connman) :
-        m_evoDb(evoDb), connman(_connman) {}
+    explicit CDeterministicMNManager(CChainState& chainstate, CConnman& _connman, CEvoDB& evoDb) :
+        m_chainstate(chainstate), connman(_connman), m_evoDb(evoDb) {}
     ~CDeterministicMNManager() = default;
 
     bool ProcessBlock(const CBlock& block, const CBlockIndex* pindex, BlockValidationState& state,
