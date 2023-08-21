@@ -71,6 +71,8 @@ BOOST_AUTO_TEST_CASE(chainstatemanager)
 
     BOOST_CHECK(!manager.SnapshotBlockhash().has_value());
 
+    DashTestSetupClose(m_node);
+
     // Create a snapshot-based chainstate.
     //
     const uint256 snapshot_blockhash = GetRandHash();
@@ -79,6 +81,8 @@ BOOST_AUTO_TEST_CASE(chainstatemanager)
         snapshot_blockhash)
     );
     chainstates.push_back(&c2);
+
+    DashTestSetup(m_node);
 
     BOOST_CHECK_EQUAL(manager.SnapshotBlockhash().value(), snapshot_blockhash);
 
@@ -122,6 +126,8 @@ BOOST_AUTO_TEST_CASE(chainstatemanager)
 
     // Let scheduler events finish running to avoid accessing memory that is going to be unloaded
     SyncWithValidationInterfaceQueue();
+
+    DashTestSetupClose(m_node);
 
     WITH_LOCK(::cs_main, manager.Unload());
 }
