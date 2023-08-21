@@ -31,7 +31,7 @@ LLMQContext::LLMQContext(CChainState& chainstate, CConnman& connman, CEvoDB& evo
     qdkgsman{std::make_unique<llmq::CDKGSessionManager>(connman, *bls_worker, *dkg_debugman, *quorum_block_processor, sporkman, peerman, unit_tests, wipe)},
     qman{[&]() -> llmq::CQuorumManager* const {
         assert(llmq::quorumManager == nullptr);
-        llmq::quorumManager = std::make_unique<llmq::CQuorumManager>(evo_db, connman, *bls_worker, *quorum_block_processor, *qdkgsman, ::masternodeSync, peerman);
+        llmq::quorumManager = std::make_unique<llmq::CQuorumManager>(*bls_worker, chainstate, connman, *qdkgsman, evo_db, *quorum_block_processor, ::masternodeSync, peerman);
         return llmq::quorumManager.get();
     }()},
     sigman{std::make_unique<llmq::CSigningManager>(connman, *llmq::quorumManager, peerman, unit_tests, wipe)},
