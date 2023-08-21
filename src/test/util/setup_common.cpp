@@ -191,7 +191,6 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
 #endif // ENABLE_WALLET
 
     deterministicMNManager.reset(new CDeterministicMNManager(*m_node.evodb, *m_node.connman));
-    m_node.llmq_ctx = std::make_unique<LLMQContext>(*m_node.evodb, *m_node.mempool, *m_node.connman, *sporkManager, m_node.peerman, true, false);
     m_node.creditPoolManager = std::make_unique<CCreditPoolManager>(*m_node.evodb);
 
     // Start script-checking threads. Set g_parallel_script_checks to true so they are used.
@@ -204,8 +203,6 @@ ChainTestingSetup::~ChainTestingSetup()
 {
     m_node.scheduler->stop();
     deterministicMNManager.reset();
-    m_node.llmq_ctx->Interrupt();
-    m_node.llmq_ctx->Stop();
     m_node.creditPoolManager.reset();
     StopScriptCheckWorkerThreads();
     GetMainSignals().FlushBackgroundCallbacks();
@@ -223,7 +220,6 @@ ChainTestingSetup::~ChainTestingSetup()
     UnloadBlockIndex(m_node.mempool.get(), *m_node.chainman);
     m_node.mempool.reset();
     m_node.scheduler.reset();
-    m_node.llmq_ctx.reset();
     m_node.chainman->Reset();
     m_node.chainman = nullptr;
     pblocktree.reset();
@@ -257,6 +253,8 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
         m_node.connman->Init(options);
     }
 
+    m_node.llmq_ctx = std::make_unique<LLMQContext>(Assert(m_node.chainman)->ActiveChainstate(), *m_node.connman, *m_node.evodb, *sporkManager, *m_node.mempool, m_node.peerman, true, false);
+
     BlockValidationState state;
     if (!::ChainstateActive().ActivateBestChain(state)) {
         throw std::runtime_error(strprintf("ActivateBestChain failed. (%s)", state.ToString()));
@@ -265,6 +263,9 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
 
 TestingSetup::~TestingSetup()
 {
+    m_node.llmq_ctx->Interrupt();
+    m_node.llmq_ctx->Stop();
+    m_node.llmq_ctx.reset();
     m_node.connman->Stop();
     m_node.peerman.reset();
     m_node.banman.reset();

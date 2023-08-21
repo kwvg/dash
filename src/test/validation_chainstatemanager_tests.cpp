@@ -7,11 +7,13 @@
 #include <index/txindex.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
+#include <llmq/context.h>
 #include <llmq/instantsend.h>
 #include <node/utxo_snapshot.h>
 #include <evo/evodb.h>
 #include <random.h>
 #include <rpc/blockchain.h>
+#include <spork.h>
 #include <sync.h>
 #include <test/util/setup_common.h>
 #include <uint256.h>
@@ -46,6 +48,7 @@ BOOST_AUTO_TEST_CASE(chainstatemanager)
     c1.InitCoinsDB(
         /* cache_size_bytes */ 1 << 23, /* in_memory */ true, /* should_wipe */ false);
     WITH_LOCK(::cs_main, c1.InitCoinsCache(1 << 23));
+    m_node.llmq_ctx = std::make_unique<LLMQContext>(Assert(m_node.chainman)->ActiveChainstate(), *m_node.connman, *m_node.evodb, *sporkManager, *m_node.mempool, m_node.peerman, true, false);
 
     BOOST_CHECK(!manager.IsSnapshotActive());
     BOOST_CHECK(!manager.IsSnapshotValidated());
