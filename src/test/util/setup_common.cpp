@@ -95,6 +95,22 @@ std::ostream& operator<<(std::ostream& os, const uint256& num)
     return os;
 }
 
+void DashTestSetup(NodeContext& node)
+{
+    CChainState& chainstate = Assert(node.chainman)->ActiveChainstate();
+
+    ::deterministicMNManager = std::make_unique<CDeterministicMNManager>(chainstate, *node.connman, *node.evodb);
+    node.llmq_ctx = std::make_unique<LLMQContext>(chainstate, *node.connman, *node.evodb, *sporkManager, *node.mempool, node.peerman, true, false);
+}
+
+void DashTestSetupClose(NodeContext& node)
+{
+    node.llmq_ctx->Interrupt();
+    node.llmq_ctx->Stop();
+    node.llmq_ctx.reset();
+    ::deterministicMNManager.reset();
+}
+
 BasicTestingSetup::BasicTestingSetup(const std::string& chainName, const std::vector<const char*>& extra_args)
     : m_path_root{fs::temp_directory_path() / "test_common_" PACKAGE_NAME / g_insecure_rand_ctx_temp_path.rand256().ToString()}
 {
@@ -249,8 +265,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
         m_node.connman->Init(options);
     }
 
-    ::deterministicMNManager = std::make_unique<CDeterministicMNManager>(Assert(m_node.chainman)->ActiveChainstate(), *m_node.connman, *m_node.evodb);
-    m_node.llmq_ctx = std::make_unique<LLMQContext>(Assert(m_node.chainman)->ActiveChainstate(), *m_node.connman, *m_node.evodb, *sporkManager, *m_node.mempool, m_node.peerman, true, false);
+    DashTestSetup(m_node);
 
     BlockValidationState state;
     if (!::ChainstateActive().ActivateBestChain(state)) {
@@ -260,10 +275,7 @@ TestingSetup::TestingSetup(const std::string& chainName, const std::vector<const
 
 TestingSetup::~TestingSetup()
 {
-    m_node.llmq_ctx->Interrupt();
-    m_node.llmq_ctx->Stop();
-    m_node.llmq_ctx.reset();
-    ::deterministicMNManager.reset();
+    DashTestSetupClose(m_node);
     m_node.connman->Stop();
     m_node.peerman.reset();
     m_node.banman.reset();
