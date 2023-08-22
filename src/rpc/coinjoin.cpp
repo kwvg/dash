@@ -162,7 +162,9 @@ static UniValue getcoinjoininfo(const JSONRPCRequest& request)
         return obj;
     }
 
-    ::coinJoinClientManagers->Get(*wallet)->GetJsonInfo(obj);
+    auto manager = ::coinJoinClientManagers->Get(*wallet);
+    CHECK_NONFATAL(manager != nullptr);
+    manager->GetJsonInfo(obj);
 
     obj.pushKV("keys_left",     wallet->nKeysLeftSinceAutoBackup);
     obj.pushKV("warnings",      wallet->nKeysLeftSinceAutoBackup < COINJOIN_KEYS_THRESHOLD_WARNING

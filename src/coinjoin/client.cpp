@@ -673,13 +673,14 @@ void CCoinJoinClientSession::CompletedTransaction(PoolMessage nMessageID)
 {
     if (fMasternodeMode) return;
 
-    if (nMessageID == MSG_SUCCESS) {
-        WalletCJLogPrint(mixingWallet, "CompletedTransaction -- success\n");
-        coinJoinClientManagers->Get(mixingWallet)->UpdatedSuccessBlock();
+    auto manager = coinJoinClientManagers->Get(mixingWallet);
+    if (nMessageID == MSG_SUCCESS && manager != nullptr) {
+        manager->UpdatedSuccessBlock();
         keyHolderStorage.KeepAll();
+        WalletCJLogPrint(mixingWallet, "CompletedTransaction -- success\n");
     } else {
-        WalletCJLogPrint(mixingWallet, "CompletedTransaction -- error\n");
         keyHolderStorage.ReturnAll();
+        WalletCJLogPrint(mixingWallet, "CompletedTransaction -- error\n");
     }
     UnlockCoins();
     WITH_LOCK(cs_coinjoin, SetNull());
@@ -1087,7 +1088,12 @@ bool CCoinJoinClientSession::JoinExistingQueue(CAmount nBalanceNeedsAnonymized, 
             continue;
         }
 
-        coinJoinClientManagers->Get(mixingWallet)->AddUsedMasternode(dsq.masternodeOutpoint);
+        auto manager = coinJoinClientManagers->Get(mixingWallet);
+        if (manager == nullptr) {
+            LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::JoinExistingQueue -- client manager for wallet %s does not exist\n", mixingWallet.GetName());
+            continue;
+        }
+        manager->AddUsedMasternode(dsq.masternodeOutpoint);
 
         if (connman.IsMasternodeOrDisconnectRequested(dmn->pdmnState->addr)) {
             WalletCJLogPrint(mixingWallet, "CCoinJoinClientSession::JoinExistingQueue -- skipping masternode connection, addr=%s\n", dmn->pdmnState->addr.ToString());
@@ -1130,15 +1136,20 @@ bool CCoinJoinClientSession::StartNewQueue(CAmount nBalanceNeedsAnonymized, CCon
 
     // otherwise, try one randomly
     while (nTries < 10) {
-        auto dmn = coinJoinClientManagers->Get(mixingWallet)->GetRandomNotUsedMasternode();
+        auto manager = coinJoinClientManagers->Get(mixingWallet);
+        if (manager == nullptr) {
+            LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::StartNewQueue -- client manager for wallet %s does not exist\n", mixingWallet.GetName());
+            return false;
+        }
 
+        auto dmn = manager->GetRandomNotUsedMasternode();
         if (!dmn) {
             strAutoDenomResult = _("Can't find random Masternode.");
             WalletCJLogPrint(mixingWallet, "CCoinJoinClientSession::StartNewQueue -- %s\n", strAutoDenomResult.original);
             return false;
         }
 
-        coinJoinClientManagers->Get(mixingWallet)->AddUsedMasternode(dmn->collateralOutpoint);
+        manager->AddUsedMasternode(dmn->collateralOutpoint);
 
         // skip next mn payments winners
         if (dmn->pdmnState->nLastPaidHeight + nWeightedMnCount < mnList.GetHeight() + WinnersToSkip()) {
@@ -1514,7 +1525,12 @@ bool CCoinJoinClientSession::MakeCollateralAmounts(const CBlockPolicyEstimator& 
         return false;
     }
 
-    coinJoinClientManagers->Get(mixingWallet)->UpdatedSuccessBlock();
+    auto manager = coinJoinClientManagers->Get(mixingWallet);
+    if (manager == nullptr) {
+        LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::%s -- client manager for wallet %s does not exist: %s\n", __func__, mixingWallet.GetName());
+        return false;
+    }
+    manager->UpdatedSuccessBlock();
 
     WalletCJLogPrint(mixingWallet, "CCoinJoinClientSession::%s -- txid: %s\n", __func__, strResult.original);
 
@@ -1791,7 +1807,12 @@ bool CCoinJoinClientSession::CreateDenominated(CBlockPolicyEstimator& fee_estima
     }
 
     // use the same nCachedLastSuccessBlock as for DS mixing to prevent race
-    coinJoinClientManagers->Get(mixingWallet)->UpdatedSuccessBlock();
+    auto manager = coinJoinClientManagers->Get(mixingWallet);
+    if (manager == nullptr) {
+        LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::%s -- client manager for wallet %s does not exist: %s\n", __func__, mixingWallet.GetName());
+        return false;
+    }
+    manager->UpdatedSuccessBlock();
 
     WalletCJLogPrint(mixingWallet, "CCoinJoinClientSession::%s -- txid: %s\n", __func__, strResult.original);
 

@@ -125,7 +125,7 @@ class CoinJoinImpl : public CoinJoin::Client
 {
     std::shared_ptr<CCoinJoinClientManager> m_manager;
 public:
-    CoinJoinImpl(const std::shared_ptr<CWallet>& wallet) : m_manager(coinJoinClientManagers->Get(*wallet)) {}
+    CoinJoinImpl(const std::shared_ptr<CWallet>& wallet) : m_manager(Assert(coinJoinClientManagers->Get(*wallet))) {}
     void resetCachedBlocks() override
     {
         m_manager->nCachedNumBlocks = std::numeric_limits<int>::max();

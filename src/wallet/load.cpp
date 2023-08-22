@@ -142,6 +142,7 @@ void FlushWallets()
         if (CCoinJoinClientOptions::IsEnabled()) {
             // Stop CoinJoin, release keys
             auto cj_clientman = ::coinJoinClientManagers->Get(*pwallet);
+            assert(cj_clientman != nullptr);
             cj_clientman->ResetPool();
             cj_clientman->StopMixing();
         }

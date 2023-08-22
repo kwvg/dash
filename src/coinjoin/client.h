@@ -85,7 +85,8 @@ public:
     }
 
     std::shared_ptr<CCoinJoinClientManager> Get(const CWallet& wallet) const {
-        return m_wallet_manager_map.at(wallet.GetName());
+        auto it = m_wallet_manager_map.find(wallet.GetName());
+        return it != m_wallet_manager_map.end() ? it->second : nullptr;
     }
 
     const std::map<const std::string, std::shared_ptr<CCoinJoinClientManager>>& raw() const { return m_wallet_manager_map; }
