@@ -4,16 +4,18 @@
 
 #include <node/context.h>
 #include <validation.h>
-#ifdef ENABLE_WALLET
-#include <coinjoin/client.h>
-#include <coinjoin/options.h>
-#include <wallet/rpcwallet.h>
-#endif // ENABLE_WALLET
+#include <coinjoin/context.h>
 #include <coinjoin/server.h>
 #include <rpc/blockchain.h>
 #include <rpc/server.h>
 #include <rpc/util.h>
 #include <util/strencodings.h>
+
+#ifdef ENABLE_WALLET
+#include <coinjoin/client.h>
+#include <coinjoin/options.h>
+#include <wallet/rpcwallet.h>
+#endif // ENABLE_WALLET
 
 #include <univalue.h>
 
@@ -146,13 +148,12 @@ static UniValue getcoinjoininfo(const JSONRPCRequest& request)
     UniValue obj(UniValue::VOBJ);
 
     if (fMasternodeMode) {
-        coinJoinServer->GetJsonInfo(obj);
+        const NodeContext& node = EnsureAnyNodeContext(request.context);
+        node.cj_ctx->server->GetJsonInfo(obj);
         return obj;
     }
 
-
 #ifdef ENABLE_WALLET
-
     CCoinJoinClientOptions::GetJsonInfo(obj);
 
     obj.pushKV("queue_size", coinJoinClientQueueManager->GetQueueSize());

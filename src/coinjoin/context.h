@@ -33,7 +33,7 @@ struct CJContext {
     CJClientManager* const clientman;
     CCoinJoinClientQueueManager* const queueman;
 #endif // ENABLE_WALLET
-    CCoinJoinServer* const server;
+    const std::unique_ptr<CCoinJoinServer> server;
 };
 
 #endif // BITCOIN_COINJOIN_CONTEXT_H

@@ -16,11 +16,11 @@ class CAddrMan;
 class CBlockPolicyEstimator;
 class CConnman;
 class CCreditPoolManager;
+class ChainstateManager;
+class CEvoDB;
 class CScheduler;
 class CTxMemPool;
-class ChainstateManager;
 class PeerManager;
-class CEvoDB;
 struct CJContext;
 struct LLMQContext;
 

@@ -1700,7 +1700,8 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     assert(!node.peerman);
     node.peerman = PeerManager::make(chainparams, *node.connman, *node.addrman, node.banman.get(),
-                                     *node.scheduler, chainman, *node.mempool, node.llmq_ctx, *::governance, ignores_incoming_txs);
+                                     *node.scheduler, chainman, *node.mempool, *::governance,
+                                     node.cj_ctx, node.llmq_ctx, ignores_incoming_txs);
     RegisterValidationInterface(node.peerman.get());
 
     assert(!::sporkManager);
@@ -2325,7 +2326,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     }
 
     if (fMasternodeMode) {
-        node.scheduler->scheduleEvery(std::bind(&CCoinJoinServer::DoMaintenance, std::ref(*::coinJoinServer)), std::chrono::seconds{1});
+        node.scheduler->scheduleEvery(std::bind(&CCoinJoinServer::DoMaintenance, std::ref(*node.cj_ctx->server)), std::chrono::seconds{1});
         node.scheduler->scheduleEvery(std::bind(&llmq::CDKGSessionManager::CleanupOldContributions, std::ref(*node.llmq_ctx->qdkgsman)), std::chrono::hours{1});
 #ifdef ENABLE_WALLET
     } else if (!ignores_incoming_txs) {

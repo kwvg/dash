@@ -33,13 +33,7 @@ CJContext::CJContext(CChainState& chainstate, CConnman& connman, CTxMemPool& mem
         }()
     },
 #endif // ENABLE_WALLET
-    server {
-        [&]() -> CCoinJoinServer* const {
-            assert(::coinJoinServer == nullptr);
-            ::coinJoinServer = std::make_unique<CCoinJoinServer>(chainstate, connman, mempool, mn_sync);
-            return ::coinJoinServer.get();
-        }()
-    }
+    server{std::make_unique<CCoinJoinServer>(chainstate, connman, mempool, mn_sync)}
 {}
 
 CJContext::~CJContext() {
@@ -47,5 +41,4 @@ CJContext::~CJContext() {
     ::coinJoinClientQueueManager.reset();
     ::coinJoinClientManagers.reset();
 #endif // ENABLE_WALLET
-    ::coinJoinServer.reset();
 }
