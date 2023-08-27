@@ -7,6 +7,7 @@
 
 class ArgsManager;
 
+struct CJClientManager;
 struct NodeContext;
 
 class WalletInitInterface {
@@ -22,7 +23,7 @@ public:
 
     // Dash Specific WalletInitInterface
     virtual void AutoLockMasternodeCollaterals() const = 0;
-    virtual void InitCoinJoinSettings() const = 0;
+    virtual void InitCoinJoinSettings(CJClientManager& clientman) const = 0;
     virtual bool InitAutoBackup() const = 0;
 
     virtual ~WalletInitInterface() {}

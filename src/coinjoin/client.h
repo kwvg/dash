@@ -7,32 +7,30 @@
 
 #include <coinjoin/util.h>
 #include <coinjoin/coinjoin.h>
+#include <util/check.h>
 #include <util/translation.h>
 
-#include <utility>
 #include <atomic>
-
-class CDeterministicMN;
-using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
-
-class CCoinJoinClientManager;
-class CCoinJoinClientQueueManager;
+#include <memory>
+#include <utility>
 
 class CBlockPolicyEstimator;
+class CCoinJoinClientManager;
+class CCoinJoinClientQueueManager;
 class CConnman;
+class CDeterministicMN;
 class CNode;
+class CMasternodeSync;
 class CTxMemPool;
 class PeerManager;
+struct CJClientManager;
 
 class UniValue;
-class CMasternodeSync;
 
+using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 
 // The main object for accessing mixing
-extern std::map<const std::string, std::shared_ptr<CCoinJoinClientManager>> coinJoinClientManagers;
-
-// The object to track mixing queues
-extern std::unique_ptr<CCoinJoinClientQueueManager> coinJoinClientQueueManager;
+extern std::unique_ptr<CJClientManager> coinJoinClientManagers;
 
 class CPendingDsaRequest
 {
@@ -71,10 +69,50 @@ public:
     }
 };
 
+struct CJClientManager {
+    CJClientManager(CConnman& connman, CTxMemPool& mempool, const CMasternodeSync& mn_sync,
+                    const std::unique_ptr<CCoinJoinClientQueueManager>& queueman)
+        : m_connman(connman), m_mempool(mempool), m_mn_sync(mn_sync), m_queueman(queueman) {}
+    ~CJClientManager() {
+        for (auto& pair : m_imap) {
+            pair.second.reset();
+        }
+    }
+
+    void Add(CWallet& wallet);
+    void DoMaintenance(CBlockPolicyEstimator& fee_estimator);
+
+    void Remove(const std::string& name) {
+        auto it = m_imap.find(name);
+        if (it != m_imap.end()) { m_imap.erase(it); }
+    }
+
+    CCoinJoinClientManager* Get(const CWallet& wallet) const {
+        auto it = m_imap.find(wallet.GetName());
+        return (it != m_imap.end()) ? it->second.get() : nullptr;
+    }
+
+    std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>>& raw() { return m_imap; }
+
+private:
+    CConnman& m_connman;
+    CTxMemPool& m_mempool;
+
+    const CMasternodeSync& m_mn_sync;
+    const std::unique_ptr<CCoinJoinClientQueueManager>& m_queueman;
+
+    std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>> m_imap;
+};
+
 class CCoinJoinClientSession : public CCoinJoinBaseSession
 {
 private:
+    CWallet& m_wallet;
+    CJClientManager& m_clientman;
+    CCoinJoinClientManager& m_manager;
+
     const CMasternodeSync& m_mn_sync;
+    const std::unique_ptr<CCoinJoinClientQueueManager>& m_queueman;
 
     std::vector<COutPoint> vecOutPointLocked;
 
@@ -86,8 +124,6 @@ private:
     CPendingDsaRequest pendingDsaRequest;
 
     CKeyHolderStorage keyHolderStorage; // storage for keys used in PrepareDenominate
-
-    CWallet& mixingWallet;
 
     /// Create denominations
     bool CreateDenominated(CBlockPolicyEstimator& fee_estimator, CAmount nBalanceToDenominate);
@@ -124,10 +160,9 @@ private:
     void SetNull() EXCLUSIVE_LOCKS_REQUIRED(cs_coinjoin);
 
 public:
-    explicit CCoinJoinClientSession(CWallet& pwallet, const CMasternodeSync& mn_sync) :
-        m_mn_sync(mn_sync), mixingWallet(pwallet)
-    {
-    }
+    explicit CCoinJoinClientSession(CWallet& pwallet, CJClientManager& clientman, const CMasternodeSync& mn_sync,
+                                    const std::unique_ptr<CCoinJoinClientQueueManager>& queueman) :
+        m_wallet(pwallet), m_clientman(clientman), m_manager(*Assert(clientman.Get(pwallet))), m_mn_sync(mn_sync), m_queueman(queueman) {}
 
     void ProcessMessage(CNode& peer, PeerManager& peerman, CConnman& connman, const CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv);
 
@@ -158,12 +193,13 @@ class CCoinJoinClientQueueManager : public CCoinJoinBaseManager
 {
 private:
     CConnman& connman;
+    CJClientManager& m_clientman;
     const CMasternodeSync& m_mn_sync;
     mutable Mutex cs_ProcessDSQueue;
 
 public:
-    explicit CCoinJoinClientQueueManager(CConnman& _connman, const CMasternodeSync& mn_sync) :
-        connman(_connman), m_mn_sync(mn_sync) {};
+    explicit CCoinJoinClientQueueManager(CConnman& _connman, CJClientManager& clientman, const CMasternodeSync& mn_sync) :
+        connman(_connman), m_clientman(clientman), m_mn_sync(mn_sync) {};
 
     void ProcessMessage(const CNode& peer, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv) LOCKS_EXCLUDED(cs_vecqueue);
     void ProcessDSQueue(const CNode& peer, PeerManager& peerman, CDataStream& vRecv);
@@ -175,10 +211,14 @@ public:
 class CCoinJoinClientManager
 {
 private:
-    // Keep track of the used Masternodes
-    std::vector<COutPoint> vecMasternodesUsed;
+    CWallet& m_wallet;
+    CJClientManager& m_clientman;
 
     const CMasternodeSync& m_mn_sync;
+    const std::unique_ptr<CCoinJoinClientQueueManager>& m_queueman;
+
+    // Keep track of the used Masternodes
+    std::vector<COutPoint> vecMasternodesUsed;
 
     mutable Mutex cs_deqsessions;
     // TODO: or map<denom, CCoinJoinClientSession> ??
@@ -189,8 +229,6 @@ private:
     int nCachedLastSuccessBlock{0};
     int nMinBlocksToWait{1}; // how many blocks to wait for after one successful mixing tx in non-multisession mode
     bilingual_str strAutoDenomResult;
-
-    CWallet& mixingWallet;
 
     // Keep track of current block height
     int nCachedBlockHeight{0};
@@ -208,8 +246,9 @@ public:
     CCoinJoinClientManager(CCoinJoinClientManager const&) = delete;
     CCoinJoinClientManager& operator=(CCoinJoinClientManager const&) = delete;
 
-    explicit CCoinJoinClientManager(CWallet& wallet, const CMasternodeSync& mn_sync) :
-        m_mn_sync(mn_sync), mixingWallet(wallet) {}
+    explicit CCoinJoinClientManager(CWallet& wallet, CJClientManager& clientman, const CMasternodeSync& mn_sync,
+                                    const std::unique_ptr<CCoinJoinClientQueueManager>& queueman) :
+        m_wallet(wallet), m_clientman(clientman), m_mn_sync(mn_sync), m_queueman(queueman) {}
 
     void ProcessMessage(CNode& peer, PeerManager& peerman, CConnman& connman, const CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv) LOCKS_EXCLUDED(cs_deqsessions);
 
@@ -244,8 +283,5 @@ public:
 
     void GetJsonInfo(UniValue& obj) const LOCKS_EXCLUDED(cs_deqsessions);
 };
-
-
-void DoCoinJoinMaintenance(CConnman& connman, CBlockPolicyEstimator& fee_estimator, CTxMemPool& mempool);
 
 #endif // BITCOIN_COINJOIN_CLIENT_H

@@ -141,9 +141,10 @@ void FlushWallets()
     for (const std::shared_ptr<CWallet>& pwallet : GetWallets()) {
         if (CCoinJoinClientOptions::IsEnabled()) {
             // Stop CoinJoin, release keys
-            auto it = coinJoinClientManagers.find(pwallet->GetName());
-            it->second->ResetPool();
-            it->second->StopMixing();
+            auto clientman = ::coinJoinClientManagers->Get(*pwallet);
+            assert(clientman != nullptr);
+            clientman->ResetPool();
+            clientman->StopMixing();
         }
         pwallet->Flush();
     }
