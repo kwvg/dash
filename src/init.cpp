@@ -320,10 +320,6 @@ void PrepareShutdown(NodeContext& node)
 
     // After all scheduled tasks have been flushed, destroy pointers
     // and reset all to nullptr.
-    ::coinJoinServer.reset();
-#ifdef ENABLE_WALLET
-    ::coinJoinClientQueueManager.reset();
-#endif // ENABLE_WALLET
     ::governance.reset();
     ::sporkManager.reset();
     ::masternodeSync.reset();
@@ -393,6 +389,14 @@ void PrepareShutdown(NodeContext& node)
     }
 
     node.chain_clients.clear();
+
+    // After all wallets are removed, destroy all CoinJoin objects
+    // and reset them to nullptr
+#ifdef ENABLE_WALLET
+    ::coinJoinClientQueueManager.reset();
+#endif // ENABLE_WALLET
+    ::coinJoinServer.reset();
+
     UnregisterAllValidationInterfaces();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
 }
@@ -2191,6 +2195,18 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         return false;
     }
 
+    // ********************************************************* Step 7c: Setup CoinJoin
+
+    ::coinJoinServer = std::make_unique<CCoinJoinServer>(chainman.ActiveChainstate(), *node.connman, *node.mempool, *::masternodeSync);
+
+#ifdef ENABLE_WALLET
+    if (!ignores_incoming_txs) {
+        ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*node.connman, *::masternodeSync);
+    }
+#endif // ENABLE_WALLET
+
+    g_wallet_init_interface.InitCoinJoinSettings();
+
     // ********************************************************* Step 8: start indexers
     if (args.GetBoolArg("-txindex", DEFAULT_TXINDEX)) {
         g_txindex = std::make_unique<TxIndex>(nTxIndexCache, false, fReindex);
@@ -2252,18 +2268,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         return false;
     }
 
-    // ********************************************************* Step 10a: Setup CoinJoin
-
-    ::coinJoinServer = std::make_unique<CCoinJoinServer>(chainman.ActiveChainstate(), *node.connman, *node.mempool, *::masternodeSync);
-#ifdef ENABLE_WALLET
-    if (!ignores_incoming_txs) {
-        ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*node.connman, *::masternodeSync);
-    }
-#endif // ENABLE_WALLET
-
-    g_wallet_init_interface.InitCoinJoinSettings();
-
-    // ********************************************************* Step 10b: Load cache data
+    // ********************************************************* Step 10a: Load cache data
 
     // LOAD SERIALIZED DAT FILES INTO DATA CACHES FOR INTERNAL USE
 
