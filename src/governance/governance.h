@@ -122,6 +122,28 @@ public:
     }
 };
 
+namespace {
+struct last_object_rec {
+    explicit last_object_rec(bool fStatusOKIn = true) :
+        triggerBuffer(),
+        fStatusOK(fStatusOKIn)
+    {
+    }
+
+    SERIALIZE_METHODS(last_object_rec, obj)
+    {
+        READWRITE(obj.triggerBuffer, obj.fStatusOK);
+    }
+
+    CRateCheckBuffer triggerBuffer;
+    bool fStatusOK;
+};
+
+using object_ref_cm_t = CacheMap<uint256, CGovernanceObject*>;
+using txout_m_t = std::map<COutPoint, last_object_rec>;
+using vote_cmm_t = CacheMultiMap<uint256, vote_time_pair_t>;
+} /* anonymous namespace */
+
 //
 // Governance Manager : Contains all proposals for the budget
 //
@@ -129,30 +151,7 @@ class CGovernanceManager
 {
     friend class CGovernanceObject;
 
-public: // Types
-    struct last_object_rec {
-        explicit last_object_rec(bool fStatusOKIn = true) :
-            triggerBuffer(),
-            fStatusOK(fStatusOKIn)
-        {
-        }
-
-        SERIALIZE_METHODS(last_object_rec, obj)
-        {
-            READWRITE(obj.triggerBuffer, obj.fStatusOK);
-        }
-
-        CRateCheckBuffer triggerBuffer;
-        bool fStatusOK;
-    };
-
-
-    using object_ref_cm_t = CacheMap<uint256, CGovernanceObject*>;
-
-    using vote_cmm_t = CacheMultiMap<uint256, vote_time_pair_t>;
-
-    using txout_m_t = std::map<COutPoint, last_object_rec>;
-
+public:
     using hash_s_t = std::set<uint256>;
 
 private:
