@@ -280,7 +280,7 @@ void PrepareShutdown(NodeContext& node)
     if (!fRPCInWarmup) {
         // STORE DATA CACHES INTO SERIALIZED DAT FILES
         CFlatDB<CNetFulfilledRequestManager> flatdb4("netfulfilled.dat", "magicFulfilledCache");
-        flatdb4.Dump(netfulfilledman);
+        flatdb4.Dump(*netfulfilledman);
     }
 
     // After the threads that potentially access these pointers have been stopped,
@@ -316,6 +316,7 @@ void PrepareShutdown(NodeContext& node)
     ::governance.reset();
     ::sporkManager.reset();
     ::masternodeSync.reset();
+    ::netfulfilledman.reset();
     ::mmetaman.reset();
 
     // Stop and delete all indexes only after flushing background callbacks.
@@ -1725,6 +1726,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         }
     }
 
+    ::netfulfilledman = std::make_unique<CNetFulfilledRequestManager>();
     ::masternodeSync = std::make_unique<CMasternodeSync>(*node.connman, *::governance);
 
     // sanitize comments per BIP-0014, format user agent and check total size
@@ -2292,7 +2294,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     uiInterface.InitMessage(_("Loading fulfilled requests cache...").translated);
     CFlatDB<CNetFulfilledRequestManager> flatdb4(strDBName, "magicFulfilledCache");
     if (fLoadCacheFiles) {
-        if(!flatdb4.Load(netfulfilledman)) {
+        if(!flatdb4.Load(*netfulfilledman)) {
             return InitError(strprintf(_("Failed to load fulfilled requests cache from %s"),(pathDB / strDBName).string()));
         }
     } else {
@@ -2304,7 +2306,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     // ********************************************************* Step 10b: schedule Dash-specific tasks
 
-    node.scheduler->scheduleEvery(std::bind(&CNetFulfilledRequestManager::DoMaintenance, std::ref(netfulfilledman)), std::chrono::minutes{1});
+    node.scheduler->scheduleEvery(std::bind(&CNetFulfilledRequestManager::DoMaintenance, std::ref(*netfulfilledman)), std::chrono::minutes{1});
     node.scheduler->scheduleEvery(std::bind(&CMasternodeSync::DoMaintenance, std::ref(*::masternodeSync)), std::chrono::seconds{1});
     node.scheduler->scheduleEvery(std::bind(&CMasternodeUtils::DoMaintenance, std::ref(*node.connman), std::ref(*::masternodeSync), std::ref(*node.cj_ctx)), std::chrono::minutes{1});
     node.scheduler->scheduleEvery(std::bind(&CDeterministicMNManager::DoMaintenance, std::ref(*deterministicMNManager)), std::chrono::seconds{10});

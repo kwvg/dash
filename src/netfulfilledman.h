@@ -10,7 +10,6 @@
 #include <sync.h>
 
 class CNetFulfilledRequestManager;
-extern CNetFulfilledRequestManager netfulfilledman;
 
 // Fulfilled requests are used to prevent nodes from asking for the same data on sync
 // and from being banned for doing so too often.
@@ -45,5 +44,7 @@ public:
 
     void DoMaintenance();
 };
+
+extern std::unique_ptr<CNetFulfilledRequestManager> netfulfilledman;
 
 #endif // BITCOIN_NETFULFILLEDMAN_H

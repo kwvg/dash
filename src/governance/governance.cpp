@@ -872,13 +872,13 @@ void CGovernanceManager::SyncObjects(CNode& peer, PeerManager& peerman, CConnman
     // do not provide any data until our node is synced
     if (!::masternodeSync->IsSynced()) return;
 
-    if (netfulfilledman.HasFulfilledRequest(peer.addr, NetMsgType::MNGOVERNANCESYNC)) {
+    if (netfulfilledman->HasFulfilledRequest(peer.addr, NetMsgType::MNGOVERNANCESYNC)) {
         // Asking for the whole list multiple times in a short period of time is no good
         LogPrint(BCLog::GOBJECT, "CGovernanceManager::%s -- peer already asked me for the list\n", __func__);
         peerman.Misbehaving(peer.GetId(), 20);
         return;
     }
-    netfulfilledman.AddFulfilledRequest(peer.addr, NetMsgType::MNGOVERNANCESYNC);
+    netfulfilledman->AddFulfilledRequest(peer.addr, NetMsgType::MNGOVERNANCESYNC);
 
     int nObjCount = 0;
 

@@ -7,7 +7,9 @@
 #include <shutdown.h>
 #include <util/system.h>
 
-CNetFulfilledRequestManager netfulfilledman;
+#include <memory>
+
+std::unique_ptr<CNetFulfilledRequestManager> netfulfilledman;
 
 void CNetFulfilledRequestManager::AddFulfilledRequest(const CService& addr, const std::string& strRequest)
 {

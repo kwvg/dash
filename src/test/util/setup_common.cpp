@@ -17,6 +17,7 @@
 #include <init.h>
 #include <interfaces/chain.h>
 #include <masternode/meta.h>
+#include <netfulfilledman.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
 #include <llmq/context.h>
@@ -209,6 +210,7 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
     ::governance = std::make_unique<CGovernanceManager>();
     ::masternodeSync = std::make_unique<CMasternodeSync>(*m_node.connman, *::governance);
     ::mmetaman = std::make_unique<CMasternodeMetaMan>(/* load_cache */ false);
+    ::netfulfilledman = std::make_unique<CNetFulfilledRequestManager>();
 
     m_node.creditPoolManager = std::make_unique<CCreditPoolManager>(*m_node.evodb);
 
@@ -225,6 +227,7 @@ ChainTestingSetup::~ChainTestingSetup()
     StopScriptCheckWorkerThreads();
     GetMainSignals().FlushBackgroundCallbacks();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
+    ::netfulfilledman.reset();
     ::mmetaman.reset();
     ::masternodeSync.reset();
     ::governance.reset();
