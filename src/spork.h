@@ -20,6 +20,8 @@
 #include <vector>
 
 class CConnman;
+template<typename T>
+class CFlatDB;
 class CNode;
 class CDataStream;
 class PeerManager;
@@ -213,6 +215,12 @@ public:
 class CSporkManager : public SporkStore
 {
 private:
+    using db_type = CFlatDB<SporkStore>;
+
+private:
+    const std::unique_ptr<db_type> m_db;
+    const bool is_valid{false};
+
     mutable Mutex cs_mapSporksCachedActive;
     mutable std::unordered_map<const SporkId, bool> mapSporksCachedActive GUARDED_BY(cs_mapSporksCachedActive);
 
@@ -230,8 +238,10 @@ private:
     std::optional<SporkValue> SporkValueIfActive(SporkId nSporkID) const EXCLUSIVE_LOCKS_REQUIRED(cs);
 
 public:
-    CSporkManager() = default;
-    ~CSporkManager() = default;
+    CSporkManager();
+    ~CSporkManager();
+
+    bool IsValid() const { return is_valid; }
 
     /**
      * CheckAndRemove is defined to fulfill an interface as part of the on-disk

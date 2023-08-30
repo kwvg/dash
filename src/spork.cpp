@@ -68,6 +68,22 @@ void SporkStore::Clear()
     // we should not alter them here.
 }
 
+CSporkManager::CSporkManager() :
+    m_db{std::make_unique<db_type>("sporks.dat", "magicSporkCache")},
+    is_valid{
+        [&]() -> bool {
+            assert(m_db != nullptr);
+            return m_db->Load(*this);
+        }()
+    }
+{
+}
+
+CSporkManager::~CSporkManager()
+{
+    m_db->Dump(*this);
+}
+
 void CSporkManager::CheckAndRemove()
 {
     LOCK(cs);

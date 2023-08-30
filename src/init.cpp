@@ -283,8 +283,6 @@ void PrepareShutdown(NodeContext& node)
         flatdb1.Dump(mmetaman);
         CFlatDB<CNetFulfilledRequestManager> flatdb4("netfulfilled.dat", "magicFulfilledCache");
         flatdb4.Dump(netfulfilledman);
-        CFlatDB<CSporkManager> flatdb6("sporks.dat", "magicSporkCache");
-        flatdb6.Dump(*::sporkManager);
     }
 
     // After the threads that potentially access these pointers have been stopped,
@@ -1703,7 +1701,11 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     assert(!::sporkManager);
     ::sporkManager = std::make_unique<CSporkManager>();
-    ::masternodeSync = std::make_unique<CMasternodeSync>(*node.connman, *::governance);
+
+    if (!::sporkManager->IsValid()) {
+        auto file_path = (GetDataDir() / "sporks.dat").string();
+        return InitError(strprintf(_("Failed to load sporks cache from %s"), file_path));
+    }
 
     std::vector<std::string> vSporkAddresses;
     if (args.IsArgSet("-sporkaddr")) {
@@ -1728,6 +1730,8 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
             return InitError(_("Unable to sign spork message, wrong key?"));
         }
     }
+
+    ::masternodeSync = std::make_unique<CMasternodeSync>(*node.connman, *::governance);
 
     // sanitize comments per BIP-0014, format user agent and check total size
     std::vector<std::string> uacomments;
@@ -1864,11 +1868,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     // ********************************************************* Step 7a: Load sporks
 
-    uiInterface.InitMessage(_("Loading sporks cache...").translated);
-    CFlatDB<CSporkManager> flatdb6("sporks.dat", "magicSporkCache");
-    if (!flatdb6.Load(*::sporkManager)) {
-        return InitError(strprintf(_("Failed to load sporks cache from %s"), (GetDataDir() / "sporks.dat").string()));
-    }
+    /* TODO: decouple db init and move here */
 
     // ********************************************************* Step 7b: load block chain
 
