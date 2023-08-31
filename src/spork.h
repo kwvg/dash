@@ -219,7 +219,7 @@ private:
 
 private:
     const std::unique_ptr<db_type> m_db;
-    const bool is_valid{false};
+    bool is_valid{false};
 
     mutable Mutex cs_mapSporksCachedActive;
     mutable std::unordered_map<const SporkId, bool> mapSporksCachedActive GUARDED_BY(cs_mapSporksCachedActive);
@@ -240,6 +240,8 @@ private:
 public:
     CSporkManager();
     ~CSporkManager();
+
+    bool LoadCache();
 
     bool IsValid() const { return is_valid; }
 

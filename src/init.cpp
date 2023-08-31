@@ -1702,11 +1702,6 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     assert(!::sporkManager);
     ::sporkManager = std::make_unique<CSporkManager>();
 
-    if (!::sporkManager->IsValid()) {
-        auto file_path = (GetDataDir() / "sporks.dat").string();
-        return InitError(strprintf(_("Failed to load sporks cache from %s"), file_path));
-    }
-
     std::vector<std::string> vSporkAddresses;
     if (args.IsArgSet("-sporkaddr")) {
         vSporkAddresses = args.GetArgs("-sporkaddr");
@@ -1868,7 +1863,10 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     // ********************************************************* Step 7a: Load sporks
 
-    /* TODO: decouple db init and move here */
+    if (!::sporkManager->LoadCache()) {
+        auto file_path = (GetDataDir() / "sporks.dat").string();
+        return InitError(strprintf(_("Failed to load sporks cache from %s"), file_path));
+    }
 
     // ********************************************************* Step 7b: load block chain
 
