@@ -3,13 +3,29 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <chainparams.h>
+#include <flat-database.h>
 #include <netfulfilledman.h>
 #include <shutdown.h>
 #include <util/system.h>
 
-#include <memory>
-
 std::unique_ptr<CNetFulfilledRequestManager> netfulfilledman;
+
+CNetFulfilledRequestManager::CNetFulfilledRequestManager(bool load_cache) :
+    m_db{std::make_unique<db_type>("netfulfilled.dat", "magicFulfilledCache")},
+    is_valid{
+        [&]() -> bool {
+            assert(m_db != nullptr);
+            return load_cache ? m_db->Load(*this) : m_db->Dump(*this);
+        }()
+    }
+{
+}
+
+CNetFulfilledRequestManager::~CNetFulfilledRequestManager()
+{
+    if (!is_valid) return;
+    m_db->Dump(*this);
+}
 
 void CNetFulfilledRequestManager::AddFulfilledRequest(const CService& addr, const std::string& strRequest)
 {

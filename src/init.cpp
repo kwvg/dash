@@ -237,11 +237,6 @@ void PrepareShutdown(NodeContext& node)
     StopHTTPServer();
     if (node.llmq_ctx) node.llmq_ctx->Stop();
 
-    // fRPCInWarmup should be `false` if we completed the loading sequence
-    // before a shutdown request was received
-    std::string statusmessage;
-    bool fRPCInWarmup = RPCIsInWarmup(&statusmessage);
-
     for (const auto& client : node.chain_clients) {
         client->flush();
     }
@@ -276,12 +271,6 @@ void PrepareShutdown(NodeContext& node)
     // After there are no more peers/RPC left to give us new data which may generate
     // CValidationInterface callbacks, flush them...
     GetMainSignals().FlushBackgroundCallbacks();
-
-    if (!fRPCInWarmup) {
-        // STORE DATA CACHES INTO SERIALIZED DAT FILES
-        CFlatDB<NetFulfilledRequestStore> flatdb4("netfulfilled.dat", "magicFulfilledCache");
-        flatdb4.Dump(*netfulfilledman);
-    }
 
     // After the threads that potentially access these pointers have been stopped,
     // destruct and reset all to nullptr.
@@ -1726,7 +1715,6 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         }
     }
 
-    ::netfulfilledman = std::make_unique<CNetFulfilledRequestManager>();
     ::masternodeSync = std::make_unique<CMasternodeSync>(*node.connman, *::governance);
 
     // sanitize comments per BIP-0014, format user agent and check total size
@@ -2222,6 +2210,16 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         return InitError(strprintf(_("Failed to clear masternode cache at %s"), file_path));
     }
 
+    assert(!::netfulfilledman);
+    ::netfulfilledman = std::make_unique<CNetFulfilledRequestManager>(fLoadCacheFiles);
+    if (!::netfulfilledman->IsValid()) {
+        auto file_path = (GetDataDir() / "netfulfilled.dat").string();
+        if (fLoadCacheFiles) {
+            return InitError(strprintf(_("Failed to load fulfilled requests cache from %s"), file_path));
+        }
+        return InitError(strprintf(_("Failed to clear fulfilled requests cache at %s"), file_path));
+    }
+
     // ********************************************************* Step 8: start indexers
     if (args.GetBoolArg("-txindex", DEFAULT_TXINDEX)) {
         g_txindex = std::make_unique<TxIndex>(nTxIndexCache, false, fReindex);
@@ -2283,28 +2281,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         return false;
     }
 
-    // ********************************************************* Step 10a: Load cache data
-
-    // LOAD SERIALIZED DAT FILES INTO DATA CACHES FOR INTERNAL USE
-
-    fs::path pathDB = GetDataDir();
-    std::string strDBName;
-
-    strDBName = "netfulfilled.dat";
-    uiInterface.InitMessage(_("Loading fulfilled requests cache...").translated);
-    CFlatDB<NetFulfilledRequestStore> flatdb4(strDBName, "magicFulfilledCache");
-    if (fLoadCacheFiles) {
-        if(!flatdb4.Load(*netfulfilledman)) {
-            return InitError(strprintf(_("Failed to load fulfilled requests cache from %s"),(pathDB / strDBName).string()));
-        }
-    } else {
-        CNetFulfilledRequestManager netfulfilledmanTmp;
-        if(!flatdb4.Dump(netfulfilledmanTmp)) {
-            return InitError(strprintf(_("Failed to clear fulfilled requests cache at %s"),(pathDB / strDBName).string()));
-        }
-    }
-
-    // ********************************************************* Step 10b: schedule Dash-specific tasks
+    // ********************************************************* Step 10a: schedule Dash-specific tasks
 
     node.scheduler->scheduleEvery(std::bind(&CNetFulfilledRequestManager::DoMaintenance, std::ref(*netfulfilledman)), std::chrono::minutes{1});
     node.scheduler->scheduleEvery(std::bind(&CMasternodeSync::DoMaintenance, std::ref(*::masternodeSync)), std::chrono::seconds{1});

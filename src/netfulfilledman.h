@@ -9,6 +9,10 @@
 #include <serialize.h>
 #include <sync.h>
 
+#include <memory>
+
+template<typename T>
+class CFlatDB;
 class CNetFulfilledRequestManager;
 
 class NetFulfilledRequestStore
@@ -39,9 +43,18 @@ public:
 // and from being banned for doing so too often.
 class CNetFulfilledRequestManager : public NetFulfilledRequestStore
 {
+private:
+    using db_type = CFlatDB<NetFulfilledRequestStore>;
+
+private:
+    const std::unique_ptr<db_type> m_db;
+    const bool is_valid{false};
+
 public:
-    CNetFulfilledRequestManager() = default;
-    ~CNetFulfilledRequestManager() = default;
+    explicit CNetFulfilledRequestManager(bool load_cache);
+    ~CNetFulfilledRequestManager();
+
+    bool IsValid() const { return is_valid; }
 
     void AddFulfilledRequest(const CService& addr, const std::string& strRequest);
     bool HasFulfilledRequest(const CService& addr, const std::string& strRequest);

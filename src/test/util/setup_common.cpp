@@ -210,7 +210,7 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
     ::governance = std::make_unique<CGovernanceManager>();
     ::masternodeSync = std::make_unique<CMasternodeSync>(*m_node.connman, *::governance);
     ::mmetaman = std::make_unique<CMasternodeMetaMan>(/* load_cache */ false);
-    ::netfulfilledman = std::make_unique<CNetFulfilledRequestManager>();
+    ::netfulfilledman = std::make_unique<CNetFulfilledRequestManager>(/* load_cache */ false);
 
     m_node.creditPoolManager = std::make_unique<CCreditPoolManager>(*m_node.evodb);
 
