@@ -33,7 +33,6 @@ public:
         READWRITE(obj.mapFulfilledRequests);
     }
 
-    void CheckAndRemove();
     void Clear();
 
     std::string ToString() const;
@@ -55,6 +54,7 @@ public:
     ~CNetFulfilledRequestManager();
 
     bool IsValid() const { return is_valid; }
+    void CheckAndRemove();
 
     void AddFulfilledRequest(const CService& addr, const std::string& strRequest);
     bool HasFulfilledRequest(const CService& addr, const std::string& strRequest);

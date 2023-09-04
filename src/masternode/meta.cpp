@@ -18,7 +18,7 @@ CMasternodeMetaMan::CMasternodeMetaMan(bool load_cache) :
     is_valid{
         [&]() -> bool {
             assert(m_db != nullptr);
-            return load_cache ? m_db->Load(*this) : m_db->Dump(*this);
+            return load_cache ? m_db->Load(*this) : m_db->Store(*this);
         }()
     }
 {
@@ -27,7 +27,7 @@ CMasternodeMetaMan::CMasternodeMetaMan(bool load_cache) :
 CMasternodeMetaMan::~CMasternodeMetaMan()
 {
     if (!is_valid) return;
-    m_db->Dump(*this);
+    m_db->Store(*this);
 }
 
 UniValue CMasternodeMetaInfo::ToJson() const

@@ -140,7 +140,6 @@ public:
         metaInfos.clear();
     }
 
-    void CheckAndRemove() { return; };
     std::string ToString() const;
 };
 

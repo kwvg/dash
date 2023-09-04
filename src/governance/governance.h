@@ -221,7 +221,6 @@ public:
         mapLastMasternodeObject.clear();
     }
 
-    void CheckAndRemove() { /* TODO: replace stub with means to call db cleanup function */ return; };
     std::string ToString() const;
 };
 

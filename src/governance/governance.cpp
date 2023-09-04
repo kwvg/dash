@@ -56,14 +56,15 @@ CGovernanceManager::CGovernanceManager() :
 CGovernanceManager::~CGovernanceManager()
 {
     if (!is_valid) return;
-    m_db->Dump(*this);
+    m_db->Store(*this);
 }
 
 bool CGovernanceManager::LoadCache(bool load_cache)
 {
     assert(m_db != nullptr);
-    is_valid = load_cache ? m_db->Load(*this) : m_db->Dump(*this);
+    is_valid = load_cache ? m_db->Load(*this) : m_db->Store(*this);
     if (is_valid && load_cache) {
+        CheckAndRemove();
         InitOnLoad();
     }
     return is_valid;

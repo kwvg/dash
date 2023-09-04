@@ -199,8 +199,6 @@ public:
      */
     void Clear() LOCKS_EXCLUDED(cs);
 
-    void CheckAndRemove() { /* TODO: replace stub with means to call db cleanup function */ return; };
-
     /**
      * ToString returns the string representation of the SporkManager.
      */

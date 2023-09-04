@@ -76,20 +76,24 @@ CSporkManager::CSporkManager() :
 CSporkManager::~CSporkManager()
 {
     if (!is_valid) return;
-    m_db->Dump(*this);
+    m_db->Store(*this);
 }
 
 bool CSporkManager::LoadCache()
 {
     assert(m_db != nullptr);
     is_valid = m_db->Load(*this);
-    return IsValid();
+    if (is_valid) {
+        CheckAndRemove();
+    }
+    return is_valid;
 }
 
 void CSporkManager::CheckAndRemove()
 {
     LOCK(cs);
-    assert(!setSporkPubKeyIDs.empty());
+
+    if (setSporkPubKeyIDs.empty()) return;
 
     for (auto itActive = mapSporksActive.begin(); itActive != mapSporksActive.end();) {
         auto itSignerPair = itActive->second.begin();
