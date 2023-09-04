@@ -279,8 +279,6 @@ void PrepareShutdown(NodeContext& node)
 
     if (!fRPCInWarmup) {
         // STORE DATA CACHES INTO SERIALIZED DAT FILES
-        CFlatDB<MasternodeMetaStore> flatdb1("mncache.dat", "magicMasternodeCache");
-        flatdb1.Dump(*mmetaman);
         CFlatDB<CNetFulfilledRequestManager> flatdb4("netfulfilled.dat", "magicFulfilledCache");
         flatdb4.Dump(netfulfilledman);
     }
@@ -1727,8 +1725,6 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         }
     }
 
-    assert(!::mmetaman);
-    ::mmetaman = std::make_unique<CMasternodeMetaMan>();
     ::masternodeSync = std::make_unique<CMasternodeSync>(*node.connman, *::governance);
 
     // sanitize comments per BIP-0014, format user agent and check total size
@@ -2214,6 +2210,16 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         }
     }
 
+    assert(!::mmetaman);
+    ::mmetaman = std::make_unique<CMasternodeMetaMan>(fLoadCacheFiles);
+    if (!::mmetaman->IsValid()) {
+        auto file_path = (GetDataDir() / "mncache.dat").string();
+        if (fLoadCacheFiles) {
+            return InitError(strprintf(_("Failed to load masternode cache from %s"), file_path));
+        }
+        return InitError(strprintf(_("Failed to clear masternode cache at %s"), file_path));
+    }
+
     // ********************************************************* Step 8: start indexers
     if (args.GetBoolArg("-txindex", DEFAULT_TXINDEX)) {
         g_txindex = std::make_unique<TxIndex>(nTxIndexCache, false, fReindex);
@@ -2281,20 +2287,6 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     fs::path pathDB = GetDataDir();
     std::string strDBName;
-
-    strDBName = "mncache.dat";
-    uiInterface.InitMessage(_("Loading masternode cache...").translated);
-    CFlatDB<MasternodeMetaStore> flatdb1(strDBName, "magicMasternodeCache");
-    if (fLoadCacheFiles) {
-        if(!flatdb1.Load(*mmetaman)) {
-            return InitError(strprintf(_("Failed to load masternode cache from %s"), (pathDB / strDBName).string()));
-        }
-    } else {
-        CMasternodeMetaMan mmetamanTmp;
-        if(!flatdb1.Dump(mmetamanTmp)) {
-            return InitError(strprintf(_("Failed to clear masternode cache at %s"), (pathDB / strDBName).string()));
-        }
-    }
 
     strDBName = "netfulfilled.dat";
     uiInterface.InitMessage(_("Loading fulfilled requests cache...").translated);

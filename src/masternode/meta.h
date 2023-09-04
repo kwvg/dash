@@ -15,6 +15,8 @@
 #include <memory>
 
 class CConnman;
+template<typename T>
+class CFlatDB;
 
 static constexpr int MASTERNODE_MAX_MIXING_TXES{5};
 static constexpr int MASTERNODE_MAX_FAILED_OUTBOUND_ATTEMPTS{5};
@@ -145,11 +147,19 @@ public:
 class CMasternodeMetaMan : public MasternodeMetaStore
 {
 private:
+    using db_type = CFlatDB<MasternodeMetaStore>;
+
+private:
+    const std::unique_ptr<db_type> m_db;
+    const bool is_valid{false};
+
     std::vector<uint256> vecDirtyGovernanceObjectHashes GUARDED_BY(cs);
 
 public:
-    CMasternodeMetaMan() = default;
-    ~CMasternodeMetaMan() = default;
+    explicit CMasternodeMetaMan(bool load_cache);
+    ~CMasternodeMetaMan();
+
+    bool IsValid() const { return is_valid; }
 
     CMasternodeMetaInfoPtr GetMetaInfo(const uint256& proTxHash, bool fCreate = true);
 

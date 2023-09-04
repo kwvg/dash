@@ -4,6 +4,7 @@
 
 #include <masternode/meta.h>
 
+#include <flat-database.h>
 #include <timedata.h>
 
 #include <sstream>
@@ -11,6 +12,23 @@
 std::unique_ptr<CMasternodeMetaMan> mmetaman;
 
 const std::string MasternodeMetaStore::SERIALIZATION_VERSION_STRING = "CMasternodeMetaMan-Version-3";
+
+CMasternodeMetaMan::CMasternodeMetaMan(bool load_cache) :
+    m_db{std::make_unique<db_type>("mncache.dat", "magicMasternodeCache")},
+    is_valid{
+        [&]() -> bool {
+            assert(m_db != nullptr);
+            return load_cache ? m_db->Load(*this) : m_db->Dump(*this);
+        }()
+    }
+{
+}
+
+CMasternodeMetaMan::~CMasternodeMetaMan()
+{
+    if (!is_valid) return;
+    m_db->Dump(*this);
+}
 
 UniValue CMasternodeMetaInfo::ToJson() const
 {
