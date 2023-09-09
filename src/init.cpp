@@ -68,6 +68,7 @@
 #include <validationinterface.h>
 
 #include <masternode/node.h>
+#include <coinjoin/context.h>
 #ifdef ENABLE_WALLET
 #include <coinjoin/client.h>
 #include <coinjoin/options.h>
@@ -392,11 +393,7 @@ void PrepareShutdown(NodeContext& node)
 
     // After all wallets are removed, destroy all CoinJoin objects
     // and reset them to nullptr
-#ifdef ENABLE_WALLET
-    ::coinJoinClientQueueManager.reset();
-    ::coinJoinClientManagers.reset();
-#endif // ENABLE_WALLET
-    ::coinJoinServer.reset();
+    node.cj_ctx.reset();
 
     UnregisterAllValidationInterfaces();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
@@ -2198,17 +2195,10 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     // ********************************************************* Step 7c: Setup CoinJoin
 
-    ::coinJoinServer = std::make_unique<CCoinJoinServer>(chainman.ActiveChainstate(), *node.connman, *node.mempool, *::masternodeSync);
+    node.cj_ctx = std::make_unique<CJContext>(chainman.ActiveChainstate(), *node.connman, *node.mempool, *::masternodeSync, !ignores_incoming_txs);
 
 #ifdef ENABLE_WALLET
-    assert(!::coinJoinClientManagers);
-    ::coinJoinClientManagers = std::make_unique<CJClientManager>(*node.connman, *node.mempool, *::masternodeSync);
-
-    if (!ignores_incoming_txs) {
-        ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*node.connman, *::masternodeSync);
-    }
-
-    g_wallet_init_interface.InitCoinJoinSettings(*::coinJoinClientManagers);
+    g_wallet_init_interface.InitCoinJoinSettings(*node.cj_ctx->clientman);
 #endif // ENABLE_WALLET
 
     // ********************************************************* Step 8: start indexers
