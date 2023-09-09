@@ -1903,14 +1903,13 @@ void CCoinJoinClientManager::GetJsonInfo(UniValue& obj) const
     obj.pushKV("sessions",  arrSessions);
 }
 
-void DoCoinJoinMaintenance(CConnman& connman, CBlockPolicyEstimator& fee_estimator, CTxMemPool& mempool)
+void DoCoinJoinMaintenance(CBlockPolicyEstimator& fee_estimator)
 {
     if (coinJoinClientQueueManager != nullptr) {
         coinJoinClientQueueManager->DoMaintenance();
     }
-
-    for (auto& pair : coinJoinClientManagers->raw()) {
-        pair.second->DoMaintenance(connman, fee_estimator, mempool);
+    if (coinJoinClientManagers != nullptr) {
+        coinJoinClientManagers->DoMaintenance(fee_estimator);
     }
 }
 
@@ -1919,4 +1918,10 @@ void CJClientManager::Add(CWallet& wallet) {
         wallet.GetName(),
         std::make_unique<CCoinJoinClientManager>(wallet, m_mn_sync)
     );
+}
+
+void CJClientManager::DoMaintenance(CBlockPolicyEstimator& fee_estimator) {
+    for (auto& pair : m_wallet_manager_map) {
+        pair.second->DoMaintenance(m_connman, fee_estimator, m_mempool);
+    }
 }

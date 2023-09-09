@@ -2202,7 +2202,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
 #ifdef ENABLE_WALLET
     assert(!::coinJoinClientManagers);
-    ::coinJoinClientManagers = std::make_unique<CJClientManager>(*::masternodeSync);
+    ::coinJoinClientManagers = std::make_unique<CJClientManager>(*node.connman, *node.mempool, *::masternodeSync);
 
     if (!ignores_incoming_txs) {
         ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*node.connman, *::masternodeSync);
@@ -2339,7 +2339,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         node.scheduler->scheduleEvery(std::bind(&llmq::CDKGSessionManager::CleanupOldContributions, std::ref(*node.llmq_ctx->qdkgsman)), std::chrono::hours{1});
 #ifdef ENABLE_WALLET
     } else if (!ignores_incoming_txs) {
-        node.scheduler->scheduleEvery(std::bind(&DoCoinJoinMaintenance, std::ref(*node.connman), std::ref(*node.fee_estimator), std::ref(*node.mempool)), std::chrono::seconds{1});
+        node.scheduler->scheduleEvery(std::bind(&DoCoinJoinMaintenance, std::ref(*node.fee_estimator)), std::chrono::seconds{1});
 #endif // ENABLE_WALLET
     }
 

@@ -74,7 +74,8 @@ public:
 
 class CJClientManager {
 public:
-    CJClientManager(const CMasternodeSync& mn_sync) : m_mn_sync(mn_sync) {}
+    CJClientManager(CConnman& connman, CTxMemPool& mempool, const CMasternodeSync& mn_sync)
+        : m_connman(connman), m_mempool(mempool), m_mn_sync(mn_sync) {}
     ~CJClientManager() {
         for (auto& pair : m_wallet_manager_map) {
             pair.second.reset();
@@ -82,6 +83,7 @@ public:
     }
 
     void Add(CWallet& wallet);
+    void DoMaintenance(CBlockPolicyEstimator& fee_estimator);
 
     void Remove(const std::string& name) {
         auto it = m_wallet_manager_map.find(name);
@@ -96,6 +98,9 @@ public:
     const std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>>& raw() const { return m_wallet_manager_map; }
 
 private:
+    CConnman& m_connman;
+    CTxMemPool& m_mempool;
+
     const CMasternodeSync& m_mn_sync;
     std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>> m_wallet_manager_map;
 };
@@ -274,6 +279,6 @@ public:
     void GetJsonInfo(UniValue& obj) const LOCKS_EXCLUDED(cs_deqsessions);
 };
 
-void DoCoinJoinMaintenance(CConnman& connman, CBlockPolicyEstimator& fee_estimator, CTxMemPool& mempool);
+void DoCoinJoinMaintenance(CBlockPolicyEstimator& fee_estimator);
 
 #endif // BITCOIN_COINJOIN_CLIENT_H
