@@ -108,6 +108,9 @@ private:
 class CCoinJoinClientSession : public CCoinJoinBaseSession
 {
 private:
+    CWallet& mixingWallet;
+    CJClientManager& m_clientman;
+
     const CMasternodeSync& m_mn_sync;
 
     std::vector<COutPoint> vecOutPointLocked;
@@ -120,8 +123,6 @@ private:
     CPendingDsaRequest pendingDsaRequest;
 
     CKeyHolderStorage keyHolderStorage; // storage for keys used in PrepareDenominate
-
-    CWallet& mixingWallet;
 
     /// Create denominations
     bool CreateDenominated(CBlockPolicyEstimator& fee_estimator, CAmount nBalanceToDenominate);
@@ -158,10 +159,8 @@ private:
     void SetNull() EXCLUSIVE_LOCKS_REQUIRED(cs_coinjoin);
 
 public:
-    explicit CCoinJoinClientSession(CWallet& pwallet, const CMasternodeSync& mn_sync) :
-        m_mn_sync(mn_sync), mixingWallet(pwallet)
-    {
-    }
+    explicit CCoinJoinClientSession(CWallet& pwallet, CJClientManager& clientman, const CMasternodeSync& mn_sync) :
+        mixingWallet(pwallet), m_clientman(clientman), m_mn_sync(mn_sync) {}
 
     void ProcessMessage(CNode& peer, PeerManager& peerman, CConnman& connman, const CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv);
 
@@ -209,10 +208,13 @@ public:
 class CCoinJoinClientManager
 {
 private:
-    // Keep track of the used Masternodes
-    std::vector<COutPoint> vecMasternodesUsed;
+    CWallet& mixingWallet;
+    CJClientManager& m_clientman;
 
     const CMasternodeSync& m_mn_sync;
+
+    // Keep track of the used Masternodes
+    std::vector<COutPoint> vecMasternodesUsed;
 
     mutable Mutex cs_deqsessions;
     // TODO: or map<denom, CCoinJoinClientSession> ??
@@ -223,8 +225,6 @@ private:
     int nCachedLastSuccessBlock{0};
     int nMinBlocksToWait{1}; // how many blocks to wait for after one successful mixing tx in non-multisession mode
     bilingual_str strAutoDenomResult;
-
-    CWallet& mixingWallet;
 
     // Keep track of current block height
     int nCachedBlockHeight{0};
@@ -242,8 +242,8 @@ public:
     CCoinJoinClientManager(CCoinJoinClientManager const&) = delete;
     CCoinJoinClientManager& operator=(CCoinJoinClientManager const&) = delete;
 
-    explicit CCoinJoinClientManager(CWallet& wallet, const CMasternodeSync& mn_sync) :
-        m_mn_sync(mn_sync), mixingWallet(wallet) {}
+    explicit CCoinJoinClientManager(CWallet& wallet, CJClientManager& clientman, const CMasternodeSync& mn_sync) :
+        mixingWallet(wallet), m_clientman(clientman), m_mn_sync(mn_sync) {}
 
     void ProcessMessage(CNode& peer, PeerManager& peerman, CConnman& connman, const CTxMemPool& mempool, std::string_view msg_type, CDataStream& vRecv) LOCKS_EXCLUDED(cs_deqsessions);
 

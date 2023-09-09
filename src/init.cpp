@@ -2207,9 +2207,9 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     if (!ignores_incoming_txs) {
         ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*node.connman, *::masternodeSync);
     }
-#endif // ENABLE_WALLET
 
-    g_wallet_init_interface.InitCoinJoinSettings();
+    g_wallet_init_interface.InitCoinJoinSettings(*::coinJoinClientManagers);
+#endif // ENABLE_WALLET
 
     // ********************************************************* Step 8: start indexers
     if (args.GetBoolArg("-txindex", DEFAULT_TXINDEX)) {

@@ -121,7 +121,7 @@ bool AddWallet(const std::shared_ptr<CWallet>& wallet)
     wallet->AutoLockMasternodeCollaterals();
     assert(::masternodeSync != nullptr && ::coinJoinClientManagers != nullptr);
     ::coinJoinClientManagers->Add(*wallet);
-    g_wallet_init_interface.InitCoinJoinSettings();
+    g_wallet_init_interface.InitCoinJoinSettings(*::coinJoinClientManagers);
     return true;
 }
 
@@ -143,7 +143,7 @@ bool RemoveWallet(const std::shared_ptr<CWallet>& wallet, std::optional<bool> lo
 
     assert(::coinJoinClientManagers != nullptr);
     ::coinJoinClientManagers->Remove(name);
-    g_wallet_init_interface.InitCoinJoinSettings();
+    g_wallet_init_interface.InitCoinJoinSettings(*::coinJoinClientManagers);
 
     // Write the wallet setting
     UpdateWalletSetting(chain, name, load_on_start, warnings);
@@ -4811,7 +4811,7 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, const std::st
     {
         LOCK(cs_wallets);
         for (auto& load_wallet : g_load_wallet_fns) {
-            load_wallet(interfaces::MakeWallet(walletInstance));
+            load_wallet(interfaces::MakeWallet(walletInstance, *::coinJoinClientManagers));
         }
     }
 

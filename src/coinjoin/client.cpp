@@ -30,7 +30,6 @@
 std::unique_ptr<CJClientManager> coinJoinClientManagers;
 std::unique_ptr<CCoinJoinClientQueueManager> coinJoinClientQueueManager;
 
-
 void CCoinJoinClientQueueManager::ProcessMessage(const CNode& peer, PeerManager& peerman, std::string_view msg_type, CDataStream& vRecv)
 {
     if (fMasternodeMode) return;
@@ -673,7 +672,7 @@ void CCoinJoinClientSession::CompletedTransaction(PoolMessage nMessageID)
 {
     if (fMasternodeMode) return;
 
-    auto manager = coinJoinClientManagers->Get(mixingWallet);
+    auto manager = m_clientman.Get(mixingWallet);
     if (nMessageID == MSG_SUCCESS && manager != nullptr) {
         manager->UpdatedSuccessBlock();
         keyHolderStorage.KeepAll();
@@ -983,7 +982,7 @@ bool CCoinJoinClientManager::DoAutomaticDenominating(CConnman& connman, CBlockPo
     AssertLockNotHeld(cs_deqsessions);
     LOCK(cs_deqsessions);
     if (int(deqSessions.size()) < CCoinJoinClientOptions::GetSessions()) {
-        deqSessions.emplace_back(mixingWallet, m_mn_sync);
+        deqSessions.emplace_back(mixingWallet, m_clientman, m_mn_sync);
     }
     for (auto& session : deqSessions) {
         if (!CheckAutomaticBackup()) return false;
@@ -1088,7 +1087,7 @@ bool CCoinJoinClientSession::JoinExistingQueue(CAmount nBalanceNeedsAnonymized, 
             continue;
         }
 
-        auto manager = coinJoinClientManagers->Get(mixingWallet);
+        auto manager = m_clientman.Get(mixingWallet);
         if (manager == nullptr) {
             LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::JoinExistingQueue -- client manager for wallet %s does not exist\n", mixingWallet.GetName());
             continue;
@@ -1136,7 +1135,7 @@ bool CCoinJoinClientSession::StartNewQueue(CAmount nBalanceNeedsAnonymized, CCon
 
     // otherwise, try one randomly
     while (nTries < 10) {
-        auto manager = coinJoinClientManagers->Get(mixingWallet);
+        auto manager = m_clientman.Get(mixingWallet);
         if (manager == nullptr) {
             LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::StartNewQueue -- client manager for wallet %s does not exist\n", mixingWallet.GetName());
             return false;
@@ -1525,7 +1524,7 @@ bool CCoinJoinClientSession::MakeCollateralAmounts(const CBlockPolicyEstimator& 
         return false;
     }
 
-    auto manager = coinJoinClientManagers->Get(mixingWallet);
+    auto manager = m_clientman.Get(mixingWallet);
     if (manager == nullptr) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::%s -- client manager for wallet %s does not exist: %s\n", __func__, mixingWallet.GetName());
         return false;
@@ -1807,7 +1806,7 @@ bool CCoinJoinClientSession::CreateDenominated(CBlockPolicyEstimator& fee_estima
     }
 
     // use the same nCachedLastSuccessBlock as for DS mixing to prevent race
-    auto manager = coinJoinClientManagers->Get(mixingWallet);
+    auto manager = m_clientman.Get(mixingWallet);
     if (manager == nullptr) {
         LogPrint(BCLog::COINJOIN, "CCoinJoinClientSession::%s -- client manager for wallet %s does not exist: %s\n", __func__, mixingWallet.GetName());
         return false;
@@ -1916,7 +1915,7 @@ void DoCoinJoinMaintenance(CBlockPolicyEstimator& fee_estimator)
 void CJClientManager::Add(CWallet& wallet) {
     m_wallet_manager_map.emplace(
         wallet.GetName(),
-        std::make_unique<CCoinJoinClientManager>(wallet, m_mn_sync)
+        std::make_unique<CCoinJoinClientManager>(wallet, *this, m_mn_sync)
     );
 }
 
