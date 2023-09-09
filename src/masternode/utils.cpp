@@ -22,7 +22,7 @@ void CMasternodeUtils::DoMaintenance(CConnman& connman, const CMasternodeSync& m
 
     std::vector<CDeterministicMNCPtr> vecDmns; // will be empty when no wallet
 #ifdef ENABLE_WALLET
-    for (const auto& pair : coinJoinClientManagers) {
+    for (auto pair : coinJoinClientManagers->raw()) {
         pair.second->GetMixingMasternodesInfo(vecDmns);
     }
 #endif // ENABLE_WALLET

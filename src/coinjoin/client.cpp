@@ -3,9 +3,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <coinjoin/client.h>
-#include <coinjoin/options.h>
 
 #include <chainparams.h>
+#include <coinjoin/options.h>
 #include <consensus/validation.h>
 #include <core_io.h>
 #include <evo/deterministicmns.h>
@@ -27,7 +27,7 @@
 #include <memory>
 #include <univalue.h>
 
-std::map<const std::string, std::shared_ptr<CCoinJoinClientManager>> coinJoinClientManagers;
+std::unique_ptr<CJClientManager> coinJoinClientManagers;
 std::unique_ptr<CCoinJoinClientQueueManager> coinJoinClientQueueManager;
 
 
@@ -99,7 +99,7 @@ void CCoinJoinClientQueueManager::ProcessDSQueue(const CNode& peer, PeerManager&
         }
 
         // if the queue is ready, submit if we can
-        if (dsq.fReady && ranges::any_of(coinJoinClientManagers,
+        if (dsq.fReady && ranges::any_of(coinJoinClientManagers->raw(),
                                          [this, &dmn](const auto &pair) {
                                              return pair.second->TrySubmitDenominate(dmn->pdmnState->addr,
                                                                                      this->connman);
@@ -124,7 +124,7 @@ void CCoinJoinClientQueueManager::ProcessDSQueue(const CNode& peer, PeerManager&
             LogPrint(BCLog::COINJOIN, "DSQUEUE -- new CoinJoin queue (%s) from masternode %s\n", dsq.ToString(),
                      dmn->pdmnState->addr.ToString());
 
-            ranges::any_of(coinJoinClientManagers,
+            ranges::any_of(coinJoinClientManagers->raw(),
                            [&dsq](const auto &pair) { return pair.second->MarkAlreadyJoinedQueueAsTried(dsq); });
 
             WITH_LOCK(cs_vecqueue, vecCoinJoinQueue.push_back(dsq));
@@ -675,7 +675,7 @@ void CCoinJoinClientSession::CompletedTransaction(PoolMessage nMessageID)
 
     if (nMessageID == MSG_SUCCESS) {
         WalletCJLogPrint(mixingWallet, "CompletedTransaction -- success\n");
-        coinJoinClientManagers.at(mixingWallet.GetName())->UpdatedSuccessBlock();
+        coinJoinClientManagers->Get(mixingWallet)->UpdatedSuccessBlock();
         keyHolderStorage.KeepAll();
     } else {
         WalletCJLogPrint(mixingWallet, "CompletedTransaction -- error\n");
@@ -1087,7 +1087,7 @@ bool CCoinJoinClientSession::JoinExistingQueue(CAmount nBalanceNeedsAnonymized, 
             continue;
         }
 
-        coinJoinClientManagers.at(mixingWallet.GetName())->AddUsedMasternode(dsq.masternodeOutpoint);
+        coinJoinClientManagers->Get(mixingWallet)->AddUsedMasternode(dsq.masternodeOutpoint);
 
         if (connman.IsMasternodeOrDisconnectRequested(dmn->pdmnState->addr)) {
             WalletCJLogPrint(mixingWallet, "CCoinJoinClientSession::JoinExistingQueue -- skipping masternode connection, addr=%s\n", dmn->pdmnState->addr.ToString());
@@ -1130,7 +1130,7 @@ bool CCoinJoinClientSession::StartNewQueue(CAmount nBalanceNeedsAnonymized, CCon
 
     // otherwise, try one randomly
     while (nTries < 10) {
-        auto dmn = coinJoinClientManagers.at(mixingWallet.GetName())->GetRandomNotUsedMasternode();
+        auto dmn = coinJoinClientManagers->Get(mixingWallet)->GetRandomNotUsedMasternode();
 
         if (!dmn) {
             strAutoDenomResult = _("Can't find random Masternode.");
@@ -1138,7 +1138,7 @@ bool CCoinJoinClientSession::StartNewQueue(CAmount nBalanceNeedsAnonymized, CCon
             return false;
         }
 
-        coinJoinClientManagers.at(mixingWallet.GetName())->AddUsedMasternode(dmn->collateralOutpoint);
+        coinJoinClientManagers->Get(mixingWallet)->AddUsedMasternode(dmn->collateralOutpoint);
 
         // skip next mn payments winners
         if (dmn->pdmnState->nLastPaidHeight + nWeightedMnCount < mnList.GetHeight() + WinnersToSkip()) {
@@ -1514,7 +1514,7 @@ bool CCoinJoinClientSession::MakeCollateralAmounts(const CBlockPolicyEstimator& 
         return false;
     }
 
-    coinJoinClientManagers.at(mixingWallet.GetName())->UpdatedSuccessBlock();
+    coinJoinClientManagers->Get(mixingWallet)->UpdatedSuccessBlock();
 
     WalletCJLogPrint(mixingWallet, "CCoinJoinClientSession::%s -- txid: %s\n", __func__, strResult.original);
 
@@ -1791,7 +1791,7 @@ bool CCoinJoinClientSession::CreateDenominated(CBlockPolicyEstimator& fee_estima
     }
 
     // use the same nCachedLastSuccessBlock as for DS mixing to prevent race
-    coinJoinClientManagers.at(mixingWallet.GetName())->UpdatedSuccessBlock();
+    coinJoinClientManagers->Get(mixingWallet)->UpdatedSuccessBlock();
 
     WalletCJLogPrint(mixingWallet, "CCoinJoinClientSession::%s -- txid: %s\n", __func__, strResult.original);
 
@@ -1888,7 +1888,14 @@ void DoCoinJoinMaintenance(CConnman& connman, CBlockPolicyEstimator& fee_estimat
         coinJoinClientQueueManager->DoMaintenance();
     }
 
-    for (const auto& pair : coinJoinClientManagers) {
+    for (auto pair : coinJoinClientManagers->raw()) {
         pair.second->DoMaintenance(connman, fee_estimator, mempool);
     }
+}
+
+void CJClientManager::Add(CWallet& wallet) {
+    m_wallet_manager_map.emplace(
+        wallet.GetName(),
+        std::make_shared<CCoinJoinClientManager>(wallet, m_mn_sync)
+    );
 }

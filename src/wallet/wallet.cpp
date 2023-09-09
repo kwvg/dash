@@ -119,8 +119,8 @@ bool AddWallet(const std::shared_ptr<CWallet>& wallet)
     }
     wallet->ConnectScriptPubKeyManNotifiers();
     wallet->AutoLockMasternodeCollaterals();
-    assert(::masternodeSync != nullptr);
-    coinJoinClientManagers.emplace(std::make_pair(wallet->GetName(), std::make_shared<CCoinJoinClientManager>(*wallet, *::masternodeSync)));
+    assert(::masternodeSync != nullptr && ::coinJoinClientManagers != nullptr);
+    ::coinJoinClientManagers->Add(*wallet);
     g_wallet_init_interface.InitCoinJoinSettings();
     return true;
 }
@@ -140,8 +140,9 @@ bool RemoveWallet(const std::shared_ptr<CWallet>& wallet, std::optional<bool> lo
         if (i == vpwallets.end()) return false;
         vpwallets.erase(i);
     }
-    auto it = coinJoinClientManagers.find(wallet->GetName());
-    coinJoinClientManagers.erase(it);
+
+    assert(::coinJoinClientManagers != nullptr);
+    ::coinJoinClientManagers->Remove(name);
     g_wallet_init_interface.InitCoinJoinSettings();
 
     // Write the wallet setting
@@ -1639,10 +1640,9 @@ void CWallet::UnsetBlankWalletFlag(WalletBatch& batch)
 
 void CWallet::NewKeyPoolCallback()
 {
-    auto it = coinJoinClientManagers.find(GetName());
-    if (it != coinJoinClientManagers.end()) {
-        it->second->StopMixing();
-    }
+    assert(::coinJoinClientManagers != nullptr);
+    auto cj_clientman = ::coinJoinClientManagers->Get(*this);
+    if (cj_clientman != nullptr) cj_clientman->StopMixing();
     nKeysLeftSinceAutoBackup = 0;
 }
 
@@ -4805,8 +4805,8 @@ std::shared_ptr<CWallet> CWallet::Create(interfaces::Chain& chain, const std::st
         walletInstance->GetDatabase().IncrementUpdateCounter();
     }
 
-    assert(::masternodeSync != nullptr);
-    coinJoinClientManagers.emplace(std::make_pair(walletInstance->GetName(), std::make_shared<CCoinJoinClientManager>(*walletInstance, *::masternodeSync)));
+    assert(::masternodeSync != nullptr && ::coinJoinClientManagers != nullptr);
+    ::coinJoinClientManagers->Add(*walletInstance);
 
     {
         LOCK(cs_wallets);

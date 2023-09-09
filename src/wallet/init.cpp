@@ -208,9 +208,9 @@ void WalletInit::InitCoinJoinSettings() const
     bool fAutoStart = gArgs.GetBoolArg("-coinjoinautostart", DEFAULT_COINJOIN_AUTOSTART);
     for (auto& pwallet : GetWallets()) {
         if (pwallet->IsLocked()) {
-            coinJoinClientManagers.at(pwallet->GetName())->StopMixing();
+            coinJoinClientManagers->Get(*pwallet)->StopMixing();
         } else if (fAutoStart) {
-            coinJoinClientManagers.at(pwallet->GetName())->StartMixing();
+            coinJoinClientManagers->Get(*pwallet)->StartMixing();
         }
     }
     LogPrintf("CoinJoin: autostart=%d, multisession=%d," /* Continued */

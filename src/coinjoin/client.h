@@ -11,26 +11,26 @@
 
 #include <atomic>
 #include <deque>
+#include <memory>
 #include <utility>
 
-class CDeterministicMN;
-using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
-
+class CBlockPolicyEstimator;
 class CCoinJoinClientManager;
 class CCoinJoinClientQueueManager;
-
-class CBlockPolicyEstimator;
 class CConnman;
+class CDeterministicMN;
+class CJClientManager;
 class CNode;
+class CMasternodeSync;
 class CTxMemPool;
 class PeerManager;
 
 class UniValue;
-class CMasternodeSync;
 
+using CDeterministicMNCPtr = std::shared_ptr<const CDeterministicMN>;
 
 // The main object for accessing mixing
-extern std::map<const std::string, std::shared_ptr<CCoinJoinClientManager>> coinJoinClientManagers;
+extern std::unique_ptr<CJClientManager> coinJoinClientManagers;
 
 // The object to track mixing queues
 extern std::unique_ptr<CCoinJoinClientQueueManager> coinJoinClientQueueManager;
@@ -70,6 +70,29 @@ public:
     {
         return *this != CPendingDsaRequest();
     }
+};
+
+class CJClientManager {
+public:
+    CJClientManager(const CMasternodeSync& mn_sync) : m_mn_sync(mn_sync) {}
+    ~CJClientManager() = default;
+
+    void Add(CWallet& wallet);
+
+    void Remove(const std::string& name) {
+        auto it = m_wallet_manager_map.find(name);
+        if (it != m_wallet_manager_map.end()) { m_wallet_manager_map.erase(it); }
+    }
+
+    std::shared_ptr<CCoinJoinClientManager> Get(const CWallet& wallet) const {
+        return m_wallet_manager_map.at(wallet.GetName());
+    }
+
+    const std::map<const std::string, std::shared_ptr<CCoinJoinClientManager>>& raw() const { return m_wallet_manager_map; }
+
+private:
+    const CMasternodeSync& m_mn_sync;
+    std::map<const std::string, std::shared_ptr<CCoinJoinClientManager>> m_wallet_manager_map;
 };
 
 class CCoinJoinClientSession : public CCoinJoinBaseSession
@@ -245,7 +268,6 @@ public:
 
     void GetJsonInfo(UniValue& obj) const LOCKS_EXCLUDED(cs_deqsessions);
 };
-
 
 void DoCoinJoinMaintenance(CConnman& connman, CBlockPolicyEstimator& fee_estimator, CTxMemPool& mempool);
 

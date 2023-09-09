@@ -394,6 +394,7 @@ void PrepareShutdown(NodeContext& node)
     // and reset them to nullptr
 #ifdef ENABLE_WALLET
     ::coinJoinClientQueueManager.reset();
+    ::coinJoinClientManagers.reset();
 #endif // ENABLE_WALLET
     ::coinJoinServer.reset();
 
@@ -2200,6 +2201,9 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     ::coinJoinServer = std::make_unique<CCoinJoinServer>(chainman.ActiveChainstate(), *node.connman, *node.mempool, *::masternodeSync);
 
 #ifdef ENABLE_WALLET
+    assert(!::coinJoinClientManagers);
+    ::coinJoinClientManagers = std::make_unique<CJClientManager>(*::masternodeSync);
+
     if (!ignores_incoming_txs) {
         ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*node.connman, *::masternodeSync);
     }

@@ -206,6 +206,7 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
     ::governance = std::make_unique<CGovernanceManager>();
     ::masternodeSync = std::make_unique<CMasternodeSync>(*m_node.connman, *::governance);
 #ifdef ENABLE_WALLET
+    ::coinJoinClientManagers = std::make_unique<CJClientManager>(*::masternodeSync);
     ::coinJoinClientQueueManager = std::make_unique<CCoinJoinClientQueueManager>(*m_node.connman, *::masternodeSync);
 #endif // ENABLE_WALLET
 
@@ -226,6 +227,7 @@ ChainTestingSetup::~ChainTestingSetup()
     GetMainSignals().UnregisterBackgroundSignalScheduler();
 #ifdef ENABLE_WALLET
     ::coinJoinClientQueueManager.reset();
+    ::coinJoinClientManagers.reset();
 #endif // ENABLE_WALLET
     ::masternodeSync.reset();
     ::governance.reset();

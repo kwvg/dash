@@ -4314,7 +4314,7 @@ void PeerManagerImpl::ProcessMessage(
         //probably one the extensions
 #ifdef ENABLE_WALLET
         coinJoinClientQueueManager->ProcessMessage(pfrom, *this, msg_type, vRecv);
-        for (auto& pair : coinJoinClientManagers) {
+        for (auto pair : coinJoinClientManagers->raw()) {
             pair.second->ProcessMessage(pfrom, *this, m_connman, m_mempool, msg_type, vRecv);
         }
 #endif // ENABLE_WALLET
