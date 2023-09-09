@@ -123,44 +123,44 @@ WalletTxOut MakeWalletTxOut(const CWallet& wallet,
 namespace CoinJoin = interfaces::CoinJoin;
 class CoinJoinImpl : public CoinJoin::Client
 {
-    std::shared_ptr<CCoinJoinClientManager> m_manager;
+    CCoinJoinClientManager& m_manager;
 public:
-    CoinJoinImpl(const std::shared_ptr<CWallet>& wallet) : m_manager(Assert(coinJoinClientManagers->Get(*wallet))) {}
+    CoinJoinImpl(const std::shared_ptr<CWallet>& wallet) : m_manager(*Assert(coinJoinClientManagers->Get(*wallet))) {}
     void resetCachedBlocks() override
     {
-        m_manager->nCachedNumBlocks = std::numeric_limits<int>::max();
+        m_manager.nCachedNumBlocks = std::numeric_limits<int>::max();
     }
     void resetPool() override
     {
-        m_manager->ResetPool();
+        m_manager.ResetPool();
     }
     void disableAutobackups() override
     {
-        m_manager->fCreateAutoBackups = false;
+        m_manager.fCreateAutoBackups = false;
     }
     int getCachedBlocks() override
     {
-        return m_manager->nCachedNumBlocks;
+        return m_manager.nCachedNumBlocks;
     }
     std::string getSessionDenoms() override
     {
-        return m_manager->GetSessionDenoms();
+        return m_manager.GetSessionDenoms();
     }
     void setCachedBlocks(int nCachedBlocks) override
     {
-       m_manager->nCachedNumBlocks = nCachedBlocks;
+       m_manager.nCachedNumBlocks = nCachedBlocks;
     }
     bool isMixing() override
     {
-        return m_manager->IsMixing();
+        return m_manager.IsMixing();
     }
     bool startMixing() override
     {
-        return m_manager->StartMixing();
+        return m_manager.StartMixing();
     }
     void stopMixing() override
     {
-        m_manager->StopMixing();
+        m_manager.StopMixing();
     }
 };
 

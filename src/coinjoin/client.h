@@ -75,7 +75,11 @@ public:
 class CJClientManager {
 public:
     CJClientManager(const CMasternodeSync& mn_sync) : m_mn_sync(mn_sync) {}
-    ~CJClientManager() = default;
+    ~CJClientManager() {
+        for (auto& pair : m_wallet_manager_map) {
+            pair.second.reset();
+        }
+    }
 
     void Add(CWallet& wallet);
 
@@ -84,16 +88,16 @@ public:
         if (it != m_wallet_manager_map.end()) { m_wallet_manager_map.erase(it); }
     }
 
-    std::shared_ptr<CCoinJoinClientManager> Get(const CWallet& wallet) const {
+    CCoinJoinClientManager* Get(const CWallet& wallet) const {
         auto it = m_wallet_manager_map.find(wallet.GetName());
-        return it != m_wallet_manager_map.end() ? it->second : nullptr;
+        return (it != m_wallet_manager_map.end()) ? it->second.get() : nullptr;
     }
 
-    const std::map<const std::string, std::shared_ptr<CCoinJoinClientManager>>& raw() const { return m_wallet_manager_map; }
+    const std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>>& raw() const { return m_wallet_manager_map; }
 
 private:
     const CMasternodeSync& m_mn_sync;
-    std::map<const std::string, std::shared_ptr<CCoinJoinClientManager>> m_wallet_manager_map;
+    std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>> m_wallet_manager_map;
 };
 
 class CCoinJoinClientSession : public CCoinJoinBaseSession

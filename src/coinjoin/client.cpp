@@ -1909,7 +1909,7 @@ void DoCoinJoinMaintenance(CConnman& connman, CBlockPolicyEstimator& fee_estimat
         coinJoinClientQueueManager->DoMaintenance();
     }
 
-    for (auto pair : coinJoinClientManagers->raw()) {
+    for (auto& pair : coinJoinClientManagers->raw()) {
         pair.second->DoMaintenance(connman, fee_estimator, mempool);
     }
 }
@@ -1917,6 +1917,6 @@ void DoCoinJoinMaintenance(CConnman& connman, CBlockPolicyEstimator& fee_estimat
 void CJClientManager::Add(CWallet& wallet) {
     m_wallet_manager_map.emplace(
         wallet.GetName(),
-        std::make_shared<CCoinJoinClientManager>(wallet, m_mn_sync)
+        std::make_unique<CCoinJoinClientManager>(wallet, m_mn_sync)
     );
 }
