@@ -72,12 +72,15 @@ public:
 
 class CJClientManager {
 public:
+    using wallet_name_cjman_map = std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>>;
+
+public:
     CJClientManager(CConnman& connman, CTxMemPool& mempool, const CMasternodeSync& mn_sync,
                     const std::unique_ptr<CCoinJoinClientQueueManager>& queueman)
         : m_connman(connman), m_mempool(mempool), m_mn_sync(mn_sync), m_queueman(queueman) {}
     ~CJClientManager() {
-        for (auto& pair : m_wallet_manager_map) {
-            pair.second.reset();
+        for (auto& [wallet_name, cj_man] : m_wallet_manager_map) {
+            cj_man.reset();
         }
     }
 
@@ -85,8 +88,7 @@ public:
     void DoMaintenance(CBlockPolicyEstimator& fee_estimator);
 
     void Remove(const std::string& name) {
-        auto it = m_wallet_manager_map.find(name);
-        if (it != m_wallet_manager_map.end()) { m_wallet_manager_map.erase(it); }
+        m_wallet_manager_map.erase(name);
     }
 
     CCoinJoinClientManager* Get(const CWallet& wallet) const {
@@ -94,7 +96,7 @@ public:
         return (it != m_wallet_manager_map.end()) ? it->second.get() : nullptr;
     }
 
-    const std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>>& raw() const { return m_wallet_manager_map; }
+    const wallet_name_cjman_map& raw() const { return m_wallet_manager_map; }
 
 private:
     CConnman& m_connman;
@@ -103,7 +105,7 @@ private:
     const CMasternodeSync& m_mn_sync;
     const std::unique_ptr<CCoinJoinClientQueueManager>& m_queueman;
 
-    std::map<const std::string, std::unique_ptr<CCoinJoinClientManager>> m_wallet_manager_map;
+    wallet_name_cjman_map m_wallet_manager_map;
 };
 
 class CCoinJoinClientSession : public CCoinJoinBaseSession

@@ -1880,14 +1880,14 @@ void CCoinJoinClientManager::GetJsonInfo(UniValue& obj) const
 }
 
 void CJClientManager::Add(CWallet& wallet) {
-    m_wallet_manager_map.emplace(
+    m_wallet_manager_map.try_emplace(
         wallet.GetName(),
         std::make_unique<CCoinJoinClientManager>(wallet, *this, m_mn_sync, m_queueman)
     );
 }
 
 void CJClientManager::DoMaintenance(CBlockPolicyEstimator& fee_estimator) {
-    for (auto& pair : m_wallet_manager_map) {
-        pair.second->DoMaintenance(m_connman, fee_estimator, m_mempool);
+    for (auto& [wallet_str, clientman] : m_wallet_manager_map) {
+        clientman->DoMaintenance(m_connman, fee_estimator, m_mempool);
     }
 }
