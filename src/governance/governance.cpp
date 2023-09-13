@@ -9,6 +9,7 @@
 #include <chainparams.h>
 #include <consensus/validation.h>
 #include <evo/deterministicmns.h>
+#include <flat-database.h>
 #include <governance/classes.h>
 #include <governance/validators.h>
 #include <masternode/meta.h>
@@ -43,12 +44,29 @@ GovernanceStore::GovernanceStore() :
 }
 
 CGovernanceManager::CGovernanceManager() :
+    m_db{std::make_unique<db_type>("governance.dat", "magicGovernanceCache")},
     nTimeLastDiff(0),
     nCachedBlockHeight(0),
     setRequestedObjects(),
     fRateChecksEnabled(true),
     votedFundingYesTriggerHash(std::nullopt)
 {
+}
+
+CGovernanceManager::~CGovernanceManager()
+{
+    if (!is_valid) return;
+    m_db->Dump(*this);
+}
+
+bool CGovernanceManager::LoadCache(bool load_cache)
+{
+    assert(m_db != nullptr);
+    is_valid = load_cache ? m_db->Load(*this) : m_db->Dump(*this);
+    if (is_valid && load_cache) {
+        InitOnLoad();
+    }
+    return is_valid;
 }
 
 // Accessors for thread-safe access to maps

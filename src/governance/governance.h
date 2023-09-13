@@ -13,6 +13,8 @@
 
 class CBloomFilter;
 class CBlockIndex;
+template<typename T>
+class CFlatDB;
 class CInv;
 
 class CGovernanceManager;
@@ -232,6 +234,7 @@ class CGovernanceManager : public GovernanceStore
 
 private:
     using hash_s_t = std::set<uint256>;
+    using db_type = CFlatDB<GovernanceStore>;
 
     class ScopedLockBool
     {
@@ -258,6 +261,9 @@ private:
     static const int RELIABLE_PROPAGATION_TIME;
 
 private:
+    const std::unique_ptr<db_type> m_db;
+    bool is_valid{false};
+
     int64_t nTimeLastDiff;
     // keep track of current block height
     int nCachedBlockHeight;
@@ -270,7 +276,11 @@ private:
 
 public:
     CGovernanceManager();
-    ~CGovernanceManager() = default;
+    ~CGovernanceManager();
+
+    bool LoadCache(bool load_cache);
+
+    bool IsValid() const { return is_valid; }
 
     /**
      * This is called by AlreadyHave in net_processing.cpp as part of the inventory

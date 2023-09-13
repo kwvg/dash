@@ -285,10 +285,6 @@ void PrepareShutdown(NodeContext& node)
         flatdb4.Dump(netfulfilledman);
         CFlatDB<CSporkManager> flatdb6("sporks.dat", "magicSporkCache");
         flatdb6.Dump(*::sporkManager);
-        if (!fDisableGovernance) {
-            CFlatDB<GovernanceStore> flatdb3("governance.dat", "magicGovernanceCache");
-            flatdb3.Dump(*::governance);
-        }
     }
 
     // After the threads that potentially access these pointers have been stopped,
@@ -1696,6 +1692,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     node.chainman = &g_chainman;
     ChainstateManager& chainman = *Assert(node.chainman);
 
+    assert(!::governance);
     ::governance = std::make_unique<CGovernanceManager>();
 
     assert(!node.peerman);
@@ -1852,8 +1849,8 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     }
 #endif
 
-    assert(masternodeSync != nullptr);
-    assert(governance != nullptr);
+    assert(::governance != nullptr);
+    assert(::masternodeSync != nullptr);
     pdsNotificationInterface = new CDSNotificationInterface(
         *node.connman, *::masternodeSync, ::deterministicMNManager, *::governance, node.llmq_ctx, node.cj_ctx
     );
@@ -2202,6 +2199,20 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     g_wallet_init_interface.InitCoinJoinSettings(*node.cj_ctx->clientman);
 #endif // ENABLE_WALLET
 
+    // ********************************************************* Step 7d: Setup other Dash services
+
+    bool fLoadCacheFiles = !(fReindex || fReindexChainState) && (::ChainActive().Tip() != nullptr);
+
+    if (!fDisableGovernance) {
+        if (!::governance->LoadCache(fLoadCacheFiles)) {
+            auto file_path = (GetDataDir() / "governance.dat").string();
+            if (fLoadCacheFiles && !fDisableGovernance) {
+                return InitError(strprintf(_("Failed to load governance cache from %s"), file_path));
+            }
+            return InitError(strprintf(_("Failed to clear governance cache at %s"), file_path));
+        }
+    }
+
     // ********************************************************* Step 8: start indexers
     if (args.GetBoolArg("-txindex", DEFAULT_TXINDEX)) {
         g_txindex = std::make_unique<TxIndex>(nTxIndexCache, false, fReindex);
@@ -2267,7 +2278,6 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     // LOAD SERIALIZED DAT FILES INTO DATA CACHES FOR INTERNAL USE
 
-    bool fLoadCacheFiles = !(fReindex || fReindexChainState) && (::ChainActive().Tip() != nullptr);
     fs::path pathDB = GetDataDir();
     std::string strDBName;
 
@@ -2282,21 +2292,6 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         CMasternodeMetaMan mmetamanTmp;
         if(!flatdb1.Dump(mmetamanTmp)) {
             return InitError(strprintf(_("Failed to clear masternode cache at %s"), (pathDB / strDBName).string()));
-        }
-    }
-
-    strDBName = "governance.dat";
-    uiInterface.InitMessage(_("Loading governance cache...").translated);
-    CFlatDB<GovernanceStore> flatdb3(strDBName, "magicGovernanceCache");
-    if (fLoadCacheFiles && !fDisableGovernance) {
-        if(!flatdb3.Load(*::governance)) {
-            return InitError(strprintf(_("Failed to load governance cache from %s"), (pathDB / strDBName).string()));
-        }
-        ::governance->InitOnLoad();
-    } else {
-        CGovernanceManager governanceTmp;
-        if(!flatdb3.Dump(governanceTmp)) {
-            return InitError(strprintf(_("Failed to clear governance cache at %s"), (pathDB / strDBName).string()));
         }
     }
 
