@@ -112,7 +112,13 @@ public:
 
 public:
     size_t GetSerializeSize(int nType, int nVersion) const {
-        return 66;
+        return /* m_address_type */   1 +
+               /* m_address_bytes */ 20 +
+               /* m_block_height */   4 +
+               /* m_block_tx_pos */   4 +
+               /* m_tx_hash */       32 +
+               /* m_tx_index */       4 +
+               /* m_tx_spent */       1;
     }
 
     template<typename Stream>
@@ -161,7 +167,8 @@ public:
 
 public:
     size_t GetSerializeSize(int nType, int nVersion) const {
-        return 21;
+        return /* m_address_type */  20 +
+               /* m_address_bytes */  1;
     }
 
     template<typename Stream>
@@ -199,7 +206,9 @@ public:
 
 public:
     size_t GetSerializeSize(int nType, int nVersion) const {
-        return 25;
+        return /* m_address_type */   1 +
+               /* m_address_bytes */ 20 +
+               /* m_block_height */   4;
     }
 
     template<typename Stream>

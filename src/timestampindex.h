@@ -27,7 +27,7 @@ public:
 
 public:
     size_t GetSerializeSize(int nType, int nVersion) const {
-        return 4;
+        return /* m_time */ 4;
     }
 
     template<typename Stream>
@@ -61,7 +61,8 @@ public:
 
 public:
     size_t GetSerializeSize(int nType, int nVersion) const {
-        return 36;
+        return /* m_block_hash */ 32 +
+               /* m_block_time */  4;
     }
 
     template<typename Stream>

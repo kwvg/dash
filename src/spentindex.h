@@ -119,7 +119,10 @@ public:
 
 public:
     size_t GetSerializeSize(int nType, int nVersion) const {
-        return 57;
+        return /* m_address_type */   1 +
+               /* m_address_bytes */ 20 +
+               /* m_tx_hash */       32 +
+               /* m_tx_index */       4;
     }
 
     template<typename Stream>
