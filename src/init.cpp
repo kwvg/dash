@@ -286,7 +286,7 @@ void PrepareShutdown(NodeContext& node)
         CFlatDB<CSporkManager> flatdb6("sporks.dat", "magicSporkCache");
         flatdb6.Dump(*::sporkManager);
         if (!fDisableGovernance) {
-            CFlatDB<CGovernanceManager> flatdb3("governance.dat", "magicGovernanceCache");
+            CFlatDB<GovernanceStore> flatdb3("governance.dat", "magicGovernanceCache");
             flatdb3.Dump(*::governance);
         }
     }
@@ -2287,7 +2287,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     strDBName = "governance.dat";
     uiInterface.InitMessage(_("Loading governance cache...").translated);
-    CFlatDB<CGovernanceManager> flatdb3(strDBName, "magicGovernanceCache");
+    CFlatDB<GovernanceStore> flatdb3(strDBName, "magicGovernanceCache");
     if (fLoadCacheFiles && !fDisableGovernance) {
         if(!flatdb3.Load(*::governance)) {
             return InitError(strprintf(_("Failed to load governance cache from %s"), (pathDB / strDBName).string()));

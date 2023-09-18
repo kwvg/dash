@@ -26,24 +26,28 @@ std::unique_ptr<CGovernanceManager> governance;
 
 int nSubmittedFinalBudget;
 
-const std::string CGovernanceManager::SERIALIZATION_VERSION_STRING = "CGovernanceManager-Version-16";
+const std::string GovernanceStore::SERIALIZATION_VERSION_STRING = "CGovernanceManager-Version-16";
 const int CGovernanceManager::MAX_TIME_FUTURE_DEVIATION = 60 * 60;
 const int CGovernanceManager::RELIABLE_PROPAGATION_TIME = 60;
 
-CGovernanceManager::CGovernanceManager() :
-    nTimeLastDiff(0),
-    nCachedBlockHeight(0),
+GovernanceStore::GovernanceStore() :
+    cs(),
     mapObjects(),
     mapErasedGovernanceObjects(),
     cmapVoteToObject(MAX_CACHE_SIZE),
     cmapInvalidVotes(MAX_CACHE_SIZE),
     cmmapOrphanVotes(MAX_CACHE_SIZE),
     mapLastMasternodeObject(),
+    lastMNListForVotingKeys(std::make_shared<CDeterministicMNList>())
+{
+}
+
+CGovernanceManager::CGovernanceManager() :
+    nTimeLastDiff(0),
+    nCachedBlockHeight(0),
     setRequestedObjects(),
     fRateChecksEnabled(true),
-    lastMNListForVotingKeys(std::make_shared<CDeterministicMNList>()),
-    votedFundingYesTriggerHash(std::nullopt),
-    cs()
+    votedFundingYesTriggerHash(std::nullopt)
 {
 }
 
@@ -1323,7 +1327,7 @@ void CGovernanceManager::InitOnLoad()
     LogPrintf("     %s\n", ToString());
 }
 
-std::string CGovernanceManager::ToString() const
+std::string GovernanceStore::ToString() const
 {
     LOCK(cs);
 
