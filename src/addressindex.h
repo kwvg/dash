@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
+// Copyright (c) 2023 The Dash Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -23,60 +24,51 @@ enum AddressType {
 
 struct CMempoolAddressDelta
 {
-    std::chrono::seconds time;
-    CAmount amount;
-    uint256 prevhash;
-    unsigned int prevout;
+public:
+    std::chrono::seconds m_time;
+    CAmount m_amount;
+    uint256 m_prev_hash;
+    uint32_t m_prev_out{0};
 
-    CMempoolAddressDelta(std::chrono::seconds t, CAmount a, uint256 hash, unsigned int out) {
-        time = t;
-        amount = a;
-        prevhash = hash;
-        prevout = out;
-    }
+public:
+    CMempoolAddressDelta(std::chrono::seconds time, CAmount amount, uint256 prev_hash, uint32_t prev_out) :
+        m_time{time}, m_amount{amount}, m_prev_hash{prev_hash}, m_prev_out{prev_out} {}
 
-    CMempoolAddressDelta(std::chrono::seconds t, CAmount a) {
-        time = t;
-        amount = a;
-        prevhash.SetNull();
-        prevout = 0;
-    }
+    CMempoolAddressDelta(std::chrono::seconds time, CAmount amount) :
+        m_time{time}, m_amount{amount} {}
 };
 
 struct CMempoolAddressDeltaKey
 {
-    int type;
-    uint160 addressBytes;
-    uint256 txhash;
-    unsigned int index;
-    bool is_spent;
+public:
+    int32_t m_address_type;
+    uint160 m_address_bytes;
+    uint256 m_tx_hash;
+    uint32_t m_tx_index{0};
+    bool m_tx_spent{false};
 
-    CMempoolAddressDeltaKey(int addressType, uint160 addressHash, uint256 hash, unsigned int i, bool s) {
-        type = addressType;
-        addressBytes = addressHash;
-        txhash = hash;
-        index = i;
-        is_spent = s;
-    }
+public:
+    CMempoolAddressDeltaKey(int32_t address_type, uint160 address_bytes, uint256 tx_hash, uint32_t tx_index, bool tx_spent) :
+        m_address_type{address_type},
+        m_address_bytes{address_bytes},
+        m_tx_hash{tx_hash},
+        m_tx_index{tx_index},
+        m_tx_spent{tx_spent} {};
 
-    CMempoolAddressDeltaKey(int addressType, uint160 addressHash) {
-        type = addressType;
-        addressBytes = addressHash;
-        txhash.SetNull();
-        index = 0;
-        is_spent = false;
-    }
+    CMempoolAddressDeltaKey(int32_t address_type, uint160 address_bytes) :
+        m_address_type{address_type},
+        m_address_bytes{address_bytes} {};
 };
 
 struct CMempoolAddressDeltaKeyCompare
 {
     bool operator()(const CMempoolAddressDeltaKey& a, const CMempoolAddressDeltaKey& b) const {
-        if (a.type != b.type) return a.type < b.type;
-        if (a.addressBytes != b.addressBytes) return a.addressBytes < b.addressBytes;
-        if (a.txhash != b.txhash) return a.txhash < b.txhash;
-        if (a.index != b.index) return a.index < b.index;
+        if (a.m_address_type != b.m_address_type) return a.m_address_type < b.m_address_type;
+        if (a.m_address_bytes != b.m_address_bytes) return a.m_address_bytes < b.m_address_bytes;
+        if (a.m_tx_hash  != b.m_tx_hash)  return a.m_tx_hash  < b.m_tx_hash;
+        if (a.m_tx_index != b.m_tx_index) return a.m_tx_index < b.m_tx_index;
 
-        return (a.is_spent < b.is_spent);
+        return (a.m_tx_spent < b.m_tx_spent);
     }
 };
 
