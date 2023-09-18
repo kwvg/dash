@@ -475,7 +475,7 @@ void CTxMemPool::addAddressIndex(const CTxMemPoolEntry &entry, const CCoinsViewC
         const Coin& coin = view.AccessCoin(input.prevout);
         const CTxOut &prevout = coin.out;
 
-        uint8_t address_type{0};
+        AddressType address_type{AddressType::UNKNOWN};
         uint160 address_bytes;
 
         if (!AddressBytesFromScript(prevout.scriptPubKey, address_type, address_bytes)) {
@@ -491,7 +491,7 @@ void CTxMemPool::addAddressIndex(const CTxMemPoolEntry &entry, const CCoinsViewC
     for (unsigned int k = 0; k < tx.vout.size(); k++) {
         const CTxOut &out = tx.vout[k];
 
-        uint8_t address_type{0};
+        AddressType address_type{AddressType::UNKNOWN};
         uint160 address_bytes;
 
         if (!AddressBytesFromScript(out.scriptPubKey, address_type, address_bytes)) {
@@ -506,11 +506,11 @@ void CTxMemPool::addAddressIndex(const CTxMemPoolEntry &entry, const CCoinsViewC
     mapAddressInserted.insert(std::make_pair(txhash, inserted));
 }
 
-bool CTxMemPool::getAddressIndex(std::vector<std::pair<uint160, int> > &addresses,
+bool CTxMemPool::getAddressIndex(std::vector<std::pair<uint160, AddressType> > &addresses,
                                  std::vector<std::pair<CMempoolAddressDeltaKey, CMempoolAddressDelta> > &results)
 {
     LOCK(cs);
-    for (std::vector<std::pair<uint160, int> >::iterator it = addresses.begin(); it != addresses.end(); it++) {
+    for (std::vector<std::pair<uint160, AddressType> >::iterator it = addresses.begin(); it != addresses.end(); it++) {
         addressDeltaMap::iterator ait = mapAddress.lower_bound(CMempoolAddressDeltaKey((*it).second, (*it).first));
         while (ait != mapAddress.end() && (*ait).first.m_address_bytes == (*it).first && (*ait).first.m_address_type == (*it).second) {
             results.push_back(*ait);
@@ -549,7 +549,7 @@ void CTxMemPool::addSpentIndex(const CTxMemPoolEntry &entry, const CCoinsViewCac
         const Coin& coin = view.AccessCoin(input.prevout);
         const CTxOut &prevout = coin.out;
 
-        uint8_t address_type{0};
+        AddressType address_type{AddressType::UNKNOWN};
         uint160 address_bytes;
 
         if (!AddressBytesFromScript(prevout.scriptPubKey, address_type, address_bytes)) {
