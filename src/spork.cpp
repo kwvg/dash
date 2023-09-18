@@ -6,6 +6,7 @@
 
 #include <chainparams.h>
 #include <consensus/params.h>
+#include <flat-database.h>
 #include <key_io.h>
 #include <logging.h>
 #include <messagesigner.h>
@@ -24,6 +25,8 @@
 #include <string>
 
 std::unique_ptr<CSporkManager> sporkManager;
+
+const std::string SporkStore::SERIALIZATION_VERSION_STRING = "CSporkManager-Version-2";
 
 std::optional<SporkValue> CSporkManager::SporkValueIfActive(SporkId nSporkID) const
 {
@@ -56,7 +59,7 @@ std::optional<SporkValue> CSporkManager::SporkValueIfActive(SporkId nSporkID) co
     return std::nullopt;
 }
 
-void CSporkManager::Clear()
+void SporkStore::Clear()
 {
     LOCK(cs);
     mapSporksActive.clear();
@@ -327,7 +330,7 @@ bool CSporkManager::SetPrivKey(const std::string& strPrivKey)
     return true;
 }
 
-std::string CSporkManager::ToString() const
+std::string SporkStore::ToString() const
 {
     LOCK(cs);
     return strprintf("Sporks: %llu", mapSporksActive.size());
