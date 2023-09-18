@@ -10,7 +10,7 @@
 
 std::unique_ptr<CMasternodeMetaMan> mmetaman;
 
-const std::string CMasternodeMetaMan::SERIALIZATION_VERSION_STRING = "CMasternodeMetaMan-Version-3";
+const std::string MasternodeMetaStore::SERIALIZATION_VERSION_STRING = "CMasternodeMetaMan-Version-3";
 
 UniValue CMasternodeMetaInfo::ToJson() const
 {
@@ -110,14 +110,7 @@ std::vector<uint256> CMasternodeMetaMan::GetAndClearDirtyGovernanceObjectHashes(
     return vecTmp;
 }
 
-void CMasternodeMetaMan::Clear()
-{
-    LOCK(cs);
-    metaInfos.clear();
-    vecDirtyGovernanceObjectHashes.clear();
-}
-
-std::string CMasternodeMetaMan::ToString() const
+std::string MasternodeMetaStore::ToString() const
 {
     std::ostringstream info;
     LOCK(cs);

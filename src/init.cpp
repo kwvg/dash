@@ -279,7 +279,7 @@ void PrepareShutdown(NodeContext& node)
 
     if (!fRPCInWarmup) {
         // STORE DATA CACHES INTO SERIALIZED DAT FILES
-        CFlatDB<CMasternodeMetaMan> flatdb1("mncache.dat", "magicMasternodeCache");
+        CFlatDB<MasternodeMetaStore> flatdb1("mncache.dat", "magicMasternodeCache");
         flatdb1.Dump(*mmetaman);
         CFlatDB<CNetFulfilledRequestManager> flatdb4("netfulfilled.dat", "magicFulfilledCache");
         flatdb4.Dump(netfulfilledman);
@@ -2284,7 +2284,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     strDBName = "mncache.dat";
     uiInterface.InitMessage(_("Loading masternode cache...").translated);
-    CFlatDB<CMasternodeMetaMan> flatdb1(strDBName, "magicMasternodeCache");
+    CFlatDB<MasternodeMetaStore> flatdb1(strDBName, "magicMasternodeCache");
     if (fLoadCacheFiles) {
         if(!flatdb1.Load(*mmetaman)) {
             return InitError(strprintf(_("Failed to load masternode cache from %s"), (pathDB / strDBName).string()));

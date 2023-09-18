@@ -90,16 +90,13 @@ public:
 };
 using CMasternodeMetaInfoPtr = std::shared_ptr<CMasternodeMetaInfo>;
 
-class CMasternodeMetaMan
+class MasternodeMetaStore
 {
-private:
+protected:
     static const std::string SERIALIZATION_VERSION_STRING;
 
     mutable RecursiveMutex cs;
-
     std::map<uint256, CMasternodeMetaInfoPtr> metaInfos GUARDED_BY(cs);
-    std::vector<uint256> vecDirtyGovernanceObjectHashes GUARDED_BY(cs);
-
     // keep track of dsq count to prevent masternodes from gaming coinjoin queue
     std::atomic<int64_t> nDsqCount{0};
 
@@ -118,8 +115,9 @@ public:
     template<typename Stream>
     void Unserialize(Stream &s)
     {
-        LOCK(cs);
         Clear();
+
+        LOCK(cs);
         std::string strVersion;
         s >> strVersion;
         if (strVersion != SERIALIZATION_VERSION_STRING) {
@@ -133,7 +131,26 @@ public:
         }
     }
 
+    void Clear()
+    {
+        LOCK(cs);
+
+        metaInfos.clear();
+    }
+
+    void CheckAndRemove() { return; };
+    std::string ToString() const;
+};
+
+class CMasternodeMetaMan : public MasternodeMetaStore
+{
+private:
+    std::vector<uint256> vecDirtyGovernanceObjectHashes GUARDED_BY(cs);
+
 public:
+    CMasternodeMetaMan() = default;
+    ~CMasternodeMetaMan() = default;
+
     CMasternodeMetaInfoPtr GetMetaInfo(const uint256& proTxHash, bool fCreate = true);
 
     int64_t GetDsqCount() const { return nDsqCount; }
@@ -146,12 +163,6 @@ public:
     void RemoveGovernanceObject(const uint256& nGovernanceObjectHash);
 
     std::vector<uint256> GetAndClearDirtyGovernanceObjectHashes();
-
-    void Clear();
-    // Needed to avoid errors in flat-database.h
-    void CheckAndRemove() const {};
-
-    std::string ToString() const;
 };
 
 extern std::unique_ptr<CMasternodeMetaMan> mmetaman;
