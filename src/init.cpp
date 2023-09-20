@@ -279,7 +279,7 @@ void PrepareShutdown(NodeContext& node)
 
     if (!fRPCInWarmup) {
         // STORE DATA CACHES INTO SERIALIZED DAT FILES
-        CFlatDB<CNetFulfilledRequestManager> flatdb4("netfulfilled.dat", "magicFulfilledCache");
+        CFlatDB<NetFulfilledRequestStore> flatdb4("netfulfilled.dat", "magicFulfilledCache");
         flatdb4.Dump(*netfulfilledman);
     }
 
@@ -2292,7 +2292,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
 
     strDBName = "netfulfilled.dat";
     uiInterface.InitMessage(_("Loading fulfilled requests cache...").translated);
-    CFlatDB<CNetFulfilledRequestManager> flatdb4(strDBName, "magicFulfilledCache");
+    CFlatDB<NetFulfilledRequestStore> flatdb4(strDBName, "magicFulfilledCache");
     if (fLoadCacheFiles) {
         if(!flatdb4.Load(*netfulfilledman)) {
             return InitError(strprintf(_("Failed to load fulfilled requests cache from %s"),(pathDB / strDBName).string()));

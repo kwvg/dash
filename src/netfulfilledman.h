@@ -11,36 +11,42 @@
 
 class CNetFulfilledRequestManager;
 
-// Fulfilled requests are used to prevent nodes from asking for the same data on sync
-// and from being banned for doing so too often.
-class CNetFulfilledRequestManager
+class NetFulfilledRequestStore
 {
-private:
+protected:
     typedef std::map<std::string, int64_t> fulfilledreqmapentry_t;
     typedef std::map<CService, fulfilledreqmapentry_t> fulfilledreqmap_t;
 
+protected:
     //keep track of what node has/was asked for and when
     fulfilledreqmap_t mapFulfilledRequests;
     mutable RecursiveMutex cs_mapFulfilledRequests;
 
 public:
-    CNetFulfilledRequestManager() {}
-
-    SERIALIZE_METHODS(CNetFulfilledRequestManager, obj)
+    SERIALIZE_METHODS(NetFulfilledRequestStore, obj)
     {
         LOCK(obj.cs_mapFulfilledRequests);
         READWRITE(obj.mapFulfilledRequests);
     }
 
-    void AddFulfilledRequest(const CService& addr, const std::string& strRequest);
-    bool HasFulfilledRequest(const CService& addr, const std::string& strRequest);
-
-    void RemoveAllFulfilledRequests(const CService& addr);
-
     void CheckAndRemove();
     void Clear();
 
     std::string ToString() const;
+};
+
+// Fulfilled requests are used to prevent nodes from asking for the same data on sync
+// and from being banned for doing so too often.
+class CNetFulfilledRequestManager : public NetFulfilledRequestStore
+{
+public:
+    CNetFulfilledRequestManager() = default;
+    ~CNetFulfilledRequestManager() = default;
+
+    void AddFulfilledRequest(const CService& addr, const std::string& strRequest);
+    bool HasFulfilledRequest(const CService& addr, const std::string& strRequest);
+
+    void RemoveAllFulfilledRequests(const CService& addr);
 
     void DoMaintenance();
 };

@@ -40,7 +40,7 @@ void CNetFulfilledRequestManager::RemoveAllFulfilledRequests(const CService& add
     }
 }
 
-void CNetFulfilledRequestManager::CheckAndRemove()
+void NetFulfilledRequestStore::CheckAndRemove()
 {
     LOCK(cs_mapFulfilledRequests);
 
@@ -64,13 +64,13 @@ void CNetFulfilledRequestManager::CheckAndRemove()
     }
 }
 
-void CNetFulfilledRequestManager::Clear()
+void NetFulfilledRequestStore::Clear()
 {
     LOCK(cs_mapFulfilledRequests);
     mapFulfilledRequests.clear();
 }
 
-std::string CNetFulfilledRequestManager::ToString() const
+std::string NetFulfilledRequestStore::ToString() const
 {
     std::ostringstream info;
     info << "Nodes with fulfilled requests: " << (int)mapFulfilledRequests.size();
