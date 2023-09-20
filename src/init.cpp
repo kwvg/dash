@@ -280,7 +280,7 @@ void PrepareShutdown(NodeContext& node)
     if (!fRPCInWarmup) {
         // STORE DATA CACHES INTO SERIALIZED DAT FILES
         CFlatDB<CMasternodeMetaMan> flatdb1("mncache.dat", "magicMasternodeCache");
-        flatdb1.Dump(mmetaman);
+        flatdb1.Dump(*mmetaman);
         CFlatDB<CNetFulfilledRequestManager> flatdb4("netfulfilled.dat", "magicFulfilledCache");
         flatdb4.Dump(netfulfilledman);
     }
@@ -318,6 +318,7 @@ void PrepareShutdown(NodeContext& node)
     ::governance.reset();
     ::sporkManager.reset();
     ::masternodeSync.reset();
+    ::mmetaman.reset();
 
     // Stop and delete all indexes only after flushing background callbacks.
     if (g_txindex) {
@@ -1726,6 +1727,8 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
         }
     }
 
+    assert(!::mmetaman);
+    ::mmetaman = std::make_unique<CMasternodeMetaMan>();
     ::masternodeSync = std::make_unique<CMasternodeSync>(*node.connman, *::governance);
 
     // sanitize comments per BIP-0014, format user agent and check total size
@@ -2283,7 +2286,7 @@ bool AppInitMain(const CoreContext& context, NodeContext& node, interfaces::Bloc
     uiInterface.InitMessage(_("Loading masternode cache...").translated);
     CFlatDB<CMasternodeMetaMan> flatdb1(strDBName, "magicMasternodeCache");
     if (fLoadCacheFiles) {
-        if(!flatdb1.Load(mmetaman)) {
+        if(!flatdb1.Load(*mmetaman)) {
             return InitError(strprintf(_("Failed to load masternode cache from %s"), (pathDB / strDBName).string()));
         }
     } else {

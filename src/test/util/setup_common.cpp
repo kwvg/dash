@@ -16,6 +16,7 @@
 #include <index/txindex.h>
 #include <init.h>
 #include <interfaces/chain.h>
+#include <masternode/meta.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/chainlocks.h>
 #include <llmq/context.h>
@@ -207,6 +208,7 @@ ChainTestingSetup::ChainTestingSetup(const std::string& chainName, const std::ve
     ::sporkManager = std::make_unique<CSporkManager>();
     ::governance = std::make_unique<CGovernanceManager>();
     ::masternodeSync = std::make_unique<CMasternodeSync>(*m_node.connman, *::governance);
+    ::mmetaman = std::make_unique<CMasternodeMetaMan>();
 
     m_node.creditPoolManager = std::make_unique<CCreditPoolManager>(*m_node.evodb);
 
@@ -223,6 +225,7 @@ ChainTestingSetup::~ChainTestingSetup()
     StopScriptCheckWorkerThreads();
     GetMainSignals().FlushBackgroundCallbacks();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
+    ::mmetaman.reset();
     ::masternodeSync.reset();
     ::governance.reset();
     ::sporkManager.reset();

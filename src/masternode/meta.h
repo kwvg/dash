@@ -6,12 +6,13 @@
 #define BITCOIN_MASTERNODE_META_H
 
 #include <serialize.h>
+#include <sync.h>
+#include <uint256.h>
 
 #include <univalue.h>
 
 #include <atomic>
-#include <uint256.h>
-#include <sync.h>
+#include <memory>
 
 class CConnman;
 
@@ -153,6 +154,6 @@ public:
     std::string ToString() const;
 };
 
-extern CMasternodeMetaMan mmetaman;
+extern std::unique_ptr<CMasternodeMetaMan> mmetaman;
 
 #endif // BITCOIN_MASTERNODE_META_H
