@@ -13,6 +13,8 @@
 
 #include <chrono>
 
+class CScript;
+
 namespace AddressType {
 enum AddressType {
     P2PK = 1,
@@ -215,19 +217,6 @@ public:
     }
 };
 
-template <typename T1>
-inline std::vector<uint8_t> TrimScriptP2PK(const T1& input) {
-    return std::vector<uint8_t>(input.begin() + 1, input.end() - 1);
-};
-
-template <typename T1>
-inline std::vector<uint8_t> TrimScriptP2PKH(const T1& input) {
-    return std::vector<uint8_t>(input.begin() + 3, input.begin() + 23);
-};
-
-template <typename T1>
-inline std::vector<uint8_t> TrimScriptP2SH(const T1& input) {
-    return std::vector<uint8_t>(input.begin() + 2, input.begin() + 22);
-};
+bool AddressBytesFromScript(const CScript& script, uint8_t& address_type, uint160& address_bytes);
 
 #endif // BITCOIN_ADDRESSINDEX_H
