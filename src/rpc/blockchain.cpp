@@ -214,20 +214,9 @@ UniValue blockheaderToJSON(const CBlockIndex* tip, const CBlockIndex* blockindex
 
 UniValue blockToJSON(const CBlock& block, const CBlockIndex* tip, const CBlockIndex* blockindex, llmq::CChainLocksHandler& clhandler, llmq::CInstantSendManager& isman, bool txDetails)
 {
-    // Serialize passed information without accessing chain state of the active chain!
-    AssertLockNotHeld(cs_main); // For performance reasons
+    UniValue result = blockheaderToJSON(tip, blockindex, clhandler, isman);
 
-    UniValue result(UniValue::VOBJ);
-    result.pushKV("hash", blockindex->GetBlockHash().GetHex());
-    const CBlockIndex* pnext;
-    int confirmations = ComputeNextBlockAndDepth(tip, blockindex, pnext);
-    result.pushKV("confirmations", confirmations);
     result.pushKV("size", (int)::GetSerializeSize(block, PROTOCOL_VERSION));
-    result.pushKV("height", blockindex->nHeight);
-    result.pushKV("version", block.nVersion);
-    result.pushKV("versionHex", strprintf("%08x", block.nVersion));
-    result.pushKV("merkleroot", block.hashMerkleRoot.GetHex());
-    bool chainLock = clhandler.HasChainLock(blockindex->nHeight, blockindex->GetBlockHash());
     UniValue txs(UniValue::VARR);
     for(const auto& tx : block.vtx)
     {
@@ -236,7 +225,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* tip, const CBlockIn
             UniValue objTx(UniValue::VOBJ);
             TxToUniv(*tx, uint256(), objTx, true);
             bool fLocked = isman.IsLocked(tx->GetHash());
-            objTx.pushKV("instantlock", fLocked || chainLock);
+            objTx.pushKV("instantlock", fLocked || result["chainlock"].get_bool());
             objTx.pushKV("instantlock_internal", fLocked);
             txs.push_back(objTx);
         }
@@ -249,20 +238,6 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* tip, const CBlockIn
             result.pushKV("cbTx", opt_cbTx->ToJson());
         }
     }
-    result.pushKV("time", block.GetBlockTime());
-    result.pushKV("mediantime", (int64_t)blockindex->GetMedianTimePast());
-    result.pushKV("nonce", (uint64_t)block.nNonce);
-    result.pushKV("bits", strprintf("%08x", block.nBits));
-    result.pushKV("difficulty", GetDifficulty(blockindex));
-    result.pushKV("chainwork", blockindex->nChainWork.GetHex());
-    result.pushKV("nTx", (uint64_t)blockindex->nTx);
-
-    if (blockindex->pprev)
-        result.pushKV("previousblockhash", blockindex->pprev->GetBlockHash().GetHex());
-    if (pnext)
-        result.pushKV("nextblockhash", pnext->GetBlockHash().GetHex());
-
-    result.pushKV("chainlock", chainLock);
 
     return result;
 }
