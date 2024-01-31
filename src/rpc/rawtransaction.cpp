@@ -369,7 +369,7 @@ static UniValue gettxchainlocks(const JSONRPCRequest& request)
                 {RPCResult::Type::OBJ, "", "",
                 {
                     {RPCResult::Type::NUM, "height", "The block height"},
-                    {RPCResult::Type::BOOL, "chainlock", "ChainLock status for the block containing the transaction"},
+                    {RPCResult::Type::BOOL, "chainlock", "The state of the corresponding block ChainLock"},
                     {RPCResult::Type::BOOL, "mempool", "Mempool status for the transaction"},
                 }},
             }
