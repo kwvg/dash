@@ -935,7 +935,7 @@ static UniValue getblockheaders(const JSONRPCRequest& request)
                 RPCResult::Type::ARR, "", "",
                     {{RPCResult::Type::OBJ, "", "",
                     {
-                        {RPCResult::Type::STR_HEX, "hash", "the block hash (same as provided)"},
+                        {RPCResult::Type::STR_HEX, "hash", "The block hash (same as provided)"},
                         {RPCResult::Type::NUM, "confirmations", "The number of confirmations, or -1 if the block is not on the main chain"},
                         {RPCResult::Type::NUM, "height", "The block height or index"},
                         {RPCResult::Type::NUM, "version", "The block version"},
@@ -1459,7 +1459,7 @@ static UniValue gettxout(const JSONRPCRequest& request)
                         {RPCResult::Type::STR_HEX, "hex", ""},
                         {RPCResult::Type::NUM, "reqSigs", "Number of required signatures"},
                         {RPCResult::Type::STR_HEX, "type", "The type, eg pubkeyhash"},
-                        {RPCResult::Type::ARR, "addresses", "array of dash addresses",
+                        {RPCResult::Type::ARR, "addresses", "Array of dash addresses",
                             {{RPCResult::Type::STR, "address", "dash address"}}},
                     }},
                 {RPCResult::Type::BOOL, "coinbase", "Coinbase or not"},

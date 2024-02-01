@@ -187,7 +187,7 @@ static UniValue getrawtransaction(const JSONRPCRequest& request)
                             {RPCResult::Type::NUM, "time", "Same as \"blocktime\""},
                             {RPCResult::Type::BOOL, "instantlock", "Current transaction lock state"},
                             {RPCResult::Type::BOOL, "instantlock_internal", "Current internal transaction lock state"},
-                            {RPCResult::Type::BOOL, "chainlock", "he state of the corresponding block chainlock"},
+                            {RPCResult::Type::BOOL, "chainlock", "The state of the corresponding block chainlock"},
                         }
                     },
                 },
