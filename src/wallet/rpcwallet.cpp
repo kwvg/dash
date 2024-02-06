@@ -1402,7 +1402,7 @@ static const std::vector<RPCResult> TransactionDescriptionString()
                                                     "transaction conflicts with the block chain"},
             {RPCResult::Type::BOOL, "instantlock", "Current transaction lock state. Available for 'send' and 'receive' category of transactions"},
             {RPCResult::Type::BOOL, "instantlock-internal", "Current internal transaction lock state. Available for 'send' and 'receive' category of transactions"},
-            {RPCResult::Type::BOOL, "chainlock", "The state of the corresponding block chainlock"},
+            {RPCResult::Type::BOOL, "chainlock", "The state of the corresponding block ChainLock"},
             {RPCResult::Type::BOOL, "trusted", "Whether we consider the outputs of this unconfirmed transaction safe to spend."},
             {RPCResult::Type::STR_HEX, "blockhash", "The block hash containing the transaction. Available for 'send' and 'receive'\n"
                                                    "category of transactions."},

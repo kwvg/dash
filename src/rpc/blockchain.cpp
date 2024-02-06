@@ -282,14 +282,14 @@ static UniValue getbestblockhash(const JSONRPCRequest& request)
 static UniValue getbestchainlock(const JSONRPCRequest& request)
 {
     RPCHelpMan{"getbestchainlock",
-        "\nReturns information about the best chainlock. Throws an error if there is no known chainlock yet.",
+        "\nReturns information about the best ChainLock. Throws an error if there is no known ChainLock yet.",
         {},
         RPCResult{
             RPCResult::Type::OBJ, "", "",
             {
                 {RPCResult::Type::STR_HEX, "hash", "The block hash hex-encoded"},
                 {RPCResult::Type::NUM, "height", "The block height or index"},
-                {RPCResult::Type::STR_HEX, "signature", "The chainlock's BLS signature"},
+                {RPCResult::Type::STR_HEX, "signature", "The ChainLock's BLS signature"},
                 {RPCResult::Type::BOOL, "known_block", "True if the block is known by our node"},
             }},
         RPCExamples{
@@ -304,7 +304,7 @@ static UniValue getbestchainlock(const JSONRPCRequest& request)
     LLMQContext& llmq_ctx = EnsureLLMQContext(node);
     llmq::CChainLockSig clsig = llmq_ctx.clhandler->GetBestChainLock();
     if (clsig.IsNull()) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Unable to find any chainlock");
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Unable to find any ChainLock");
     }
     result.pushKV("blockhash", clsig.getBlockHash().GetHex());
     result.pushKV("height", clsig.getHeight());
