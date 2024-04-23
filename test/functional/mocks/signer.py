@@ -25,27 +25,26 @@ def getdescriptors(args):
 
     sys.stdout.write(json.dumps({
         "receive": [
-            "pkh([00000001/44'/1'/" + args.account + "']" + xpub + "/0/*)#vt6w3l3j"
+            "pkh([00000001/44h/1h/" + args.account + "']" + xpub + "/0/*)#aqllu46s"
         ],
         "internal": [
-            "pkh([00000001/44'/1'/" + args.account + "']" + xpub + "/1/*)#all0v2p2"
+            "pkh([00000001/44h/1h/" + args.account + "']" + xpub + "/1/*)#v567pq2g"
         ]
     }))
 
 
 def displayaddress(args):
-    # Several descriptor formats are acceptable, so allowing for potential
-    # changes to InferDescriptor:
     if args.fingerprint != "00000001":
         return sys.stdout.write(json.dumps({"error": "Unexpected fingerprint", "fingerprint": args.fingerprint}))
 
-    expected_desc = [
-        "pkh([00000001/44'/1'/0'/0/0]02c97dc3f4420402e01a113984311bf4a1b8de376cac0bdcfaf1b3ac81f13433c7)#0yneg42r"
-    ]
+    expected_desc = {
+        "pkh([00000001/44h/1h/0h/0/0]02c97dc3f4420402e01a113984311bf4a1b8de376cac0bdcfaf1b3ac81f13433c7)#q3pqd8wh": "yg8pCsowDbY7PbJMthTi4xkkmhNfcNNdHV",
+        "pkh([00000001/44h/1h/0h/0/1]03a20a46308be0b8ded6dff0a22b10b4245c587ccf23f3b4a303885be3a524f172)#x450egwy": "wrong_address",
+    }
     if args.desc not in expected_desc:
         return sys.stdout.write(json.dumps({"error": "Unexpected descriptor", "desc": args.desc}))
 
-    return sys.stdout.write(json.dumps({"address": "yg8pCsowDbY7PbJMthTi4xkkmhNfcNNdHV"}))
+    return sys.stdout.write(json.dumps({"address": expected_desc[args.desc]}))
 
 def signtx(args):
     if args.fingerprint != "00000001":
