@@ -2824,16 +2824,7 @@ void CConnman::OpenNetworkConnection(const CAddress& addrConnect, bool fCountFai
     {
         LOCK2(cs_mapSocketToNode, pnode->m_sock_mutex);
         mapSocketToNode.emplace(pnode->m_sock->Get(), pnode);
-    }
-
-    m_msgproc->InitializeNode(pnode);
-    {
-        LOCK(m_nodes_mutex);
-        m_nodes.push_back(pnode);
-    }
-    {
         if (m_edge_trig_events) {
-            LOCK(pnode->m_sock_mutex);
             if (!m_edge_trig_events->RegisterEvents(pnode->m_sock->Get())) {
                 LogPrint(BCLog::NET, "EdgeTriggeredEvents::RegisterEvents() failed\n");
             }
@@ -2841,6 +2832,12 @@ void CConnman::OpenNetworkConnection(const CAddress& addrConnect, bool fCountFai
         if (m_wakeup_pipe) {
             m_wakeup_pipe->Write();
         }
+    }
+
+    m_msgproc->InitializeNode(pnode);
+    {
+        LOCK(m_nodes_mutex);
+        m_nodes.push_back(pnode);
     }
 }
 
