@@ -78,7 +78,7 @@ void WakeupPipe::Write()
 #ifdef USE_WAKEUP_PIPE
     assert(m_valid && m_pipe[1] != -1);
 
-    std::array<uint8_t, EXPECTED_PIPE_WRITTEN_BYTES> buf;
+    std::array<uint8_t, EXPECTED_PIPE_WRITTEN_BYTES> buf{0};
     int ret = write(m_pipe[1], buf.data(), buf.size());
     if (ret == -1) {
         LogPrintf("write() to m_pipe[1] = %d failed with error %s\n", m_pipe[1], NetworkErrorString(WSAGetLastError()));
