@@ -3911,10 +3911,6 @@ void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)
                 pnode->AddRef();
             }
         }
-
-        // wake up select() call in case there was no pending data before (so it was not selecting this socket for sending)
-        if (!hasPendingData && (m_wakeup_pipe && m_wakeup_pipe->m_need_wakeup.load()))
-            m_wakeup_pipe->Write();
     }
 }
 
