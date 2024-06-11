@@ -1728,7 +1728,7 @@ void CConnman::SocketHandler(CMasternodeSync& mn_sync)
         }
 
         // Drain the wakeup pipe
-        if (m_wakeup_pipe && events_per_sock.find(m_wakeup_pipe->m_pipe[0]) != events_per_sock.end()) {
+        if (!events_per_sock.empty() && m_wakeup_pipe && events_per_sock.find(m_wakeup_pipe->m_pipe[0]) != events_per_sock.end()) {
             m_wakeup_pipe->Drain();
         }
 
