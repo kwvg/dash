@@ -168,6 +168,10 @@ static RPCHelpMan coinjoin_stop()
     auto cj_clientman = node.coinjoin_loader->walletman().Get(wallet->GetName());
     CHECK_NONFATAL(cj_clientman != nullptr);
 
+    if (!cj_clientman->IsMixing()) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "No mix session to stop");
+    }
+
     cj_clientman->StopMixing();
     return "Mixing was stopped";
 },
