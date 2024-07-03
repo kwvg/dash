@@ -22,19 +22,55 @@
 #include <univalue.h>
 
 #ifdef ENABLE_WALLET
+namespace {
+void ValidateCoinJoinArguments()
+{
+    /* If CoinJoin is enabled, everything is working as expected, we can bail */
+    if (CCoinJoinClientOptions::IsEnabled())
+        return;
+
+    /* CoinJoin is on by default, unless a command line argument says otherwise */
+    if (!gArgs.GetBoolArg("-enablecoinjoin", true)) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Mixing is disabled via -enablecoinjoin=0 command line option, remove it to enable mixing again");
+    }
+
+    /* Most likely something bad happened and we disabled it while running the wallet */
+    throw JSONRPCError(RPC_INTERNAL_ERROR, "Mixing is disabled due to some internal error");
+}
+} // anonymous namespace
+
 static RPCHelpMan coinjoin()
 {
-            return RPCHelpMan{"coinjoin",
-                "\nAvailable commands:\n"
-                "  start       - Start mixing\n"
-                "  stop        - Stop mixing\n"
-                "  reset       - Reset mixing",
-                {
-                    {"command", RPCArg::Type::STR, RPCArg::Optional::NO, "The command to execute"},
-                },
-                RPCResults{},
-                RPCExamples{""},
-                [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+    return RPCHelpMan{"coinjoin",
+        "\nAvailable commands:\n"
+        "  start       - Start mixing\n"
+        "  stop        - Stop mixing\n"
+        "  reset       - Reset mixing",
+        {
+            {"command", RPCArg::Type::STR, RPCArg::Optional::NO, "The command to execute"},
+        },
+        RPCResults{},
+        RPCExamples{""},
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    throw JSONRPCError(RPC_INVALID_PARAMETER, "Must be a valid command");
+},
+    };
+}
+
+static RPCHelpMan coinjoin_reset()
+{
+    return RPCHelpMan{"coinjoin reset",
+        "\nReset CoinJoin mixing\n",
+        {},
+        RPCResult{
+            RPCResult::Type::STR, "", "Status of request"
+        },
+        RPCExamples{
+            HelpExampleCli("coinjoin reset", "")
+          + HelpExampleRpc("coinjoin reset", "")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
     if (!wallet) return NullUniValue;
@@ -45,49 +81,95 @@ static RPCHelpMan coinjoin()
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Client-side mixing is not supported on masternodes");
     }
 
-    if (!CCoinJoinClientOptions::IsEnabled()) {
-        if (!gArgs.GetBoolArg("-enablecoinjoin", true)) {
-            // otherwise it's on by default, unless cmd line option says otherwise
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "Mixing is disabled via -enablecoinjoin=0 command line option, remove it to enable mixing again");
-        } else {
-            // not enablecoinjoin=false case,
-            // most likely something bad happened and we disabled it while running the wallet
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "Mixing is disabled due to some internal error");
-        }
-    }
+    ValidateCoinJoinArguments();
 
     auto cj_clientman = node.coinjoin_loader->walletman().Get(wallet->GetName());
     CHECK_NONFATAL(cj_clientman != nullptr);
 
-    if (request.params[0].get_str() == "start") {
-        {
-            LOCK(wallet->cs_wallet);
-            if (wallet->IsLocked(true))
-                throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please unlock wallet for mixing with walletpassphrase first.");
-        }
+    cj_clientman->ResetPool();
+    return "Mixing was reset";
+},
+    };
+}
 
-        if (!cj_clientman->StartMixing()) {
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "Mixing has been started already.");
-        }
+static RPCHelpMan coinjoin_start()
+{
+    return RPCHelpMan{"coinjoin start",
+        "\nStart CoinJoin mixing\n"
+        "Wallet must be unlocked for mixing\n",
+        {},
+        RPCResult{
+            RPCResult::Type::STR, "", "Status of request"
+        },
+        RPCExamples{
+            HelpExampleCli("coinjoin start", "")
+          + HelpExampleRpc("coinjoin start", "")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
+    if (!wallet) return NullUniValue;
 
-        ChainstateManager& chainman = EnsureChainman(node);
-        CTxMemPool& mempool = EnsureMemPool(node);
-        CConnman& connman = EnsureConnman(node);
-        bool result = cj_clientman->DoAutomaticDenominating(chainman.ActiveChainstate(), connman, mempool);
-        return "Mixing " + (result ? "started successfully" : ("start failed: " + cj_clientman->GetStatuses().original + ", will retry"));
+    const NodeContext& node = EnsureAnyNodeContext(request.context);
+
+    if (node.mn_activeman) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Client-side mixing is not supported on masternodes");
     }
 
-    if (request.params[0].get_str() == "stop") {
-        cj_clientman->StopMixing();
-        return "Mixing was stopped";
+    ValidateCoinJoinArguments();
+
+    auto cj_clientman = node.coinjoin_loader->walletman().Get(wallet->GetName());
+    CHECK_NONFATAL(cj_clientman != nullptr);
+
+    {
+        LOCK(wallet->cs_wallet);
+        if (wallet->IsLocked(true))
+            throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please unlock wallet for mixing with walletpassphrase first.");
     }
 
-    if (request.params[0].get_str() == "reset") {
-        cj_clientman->ResetPool();
-        return "Mixing was reset";
+    if (!cj_clientman->StartMixing()) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Mixing has been started already.");
     }
 
-    return "Unknown command, please see \"help coinjoin\"";
+    ChainstateManager& chainman = EnsureChainman(node);
+    CTxMemPool& mempool = EnsureMemPool(node);
+    CConnman& connman = EnsureConnman(node);
+    bool result = cj_clientman->DoAutomaticDenominating(chainman.ActiveChainstate(), connman, mempool);
+    return "Mixing " + (result ? "started successfully" : ("start failed: " + cj_clientman->GetStatuses().original + ", will retry"));
+},
+    };
+}
+
+static RPCHelpMan coinjoin_stop()
+{
+    return RPCHelpMan{"coinjoin stop",
+        "\nStop CoinJoin mixing\n",
+        {},
+        RPCResult{
+            RPCResult::Type::STR, "", "Status of request"
+        },
+        RPCExamples{
+            HelpExampleCli("coinjoin stop", "")
+          + HelpExampleRpc("coinjoin stop", "")
+        },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest(request);
+    if (!wallet) return NullUniValue;
+
+    const NodeContext& node = EnsureAnyNodeContext(request.context);
+
+    if (node.mn_activeman) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Client-side mixing is not supported on masternodes");
+    }
+
+    ValidateCoinJoinArguments();
+
+    auto cj_clientman = node.coinjoin_loader->walletman().Get(wallet->GetName());
+    CHECK_NONFATAL(cj_clientman != nullptr);
+
+    cj_clientman->StopMixing();
+    return "Mixing was stopped";
 },
     };
 }
@@ -410,6 +492,9 @@ static const CRPCCommand commands[] =
         { "dash",               "getcoinjoininfo",            &getcoinjoininfo,        {} },
 #ifdef ENABLE_WALLET
         { "dash",               "coinjoin",                   &coinjoin,               {"command"} },
+        { "dash",               "coinjoin", "reset",          &coinjoin_reset,         {} },
+        { "dash",               "coinjoin", "start",          &coinjoin_start,         {} },
+        { "dash",               "coinjoin", "stop",           &coinjoin_stop,          {} },
         { "dash",               "coinjoinsalt",               &coinjoinsalt,           {"command"} },
         { "dash",               "coinjoinsalt", "generate",   &coinjoinsalt_generate,  {"overwrite", "force_rescan"} },
         { "dash",               "coinjoinsalt", "get",        &coinjoinsalt_get,       {} },
