@@ -128,11 +128,14 @@ bool CAssetUnlockPayload::VerifySig(const llmq::CQuorumManager& qman, const uint
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-assetunlock-too-late");
     }
 
-    const auto quorum = qman.GetQuorum(llmqType, quorumHash);
-    assert(quorum);
+    const auto quorum_opt = qman.GetQuorum(llmqType, quorumHash);
+    if (!quorum_opt.value()) {
+        LogPrint(BCLog::CREDITPOOL, "No quorum for found for hash=%s\n", quorumHash.ToString());
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-assetunlock-missing-quorum");
+    }
 
+    const auto quorum = quorum_opt.value();
     const uint256 requestId = ::SerializeHash(std::make_pair(ASSETUNLOCK_REQUESTID_PREFIX, index));
-
     if (const uint256 signHash = llmq::BuildSignHash(llmqType, quorum->qc->quorumHash, requestId, msgHash);
             quorumSig.VerifyInsecure(quorum->qc->quorumPublicKey, signHash)) {
         return true;
