@@ -672,8 +672,9 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
         return state.Invalid(TxValidationResult::TX_CONFLICT, "txn-already-in-mempool");
     }
 
-    llmq::CInstantSendLockPtr conflictLock = llmq::quorumInstantSendManager->GetConflictingLock(tx);
-    if (conflictLock) {
+    auto conflictLockOpt = llmq::quorumInstantSendManager->GetConflictingLock(tx);
+    if (conflictLockOpt.has_value()) {
+        auto conflictLock = conflictLockOpt.value();
         uint256 hashBlock;
         CTransactionRef txConflict = GetTransaction(/* block_index */ nullptr, &m_pool, conflictLock->txid, chainparams.GetConsensus(), hashBlock);
         if (txConflict) {
@@ -2321,7 +2322,8 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
         for (const auto& tx : block.vtx) {
             // skip txes that have no inputs
             if (tx->vin.empty()) continue;
-            while (llmq::CInstantSendLockPtr conflictLock = m_isman->GetConflictingLock(*tx)) {
+            for (auto conflictLockOpt = m_isman->GetConflictingLock(*tx); conflictLockOpt.has_value(); ) {
+                auto conflictLock = conflictLockOpt.value();
                 if (m_clhandler->HasChainLock(pindex->nHeight, pindex->GetBlockHash())) {
                     LogPrint(BCLog::ALL, "ConnectBlock(DASH): chain-locked transaction %s overrides islock %s\n",
                             tx->GetHash().ToString(), ::SerializeHash(*conflictLock).ToString());
