@@ -2721,8 +2721,8 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect, CDe
                 std::tie(addr, addr_last_try) = addrman.Select();
             }
 
-            auto dmn = mnList.GetMNByService(addr);
-            bool isMasternode = dmn != nullptr;
+            auto dmn_opt = mnList.GetMNByService(addr);
+            bool isMasternode = dmn_opt.has_value();
 
             // Require outbound connections, other than feelers, to be to distinct network groups
             if (!fFeeler && setConnected.count(addr.GetGroup(addrman.GetAsmap()))) {
@@ -2734,7 +2734,7 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect, CDe
                 break;
 
             // don't try to connect to masternodes that we already have a connection to (most likely inbound)
-            if (isMasternode && setConnectedMasternodes.count(dmn->proTxHash))
+            if (isMasternode && setConnectedMasternodes.count(dmn_opt.value()->proTxHash))
                 break;
 
             // if we selected a local address, restart (local addresses are allowed in regtest and devnet)
@@ -2936,10 +2936,12 @@ void CConnman::ThreadOpenMasternodeConnections(CDeterministicMNManager& dmnman, 
             std::vector<CDeterministicMNCPtr> ret;
             for (const auto& group : masternodeQuorumNodes) {
                 for (const auto& proRegTxHash : group.second) {
-                    auto dmn = mnList.GetMN(proRegTxHash);
-                    if (!dmn) {
+                    auto dmn_opt = mnList.GetMN(proRegTxHash);
+                    if (!dmn_opt.has_value()) {
                         continue;
                     }
+
+                    auto dmn = dmn_opt.value();
                     const auto& addr2 = dmn->pdmnState->addr;
                     if (connectedNodes.count(addr2) && !connectedProRegTxHashes.count(proRegTxHash)) {
                         // we probably connected to it before it became a masternode
@@ -2974,11 +2976,13 @@ void CConnman::ThreadOpenMasternodeConnections(CDeterministicMNManager& dmnman, 
             LockAssertion lock(cs_vPendingMasternodes);
             std::vector<CDeterministicMNCPtr> ret;
             for (auto it = masternodePendingProbes.begin(); it != masternodePendingProbes.end(); ) {
-                auto dmn = mnList.GetMN(*it);
-                if (!dmn) {
+                auto dmn_opt = mnList.GetMN(*it);
+                if (!dmn_opt.has_value()) {
                     it = masternodePendingProbes.erase(it);
                     continue;
                 }
+
+                auto dmn = dmn_opt.value();
                 bool connectedAndOutbound = connectedProRegTxHashes.count(dmn->proTxHash) && !connectedProRegTxHashes[dmn->proTxHash];
                 if (connectedAndOutbound) {
                     // we already have an outbound connection to this MN so there is no theed to probe it again
@@ -3004,11 +3008,13 @@ void CConnman::ThreadOpenMasternodeConnections(CDeterministicMNManager& dmnman, 
             LOCK2(m_nodes_mutex, cs_vPendingMasternodes);
 
             if (!vPendingMasternodes.empty()) {
-                auto dmn = mnList.GetValidMN(vPendingMasternodes.front());
+                auto dmn_opt = mnList.GetValidMN(vPendingMasternodes.front());
                 vPendingMasternodes.erase(vPendingMasternodes.begin());
-                if (dmn && !connectedNodes.count(dmn->pdmnState->addr) && !IsMasternodeOrDisconnectRequested(dmn->pdmnState->addr)) {
-                    LogPrint(BCLog::NET_NETCONN, "CConnman::%s -- opening pending masternode connection to %s, service=%s\n", _func_, dmn->proTxHash.ToString(), dmn->pdmnState->addr.ToString());
-                    return dmn;
+                if (dmn_opt.has_value()) {
+                    if (auto dmn = dmn_opt.value(); !connectedNodes.count(dmn->pdmnState->addr) && !IsMasternodeOrDisconnectRequested(dmn->pdmnState->addr)) {
+                        LogPrint(BCLog::NET_NETCONN, "CConnman::%s -- opening pending masternode connection to %s, service=%s\n", _func_, dmn->proTxHash.ToString(), dmn->pdmnState->addr.ToString());
+                        return dmn;
+                    }
                 }
             }
 
@@ -3883,12 +3889,12 @@ bool CConnman::IsMasternodeQuorumNode(const CNode* pnode, const CDeterministicMN
     // We however only need to know this if the node did not authenticate itself as a MN yet
     uint256 assumedProTxHash;
     if (pnode->GetVerifiedProRegTxHash().IsNull() && !pnode->IsInboundConn()) {
-        auto dmn = tip_mn_list.GetMNByService(pnode->addr);
-        if (dmn == nullptr) {
+        auto dmn_opt = tip_mn_list.GetMNByService(pnode->addr);
+        if (!dmn_opt.has_value()) {
             // This is definitely not a masternode
             return false;
         }
-        assumedProTxHash = dmn->proTxHash;
+        assumedProTxHash = dmn_opt.value()->proTxHash;
     }
 
     LOCK(cs_vPendingMasternodes);

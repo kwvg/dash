@@ -1330,8 +1330,8 @@ void RPCConsole::updateDetailWidget()
         ui->peerPermissions->setText(permissions.join(" & "));
     }
     ui->peerMappedAS->setText(stats->nodeStats.m_mapped_as != 0 ? QString::number(stats->nodeStats.m_mapped_as) : tr("N/A"));
-    auto dmn = clientModel->getMasternodeList().first.GetMNByService(stats->nodeStats.addr);
-    if (dmn == nullptr) {
+    auto dmn_opt = clientModel->getMasternodeList().first.GetMNByService(stats->nodeStats.addr);
+    if (dmn_opt.has_value()) {
         ui->peerNodeType->setText(tr("Regular"));
         ui->peerPoSeScore->setText(tr("N/A"));
     } else {
@@ -1340,7 +1340,7 @@ void RPCConsole::updateDetailWidget()
         } else {
             ui->peerNodeType->setText(tr("Verified Masternode"));
         }
-        ui->peerPoSeScore->setText(QString::number(dmn->pdmnState->nPoSePenalty));
+        ui->peerPoSeScore->setText(QString::number(dmn_opt.value()->pdmnState->nPoSePenalty));
     }
 
     // This check fails for example if the lock was busy and

@@ -355,8 +355,7 @@ CDeterministicMNCPtr MasternodeList::GetSelectedDIP3MN()
 
     uint256 proTxHash;
     proTxHash.SetHex(strProTxHash);
-
-    return clientModel->getMasternodeList().first.GetMN(proTxHash);;
+    return clientModel->getMasternodeList().first.GetMN(proTxHash).value_or(CDeterministicMNCPtr{});
 }
 
 void MasternodeList::extraInfoDIP3_clicked()

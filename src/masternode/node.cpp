@@ -93,12 +93,13 @@ void CActiveMasternodeManager::InitInternal(const CBlockIndex* pindex)
 
     CDeterministicMNList mnList = Assert(m_dmnman)->GetListForBlock(pindex);
 
-    CDeterministicMNCPtr dmn = mnList.GetMNByOperatorKey(m_info.blsPubKeyOperator);
-    if (!dmn) {
+    auto dmn_opt = mnList.GetMNByOperatorKey(m_info.blsPubKeyOperator);
+    if (!dmn_opt.has_value()) {
         // MN not appeared on the chain yet
         return;
     }
 
+    auto dmn = dmn_opt.has_value()
     if (!mnList.IsMNValid(dmn->proTxHash)) {
         if (mnList.IsMNPoSeBanned(dmn->proTxHash)) {
             m_state = MASTERNODE_POSE_BANNED;
