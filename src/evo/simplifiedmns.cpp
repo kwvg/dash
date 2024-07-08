@@ -308,13 +308,13 @@ CSimplifiedMNListDiff BuildSimplifiedDiff(const CDeterministicMNList& from, cons
     diffRet.blockHash = to.GetBlockHash();
 
     to.ForEachMN(false, [&](const auto& toPtr) {
-        auto fromPtr = from.GetMN(toPtr.proTxHash);
-        if (fromPtr == nullptr) {
+        auto fromPtrOpt = from.GetMN(toPtr.proTxHash);
+        if (!fromPtrOpt.has_value()) {
             CSimplifiedMNListEntry sme(toPtr);
             diffRet.mnList.push_back(std::move(sme));
         } else {
             CSimplifiedMNListEntry sme1(toPtr);
-            CSimplifiedMNListEntry sme2(*fromPtr);
+            CSimplifiedMNListEntry sme2(*fromPtrOpt.value());
             if ((sme1 != sme2) ||
                 (extended && (sme1.scriptPayout != sme2.scriptPayout || sme1.scriptOperatorPayout != sme2.scriptOperatorPayout))) {
                     diffRet.mnList.push_back(std::move(sme1));
@@ -323,8 +323,8 @@ CSimplifiedMNListDiff BuildSimplifiedDiff(const CDeterministicMNList& from, cons
     });
 
     from.ForEachMN(false, [&](auto& fromPtr) {
-        auto toPtr = to.GetMN(fromPtr.proTxHash);
-        if (toPtr == nullptr) {
+        auto toPtrOpt = to.GetMN(fromPtr.proTxHash);
+        if (!toPtrOpt.has_value()) {
             diffRet.deletedMNs.emplace_back(fromPtr.proTxHash);
         }
     });

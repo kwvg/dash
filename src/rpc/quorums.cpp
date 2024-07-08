@@ -397,11 +397,12 @@ static RPCHelpMan quorum_memberof()
 
     const CBlockIndex* pindexTip = WITH_LOCK(cs_main, return chainman.ActiveChain().Tip());
     auto mnList = CHECK_NONFATAL(node.dmnman)->GetListForBlock(pindexTip);
-    auto dmn = mnList.GetMN(protxHash);
-    if (!dmn) {
+    auto dmn_opt = mnList.GetMN(protxHash);
+    if (!dmn_opt.has_value()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "masternode not found");
     }
 
+    auto dmn = dmn_opt.value();
     UniValue result(UniValue::VARR);
     for (const auto& type : llmq::GetEnabledQuorumTypes(pindexTip)) {
         const auto llmq_params_opt = Params().GetLLMQ(type);

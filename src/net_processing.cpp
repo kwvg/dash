@@ -3349,7 +3349,7 @@ std::pair<bool /*ret*/, bool /*do_return*/> static ValidateDSTX(CDeterministicMN
     }
 
     const CBlockIndex* pindex{nullptr};
-    CDeterministicMNCPtr dmn{nullptr};
+    std::optional<CDeterministicMNCPtr> dmn_opt{std::nullopt};
     {
         LOCK(cs_main);
         pindex = chainman.ActiveChain().Tip();
@@ -3358,29 +3358,30 @@ std::pair<bool /*ret*/, bool /*do_return*/> static ValidateDSTX(CDeterministicMN
     // Try to find a MN up to 24 blocks deep to make sure such dstx-es are relayed and processed correctly.
     if (dstx.masternodeOutpoint.IsNull()) {
         for (int i = 0; i < 24 && pindex; ++i) {
-            dmn = dmnman.GetListForBlock(pindex).GetMN(dstx.m_protxHash);
-            if (dmn) {
-                dstx.masternodeOutpoint = dmn->collateralOutpoint;
+            dmn_opt = dmnman.GetListForBlock(pindex).GetMN(dstx.m_protxHash);
+            if (dmn_opt.has_value()) {
+                dstx.masternodeOutpoint = dmn_opt.value()->collateralOutpoint;
                 break;
             }
             pindex = pindex->pprev;
         }
     } else {
         for (int i = 0; i < 24 && pindex; ++i) {
-            dmn = dmnman.GetListForBlock(pindex).GetMNByCollateral(dstx.masternodeOutpoint);
-            if (dmn) {
-                dstx.m_protxHash = dmn->proTxHash;
+            dmn_opt = dmnman.GetListForBlock(pindex).GetMNByCollateral(dstx.masternodeOutpoint);
+            if (dmn_opt.has_value()) {
+                dstx.m_protxHash = dmn_opt.value()->proTxHash;
                 break;
             }
             pindex = pindex->pprev;
         }
     }
 
-    if (!dmn) {
+    if (!dmn_opt.has_value()) {
         LogPrint(BCLog::COINJOIN, "DSTX -- Can't find masternode %s to verify %s\n", dstx.masternodeOutpoint.ToStringShort(), hashTx.ToString());
         return {false, true};
     }
 
+    auto dmn = dmn_opt.value();
     if (!mn_metaman.GetMetaInfo(dmn->proTxHash)->IsValidForMixingTxes()) {
         LogPrint(BCLog::COINJOIN, "DSTX -- Masternode %s is sending too many transactions %s\n", dstx.masternodeOutpoint.ToStringShort(), hashTx.ToString());
         return {true, true};
