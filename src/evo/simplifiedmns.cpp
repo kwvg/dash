@@ -197,13 +197,14 @@ bool CSimplifiedMNListDiff::BuildQuorumChainlockInfo(const llmq::CQuorumManager&
         // We assume that we have on hand, quorums that correspond to the hashes queried.
         // If we cannot find them, something must have gone wrong and we should cease trying
         // to build any further.
-        auto quorum = qman.GetQuorum(e.llmqType, e.quorumHash);
-        if (!quorum) {
+        auto quorum_opt = qman.GetQuorum(e.llmqType, e.quorumHash);
+        if (!quorum_opt.has_value()) {
             LogPrintf("%s: ERROR! Unexpected missing quorum with llmqType=%d, quorumHash=%s\n", __func__,
                       ToUnderlying(e.llmqType), e.quorumHash.ToString());
             return false;
         }
 
+        auto quorum = quorum_opt.value();
         // In case of rotation, all rotated quorums rely on the CL sig expected in the cycleBlock (the block of the first DKG) - 8
         // In case of non-rotation, quorums rely on the CL sig expected in the block of the DKG - 8
         const CBlockIndex* pWorkBaseBlockIndex =
