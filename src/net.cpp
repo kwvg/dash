@@ -940,7 +940,7 @@ void V1TransportSerializer::prepareForTransport(CSerializedNetMsg& msg, std::vec
     CVectorWriter{SER_NETWORK, INIT_PROTO_VERSION, header, 0, hdr};
 }
 
-size_t CConnman::SocketSendData(CNode& node)
+std::pair<size_t, bool> CConnman::SocketSendData(CNode& node) const
 {
     auto it = node.vSendMsg.begin();
     size_t nSentSize = 0;
@@ -998,7 +998,7 @@ size_t CConnman::SocketSendData(CNode& node)
     }
     node.vSendMsg.erase(node.vSendMsg.begin(), it);
     node.nSendMsgSize = node.vSendMsg.size();
-    return nSentSize;
+    return {nSentSize, !node.vSendMsg.empty()};
 }
 
 static bool ReverseCompareNodeMinPingTime(const NodeEvictionCandidate& a, const NodeEvictionCandidate& b)
@@ -1716,10 +1716,10 @@ bool CConnman::GenerateSelectSet(const std::vector<CNode*>& nodes,
         recv_set.insert(hListenSocket.sock->Get());
     }
 
-    for (CNode* pnode : nodes)
-    {
+    for (CNode* pnode : nodes) {
         bool select_recv = !pnode->fHasRecvData;
         bool select_send = !pnode->fCanSendData;
+        if (!select_recv && !select_send) continue;
 
         LOCK(pnode->m_sock_mutex);
         if (!pnode->m_sock) {
@@ -2120,6 +2120,18 @@ void CConnman::SocketHandlerConnected(const std::set<SOCKET>& recv_set,
         }
     }
 
+    for (CNode* pnode : vSendableNodes) {
+        if (interruptNet) {
+            break;
+        }
+
+        // Send data
+        auto [bytes_sent, data_left] = WITH_LOCK(pnode->cs_vSend, return SocketSendData(*pnode));
+        if (bytes_sent) {
+            RecordBytesSent(bytes_sent);
+        }
+    }
+
     for (CNode* pnode : vErrorNodes)
     {
         if (interruptNet) {
@@ -2139,16 +2151,6 @@ void CConnman::SocketHandlerConnected(const std::set<SOCKET>& recv_set,
         }
 
         SocketRecvData(pnode);
-    }
-
-    for (CNode* pnode : vSendableNodes) {
-        if (interruptNet) {
-            break;
-        }
-
-        // Send data
-        size_t bytes_sent = WITH_LOCK(pnode->cs_vSend, return SocketSendData(*pnode));
-        if (bytes_sent) RecordBytesSent(bytes_sent);
     }
 
     for (auto& node : vErrorNodes) {
@@ -4178,7 +4180,7 @@ void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)
 
     {
         LOCK(pnode->cs_vSend);
-        bool hasPendingData = !pnode->vSendMsg.empty();
+        bool optimisticSend(pnode->vSendMsg.empty());
 
         //log total amount of bytes per message type
         pnode->mapSendBytesPerMsgType[msg.m_type] += nTotalSize;
@@ -4201,7 +4203,7 @@ void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)
         }
 
         // wake up select() call in case there was no pending data before (so it was not selecting this socket for sending)
-        if (!hasPendingData && (m_wakeup_pipe && m_wakeup_pipe->m_need_wakeup.load()))
+        if (optimisticSend && (m_wakeup_pipe && m_wakeup_pipe->m_need_wakeup.load()))
             m_wakeup_pipe->Write();
     }
 }
