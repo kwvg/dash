@@ -158,10 +158,7 @@ PeerMsgRet CGovernanceManager::ProcessMessage(CNode& peer, CConnman& connman, Pe
 
         uint256 nHash = govobj.GetHash();
 
-        {
-            LOCK(cs_main);
-            EraseObjectRequest(peer.GetId(), CInv(MSG_GOVERNANCE_OBJECT, nHash));
-        }
+        WITH_LOCK(::cs_main, peerman.EraseObjectRequest(peer.GetId(), CInv(MSG_GOVERNANCE_OBJECT, nHash)));
 
         if (!m_mn_sync->IsBlockchainSynced()) {
             LogPrint(BCLog::GOBJECT, "MNGOVERNANCEOBJECT -- masternode list not synced\n");
@@ -224,11 +221,7 @@ PeerMsgRet CGovernanceManager::ProcessMessage(CNode& peer, CConnman& connman, Pe
         vRecv >> vote;
 
         uint256 nHash = vote.GetHash();
-
-        {
-            LOCK(cs_main);
-            EraseObjectRequest(peer.GetId(), CInv(MSG_GOVERNANCE_OBJECT_VOTE, nHash));
-        }
+        WITH_LOCK(::cs_main, peerman.EraseObjectRequest(peer.GetId(), CInv(MSG_GOVERNANCE_OBJECT_VOTE, nHash)));
 
         // Ignore such messages until masternode list is synced
         if (!m_mn_sync->IsBlockchainSynced()) {
