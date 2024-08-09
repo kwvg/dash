@@ -153,7 +153,7 @@ struct CSerializedNetMsg {
     std::string m_type;
 
     /** Compute total memory usage of this object (own memory + any dynamic memory). */
-    size_t GetMemoryUsage() const noexcept;
+    size_t GetMemoryUsage(std::string r) const noexcept;
 };
 
 /** Different types of connections to a peer. This enum encapsulates the

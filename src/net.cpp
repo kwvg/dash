@@ -143,11 +143,13 @@ std::map<CNetAddr, LocalServiceInfo> mapLocalHost GUARDED_BY(g_maplocalhost_mute
 static bool vfLimited[NET_MAX] GUARDED_BY(g_maplocalhost_mutex) = {};
 std::string strSubVersion;
 
-size_t CSerializedNetMsg::GetMemoryUsage() const noexcept
+size_t CSerializedNetMsg::GetMemoryUsage(std::string r) const noexcept
 {
     // Don't count the dynamic memory used for the m_type string, by assuming it fits in the
     // "small string" optimization area (which stores data inside the object itself, up to some
     // size; 15 bytes in modern libstdc++).
+    LogPrintf("%s (node.m_send_memusage) static (%d) + dynamic (%d) = %d, msg_size=%s\n",
+              r, sizeof(*this), memusage::DynamicUsage(data), sizeof(*this) + memusage::DynamicUsage(data), data.size());
     return sizeof(*this) + memusage::DynamicUsage(data);
 }
 
@@ -966,6 +968,8 @@ bool V1Transport::SetMessageToSend(CSerializedNetMsg& msg) noexcept
     m_header_to_send.clear();
     CVectorWriter{SER_NETWORK, INIT_PROTO_VERSION, m_header_to_send, 0, hdr};
 
+    LogPrintf("(node.m_send_memusage) msg=%s, size=%d\n", msg.m_type, msg.GetMemoryUsage(strprintf("(%s) %s:%s", __func__, __FILE__, __LINE__)));
+
     // update state
     m_message_to_send = std::move(msg);
     m_sending_header = true;
@@ -1014,23 +1018,29 @@ size_t V1Transport::GetSendMemoryUsage() const noexcept
     AssertLockNotHeld(m_send_mutex);
     LOCK(m_send_mutex);
     // Don't count sending-side fields besides m_message_to_send, as they're all small and bounded.
-    return m_message_to_send.GetMemoryUsage();
+    return m_message_to_send.GetMemoryUsage(strprintf("(%s) %s:%s", __func__, __FILE__, __LINE__));
 }
 
 std::pair<size_t, bool> CConnman::SocketSendData(CNode& node) const
 {
+    AssertLockHeld(node.cs_vSend);
+
     auto it = node.vSendMsg.begin();
     size_t nSentSize = 0;
     bool data_left{false}; //!< second return value (whether unsent data remains)
+
+    LogPrintf("(node.m_send_memusage) node.vSendMsg.size() = %d, node.vSendMsg[0].size() = %d\n",
+              node.vSendMsg.size(), node.vSendMsg.at(0).data.size());
 
     while (true) {
         if (it != node.vSendMsg.end()) {
             // If possible, move one message from the send queue to the transport. This fails when
             // there is an existing message still being sent.
-            size_t memusage = it->GetMemoryUsage();
+            size_t memusage = it->GetMemoryUsage(strprintf("(%s) %s:%s", __func__, __FILE__, __LINE__));
             if (node.m_transport->SetMessageToSend(*it)) {
                 // Update memory usage of send buffer (as *it will be deleted).
                 node.m_send_memusage -= memusage;
+                LogPrintf("node.m_send_memusage = %d, it_pos=%d\n", node.m_send_memusage, std::distance(node.vSendMsg.begin(), it));
                 ++it;
             }
         }
@@ -1081,9 +1091,11 @@ std::pair<size_t, bool> CConnman::SocketSendData(CNode& node) const
         }
     }
 
+    LogPrintf("node.m_send_memusage = %d\n", node.m_send_memusage);
     node.fPauseSend = node.m_send_memusage + node.m_transport->GetSendMemoryUsage() > nSendBufferMaxSize;
 
     if (it == node.vSendMsg.end()) {
+        LogPrintf("asserting node.m_send_memusage == 0\n");
         assert(node.m_send_memusage == 0);
     }
     node.vSendMsg.erase(node.vSendMsg.begin(), it);
@@ -4290,7 +4302,8 @@ void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)
         const bool queue_was_empty{to_send.empty() && pnode->vSendMsg.empty()};
 
         // Update memory usage of send buffer.
-        pnode->m_send_memusage += msg.GetMemoryUsage();
+        pnode->m_send_memusage += msg.GetMemoryUsage(strprintf("(%s) %s:%s", __func__, __FILE__, __LINE__));
+        LogPrintf("node.m_send_memusage=%d, msg_memsize=%d, msg_size=%d, msg_type=%s\n", pnode->m_send_memusage, msg.GetMemoryUsage(strprintf("(%s) %s:%s", __func__, __FILE__, __LINE__)), msg.data.size(), msg.m_type);
         if (pnode->m_send_memusage + pnode->m_transport->GetSendMemoryUsage() > nSendBufferMaxSize) pnode->fPauseSend = true;
         // Move message to vSendMsg queue.
         pnode->vSendMsg.push_back(std::move(msg));
