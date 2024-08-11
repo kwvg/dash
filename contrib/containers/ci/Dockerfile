@@ -7,12 +7,15 @@ ENV DEBIAN_FRONTEND="noninteractive" TZ="Europe/London"
 # (zlib1g-dev is needed for the Qt host binary builds, but should not be used by target binaries)
 ENV APT_ARGS="-y --no-install-recommends --no-upgrade"
 
-# Install packages for i386; disabled on aarch64 and arm64 hosts
-RUN (dpkg --print-architecture | grep -Eq 'aarch64|arm64' || dpkg --add-architecture i386)
-RUN (dpkg --print-architecture | grep -Eq 'aarch64|arm64' || (apt-get update && apt-get install $APT_ARGS \
-    g++-9-multilib \
-    linux-libc-dev:i386 \
-    wine32) && rm -rf /var/lib/apt/lists/*)
+# Install packages for i386; enabled on amd64 hosts
+SHELL ["/bin/bash", "-c"]
+RUN if [[ "$(dpkg --print-architecture)" == "amd64" ]]; then \
+      dpkg --add-architecture i386 && \
+      apt-get update && apt-get install $APT_ARGS \
+      g++-9-multilib \
+      linux-libc-dev:i386 \
+      wine32 && rm -rf /var/lib/apt/lists/*; \
+    fi;
 
 RUN apt-get update && apt-get install $APT_ARGS \
     autotools-dev \
@@ -43,7 +46,6 @@ RUN apt-get update && apt-get install $APT_ARGS \
 # them in configuration arguments
 ARG GCC_VERSION=9.4.0
 ARG GCC_COMPILE_ARGS=""
-SHELL ["/bin/bash", "-c"]
 RUN set -ex; \
     curl -fL https://ftpmirror.gnu.org/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz -o /tmp/gcc.tar.xz; \
     mkdir -p /tmp/gcc; \
