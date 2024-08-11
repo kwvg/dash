@@ -27,13 +27,16 @@ RUN apt-get update && apt-get install $APT_ARGS \
     curl \
     g++ \
     git \
+    gnupg \
     libc++-dev \
     libc++abi-dev \
     libtool \
     linux-libc-dev \
+    lsb-release \
     m4 \
     make \
     pkg-config \
+    software-properties-common \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -143,11 +146,17 @@ RUN useradd -u ${USER_ID} -g dash -s /bin/bash -m -d /home/dash dash
 
 # Build dependencies
 RUN apt-get update && apt-get install $APT_ARGS \
+    bc \
     bison \
     ccache \
     clang \
     cmake \
+    g++-arm-linux-gnueabihf \
+    g++-mingw-w64-x86-64 \
+    gawk \
     gettext \
+    jq \
+    libncurses5 \
     libxcb-icccm4 \
     libxcb-image0 \
     libxcb-keysyms1 \
@@ -159,24 +168,14 @@ RUN apt-get update && apt-get install $APT_ARGS \
     libxcb-xinerama0 \
     libxcb-xkb1 \
     libxkbcommon-x11-0 \
-    llvm \
-    wget \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
-
-# Packages needed for all target builds
-RUN apt-get update && apt-get install $APT_ARGS \
-    bc \
-    gawk \
-    g++-arm-linux-gnueabihf \
-    g++-mingw-w64-x86-64 \
-    jq \
     libz-dev \
-    libncurses5 \
+    llvm \
     nsis \
-    python3-zmq \
     parallel \
+    python3-zmq \
+    unzip \
     valgrind \
+    wget \
     wine-stable \
     wine64 \
     xorriso \
@@ -204,14 +203,8 @@ RUN \
   update-alternatives --set x86_64-w64-mingw32-g++  /usr/bin/x86_64-w64-mingw32-g++-posix; \
   exit 0
 
-ARG LLVM_VERSION=16
 # Setup Clang+LLVM support
-RUN apt-get update && apt-get install $APT_ARGS \
-    lsb-release \
-    software-properties-common \
-    gnupg \
-    && rm -rf /var/lib/apt/lists/*
-
+ARG LLVM_VERSION=16
 RUN cd /tmp && \
     wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
