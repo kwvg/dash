@@ -18,33 +18,17 @@ RUN apt-get update && apt-get install $APT_ARGS \
     autotools-dev \
     automake \
     autoconf \
-    bison \
     build-essential \
     bsdmainutils \
+    ca-certificates \
     curl \
-    ccache \
-    clang \
-    cmake \
     g++ \
-    gettext \
     git \
     libc++-dev \
     libc++abi-dev \
     libtool \
-    libxcb-icccm4 \
-    libxcb-image0 \
-    libxcb-keysyms1 \
-    libxcb-randr0 \
-    libxcb-render-util0 \
-    libxcb-shape0 \
-    libxcb-sync1 \
-    libxcb-xfixes0 \
-    libxcb-xinerama0 \
-    libxcb-xkb1 \
-    libxkbcommon-x11-0 \
-    wget \
-    unzip \
     m4 \
+    make \
     pkg-config \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -53,7 +37,6 @@ RUN apt-get update && apt-get install $APT_ARGS \
 # PYTHON_VERSION should match the value in .python-version
 ARG PYTHON_VERSION=3.8.16
 RUN apt-get update && apt-get install $APT_ARGS \
-    ca-certificates \
     libbz2-dev \
     libffi-dev \
     liblzma-dev \
@@ -62,8 +45,6 @@ RUN apt-get update && apt-get install $APT_ARGS \
     libreadline-dev \
     libsqlite3-dev \
     libssl-dev \
-    llvm \
-    make \
     tk-dev \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
@@ -98,6 +79,29 @@ ENV USER_ID ${USER_ID}
 ENV GROUP_ID ${GROUP_ID}
 RUN groupadd -g ${GROUP_ID} dash
 RUN useradd -u ${USER_ID} -g dash -s /bin/bash -m -d /home/dash dash
+
+# Build dependencies
+RUN apt-get update && apt-get install $APT_ARGS \
+    bison \
+    ccache \
+    clang \
+    cmake \
+    gettext \
+    libxcb-icccm4 \
+    libxcb-image0 \
+    libxcb-keysyms1 \
+    libxcb-randr0 \
+    libxcb-render-util0 \
+    libxcb-shape0 \
+    libxcb-sync1 \
+    libxcb-xfixes0 \
+    libxcb-xinerama0 \
+    libxcb-xkb1 \
+    libxkbcommon-x11-0 \
+    llvm \
+    wget \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
 # Packages needed for all target builds
 RUN apt-get update && apt-get install $APT_ARGS \
