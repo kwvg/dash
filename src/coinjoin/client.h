@@ -93,7 +93,11 @@ public:
 
     CCoinJoinClientManager* Get(const std::string& name) const;
 
-    const wallet_name_cjman_map& raw() const { return m_wallet_manager_map; }
+    const wallet_name_cjman_map& raw() const
+    {
+        LOCK(cs_wallet_manager_map);
+        return m_wallet_manager_map;
+    }
 
 private:
     CChainState& m_chainstate;
@@ -105,7 +109,9 @@ private:
     const std::unique_ptr<CCoinJoinClientQueueManager>& m_queueman;
 
     const bool m_is_masternode;
-    wallet_name_cjman_map m_wallet_manager_map;
+
+    mutable Mutex cs_wallet_manager_map;
+    wallet_name_cjman_map m_wallet_manager_map GUARDED_BY(cs_wallet_manager_map);
 };
 
 class CCoinJoinClientSession : public CCoinJoinBaseSession
