@@ -7,11 +7,11 @@ ENV DEBIAN_FRONTEND="noninteractive" TZ="Europe/London"
 # (zlib1g-dev is needed for the Qt host binary builds, but should not be used by target binaries)
 ENV APT_ARGS="-y --no-install-recommends --no-upgrade"
 
-
 # Install packages for i386; disabled on aarch64 and arm64 hosts
 RUN (dpkg --print-architecture | grep -Eq 'aarch64|arm64' || dpkg --add-architecture i386)
 RUN (dpkg --print-architecture | grep -Eq 'aarch64|arm64' || (apt-get update && apt-get install $APT_ARGS \
     g++-9-multilib \
+    linux-libc-dev:i386 \
     wine32) && rm -rf /var/lib/apt/lists/*)
 
 RUN apt-get update && apt-get install $APT_ARGS \
@@ -27,11 +27,70 @@ RUN apt-get update && apt-get install $APT_ARGS \
     libc++-dev \
     libc++abi-dev \
     libtool \
+    linux-libc-dev \
     m4 \
     make \
     pkg-config \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Compile and install GCC compiler
+#
+# The folder containing compiled binaries are deliberately not included in PATH as
+# it is possible for the distro to offer the same version of GCC that we are
+# compiling. Builds that wish to use the version we have compiled should update
+# PATH and any relevant environment variables in their build scripts or point to
+# them in configuration arguments
+ARG GCC_VERSION=9.4.0
+ARG GCC_COMPILE_ARGS=""
+SHELL ["/bin/bash", "-c"]
+RUN set -ex; \
+    curl -fL https://ftpmirror.gnu.org/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz -o /tmp/gcc.tar.xz; \
+    mkdir -p /tmp/gcc; \
+    tar -xf /tmp/gcc.tar.xz -C /tmp/gcc --strip-components=1; \
+    rm /tmp/gcc.tar.xz; \
+    cd /tmp/gcc; \
+    ./contrib/download_prerequisites; \
+    (rm *.tar.* || true); \
+    dpkgArch="$(dpkg --print-architecture)"; GCC_PLATFORM_ARGS=""; \
+    case "${dpkgArch##*-}" in  \
+      armel) GCC_PLATFORM_ARGS="--with-arch=armv4t --with-float=soft";; \
+      armhf) GCC_PLATFORM_ARGS="--with-arch=armv7-a --with-float=hard --with-fpu=vfpv3-d16 --with-mode=thumb";; \
+      i386|i686) GCC_PLATFORM_ARGS="--with-arch=i686";; \
+      amd64) GCC_PLATFORM_ARGS="--enable-multilib --with-abi=m64 --with-arch-32=i686 --with-multilib-list=m32,m64,mx32 --without-isl";; \
+    esac; \
+    gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)"; \
+    ln -s "/usr/include/${gnuArch}/asm" "/usr/include/asm"; \
+    majorVersion="${GCC_VERSION%%.*}"; \
+    ./configure \
+      --build="${gnuArch}" \
+      --host="${gnuArch}" \
+      --target="${gnuArch}" \
+      --disable-bootstrap \
+      --disable-vtable-verify \
+      --disable-werror \
+      --enable-checking=release \
+      --enable-clocale=gnu \
+      --enable-default-pie \
+      --enable-gnu-unique-object \
+      --enable-languages=c,c++,fortran,objc,obj-c++ \
+      --enable-libstdcxx-debug \
+      --enable-libstdcxx-time=yes \
+      --enable-libsanitizer \
+      --enable-linker-build-id \
+      --enable-nls \
+      --enable-threads=posix \
+      --prefix="/usr/local/gcc-${majorVersion}" \
+      --program-suffix="-${majorVersion}" \
+      --with-default-libstdcxx-abi=new \
+      --with-gcc-major-version-only \
+      --with-tune=generic \
+      ${GCC_COMPILE_ARGS} \
+      ${GCC_PLATFORM_ARGS}; \
+    make -j "$(( $(nproc) - 1 ))"; \
+    make install-strip; \
+    cd /tmp; \
+    rm -rf /tmp/gcc;
 
 # Python setup
 # PYTHON_VERSION should match the value in .python-version
