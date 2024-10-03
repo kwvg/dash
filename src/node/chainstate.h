@@ -83,6 +83,14 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
                                                      std::function<bool()> shutdown_requested = nullptr,
                                                      std::function<void()> coins_error_cb = nullptr);
 
+/** Initialize Dash-specific components during chainstate initialization */
+void DashChainstateSetup(ChainstateManager& chainman,
+                         NodeContext& node,
+                         bool fReset,
+                         bool fReindexChainState,
+                         const Consensus::Params& consensus_params);
+void DashChainstateSetupClose(NodeContext& node);
+
 enum class ChainstateLoadVerifyError {
     ERROR_BLOCK_FROM_FUTURE,
     ERROR_CORRUPTED_BLOCK_DB,

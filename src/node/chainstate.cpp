@@ -64,32 +64,7 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
         pblocktree.reset();
         pblocktree.reset(new CBlockTreeDB(nBlockTreeDBCache, block_tree_db_in_memory, fReset));
 
-        // Same logic as above with pblocktree
-        node.dmnman.reset();
-        node.dmnman = std::make_unique<CDeterministicMNManager>(chainman.ActiveChainstate(), *node.connman, *node.evodb);
-        node.mempool->ConnectManagers(node.dmnman.get());
-
-        node.cpoolman.reset();
-        node.cpoolman = std::make_unique<CCreditPoolManager>(*node.evodb);
-
-        llmq::quorumSnapshotManager.reset();
-        llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(*node.evodb));
-
-        if (node.llmq_ctx) {
-            node.llmq_ctx->Interrupt();
-            node.llmq_ctx->Stop();
-        }
-        node.llmq_ctx.reset();
-        node.llmq_ctx = std::make_unique<LLMQContext>(chainman, *node.connman, *node.dmnman, *node.evodb, *node.mn_metaman, *node.mnhf_manager, *node.sporkman,
-                                                        *node.mempool, node.mn_activeman.get(), *node.mn_sync, node.peerman, /* unit_tests = */ false, /* wipe = */ fReset || fReindexChainState);
-        // Enable CMNHFManager::{Process, Undo}Block
-        node.mnhf_manager->ConnectManagers(node.chainman.get(), node.llmq_ctx->qman.get());
-        // Have to start it early to let VerifyDB check ChainLock signatures in coinbase
-        node.llmq_ctx->Start();
-
-        node.chain_helper.reset();
-        node.chain_helper = std::make_unique<CChainstateHelper>(*node.cpoolman, *node.dmnman, *node.mnhf_manager, *node.govman, *(node.llmq_ctx->quorum_block_processor), *node.chainman,
-                                                                consensus_params, *node.mn_sync, *node.sporkman, *(node.llmq_ctx->clhandler), *(node.llmq_ctx->qman));
+        DashChainstateSetup(chainman, node, fReset, fReindexChainState, consensus_params);
 
         if (fReset) {
             pblocktree->WriteReindexing(true);
@@ -205,6 +180,55 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
     }
 
     return std::nullopt;
+}
+
+void DashChainstateSetup(ChainstateManager& chainman,
+                         NodeContext& node,
+                         bool fReset,
+                         bool fReindexChainState,
+                         const Consensus::Params& consensus_params)
+{
+    // Same logic as pblocktree
+    node.dmnman.reset();
+    node.dmnman = std::make_unique<CDeterministicMNManager>(chainman.ActiveChainstate(), *node.connman, *node.evodb);
+    node.mempool->ConnectManagers(node.dmnman.get());
+
+    node.cpoolman.reset();
+    node.cpoolman = std::make_unique<CCreditPoolManager>(*node.evodb);
+
+    llmq::quorumSnapshotManager.reset();
+    llmq::quorumSnapshotManager.reset(new llmq::CQuorumSnapshotManager(*node.evodb));
+
+    if (node.llmq_ctx) {
+        node.llmq_ctx->Interrupt();
+        node.llmq_ctx->Stop();
+    }
+    node.llmq_ctx.reset();
+    node.llmq_ctx = std::make_unique<LLMQContext>(chainman, *node.connman, *node.dmnman, *node.evodb, *node.mn_metaman, *node.mnhf_manager, *node.sporkman,
+                                                  *node.mempool, node.mn_activeman.get(), *node.mn_sync, node.peerman, /* unit_tests = */ false, /* wipe = */ fReset || fReindexChainState);
+    // Enable CMNHFManager::{Process, Undo}Block
+    node.mnhf_manager->ConnectManagers(node.chainman.get(), node.llmq_ctx->qman.get());
+
+    // Have to start it early to let VerifyDB check ChainLock signatures in coinbase
+    node.llmq_ctx->Start();
+
+    node.chain_helper.reset();
+    node.chain_helper = std::make_unique<CChainstateHelper>(*node.cpoolman, *node.dmnman, *node.mnhf_manager, *node.govman, *(node.llmq_ctx->quorum_block_processor), *node.chainman,
+                                                            consensus_params, *node.mn_sync, *node.sporkman, *(node.llmq_ctx->clhandler), *(node.llmq_ctx->qman));
+}
+
+void DashChainstateSetupClose(NodeContext& node)
+{
+    assert(node.chainman);
+
+    node.chain_helper.reset();
+    if (node.mnhf_manager) {
+        node.mnhf_manager->DisconnectManagers();
+    }
+    node.llmq_ctx.reset();
+    llmq::quorumSnapshotManager.reset();
+    node.mempool->DisconnectManagers();
+    node.dmnman.reset();
 }
 
 std::optional<ChainstateLoadVerifyError> VerifyLoadedChainstate(ChainstateManager& chainman,

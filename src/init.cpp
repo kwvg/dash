@@ -347,14 +347,7 @@ void PrepareShutdown(NodeContext& node)
                 chainstate->ResetCoinsViews();
             }
         }
-        node.chain_helper.reset();
-        if (node.mnhf_manager) {
-            node.mnhf_manager->DisconnectManagers();
-        }
-        node.llmq_ctx.reset();
-        llmq::quorumSnapshotManager.reset();
-        node.mempool->DisconnectManagers();
-        node.dmnman.reset();
+        DashChainstateSetupClose(node);
         node.cpoolman.reset();
         node.mnhf_manager.reset();
         node.evodb.reset();
