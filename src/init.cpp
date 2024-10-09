@@ -1882,7 +1882,8 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                 args.GetBoolArg("-spentindex", DEFAULT_SPENTINDEX),
                                 args.GetBoolArg("-timestampindex", DEFAULT_TIMESTAMPINDEX),
                                 args.GetBoolArg("-txindex", DEFAULT_TXINDEX),
-                                chainparams,
+                                chainparams.GetConsensus(),
+                                chainparams.NetworkIDString(),
                                 fReindexChainState,
                                 nBlockTreeDBCache,
                                 nCoinDBCache,
@@ -1959,7 +1960,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                              *Assert(node.evodb.get()),
                                              fReset,
                                              fReindexChainState,
-                                             chainparams,
+                                             chainparams.GetConsensus(),
                                              check_blocks,
                                              args.GetArg("-checklevel", DEFAULT_CHECKLEVEL),
                                              static_cast<int64_t(*)()>(GetTime));

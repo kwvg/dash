@@ -4,7 +4,7 @@
 
 #include <node/chainstate.h>
 
-#include <chainparams.h> // for CChainParams
+#include <consensus/params.h> // for Consensus::Params
 #include <deploymentstatus.h> // for DeploymentActiveAfter
 #include <node/blockstorage.h> // for CleanupBlockRevFiles, fHavePruned, fReindex
 #include <node/context.h> // for NodeContext
@@ -29,7 +29,8 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
                                                      bool is_spentindex_enabled,
                                                      bool is_timeindex_enabled,
                                                      bool is_txindex_enabled,
-                                                     const CChainParams& chainparams,
+                                                     const Consensus::Params& consensus_params,
+                                                     const std::string& network_id,
                                                      bool fReindexChainState,
                                                      int64_t nBlockTreeDBCache,
                                                      int64_t nCoinDBCache,
@@ -86,7 +87,7 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
 
         node.chain_helper.reset();
         node.chain_helper = std::make_unique<CChainstateHelper>(*node.cpoolman, *node.dmnman, *node.mnhf_manager, *node.govman, *(node.llmq_ctx->quorum_block_processor), *node.chainman,
-                                                                chainparams.GetConsensus(), *node.mn_sync, *node.sporkman, *(node.llmq_ctx->clhandler), *(node.llmq_ctx->qman));
+                                                                consensus_params, *node.mn_sync, *node.sporkman, *(node.llmq_ctx->clhandler), *(node.llmq_ctx->qman));
 
         if (fReset) {
             pblocktree->WriteReindexing(true);
@@ -107,18 +108,18 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
         }
 
         if (!chainman.BlockIndex().empty() &&
-                !chainman.m_blockman.LookupBlockIndex(chainparams.GetConsensus().hashGenesisBlock)) {
+                !chainman.m_blockman.LookupBlockIndex(consensus_params.hashGenesisBlock)) {
             return ChainstateLoadingError::ERROR_BAD_GENESIS_BLOCK;
         }
 
-        if (!chainparams.GetConsensus().hashDevnetGenesisBlock.IsNull() && !chainman.BlockIndex().empty() &&
-                !chainman.m_blockman.LookupBlockIndex(chainparams.GetConsensus().hashDevnetGenesisBlock)) {
+        if (!consensus_params.hashDevnetGenesisBlock.IsNull() && !chainman.BlockIndex().empty() &&
+                !chainman.m_blockman.LookupBlockIndex(consensus_params.hashDevnetGenesisBlock)) {
             return ChainstateLoadingError::ERROR_BAD_DEVNET_GENESIS_BLOCK;
         }
 
         // TODO: Remove this when pruning is fixed.
         // See https://github.com/dashpay/dash/pull/1817 and https://github.com/dashpay/dash/pull/1743
-        if (is_governance_enabled && !is_txindex_enabled && chainparams.NetworkIDString() != CBaseChainParams::REGTEST) {
+        if (is_governance_enabled && !is_txindex_enabled && network_id != CBaseChainParams::REGTEST) {
             return ChainstateLoadingError::ERROR_TXINDEX_DISABLED_WHEN_GOV_ENABLED;
         }
 
@@ -208,7 +209,7 @@ std::optional<ChainstateLoadVerifyError> VerifyLoadedChainstate(ChainstateManage
                                                                 CEvoDB& evodb,
                                                                 bool fReset,
                                                                 bool fReindexChainState,
-                                                                const CChainParams& chainparams,
+                                                                const Consensus::Params& consensus_params,
                                                                 unsigned int check_blocks,
                                                                 unsigned int check_level,
                                                                 std::function<int64_t()> get_unix_time_seconds)
@@ -226,14 +227,14 @@ std::optional<ChainstateLoadVerifyError> VerifyLoadedChainstate(ChainstateManage
                 if (tip && tip->nTime > get_unix_time_seconds() + 2 * 60 * 60) {
                     return ChainstateLoadVerifyError::ERROR_BLOCK_FROM_FUTURE;
                 }
-                const bool v19active{DeploymentActiveAfter(tip, chainparams.GetConsensus(), Consensus::DEPLOYMENT_V19)};
+                const bool v19active{DeploymentActiveAfter(tip, consensus_params, Consensus::DEPLOYMENT_V19)};
                 if (v19active) {
                     bls::bls_legacy_scheme.store(false);
                     LogPrintf("%s: bls_legacy_scheme=%d\n", __func__, bls::bls_legacy_scheme.load());
                 }
 
                 if (!CVerifyDB().VerifyDB(
-                        *chainstate, chainparams, chainstate->CoinsDB(),
+                        *chainstate, consensus_params, chainstate->CoinsDB(),
                         evodb,
                         check_level,
                         check_blocks)) {
