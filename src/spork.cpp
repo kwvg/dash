@@ -6,7 +6,7 @@
 
 #include <chainparams.h>
 #include <consensus/params.h>
-#include <flat-database.h>
+#include <flatdb.h>
 #include <key_io.h>
 #include <logging.h>
 #include <messagesigner.h>

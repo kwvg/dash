@@ -2,8 +2,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_FLAT_DATABASE_H
-#define BITCOIN_FLAT_DATABASE_H
+#ifndef BITCOIN_FLATDB_H
+#define BITCOIN_FLATDB_H
 
 #include <clientversion.h>
 #include <chainparams.h>
@@ -208,4 +208,4 @@ public:
 };
 
 
-#endif // BITCOIN_FLAT_DATABASE_H
+#endif // BITCOIN_FLATDB_H

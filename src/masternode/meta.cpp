@@ -4,7 +4,7 @@
 
 #include <masternode/meta.h>
 
-#include <flat-database.h>
+#include <flatdb.h>
 #include <util/time.h>
 
 #include <sstream>

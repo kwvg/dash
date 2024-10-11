@@ -10,7 +10,7 @@
 #include <consensus/validation.h>
 #include <deploymentstatus.h>
 #include <evo/deterministicmns.h>
-#include <flat-database.h>
+#include <flatdb.h>
 #include <governance/classes.h>
 #include <governance/common.h>
 #include <governance/validators.h>

@@ -80,7 +80,7 @@
 #endif // ENABLE_WALLET
 #include <coinjoin/server.h>
 #include <dsnotificationinterface.h>
-#include <flat-database.h>
+#include <flatdb.h>
 #include <governance/governance.h>
 #include <masternode/meta.h>
 #include <masternode/sync.h>

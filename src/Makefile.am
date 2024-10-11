@@ -204,7 +204,7 @@ BITCOIN_CORE_H = \
   governance/votedb.h \
   gsl/assert.h \
   gsl/pointers.h \
-  flat-database.h \
+  flatdb.h \
   flatfile.h \
   fs.h \
   httprpc.h \
