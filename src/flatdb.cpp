@@ -11,9 +11,9 @@
 #include <util/system.h>
 
 /**
-*   Generic Dumping and Loading
-*   ---------------------------
-*/
+ *   Generic Dumping and Loading
+ *   ---------------------------
+ */
 
 template <typename T>
 CFlatDB<T>::CFlatDB(std::string&& strFilenameIn, std::string&& strMagicMessageIn) :
@@ -31,29 +31,27 @@ CFlatDB<T>::~CFlatDB()
 template <typename T>
 bool CFlatDB<T>::CoreWrite(const T& objToSave)
 {
-    // LOCK(objToSave.cs);
-
     int64_t nStart = GetTimeMillis();
 
     // serialize, checksum data up to that point, then append checksum
     CDataStream ssObj(SER_DISK, CLIENT_VERSION);
-    ssObj << strMagicMessage; // specific magic message for this type of object
+    ssObj << strMagicMessage;         // specific magic message for this type of object
     ssObj << Params().MessageStart(); // network specific magic number
     ssObj << objToSave;
     uint256 hash = Hash(ssObj);
     ssObj << hash;
 
     // open output file, and associate with CAutoFile
-    FILE *file = fsbridge::fopen(pathDB, "wb");
+    FILE* file = fsbridge::fopen(pathDB, "wb");
     CAutoFile fileout(file, SER_DISK, CLIENT_VERSION);
-    if (fileout.IsNull())
+    if (fileout.IsNull()) {
         return error("%s: Failed to open file %s", __func__, fs::PathToString(pathDB));
+    }
 
     // Write and commit header, data
     try {
         fileout << ssObj;
-    }
-    catch (std::exception &e) {
+    } catch (std::exception& e) {
         return error("%s: Serialize or I/O error - %s", __func__, e.what());
     }
     fileout.fclose();
@@ -67,14 +65,11 @@ bool CFlatDB<T>::CoreWrite(const T& objToSave)
 template <typename T>
 CFlatDB<T>::ReadResult CFlatDB<T>::CoreRead(T& objToLoad)
 {
-    //LOCK(objToLoad.cs);
-
     int64_t nStart = GetTimeMillis();
     // open input file, and associate with CAutoFile
-    FILE *file = fsbridge::fopen(pathDB, "rb");
+    FILE* file = fsbridge::fopen(pathDB, "rb");
     CAutoFile filein(file, SER_DISK, CLIENT_VERSION);
-    if (filein.IsNull())
-    {
+    if (filein.IsNull()) {
         error("%s: Failed to open file %s", __func__, fs::PathToString(pathDB));
         return FileError;
     }
@@ -83,8 +78,7 @@ CFlatDB<T>::ReadResult CFlatDB<T>::CoreRead(T& objToLoad)
     int fileSize = fs::file_size(pathDB);
     int dataSize = fileSize - sizeof(uint256);
     // Don't try to resize to a negative number if file is small
-    if (dataSize < 0)
-        dataSize = 0;
+    if (dataSize < 0) dataSize = 0;
     std::vector<unsigned char> vchData;
     vchData.resize(dataSize);
     uint256 hashIn;
@@ -93,8 +87,7 @@ CFlatDB<T>::ReadResult CFlatDB<T>::CoreRead(T& objToLoad)
     try {
         filein.read(MakeWritableByteSpan(vchData));
         filein >> hashIn;
-    }
-    catch (std::exception &e) {
+    } catch (std::exception& e) {
         error("%s: Deserialize or I/O error - %s", __func__, e.what());
         return HashReadError;
     }
@@ -104,12 +97,10 @@ CFlatDB<T>::ReadResult CFlatDB<T>::CoreRead(T& objToLoad)
 
     // verify stored checksum matches input data
     uint256 hashTmp = Hash(ssObj);
-    if (hashIn != hashTmp)
-    {
+    if (hashIn != hashTmp) {
         error("%s: Checksum mismatch, data corrupted", __func__);
         return IncorrectHash;
     }
-
 
     try {
         unsigned char pchMsgTmp[4];
@@ -118,27 +109,23 @@ CFlatDB<T>::ReadResult CFlatDB<T>::CoreRead(T& objToLoad)
         ssObj >> strMagicMessageTmp;
 
         // ... verify the message matches predefined one
-        if (strMagicMessage != strMagicMessageTmp)
-        {
+        if (strMagicMessage != strMagicMessageTmp) {
             error("%s: Invalid magic message", __func__);
             return IncorrectMagicMessage;
         }
-
 
         // de-serialize file header (network specific magic number) and ..
         ssObj >> pchMsgTmp;
 
         // ... verify the network matches ours
-        if (memcmp(pchMsgTmp, Params().MessageStart(), sizeof(pchMsgTmp)))
-        {
+        if (memcmp(pchMsgTmp, Params().MessageStart(), sizeof(pchMsgTmp))) {
             error("%s: Invalid network magic number", __func__);
             return IncorrectMagicNumber;
         }
 
         // de-serialize data into T object
         ssObj >> objToLoad;
-    }
-    catch (std::exception &e) {
+    } catch (std::exception& e) {
         objToLoad.Clear();
         error("%s: Deserialize or I/O error - %s", __func__, e.what());
         return IncorrectFormat;
@@ -154,16 +141,13 @@ template <typename T>
 bool CFlatDB<T>::Read(T& objToLoad)
 {
     ReadResult readResult = CoreRead(objToLoad);
-    if (readResult == FileError)
+    if (readResult == FileError) {
         LogPrintf("Missing file %s, will try to recreate\n", strFilename);
-    else if (readResult != Ok)
-    {
+    } else if (readResult != Ok) {
         LogPrintf("Error reading %s: ", strFilename);
-        if(readResult == IncorrectFormat)
-        {
+        if (readResult == IncorrectFormat) {
             LogPrintf("%s: Magic is ok but data has invalid format, will try to recreate\n", __func__);
-        }
-        else {
+        } else {
             LogPrintf("%s: File format is unknown or invalid, please fix it manually\n", __func__);
             // program should exit with an error
             return false;
