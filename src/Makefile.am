@@ -453,6 +453,7 @@ libbitcoin_server_a_SOURCES = \
   evo/simplifiedmns.cpp \
   evo/specialtx.cpp \
   evo/specialtxman.cpp \
+  flatdb.cpp \
   flatfile.cpp \
   governance/classes.cpp \
   governance/exceptions.cpp \

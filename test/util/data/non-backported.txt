@@ -9,7 +9,7 @@ src/coinjoin/*.h
 src/ctpl_stl.h
 src/cxxtimer.hpp
 src/dsnotificationinterface.*
-src/flatdb.h
+src/flatdb.*
 src/evo/*.cpp
 src/evo/*.h
 src/governance/*.cpp
