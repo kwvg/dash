@@ -34,11 +34,16 @@ std::unique_ptr<StatsdClient> g_stats_client;
 std::unique_ptr<StatsdClient> InitStatsClient(const ArgsManager& args)
 {
     auto sanitize_string = [](std::string string) {
+        if (!string.empty()) {
+            return string;
+        }
         // Remove key delimiters from the front and back as they're added back in
         // the constructor
-        if (!string.empty()) {
-            if (string.front() == STATSD_NS_DELIMITER) string.erase(string.begin());
-            if (string.back() == STATSD_NS_DELIMITER) string.pop_back();
+        if (string.front() == STATSD_NS_DELIMITER) string.erase(string.begin());
+        if (string.back() == STATSD_NS_DELIMITER) string.pop_back();
+        // Replace prohibited characters with underscores
+        for (const auto ch : {'@', ':', '|'}) {
+            std::replace(string.begin(), string.end(), ch, '_');
         }
         return string;
     };
