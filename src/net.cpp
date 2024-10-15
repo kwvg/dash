@@ -1054,6 +1054,78 @@ const std::array<std::string, 33> V2_MESSAGE_IDS = {
     ""
 };
 
+/** List of short messages allocated in Dash's reserved namespace (128-256).
+ *
+ * Slots should not be reused unless the switchover has already been done
+ * by a protocol upgrade, the old message is no longer supported by the client
+ * and a new slot wasn't already allotted for the message.
+ */
+const std::array<std::string, 40> V2_DASH_IDS = {
+    NetMsgType::SPORK,
+    NetMsgType::GETSPORKS,
+    NetMsgType::SENDDSQUEUE,
+    NetMsgType::DSACCEPT,
+    NetMsgType::DSVIN,
+    NetMsgType::DSFINALTX,
+    NetMsgType::DSSIGNFINALTX,
+    NetMsgType::DSCOMPLETE,
+    NetMsgType::DSSTATUSUPDATE,
+    NetMsgType::DSTX,
+    NetMsgType::DSQUEUE,
+    NetMsgType::SYNCSTATUSCOUNT,
+    NetMsgType::MNGOVERNANCESYNC,
+    NetMsgType::MNGOVERNANCEOBJECT,
+    NetMsgType::MNGOVERNANCEOBJECTVOTE,
+    NetMsgType::GETMNLISTDIFF,
+    NetMsgType::MNLISTDIFF,
+    NetMsgType::QSENDRECSIGS,
+    NetMsgType::QFCOMMITMENT,
+    NetMsgType::QCONTRIB,
+    NetMsgType::QCOMPLAINT,
+    NetMsgType::QJUSTIFICATION,
+    NetMsgType::QPCOMMITMENT,
+    NetMsgType::QWATCH,
+    NetMsgType::QSIGSESANN,
+    NetMsgType::QSIGSHARESINV,
+    NetMsgType::QGETSIGSHARES,
+    NetMsgType::QBSIGSHARES,
+    NetMsgType::QSIGREC,
+    NetMsgType::QSIGSHARE,
+    NetMsgType::QGETDATA,
+    NetMsgType::QDATA,
+    NetMsgType::CLSIG,
+    NetMsgType::ISDLOCK,
+    NetMsgType::MNAUTH,
+    NetMsgType::GETHEADERS2,
+    NetMsgType::SENDHEADERS2,
+    NetMsgType::HEADERS2,
+    NetMsgType::GETQUORUMROTATIONINFO,
+    NetMsgType::QUORUMROTATIONINFO
+};
+
+/** A complete set of short IDs  */
+constexpr std::array<std::string_view, 256> V2ShortIDs() {
+    std::array<std::string_view, 256> ret;
+    std::fill(ret.begin(), ret.end(), "");
+
+    // Copy Bitcoin's short ID allocations to the lower half of the namespace
+    static_assert(V2_MESSAGE_IDS.size() <= 128);
+    std::copy(V2_MESSAGE_IDS.begin(), V2_MESSAGE_IDS.end(), ret.begin());
+    // Copy Dash's short ID allocations to the upper half of the namespace
+    static_assert(V2_DASH_IDS.size() <= 128);
+    std::copy(V2_DASH_IDS.begin(), V2_DASH_IDS.end(), ret.begin() + 128);
+
+    return ret;
+}
+
+bool IsValidV2ShortID(uint8_t first_byte) {
+    // Since we have filled the namespace of short IDs, we have to preserve
+    // the expected behaviour of coming up short when going beyond Bitcoin's
+    // and Dash's *used* slots. We do this by checking if the byte is within
+    // the range where a valid message will reside.
+    return first_byte < V2_MESSAGE_IDS.size() - 1 || (first_byte >= 128 && first_byte - 128 < V2_DASH_IDS.size());
+}
+
 class V2MessageMap
 {
     std::unordered_map<std::string, uint8_t> m_map;
@@ -1061,8 +1133,10 @@ class V2MessageMap
 public:
     V2MessageMap() noexcept
     {
-        for (size_t i = 1; i < std::size(V2_MESSAGE_IDS); ++i) {
-            m_map.emplace(V2_MESSAGE_IDS[i], i);
+        for (size_t i = 1; i < std::size(V2ShortIDs()); ++i) {
+            if (IsValidV2ShortID(i)) {
+                m_map.emplace(V2ShortIDs()[i], i);
+            }
         }
     }
 
@@ -1526,9 +1600,9 @@ std::optional<std::string> V2Transport::GetMessageType(Span<const uint8_t>& cont
 
     if (first_byte != 0) {
         // Short (1 byte) encoding.
-        if (first_byte < std::size(V2_MESSAGE_IDS)) {
+        if (IsValidV2ShortID(first_byte)) {
             // Valid short message id.
-            return V2_MESSAGE_IDS[first_byte];
+            return std::string{V2ShortIDs()[first_byte]};
         } else {
             // Unknown short message id.
             return std::nullopt;
