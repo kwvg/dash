@@ -3,8 +3,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_MINER_H
-#define BITCOIN_MINER_H
+#ifndef BITCOIN_NODE_MINER_H
+#define BITCOIN_NODE_MINER_H
 
 #include <primitives/block.h>
 #include <txmempool.h>
@@ -19,6 +19,7 @@
 #include <boost/multi_index/tag.hpp>
 #include <boost/multi_index_container.hpp>
 
+class ChainstateManager;
 class BlockManager;
 class CBlockIndex;
 class CChainParams;
@@ -234,4 +235,4 @@ private:
 void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce);
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
 
-#endif // BITCOIN_MINER_H
+#endif // BITCOIN_NODE_MINER_H
