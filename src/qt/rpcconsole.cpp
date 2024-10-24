@@ -3,10 +3,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#if defined(HAVE_CONFIG_H)
-#include <config/bitcoin-config.h>
-#endif
-
 #include <qt/rpcconsole.h>
 #include <qt/forms/ui_debugwindow.h>
 
@@ -66,8 +62,6 @@ const char fontSizeSettingsKey[] = "consoleFontSize";
 const TrafficGraphData::GraphRange INITIAL_TRAFFIC_GRAPH_SETTING = TrafficGraphData::Range_30m;
 
 // Repair parameters
-const QString RESCAN1("-rescan=1");
-const QString RESCAN2("-rescan=2");
 const QString REINDEX("-reindex");
 
 namespace {
@@ -570,12 +564,14 @@ RPCConsole::RPCConsole(interfaces::Node& node, QWidget* parent, Qt::WindowFlags 
     ui->WalletSelector->setVisible(false);
     ui->WalletSelectorLabel->setVisible(false);
 
-    // Wallet Repair Buttons
+    // Repair Buttons
     // Disable wallet repair options that require a wallet (enable them later when a wallet is added)
     ui->btn_rescan1->setEnabled(false);
     ui->btn_rescan2->setEnabled(false);
+#ifdef ENABLE_WALLET
     connect(ui->btn_rescan1, &QPushButton::clicked, this, &RPCConsole::walletRescan1);
     connect(ui->btn_rescan2, &QPushButton::clicked, this, &RPCConsole::walletRescan2);
+#endif // ENABLE_WALLET
     connect(ui->btn_reindex, &QPushButton::clicked, this, &RPCConsole::walletReindex);
 
     // Register RPC timer interface
@@ -909,17 +905,29 @@ void RPCConsole::setFontSize(int newSize)
     ui->messagesWidget->verticalScrollBar()->setValue(oldPosFactor * ui->messagesWidget->verticalScrollBar()->maximum());
 }
 
-/** Restart wallet with "-rescan=1" */
-void RPCConsole::walletRescan1()
+#ifdef ENABLE_WALLET
+void RPCConsole::walletRescan(bool from_genesis)
 {
-    buildParameterlist(RESCAN1);
+    WalletModel* wallet_model{ui->WalletSelector->itemData(1).value<WalletModel*>()};
+    if (!wallet_model) {
+        QMessageBox::critical(this, PACKAGE_NAME, QObject::tr("Error: Rescan failed. Wallet not loaded."));
+    } else if (auto rescan_err = wallet_model->wallet().startRescan(from_genesis); rescan_err.has_value()) {
+        QMessageBox::critical(this, PACKAGE_NAME, QObject::tr("Error: %1").arg(QString::fromStdString(rescan_err.value())));
+    }
 }
 
-/** Restart wallet with "-rescan=2" */
+/** Rescan wallet from wallet creation */
+void RPCConsole::walletRescan1()
+{
+    walletRescan(/*from_genesis=*/false);
+}
+
+/** Rescan wallet from genesis block */
 void RPCConsole::walletRescan2()
 {
-    buildParameterlist(RESCAN2);
+    walletRescan(/*from_genesis=*/true);
 }
+#endif
 
 /** Restart wallet with "-reindex" */
 void RPCConsole::walletReindex()
@@ -944,8 +952,6 @@ void RPCConsole::buildParameterlist(QString arg)
     }
 
     // Remove existing repair-options
-    args.removeAll(RESCAN1);
-    args.removeAll(RESCAN2);
     args.removeAll(REINDEX);
 
     // Append repair parameter to command line.

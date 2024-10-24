@@ -146,6 +146,35 @@ public:
     {
         return m_wallet->ChangeWalletPassphrase(old_wallet_passphrase, new_wallet_passphrase);
     }
+    std::optional<std::string> startRescan(bool from_genesis) override {
+        int rescan_height{0};
+        if (!from_genesis) {
+            std::optional<int64_t> time_first_key;
+            for (auto spk_man : m_wallet->GetAllScriptPubKeyMans()) {
+                int64_t time = spk_man->GetTimeFirstKey();
+                if (!time_first_key || time < *time_first_key) time_first_key = time;
+            }
+            if (time_first_key) {
+                m_wallet->chain().findFirstBlockWithTimeAndHeight(*time_first_key - TIMESTAMP_WINDOW, rescan_height,
+                                                                  FoundBlock().height(rescan_height));
+            }
+        }
+
+        WalletRescanReserver reserver(*m_wallet);
+        if (!reserver.reserve()) {
+            return "Wallet is currently rescanning. Abort existing rescan or wait.";
+        }
+        switch (m_wallet->ScanForWalletTransactions(m_wallet->chain().getBlockHash(rescan_height), rescan_height, /*stop_height=*/{},
+                                                    reserver, /*fUpdate=*/true).status) {
+        case CWallet::ScanResult::SUCCESS:
+            break;
+        case CWallet::ScanResult::FAILURE:
+            return "Rescan failed. Potentially corrupted data files.";
+        case CWallet::ScanResult::USER_ABORT:
+            return "Rescan aborted.";
+        }
+        return std::nullopt;
+    }
     void abortRescan() override { m_wallet->AbortRescan(); }
     bool backupWallet(const std::string& filename) override { return m_wallet->BackupWallet(filename); }
     bool autoBackupWallet(const fs::path& wallet_path, bilingual_str& error_string, std::vector<bilingual_str>& warnings) override

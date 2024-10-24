@@ -18,6 +18,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <psbt.h>
 #include <string>
 #include <tuple>
@@ -82,6 +83,9 @@ public:
     //! Change wallet passphrase.
     virtual bool changeWalletPassphrase(const SecureString& old_wallet_passphrase,
         const SecureString& new_wallet_passphrase) = 0;
+
+    //! Initiate a rescan
+    virtual std::optional<std::string> startRescan(bool from_genesis) = 0;
 
     //! Abort a rescan.
     virtual void abortRescan() = 0;

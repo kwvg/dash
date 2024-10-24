@@ -5,6 +5,10 @@
 #ifndef BITCOIN_QT_RPCCONSOLE_H
 #define BITCOIN_QT_RPCCONSOLE_H
 
+#if defined(HAVE_CONFIG_H)
+#include <config/bitcoin-config.h>
+#endif
+
 #include <qt/guiutil.h>
 #include <qt/peertablemodel.h>
 #include <qt/trafficgraphdata.h>
@@ -109,10 +113,12 @@ public Q_SLOTS:
     void fontSmaller();
     void setFontSize(int newSize);
 
-    /** Wallet repair options */
+    /** Repair options */
+    void walletReindex();
+#ifdef ENABLE_WALLET
     void walletRescan1();
     void walletRescan2();
-    void walletReindex();
+#endif // ENABLE_WALLET
 
     /** Append the message to the message widget */
     void message(int category, const QString &msg) { message(category, msg, false); }
@@ -164,6 +170,10 @@ private:
     void setButtonIcons();
     /** Reload some themes related widgets */
     void reloadThemedWidgets();
+#ifdef ENABLE_WALLET
+    /** Initiate a wallet rescan */
+    void walletRescan(bool from_genesis);
+#endif // ENABLE_WALLET
 
     enum ColumnWidths
     {
