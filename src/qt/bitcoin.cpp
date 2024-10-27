@@ -722,6 +722,9 @@ int GuiMain(int argc, char* argv[])
     if (did_show_intro) {
         // Store intro dialog settings other than datadir (network specific)
         app.InitPruneSetting(prune_MiB);
+        // Run parameter interactions again to make sure parameters affected by
+        // new prune settings are processed
+        app.parameterSetup();
     }
 
     if (gArgs.GetBoolArg("-splash", DEFAULT_SPLASHSCREEN) && !gArgs.GetBoolArg("-min", false))
