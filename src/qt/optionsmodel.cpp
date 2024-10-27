@@ -192,12 +192,10 @@ void OptionsModel::Init(bool resetSettings)
 
     // If GUI is setting prune, then we also must set disablegovernance and txindex
     if (settings.value("bPrune").toBool()) {
-        if (gArgs.SoftSetBoolArg("-disablegovernance", true)) {
-            LogPrintf("%s: parameter interaction: -prune=true -> setting -disablegovernance=true\n", __func__);
+        if (!gArgs.SoftSetBoolArg("-disablegovernance", true)) {
             addOverriddenOption("-disablegovernance");
         }
-        if (gArgs.SoftSetBoolArg("-txindex", false)) {
-            LogPrintf("%s: parameter interaction: -prune=true -> setting -txindex=false\n", __func__);
+        if (!gArgs.SoftSetBoolArg("-txindex", false)) {
             addOverriddenOption("-txindex");
         }
     }
