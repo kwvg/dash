@@ -4,10 +4,9 @@ FROM ubuntu:jammy
 ENV DEBIAN_FRONTEND="noninteractive" TZ="Europe/London"
 
 # Build and base stuff
-# (zlib1g-dev is needed for the Qt host binary builds, but should not be used by target binaries)
 ENV APT_ARGS="-y --no-install-recommends --no-upgrade"
 
-# Install packages for i386 on amd64 hosts, then install common packages
+# Install packages for i386 on amd64 hosts, then install base packages
 SHELL ["/bin/bash", "-c"]
 RUN set -ex; \
     apt-get update && \
@@ -15,50 +14,32 @@ RUN set -ex; \
         dpkg --add-architecture i386 && \
         apt-get update && \
         apt-get install $APT_ARGS \
-        g++-multilib \
-        linux-libc-dev:i386 \
-        wine32; \
+        gcc-multilib \
+        linux-libc-dev:i386; \
     fi; \
     apt-get install $APT_ARGS \
     autotools-dev \
     automake \
     autoconf \
-    bison \
     build-essential \
-    bsdmainutils \
     ca-certificates \
-    ccache \
-    cmake \
     curl \
     flex \
     g++ \
-    gettext \
     git \
     gnupg \
     libtool \
     libgmp3-dev	\
     libmpc-dev \
     libmpfr-dev \
-    libxcb-icccm4 \
-    libxcb-image0 \
-    libxcb-keysyms1 \
-    libxcb-randr0 \
-    libxcb-render-util0 \
-    libxcb-shape0 \
-    libxcb-sync1 \
-    libxcb-xfixes0 \
-    libxcb-xinerama0 \
-    libxcb-xkb1 \
-    libxkbcommon-x11-0 \
     linux-libc-dev \
     lsb-release \
+    m4 \
+    make \
+    pkg-config \
     software-properties-common \
     tzdata \
-    unzip \
     wget \
-    m4 \
-    pkg-config \
-    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Compile and install GCC
@@ -124,11 +105,7 @@ ENV PATH="/opt/gcc/bin:${PATH}"
 # packages we want so we will need to install some of them manually.
 ARG LLVM_VERSION=18
 RUN set -ex; \
-    cd /tmp && \
-    wget https://apt.llvm.org/llvm.sh && \
-    chmod +x llvm.sh && \
-    /tmp/llvm.sh ${LLVM_VERSION} && \
-    rm -rf /tmp/llvm.sh; \
+    curl -sL https://apt.llvm.org/llvm.sh | bash -s "${LLVM_VERSION}" && \
     apt-get update && apt-get install $APT_ARGS \
     clang-format-${LLVM_VERSION} \
     clang-tidy-${LLVM_VERSION} \
@@ -154,7 +131,6 @@ RUN apt-get update && apt-get install $APT_ARGS \
     libreadline-dev \
     libsqlite3-dev \
     libssl-dev \
-    make \
     tk-dev \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
@@ -166,6 +142,36 @@ RUN curl https://pyenv.run | bash \
     && pyenv install $PYTHON_VERSION \
     && pyenv global $PYTHON_VERSION \
     && pyenv rehash
+
+# Install packages for i386 on amd64 hosts, then install common packages
+# (zlib1g-dev is needed for the Qt host binary builds, but should not be used by target binaries)
+RUN set -ex; \
+    apt-get update && \
+    if [[ "$(dpkg --print-architecture)" == "amd64" ]]; then \
+        apt-get install $APT_ARGS \
+        wine32; \
+    fi; \
+    apt-get install $APT_ARGS \
+    bison \
+    bsdmainutils \
+    ccache \
+    cmake \
+    gettext \
+    libxcb-icccm4 \
+    libxcb-image0 \
+    libxcb-keysyms1 \
+    libxcb-randr0 \
+    libxcb-render-util0 \
+    libxcb-shape0 \
+    libxcb-sync1 \
+    libxcb-xfixes0 \
+    libxcb-xinerama0 \
+    libxcb-xkb1 \
+    libxkbcommon-x11-0 \
+    unzip \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip3 install \
     codespell==1.17.1 \
     flake8==3.8.3 \
