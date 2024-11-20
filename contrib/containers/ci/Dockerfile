@@ -36,6 +36,10 @@ RUN set -ex; \
     git \
     gnupg \
     libtool \
+    libgmp3-dev	\
+    libisl-dev \
+    libmpc-dev \
+    libmpfr-dev \
     libxcb-icccm4 \
     libxcb-image0 \
     libxcb-keysyms1 \
@@ -67,8 +71,6 @@ RUN set -ex; \
     tar -xf /tmp/gcc.tar.xz -C /tmp/gcc --strip-components=1; \
     rm /tmp/gcc.tar.xz; \
     cd /tmp/gcc; \
-    ./contrib/download_prerequisites; \
-    (rm *.tar.* || true); \
     dpkgArch="$(dpkg --print-architecture)"; GCC_PLATFORM_ARGS=""; \
     case "${dpkgArch##*-}" in  \
       armel) GCC_PLATFORM_ARGS="--with-arch=armv4t --with-float=soft";; \
@@ -101,6 +103,14 @@ RUN set -ex; \
       --program-suffix="-${majorVersion}" \
       --with-default-libstdcxx-abi=new \
       --with-gcc-major-version-only \
+      --with-isl-include="/usr/include" \
+      --with-isl-lib="/usr/lib/${gnuArch}" \
+      --with-mpc-include="/usr/include" \
+      --with-mpc-lib="/usr/lib/${gnuArch}" \
+      --with-mpfr-include="/usr/include" \
+      --with-mpfr-lib="/usr/lib/${gnuArch}" \
+      --with-gmp-include="/usr/include" \
+      --with-gmp-lib="/usr/lib/${gnuArch}" \
       --with-tune=generic \
       --without-included-gettext \
       ${GCC_COMPILE_ARGS} \
