@@ -118,6 +118,7 @@ RUN set -ex; \
         lldbUpdAltArgs="${lldbUpdAltArgs} --slave /usr/bin/${binName} ${binName} /usr/bin/${binName}-${LLVM_VERSION}"; \
     done; \
     bash -c "${lldbUpdAltArgs}";
+ENV LD_LIBRARY_PATH="/usr/lib/llvm-${LLVM_VERSION}/lib:${LD_LIBRARY_PATH}"
 
 # Python setup
 # PYTHON_VERSION should match the value in .python-version
@@ -196,7 +197,7 @@ RUN set -ex; \
     groupadd -g ${GROUP_ID} dash; \
     useradd -u ${USER_ID} -g dash -s /bin/bash -m -d /home/dash dash; \
     mkdir -p /home/dash/.config/gdb; \
-    echo "add-auto-load-safe-path /opt/gcc/lib:/opt/gcc/lib64" | tee /home/dash/.config/gdb/gdbinit; \
+    echo "add-auto-load-safe-path /opt/gcc/lib:/opt/gcc/lib64:/usr/lib/llvm-${LLVM_VERSION}/lib" | tee /home/dash/.config/gdb/gdbinit; \
     chown ${USER_ID}:${GROUP_ID} -R /home/dash
 
 # Packages needed for all target builds
