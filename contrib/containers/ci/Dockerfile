@@ -37,7 +37,6 @@ RUN set -ex; \
     gnupg \
     libtool \
     libgmp3-dev	\
-    libisl-dev \
     libmpc-dev \
     libmpfr-dev \
     libxcb-icccm4 \
@@ -86,25 +85,22 @@ RUN set -ex; \
       --host="${gnuArch}" \
       --target="${gnuArch}" \
       --disable-bootstrap \
+      --disable-libsanitizer \
+      --disable-nls \
       --disable-vtable-verify \
       --disable-werror \
       --enable-checking=release \
       --enable-clocale=gnu \
       --enable-default-pie \
       --enable-gnu-unique-object \
-      --enable-languages=c,c++,fortran,objc,obj-c++ \
-      --enable-libstdcxx-debug \
+      --enable-languages=c,c++ \
       --enable-libstdcxx-time=yes \
-      --enable-libsanitizer \
       --enable-linker-build-id \
-      --enable-nls \
       --enable-threads=posix \
       --prefix="/opt/gcc" \
       --program-suffix="-${majorVersion}" \
       --with-default-libstdcxx-abi=new \
       --with-gcc-major-version-only \
-      --with-isl-include="/usr/include" \
-      --with-isl-lib="/usr/lib/${gnuArch}" \
       --with-mpc-include="/usr/include" \
       --with-mpc-lib="/usr/lib/${gnuArch}" \
       --with-mpfr-include="/usr/include" \
@@ -113,6 +109,7 @@ RUN set -ex; \
       --with-gmp-lib="/usr/lib/${gnuArch}" \
       --with-tune=generic \
       --without-included-gettext \
+      --without-isl \
       ${GCC_COMPILE_ARGS} \
       ${GCC_PLATFORM_ARGS}; \
     make -j "$(( $(nproc) - 1 ))"; \
