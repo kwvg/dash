@@ -16,6 +16,7 @@ RUN set -ex; \
         apt-get update && \
         apt-get install $APT_ARGS \
         g++-multilib \
+        linux-libc-dev:i386 \
         wine32; \
     fi; \
     apt-get install $APT_ARGS \
@@ -25,9 +26,11 @@ RUN set -ex; \
     bison \
     build-essential \
     bsdmainutils \
-    curl \
+    ca-certificates \
     ccache \
     cmake \
+    curl \
+    flex \
     g++ \
     gettext \
     git \
@@ -44,14 +47,70 @@ RUN set -ex; \
     libxcb-xinerama0 \
     libxcb-xkb1 \
     libxkbcommon-x11-0 \
+    linux-libc-dev \
     lsb-release \
     software-properties-common \
+    tzdata \
     unzip \
     wget \
     m4 \
     pkg-config \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Compile and install GCC
+ARG GCC_VERSION=14.2.0
+ARG GCC_COMPILE_ARGS=""
+RUN set -ex; \
+    curl -fL https://ftpmirror.gnu.org/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz -o /tmp/gcc.tar.xz; \
+    mkdir -p /tmp/gcc; \
+    tar -xf /tmp/gcc.tar.xz -C /tmp/gcc --strip-components=1; \
+    rm /tmp/gcc.tar.xz; \
+    cd /tmp/gcc; \
+    ./contrib/download_prerequisites; \
+    (rm *.tar.* || true); \
+    dpkgArch="$(dpkg --print-architecture)"; GCC_PLATFORM_ARGS=""; \
+    case "${dpkgArch##*-}" in  \
+      armel) GCC_PLATFORM_ARGS="--with-arch=armv4t --with-float=soft";; \
+      armhf) GCC_PLATFORM_ARGS="--with-arch=armv7-a --with-float=hard --with-fpu=vfpv3-d16 --with-mode=thumb";; \
+      i386|i686) GCC_PLATFORM_ARGS="--with-arch=i686";; \
+      amd64) GCC_PLATFORM_ARGS="--enable-multilib --with-abi=m64 --with-arch-32=i686 --with-multilib-list=m32,m64,mx32";; \
+    esac; \
+    gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)"; \
+    ln -s "/usr/include/${gnuArch}/asm" "/usr/include/asm"; \
+    majorVersion="${GCC_VERSION%%.*}"; \
+    ./configure \
+      --build="${gnuArch}" \
+      --host="${gnuArch}" \
+      --target="${gnuArch}" \
+      --disable-bootstrap \
+      --disable-vtable-verify \
+      --disable-werror \
+      --enable-checking=release \
+      --enable-clocale=gnu \
+      --enable-default-pie \
+      --enable-gnu-unique-object \
+      --enable-languages=c,c++,fortran,objc,obj-c++ \
+      --enable-libstdcxx-debug \
+      --enable-libstdcxx-time=yes \
+      --enable-libsanitizer \
+      --enable-linker-build-id \
+      --enable-nls \
+      --enable-threads=posix \
+      --prefix="/opt/gcc" \
+      --program-suffix="-${majorVersion}" \
+      --with-default-libstdcxx-abi=new \
+      --with-gcc-major-version-only \
+      --with-tune=generic \
+      --without-included-gettext \
+      ${GCC_COMPILE_ARGS} \
+      ${GCC_PLATFORM_ARGS}; \
+    make -j "$(( $(nproc) - 1 ))"; \
+    make install-strip; \
+    cd /tmp; \
+    rm -rf /tmp/gcc;
+ENV LD_LIBRARY_PATH="/opt/gcc/lib:/opt/gcc/lib64:${LD_LIBRARY_PATH}"
+ENV PATH="/opt/gcc/bin:${PATH}"
 
 # Install Clang+LLVM and set it as default
 # We don't need all packages but the default set doesn't include some
@@ -80,7 +139,6 @@ RUN set -ex; \
 # PYTHON_VERSION should match the value in .python-version
 ARG PYTHON_VERSION=3.9.18
 RUN apt-get update && apt-get install $APT_ARGS \
-    ca-certificates \
     libbz2-dev \
     libffi-dev \
     liblzma-dev \
@@ -158,7 +216,7 @@ ENV PATH="/tmp/shellcheck-${SHELLCHECK_VERSION}:${PATH}"
 # due to gcc-multilib installing the following symbolic link, which is needed for -m32 support. However, this causes
 # arm builds to also have the asm folder implicitly in the include search path. This is kind of ok, because the asm folder
 # for arm has precedence.
-RUN ln -s x86_64-linux-gnu/asm /usr/include/asm
+RUN ln -s "/usr/include/$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)/asm" "/usr/include/asm"
 
 # Make sure std::thread and friends is available
 RUN \
