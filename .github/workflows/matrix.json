@@ -7,6 +7,11 @@
         "dep_opts": ""
       },
       {
+        "depends_name": "x86_64-apple-darwin",
+        "host": "x86_64-apple-darwin",
+        "dep_opts": ""
+      },
+      {
         "depends_name": "x86_64-pc-linux-gnu_debug",
         "host": "x86_64-pc-linux-gnu",
         "dep_opts": "DEBUG=1"
@@ -65,6 +70,10 @@
       {
         "build_target": "linux64_ubsan",
         "depends_name": "x86_64-pc-linux-gnu_debug"
+      },
+      {
+        "build_target": "mac",
+        "depends_name": "x86_64-apple-darwin"
       },
       {
         "build_target": "win64",
