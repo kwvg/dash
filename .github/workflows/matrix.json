@@ -20,6 +20,11 @@
         "depends_name": "x86_64-pc-linux-gnu_nowallet",
         "host": "x86_64-pc-linux-gnu",
         "dep_opts": "NO_WALLET=1"
+      },
+      {
+        "depends_name": "x86_64-w64-mingw32",
+        "host": "x86_64-w64-mingw32",
+        "dep_opts": ""
       }
     ]
   },
@@ -60,6 +65,10 @@
       {
         "build_target": "linux64_ubsan",
         "depends_name": "x86_64-pc-linux-gnu_debug"
+      },
+      {
+        "build_target": "win64",
+        "depends_name": "x86_64-w64-mingw32"
       }
     ]
   }
