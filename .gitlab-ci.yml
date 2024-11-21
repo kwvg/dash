@@ -201,7 +201,7 @@ x86_64-pc-linux-gnu_nowallet:
     - .skip-in-fast-mode-template
   variables:
     HOST: x86_64-pc-linux-gnu
-    DEP_OPTS: "NO_WALLET=1"
+    DEP_OPTS: "NO_WALLET=1 CC=gcc-14 CXX=g++-14"
 
 x86_64-pc-linux-gnu_multiprocess:
   extends:
