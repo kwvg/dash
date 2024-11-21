@@ -20,6 +20,8 @@ export BOOST_TEST_RANDOM=${BOOST_TEST_RANDOM:-1}
 export LD_LIBRARY_PATH=$DEPENDS_DIR/$HOST/lib
 
 export WINEDEBUG=fixme-all
+# shellcheck disable=SC2155
+export WINEPREFIX="$(mktemp -d)"
 export BOOST_TEST_LOG_LEVEL=test_suite
 
 cd build-ci/dashcore-$BUILD_TARGET
