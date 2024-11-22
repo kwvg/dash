@@ -5,6 +5,10 @@
 
 export LC_ALL=C.UTF-8
 
+## WARNING! THIS SCRIPT IS ALSO COPIED INTO THE GUIX CONTAINER ##
+## MAKE SURE THIS SCRIPT DOES NOT RELY ON EXTERNAL SCRIPTS AS  ##
+## DOCKER WILL NOT COPY THEM TO THE CONTAINER                  ##
+
 SDK_URL="${SDK_URL:-https://bitcoincore.org/depends-sources/sdks}"
 SDK_PATH="${SDK_PATH:-depends/SDKs}"
 SDK_SRCS="${SDK_SOURCES:-depends/sdk-sources}"
