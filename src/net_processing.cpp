@@ -2538,9 +2538,9 @@ void PeerManagerImpl::ProcessGetBlockData(CNode& pfrom, Peer& peer, const CInv& 
                     m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::TX, *pblock->vtx[pair.first]));
                 }
                 for (PairType &pair : merkleBlock.vMatchedTxn) {
-                    auto islock = isman.GetInstantSendLockByTxid(pair.second);
-                    if (islock != nullptr) {
-                        m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::ISDLOCK, *islock));
+                    auto islock_opt = isman.GetInstantSendLockByTxid(pair.second);
+                    if (islock_opt.has_value()) {
+                        m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::ISDLOCK, *islock_opt.value()));
                     }
                 }
             }
@@ -6034,10 +6034,10 @@ bool PeerManagerImpl::SendMessages(CNode* pto)
                     tx_relay->m_tx_inventory_known_filter.insert(hash);
                     queueAndMaybePushInv(CInv(nInvType, hash));
 
-                    const auto islock = m_llmq_ctx->isman->GetInstantSendLockByTxid(hash);
-                    if (islock == nullptr) continue;
+                    const auto islock_opt = m_llmq_ctx->isman->GetInstantSendLockByTxid(hash);
+                    if (!islock_opt.has_value()) continue;
                     if (pto->nVersion < ISDLOCK_PROTO_VERSION) continue;
-                    uint256 isLockHash{::SerializeHash(*islock)};
+                    uint256 isLockHash{::SerializeHash(*islock_opt.value())};
                     tx_relay->m_tx_inventory_known_filter.insert(isLockHash);
                     queueAndMaybePushInv(CInv(MSG_ISDLOCK, isLockHash));
                 }
