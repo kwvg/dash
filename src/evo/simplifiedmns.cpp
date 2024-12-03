@@ -176,11 +176,11 @@ bool CSimplifiedMNListDiff::BuildQuorumsDiff(const CBlockIndex* baseBlockIndex, 
         const auto& [llmqType, hash] = p;
         if (!baseQuorumHashes.count(p)) {
             uint256 minedBlockHash;
-            llmq::CFinalCommitmentPtr qc = quorum_block_processor.GetMinedCommitment(llmqType, hash, minedBlockHash);
-            if (qc == nullptr) {
+            auto qc = quorum_block_processor.GetMinedCommitment(llmqType, hash, minedBlockHash);
+            if (!qc.has_value()) {
                 return false;
             }
-            newQuorums.emplace_back(*qc);
+            newQuorums.emplace_back(*qc.value());
         }
     }
 

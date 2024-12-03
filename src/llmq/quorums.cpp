@@ -397,11 +397,13 @@ std::optional<CQuorumPtr> CQuorumManager::BuildQuorumFromCommitment(const Consen
 {
     const uint256& quorumHash{pQuorumBaseBlockIndex->GetBlockHash()};
     uint256 minedBlockHash;
-    CFinalCommitmentPtr qc = quorumBlockProcessor.GetMinedCommitment(llmqType, quorumHash, minedBlockHash);
-    if (qc == nullptr) {
+    auto qc_opt = quorumBlockProcessor.GetMinedCommitment(llmqType, quorumHash, minedBlockHash);
+    if (!qc_opt.has_value()) {
         LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- No mined commitment for llmqType[%d] nHeight[%d] quorumHash[%s]\n", __func__, ToUnderlying(llmqType), pQuorumBaseBlockIndex->nHeight, pQuorumBaseBlockIndex->GetBlockHash().ToString());
         return std::nullopt;
     }
+
+    auto qc = std::move(qc_opt).value();
     assert(qc->quorumHash == pQuorumBaseBlockIndex->GetBlockHash());
 
     const auto& llmq_params_opt = Params().GetLLMQ(llmqType);
