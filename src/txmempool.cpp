@@ -465,11 +465,12 @@ CTxMemPool::CTxMemPool(CBlockPolicyEstimator* estimator, int check_ratio)
     _clear(); //lock free clear
 }
 
-void CTxMemPool::ConnectManagers(gsl::not_null<CDeterministicMNManager*> dmnman)
+void CTxMemPool::ConnectManagers(gsl::not_null<CDeterministicMNManager*> dmnman, gsl::not_null<llmq::CInstantSendManager*> isman)
 {
     // Do not allow double-initialization
-    assert(m_dmnman == nullptr);
+    assert(m_dmnman == nullptr && isman == nullptr);
     m_dmnman = dmnman;
+    m_isman = isman;
 }
 
 bool CTxMemPool::isSpent(const COutPoint& outpoint) const
@@ -1580,7 +1581,7 @@ int CTxMemPool::Expire(std::chrono::seconds time)
     setEntries toremove;
     while (it != mapTx.get<entry_time>().end() && it->GetTime() < time) {
         // locked txes do not expire until mined and have sufficient confirmations
-        if (llmq::quorumInstantSendManager->IsLocked(it->GetTx().GetHash())) {
+        if (m_isman && m_isman->IsLocked(it->GetTx().GetHash())) {
             it++;
             continue;
         }

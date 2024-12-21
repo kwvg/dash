@@ -36,11 +36,12 @@ private:
     CTxMemPool& mempool;
     const CActiveMasternodeManager* const m_mn_activeman;
     const CMasternodeSync& m_mn_sync;
+    const llmq::CInstantSendManager& m_isman;
     std::unique_ptr<PeerManager>& m_peerman;
 
     // Mixing uses collateral transactions to trust parties entering the pool
     // to behave honestly. If they don't it takes their money.
-    std::vector<CTransactionRef> vecSessionCollaterals;
+    std::vector<CTransactionRef> vecSessionCollaterals{};
 
     bool fUnitTest;
 
@@ -94,18 +95,18 @@ public:
     explicit CCoinJoinServer(ChainstateManager& chainman, CConnman& _connman, CDeterministicMNManager& dmnman,
                              CDSTXManager& dstxman, CMasternodeMetaMan& mn_metaman, CTxMemPool& mempool,
                              const CActiveMasternodeManager* const mn_activeman, const CMasternodeSync& mn_sync,
-                             std::unique_ptr<PeerManager>& peerman) :
-        m_chainman(chainman),
-        connman(_connman),
-        m_dmnman(dmnman),
-        m_dstxman(dstxman),
-        m_mn_metaman(mn_metaman),
-        mempool(mempool),
-        m_mn_activeman(mn_activeman),
-        m_mn_sync(mn_sync),
-        m_peerman(peerman),
-        vecSessionCollaterals(),
-        fUnitTest(false)
+                             const llmq::CInstantSendManager& isman, std::unique_ptr<PeerManager>& peerman) :
+        m_chainman{chainman},
+        connman{_connman},
+        m_dmnman{dmnman},
+        m_dstxman{dstxman},
+        m_mn_metaman{mn_metaman},
+        mempool{mempool},
+        m_mn_activeman{mn_activeman},
+        m_mn_sync{mn_sync},
+        m_isman{isman},
+        m_peerman{peerman},
+        fUnitTest{false}
     {}
 
     PeerMsgRet ProcessMessage(CNode& pfrom, std::string_view msg_type, CDataStream& vRecv);
