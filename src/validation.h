@@ -58,7 +58,6 @@ struct AssumeutxoData;
 
 namespace llmq {
 class CChainLocksHandler;
-class CInstantSendManager;
 } // namespace llmq
 
 /** Default for -minrelaytxfee, minimum relay fee for transactions */
@@ -486,7 +485,6 @@ protected:
 
     //! Dash
     const std::unique_ptr<CChainstateHelper>& m_chain_helper;
-    const std::unique_ptr<llmq::CInstantSendManager>& m_isman;
     CEvoDB& m_evoDb;
 
 public:
@@ -507,7 +505,6 @@ public:
                          ChainstateManager& chainman,
                          CEvoDB& evoDb,
                          const std::unique_ptr<CChainstateHelper>& chain_helper,
-                         const std::unique_ptr<llmq::CInstantSendManager>& isman,
                          std::optional<uint256> from_snapshot_blockhash = std::nullopt);
 
     /**
@@ -939,7 +936,6 @@ public:
     CChainState& InitializeChainstate(CTxMemPool* mempool,
                                       CEvoDB& evoDb,
                                       const std::unique_ptr<CChainstateHelper>& chain_helper,
-                                      const std::unique_ptr<llmq::CInstantSendManager>& isman,
                                       const std::optional<uint256>& snapshot_blockhash = std::nullopt)
         LIFETIMEBOUND EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 

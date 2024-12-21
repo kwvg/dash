@@ -641,18 +641,19 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
         return state.Invalid(TxValidationResult::TX_CONFLICT, "txn-already-in-mempool");
     }
 
-    llmq::CInstantSendLockPtr conflictLock = llmq::quorumInstantSendManager->GetConflictingLock(tx);
-    if (conflictLock) {
+    auto conflictLockOpt = m_chain_helper.HasConflictingISLock(tx);
+    if (conflictLockOpt.has_value()) {
+        auto [_, conflict_txid] = conflictLockOpt.value();
         uint256 hashBlock;
-        CTransactionRef txConflict = GetTransaction(/* block_index */ nullptr, &m_pool, conflictLock->txid, chainparams.GetConsensus(), hashBlock);
+        CTransactionRef txConflict = GetTransaction(/* block_index */ nullptr, &m_pool, conflict_txid, chainparams.GetConsensus(), hashBlock);
         if (txConflict) {
             GetMainSignals().NotifyInstantSendDoubleSpendAttempt(ptx, txConflict);
         }
-        LogPrintf("ERROR: AcceptToMemoryPool : Transaction %s conflicts with locked TX %s\n", hash.ToString(), conflictLock->txid.ToString());
+        LogPrintf("ERROR: AcceptToMemoryPool : Transaction %s conflicts with locked TX %s\n", hash.ToString(), conflict_txid.ToString());
         return state.Invalid(TxValidationResult::TX_CONFLICT_LOCK, "tx-txlock-conflict");
     }
 
-    if (llmq::quorumInstantSendManager->IsWaitingForTx(hash)) {
+    if (m_chain_helper.IsInstantSendWaitingForTx(hash)) {
         m_pool.removeConflicts(tx);
         m_pool.removeProTxConflicts(tx);
     } else {
@@ -1238,11 +1239,9 @@ CChainState::CChainState(CTxMemPool* mempool,
                          ChainstateManager& chainman,
                          CEvoDB& evoDb,
                          const std::unique_ptr<CChainstateHelper>& chain_helper,
-                         const std::unique_ptr<llmq::CInstantSendManager>& isman,
                          std::optional<uint256> from_snapshot_blockhash)
     : m_mempool(mempool),
       m_chain_helper(chain_helper),
-      m_isman(isman),
       m_evoDb(evoDb),
       m_blockman(blockman),
       m_params(::Params()),
@@ -1859,7 +1858,6 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     assert(*pindex->phashBlock == block_hash);
 
     assert(m_chain_helper);
-    assert(m_isman);
 
     // Check it again in case a previous version let a bad block in
     // NOTE: We don't currently (re-)invoke ContextualCheckBlock() or
@@ -2181,21 +2179,21 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
 
     // DASH : CHECK TRANSACTIONS FOR INSTANTSEND
 
-    if (m_isman->RejectConflictingBlocks()) {
+    if (m_chain_helper->ShouldInstantSendRejectConflicts()) {
         // Require other nodes to comply, send them some data in case they are missing it.
         const bool has_chainlock = m_chain_helper->HasChainLock(pindex->nHeight, pindex->GetBlockHash());
         for (const auto& tx : block.vtx) {
             // skip txes that have no inputs
             if (tx->vin.empty()) continue;
-            while (llmq::CInstantSendLockPtr conflictLock = m_isman->GetConflictingLock(*tx)) {
+            while (auto conflictLockOpt = m_chain_helper->HasConflictingISLock(*tx)) {
+                auto [conflict_islock, conflict_txid] = conflictLockOpt.value();
                 if (has_chainlock) {
-                    LogPrint(BCLog::ALL, "ConnectBlock(DASH): chain-locked transaction %s overrides islock %s\n",
-                            tx->GetHash().ToString(), ::SerializeHash(*conflictLock).ToString());
-                    m_isman->RemoveConflictingLock(::SerializeHash(*conflictLock), *conflictLock);
+                    LogPrint(BCLog::ALL, "ConnectBlock(DASH): chain-locked transaction %s overrides islock %s\n", tx->GetHash().ToString(), conflict_islock.ToString());
+                    m_chain_helper->RemoveConflictingISLockByTx(*tx);
                 } else {
                     // The node which relayed this should switch to correct chain.
                     // TODO: relay instantsend data/proof.
-                    LogPrintf("ERROR: ConnectBlock(DASH): transaction %s conflicts with transaction lock %s\n", tx->GetHash().ToString(), conflictLock->txid.ToString());
+                    LogPrintf("ERROR: ConnectBlock(DASH): transaction %s conflicts with transaction lock %s\n", tx->GetHash().ToString(), conflict_txid.ToString());
                     return state.Invalid(BlockValidationResult::BLOCK_CHAINLOCK, "conflict-tx-lock");
                 }
             }
@@ -5203,7 +5201,6 @@ std::vector<CChainState*> ChainstateManager::GetAll()
 CChainState& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
                                                      CEvoDB& evoDb,
                                                      const std::unique_ptr<CChainstateHelper>& chain_helper,
-                                                     const std::unique_ptr<llmq::CInstantSendManager>& isman,
                                                      const std::optional<uint256>& snapshot_blockhash)
 {
     AssertLockHeld(::cs_main);
@@ -5215,7 +5212,7 @@ CChainState& ChainstateManager::InitializeChainstate(CTxMemPool* mempool,
         throw std::logic_error("should not be overwriting a chainstate");
     }
 
-    to_modify.reset(new CChainState(mempool, m_blockman, *this, evoDb, chain_helper, isman, snapshot_blockhash));
+    to_modify.reset(new CChainState(mempool, m_blockman, *this, evoDb, chain_helper, snapshot_blockhash));
 
     // Snapshot chainstates and initial IBD chaintates always become active.
     if (is_snapshot || (!is_snapshot && !m_active_chainstate)) {
@@ -5288,7 +5285,6 @@ bool ChainstateManager::ActivateSnapshot(
             /* mempool */ nullptr, m_blockman, *this,
             this->ActiveChainstate().m_evoDb,
             this->ActiveChainstate().m_chain_helper,
-            this->ActiveChainstate().m_isman,
             base_blockhash
         )
     );

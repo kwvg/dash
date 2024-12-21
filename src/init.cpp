@@ -1858,7 +1858,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                 node.dmnman,
                                 node.evodb,
                                 node.mnhf_manager,
-                                llmq::quorumInstantSendManager,
                                 llmq::quorumSnapshotManager,
                                 node.llmq_ctx,
                                 Assert(node.mempool.get()),
