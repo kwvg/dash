@@ -246,9 +246,12 @@ static bool rest_headers(const CoreContext& context,
         return true;
     }
     case RetFormat::JSON: {
+        const NodeContext* const node = GetNodeContext(context, req);
+        if (!node || !node->llmq_ctx) return false;
+
         UniValue jsonHeaders(UniValue::VARR);
         for (const CBlockIndex *pindex : headers) {
-            jsonHeaders.push_back(blockheaderToJSON(tip, pindex, *llmq::chainLocksHandler));
+            jsonHeaders.push_back(blockheaderToJSON(tip, pindex, *(node->llmq_ctx->clhandler)));
         }
         std::string strJSON = jsonHeaders.write() + "\n";
         req->WriteHeader("Content-Type", "application/json");
@@ -316,7 +319,10 @@ static bool rest_block(const CoreContext& context,
     }
 
     case RetFormat::JSON: {
-        UniValue objBlock = blockToJSON(chainman.m_blockman, block, tip, pblockindex, *llmq::chainLocksHandler, *llmq::quorumInstantSendManager, showTxDetails);
+        const NodeContext* const node = GetNodeContext(context, req);
+        if (!node || !node->llmq_ctx) return false;
+
+        UniValue objBlock = blockToJSON(chainman.m_blockman, block, tip, pblockindex, *(node->llmq_ctx->clhandler), *(node->llmq_ctx->isman), showTxDetails);
         std::string strJSON = objBlock.write() + "\n";
         req->WriteHeader("Content-Type", "application/json");
         req->WriteReply(HTTP_OK, strJSON);
@@ -579,7 +585,10 @@ static bool rest_mempool_info(const CoreContext& context, HTTPRequest* req, cons
 
     switch (rf) {
     case RetFormat::JSON: {
-        UniValue mempoolInfoObject = MempoolInfoToJSON(*mempool, *llmq::quorumInstantSendManager);
+        const NodeContext* const node = GetNodeContext(context, req);
+        if (!node || !node->llmq_ctx) return false;
+
+        UniValue mempoolInfoObject = MempoolInfoToJSON(*mempool, *(node->llmq_ctx->isman));
 
         std::string strJSON = mempoolInfoObject.write() + "\n";
         req->WriteHeader("Content-Type", "application/json");
@@ -602,7 +611,10 @@ static bool rest_mempool_contents(const CoreContext& context, HTTPRequest* req, 
 
     switch (rf) {
     case RetFormat::JSON: {
-        UniValue mempoolObject = MempoolToJSON(*mempool, llmq::quorumInstantSendManager.get(), true);
+        const NodeContext* const node = GetNodeContext(context, req);
+        if (!node || !node->llmq_ctx) return false;
+
+        UniValue mempoolObject = MempoolToJSON(*mempool, node->llmq_ctx->isman, true);
 
         std::string strJSON = mempoolObject.write() + "\n";
         req->WriteHeader("Content-Type", "application/json");
