@@ -1858,7 +1858,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                 node.dmnman,
                                 node.evodb,
                                 node.mnhf_manager,
-                                llmq::chainLocksHandler,
                                 llmq::quorumInstantSendManager,
                                 llmq::quorumSnapshotManager,
                                 node.llmq_ctx,

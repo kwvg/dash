@@ -31,7 +31,6 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
                                                      std::unique_ptr<CDeterministicMNManager>& dmnman,
                                                      std::unique_ptr<CEvoDB>& evodb,
                                                      std::unique_ptr<CMNHFManager>& mnhf_manager,
-                                                     std::unique_ptr<llmq::CChainLocksHandler>& clhandler,
                                                      std::unique_ptr<llmq::CInstantSendManager>& isman,
                                                      std::unique_ptr<llmq::CQuorumSnapshotManager>& qsnapman,
                                                      std::unique_ptr<LLMQContext>& llmq_ctx,
@@ -66,7 +65,7 @@ std::optional<ChainstateLoadingError> LoadChainstate(bool fReset,
     mnhf_manager.reset();
     mnhf_manager = std::make_unique<CMNHFManager>(*evodb);
 
-    chainman.InitializeChainstate(mempool, *evodb, chain_helper, clhandler, isman);
+    chainman.InitializeChainstate(mempool, *evodb, chain_helper, isman);
     chainman.m_total_coinstip_cache = nCoinCacheUsage;
     chainman.m_total_coinsdb_cache = nCoinDBCache;
 

@@ -5,6 +5,8 @@
 #ifndef BITCOIN_EVO_CHAINHELPER_H
 #define BITCOIN_EVO_CHAINHELPER_H
 
+#include <uint256.h>
+
 #include <memory>
 
 class CCreditPoolManager;
@@ -26,6 +28,8 @@ class CQuorumManager;
 
 class CChainstateHelper
 {
+private:
+    const llmq::CChainLocksHandler& clhandler;
 public:
     explicit CChainstateHelper(CCreditPoolManager& cpoolman, CDeterministicMNManager& dmnman, CMNHFManager& mnhfman, CGovernanceManager& govman,
                                llmq::CQuorumBlockProcessor& qblockman, const ChainstateManager& chainman, const Consensus::Params& consensus_params,
@@ -35,6 +39,11 @@ public:
 
     CChainstateHelper() = delete;
     CChainstateHelper(const CChainstateHelper&) = delete;
+
+    /** Passthrough functions to CChainLocksHandler */
+    bool HasConflictingChainLock(int nHeight, const uint256& blockHash) const;
+    bool HasChainLock(int nHeight, const uint256& blockHash) const;
+    int32_t GetBestChainLockHeight() const;
 
 public:
     const std::unique_ptr<CMNPaymentsProcessor> mn_payments;
