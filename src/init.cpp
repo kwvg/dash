@@ -335,8 +335,8 @@ void PrepareShutdown(NodeContext& node)
                 chainstate->ResetCoinsViews();
             }
         }
-        DashChainstateSetupClose(node.chain_helper, node.cpoolman, node.dmnman, node.mnhf_manager,
-                                 llmq::quorumSnapshotManager, node.llmq_ctx, Assert(node.mempool.get()));
+        DashChainstateSetupClose(node.chain_helper, node.cpoolman, node.dmnman, node.mnhf_manager, node.llmq_ctx,
+                                 Assert(node.mempool.get()));
         node.mnhf_manager.reset();
         node.evodb.reset();
     }
@@ -1858,7 +1858,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                 node.dmnman,
                                 node.evodb,
                                 node.mnhf_manager,
-                                llmq::quorumSnapshotManager,
                                 node.llmq_ctx,
                                 Assert(node.mempool.get()),
                                 fPruneMode,
