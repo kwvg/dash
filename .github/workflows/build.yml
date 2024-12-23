@@ -109,6 +109,11 @@ jobs:
               ./ci/dash/manage-cache.sh extract
           fi
 
+          # Download Xcode SDK if target is macOS
+          if [ "${HOST}" = "x86_64-apple-darwin" ]; then
+            ./contrib/containers/guix/scripts/setup-sdk
+          fi
+
           # Build depends
           make -j$(nproc) -C depends
 

@@ -31,6 +31,8 @@ DEPENDS_ARCHIVE="depends_${BUILD_TARGET}.tar.zst"
 DEPENDS_PATHS=(
     "depends/${HOST}"
     "depends/built"
+    "depends/sdk-sources"
+    "depends/SDKs"
 )
 
 if [ "${1}" == "create" ]; then
