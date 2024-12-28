@@ -160,6 +160,7 @@ RUN apt-get update && apt-get install $APT_ARGS \
     wine-stable \
     wine64 \
     xorriso \
+    zstd \
     && rm -rf /var/lib/apt/lists/*
 
 # This is a hack. It is needed because gcc-multilib and g++-multilib are conflicting with g++-arm-linux-gnueabihf. This is
