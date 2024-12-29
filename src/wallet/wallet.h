@@ -241,6 +241,14 @@ struct CRecipient
     bool fSubtractFeeFromAmount;
 };
 
+struct CompareRecipientBIP69
+{
+    inline bool operator()(const CRecipient& a, const CRecipient& b) const
+    {
+        return a.nAmount < b.nAmount || (a.nAmount == b.nAmount && a.scriptPubKey < b.scriptPubKey);
+    }
+};
+
 typedef std::map<std::string, std::string> mapValue_t;
 
 
