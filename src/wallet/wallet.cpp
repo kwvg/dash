@@ -3587,18 +3587,6 @@ bool CWallet::CreateTransactionInternal(
                 // change keypool ran out, but change is required.
                 CHECK_NONFATAL(IsValidDestination(dest) != scriptChange.empty());
             }
-            CTxOut change_prototype_txout(0, scriptChange);
-            coin_selection_params.change_output_size = GetSerializeSize(change_prototype_txout);
-
-            // Get size of spending the change output
-            int change_spend_size = CalculateMaximumSignedInputSize(change_prototype_txout, this);
-            // If the wallet doesn't know how to sign change output, assume p2sh-p2pkh
-            // as lower-bound to allow BnB to do it's thing
-            if (change_spend_size == -1) {
-                coin_selection_params.change_spend_size = DUMMY_NESTED_P2PKH_INPUT_SIZE;
-            } else {
-                coin_selection_params.change_spend_size = (size_t)change_spend_size;
-            }
 
             // Set discard feerate
             coin_selection_params.m_discard_feerate = coin_control.m_discard_feerate ? *coin_control.m_discard_feerate : GetDiscardRate(*this);
@@ -3617,11 +3605,6 @@ bool CWallet::CreateTransactionInternal(
                 return false;
             }
 
-            // Get long term estimate
-            CCoinControl cc_temp;
-            cc_temp.m_confirm_target = chain().estimateMaxBlocks();
-            coin_selection_params.m_long_term_feerate = GetMinimumFeeRate(*this, cc_temp, nullptr);
-
             // Calculate the cost of change
             // Cost of change is the cost of creating the change output + cost of spending the change output in the future.
             // For creating the change output now, we use the effective feerate.
@@ -3630,21 +3613,9 @@ bool CWallet::CreateTransactionInternal(
             coin_selection_params.m_change_fee = coin_selection_params.m_effective_feerate.GetFee(coin_selection_params.change_output_size);
             coin_selection_params.m_cost_of_change = coin_selection_params.m_discard_feerate.GetFee(coin_selection_params.change_spend_size) + coin_selection_params.m_change_fee;
 
-            coin_selection_params.m_subtract_fee_outputs = nSubtractFeeFromAmount != 0; // If we are doing subtract fee from recipient, don't use effective values
-
-            // vouts to the payees
-            if (!coin_selection_params.m_subtract_fee_outputs) {
-                coin_selection_params.tx_noinputs_size = 9; // Static vsize overhead + outputs vsize. 4 nVersion, 4 nLocktime, 1 input count
-                coin_selection_params.tx_noinputs_size += GetSizeOfCompactSize(vecSend.size()); // bytes for output count
-            }
             for (const auto& recipient : vecSend)
             {
                 CTxOut txout(recipient.nAmount, recipient.scriptPubKey);
-
-                // Include the fee cost for outputs.
-                if (!coin_selection_params.m_subtract_fee_outputs) {
-                    coin_selection_params.tx_noinputs_size += ::GetSerializeSize(txout, PROTOCOL_VERSION);
-                }
 
                 if (IsDust(txout, chain().relayDustFee()))
                 {
