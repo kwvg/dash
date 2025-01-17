@@ -127,6 +127,7 @@ public:
     const std::vector<std::string>& DNSSeeds() const { return vSeeds; }
     const std::vector<unsigned char>& Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
     int ExtCoinType() const { return nExtCoinType; }
+    const std::string& MnAddrHRP() const { return mnaddr_hrp; }
     const std::vector<uint8_t>& FixedSeeds() const { return vFixedSeeds; }
     const CCheckpointData& Checkpoints() const { return checkpointData; }
 
@@ -167,6 +168,7 @@ protected:
     std::vector<std::string> vSeeds;
     std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];
     int nExtCoinType;
+    std::string mnaddr_hrp;
     std::string strNetworkID;
     CBlock genesis;
     CBlock devnetGenesis;

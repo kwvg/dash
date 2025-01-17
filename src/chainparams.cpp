@@ -266,6 +266,9 @@ public:
         // Dash BIP44 coin type is '5'
         nExtCoinType = 5;
 
+        // Dash masternode addresses start with 'dmn'
+        mnaddr_hrp = "dmn";
+
         vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_main), std::end(chainparams_seed_main));
 
         // long living quorum params
@@ -459,6 +462,9 @@ public:
         // Testnet Dash BIP44 coin type is '1' (All coin's testnet default)
         nExtCoinType = 1;
 
+        // Testnet Dash masternode addresses start with 'tmn'
+        mnaddr_hrp = "tmn";
+
         // long living quorum params
         AddLLMQ(Consensus::LLMQType::LLMQ_50_60);
         AddLLMQ(Consensus::LLMQType::LLMQ_60_75);
@@ -632,6 +638,9 @@ public:
 
         // Testnet Dash BIP44 coin type is '1' (All coin's testnet default)
         nExtCoinType = 1;
+
+        // Testnet Dash masternode addresses start with 'tmn'
+        mnaddr_hrp = "tmn";
 
         // long living quorum params
         AddLLMQ(Consensus::LLMQType::LLMQ_50_60);
@@ -908,6 +917,9 @@ public:
         base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x35, 0x87, 0xCF};
         // Regtest Dash BIP32 prvkeys start with 'tprv' (Bitcoin defaults)
         base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x35, 0x83, 0x94};
+
+        // Regtest Dash masternode addresses start with 'rmn'
+        mnaddr_hrp = "rmn";
 
         // Regtest Dash BIP44 coin type is '1' (All coin's testnet default)
         nExtCoinType = 1;
