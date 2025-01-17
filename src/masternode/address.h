@@ -20,6 +20,7 @@ class MnAddr
 private:
     const uint256 protx_hash;
     const bool is_valid;
+    const std::string address;
 
 public:
     // Error codes when unable to decode an MnAddr string
@@ -37,17 +38,17 @@ public:
 
 public:
     MnAddr() = delete;
-    ~MnAddr() = default;
+    ~MnAddr();
 
-    MnAddr(uint256 hash) : protx_hash{hash}, is_valid{true} {};
+    MnAddr(uint256 hash);
     MnAddr(std::string addr, MnAddr::DecodeStatus& status);
 
     // Get the validity of the MnAddr
     bool IsValid() const { return is_valid; }
     // Get the bech32-encoded address of the collateral
-    std::string GetAddress() const;
+    const std::string& GetAddress() const { return address; }
     // Get the collateral hash from a bech32-encoded address
-    uint256 GetHash() const { return protx_hash; }
+    const uint256& GetHash() const { return protx_hash; }
 };
 
 // Converts DecodeStatus to human-readable error

@@ -52,14 +52,21 @@ std::optional<uint256> AddressToHash(const std::string addr, MnAddr::DecodeStatu
 }
 } // anonymous namespace
 
+MnAddr::MnAddr(uint256 hash) :
+    protx_hash{hash},
+    is_valid{true},
+    address{HashToAddress(protx_hash)}
+{}
+
 MnAddr::MnAddr(std::string addr, MnAddr::DecodeStatus& status) :
     protx_hash{[&addr, &status]() {
         if (auto hash_opt = AddressToHash(addr, status); hash_opt.has_value()) { return hash_opt.value(); } else { return uint256::ZERO; }
     }()},
-    is_valid{protx_hash != uint256::ZERO}
+    is_valid{protx_hash != uint256::ZERO},
+    address{[&addr, this]() { if (is_valid) { return addr; } else { return std::string{""}; } }()}
 {}
 
-std::string MnAddr::GetAddress() const { return HashToAddress(protx_hash); }
+MnAddr::~MnAddr() {}
 
 std::string DSToString(MnAddr::DecodeStatus status)
 {
