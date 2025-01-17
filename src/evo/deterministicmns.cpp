@@ -8,6 +8,7 @@
 #include <evo/evodb.h>
 #include <evo/providertx.h>
 #include <evo/specialtx.h>
+#include <masternode/address.h>
 #include <llmq/commitment.h>
 #include <llmq/utils.h>
 
@@ -47,6 +48,7 @@ UniValue CDeterministicMN::ToJson() const
 
     obj.pushKV("type", std::string(GetMnType(nType).description));
     obj.pushKV("proTxHash", proTxHash.ToString());
+    obj.pushKV("nodeAddress", MnAddr(proTxHash).GetAddress());
     obj.pushKV("collateralHash", collateralOutpoint.hash.ToString());
     obj.pushKV("collateralIndex", (int)collateralOutpoint.n);
 

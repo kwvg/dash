@@ -7,7 +7,11 @@
 
 #include <uint256.h>
 
+#include <optional>
 #include <string>
+
+class CDeterministicMNManager;
+class CService;
 
 // MnAddr is a bech32m encoded masternode ProTx hash that can be used
 // to identify and interact with a masternode.
@@ -18,11 +22,25 @@ private:
     const bool is_valid;
 
 public:
+    // Error codes when unable to decode an MnAddr string
+    enum class DecodeStatus : uint8_t
+    {
+        NotBech32m,
+        HRPBad,
+        DataEmpty,
+        DataVersionBad,
+        DataPaddingBad,
+        DataSizeBad,
+
+        Success
+    };
+
+public:
     MnAddr() = delete;
     ~MnAddr() = default;
 
     MnAddr(uint256 hash) : protx_hash{hash}, is_valid{true} {};
-    MnAddr(std::string addr, std::string& error);
+    MnAddr(std::string addr, MnAddr::DecodeStatus& status);
 
     // Get the validity of the MnAddr
     bool IsValid() const { return is_valid; }
@@ -31,5 +49,11 @@ public:
     // Get the collateral hash from a bech32-encoded address
     uint256 GetHash() const { return protx_hash; }
 };
+
+// Converts DecodeStatus to human-readable error
+std::string DSToString(MnAddr::DecodeStatus status);
+
+// Tries to find the connection details registered for a masternode by the collateral hash encoded within a given MnAddr
+std::optional<CService> GetConnectionDetails(CDeterministicMNManager& dmnman, const MnAddr mn_addr, std::string& error_str);
 
 #endif // BITCOIN_MASTERNODE_ADDRESS_H

@@ -10,6 +10,7 @@
 #include <chainparams.h>
 #include <clientversion.h>
 #include <core_io.h>
+#include <masternode/address.h>
 #include <net_permissions.h>
 #include <net_processing.h>
 #include <net_types.h> // For banmap_t
@@ -326,6 +327,23 @@ static RPCHelpMan addnode()
 
     if (use_v2transport && !node_v2transport) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Error: v2transport requested but not enabled (see -v2transport)");
+    }
+
+    // We could be given a masternode address, try to see if we were and if we can
+    // get our address from there instead.
+    MnAddr::DecodeStatus mn_addr_status;
+    MnAddr mn_addr{strNode, mn_addr_status};
+    if (mn_addr.IsValid()) {
+        CDeterministicMNManager& dmnman = *CHECK_NONFATAL(node.dmnman);
+        std::string error_str;
+        if (auto service_opt = GetConnectionDetails(dmnman, mn_addr, error_str); service_opt.has_value()) {
+            strNode = service_opt.value().ToStringAddrPort();
+        } else {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Error: %s", error_str));
+        }
+    } else if (mn_addr_status != MnAddr::DecodeStatus::NotBech32m) {
+        CHECK_NONFATAL(mn_addr_status != MnAddr::DecodeStatus::Success);
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Error: Invalid address, %s", DSToString(mn_addr_status)));
     }
 
     if (strCommand == "onetry")

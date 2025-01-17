@@ -11,6 +11,7 @@
 #include <node/blockstorage.h>
 #include <node/context.h>
 #include <governance/governance.h>
+#include <masternode/address.h>
 #include <masternode/node.h>
 #include <masternode/payments.h>
 #include <net.h>
@@ -46,11 +47,6 @@ static RPCHelpMan masternode_connect()
 {
     std::string strAddress = request.params[0].get_str();
 
-    std::optional<CService> addr{Lookup(strAddress, 0, false)};
-    if (!addr.has_value()) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, strprintf("Incorrect masternode address %s", strAddress));
-    }
-
     const NodeContext& node = EnsureAnyNodeContext(request.context);
     CConnman& connman = EnsureConnman(node);
 
@@ -59,6 +55,28 @@ static RPCHelpMan masternode_connect()
 
     if (use_v2transport && !node_v2transport) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Error: Adding v2transport connections requires -v2transport init flag to be set.");
+    }
+
+    // We could be given a masternode address, try to see if we were and if we can
+    // get our address from there instead.
+    MnAddr::DecodeStatus mn_addr_status;
+    MnAddr mn_addr{strAddress, mn_addr_status};
+    if (mn_addr.IsValid()) {
+        CDeterministicMNManager& dmnman = *CHECK_NONFATAL(node.dmnman);
+        std::string error_str;
+        if (auto service_opt = GetConnectionDetails(dmnman, mn_addr, error_str); service_opt.has_value()) {
+            strAddress = service_opt.value().ToStringAddrPort();
+        } else {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Error: %s", error_str));
+        }
+    } else if (mn_addr_status != MnAddr::DecodeStatus::NotBech32m) {
+        CHECK_NONFATAL(mn_addr_status != MnAddr::DecodeStatus::Success);
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Error: Invalid address, %s", DSToString(mn_addr_status)));
+    }
+
+    std::optional<CService> addr{Lookup(strAddress, 0, false)};
+    if (!addr.has_value()) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strprintf("Incorrect masternode address %s", strAddress));
     }
 
     connman.OpenMasternodeConnection(CAddress(addr.value(), NODE_NETWORK), use_v2transport);
