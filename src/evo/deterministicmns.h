@@ -79,29 +79,8 @@ public:
         READWRITE(VARINT(internalId));
         READWRITE(collateralOutpoint);
         READWRITE(nOperatorReward);
-        // We need to read CDeterministicMNState using the old format only when called with MN_OLD_FORMAT or MN_TYPE_FORMAT on Unserialize()
-        // Serialisation (writing) will be done always using new format
-        if (ser_action.ForRead() && format_version == MN_OLD_FORMAT) {
-            CDeterministicMNState_Oldformat old_state;
-            READWRITE(old_state);
-            pdmnState = std::make_shared<const CDeterministicMNState>(old_state);
-        } else if (ser_action.ForRead() && format_version == MN_TYPE_FORMAT) {
-            CDeterministicMNState_mntype_format old_state;
-            READWRITE(old_state);
-            pdmnState = std::make_shared<const CDeterministicMNState>(old_state);
-        } else {
-            READWRITE(pdmnState);
-        }
-        // We need to read/write nType if:
-        // format_version is set to MN_TYPE_FORMAT (For writing (serialisation) it is always the case) Needed for the MNLISTDIFF Migration in evoDB
-        // We can't know if we are serialising for the Disk or for the Network here (s.GetType() is not accessible)
-        // Therefore if s.GetVersion() == CLIENT_VERSION -> Then we know we are serialising for the Disk
-        // Otherwise, we can safely check with protocol versioning logic so we won't break old clients
-        if (format_version >= MN_TYPE_FORMAT && (s.GetVersion() == CLIENT_VERSION || s.GetVersion() >= DMN_TYPE_PROTO_VERSION)) {
-            READWRITE(nType);
-        } else {
-            nType = MnType::Regular;
-        }
+        READWRITE(pdmnState);
+        READWRITE(nType);
     }
 
     template<typename Stream>
