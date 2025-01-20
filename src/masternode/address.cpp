@@ -145,6 +145,7 @@ static constexpr std::string_view SAFE_CHARS_RFC1035{"abcdefghijklmnopqrstuvwxyz
 
 template<> struct is_serializable_enum<CNetAddr::BIP155Network> : std::true_type {};
 
+// TODO: Currently this corresponds to the index, is this a good idea?
 enum class Purpose : uint8_t
 {
     // Mandatory for all masternodes
@@ -180,10 +181,28 @@ private:
         uint16_t port;
 
     private:
+        friend class MnNetInfo;
+
         // Used in Validate()
         static std::optional<std::string> ValidateNetAddr(const NetAddrVariant& input, const uint16_t& port);
         // Used in Validate()
         static std::optional<std::string> ValidateStrAddr(const StrAddrVariant& input, const uint16_t& port);
+
+        // Used in RemoveEntry()
+        std::optional<CService> GetCService() const
+        {
+            const auto* ptr{std::get_if<NetAddrVariant>(&type_addr)};
+            if (ptr != nullptr) { return CService{ptr->second, port}; }
+            return std::nullopt;
+        }
+
+        // Used in RemoveEntry()
+        std::optional<std::string> GetString() const
+        {
+            const auto* ptr{std::get_if<StrAddrVariant>(&type_addr)};
+            if (ptr != nullptr) { return ptr->second; }
+            return std::nullopt;
+        }
 
     public:
         NetInfo() = default; // should be delete but deserialization code becomes very angry if we do
@@ -281,6 +300,9 @@ public:
 
     // Add or remove entry from set of entries
     std::optional<std::string> AddEntry(Purpose purpose, CService service);
+    std::optional<std::string> AddEntry(Purpose purpose, std::string addr, uint16_t port);
+    std::optional<std::string> RemoveEntry(CService service);
+    std::optional<std::string> RemoveEntry(std::string addr);
 
     SERIALIZE_METHODS(MnNetInfo, obj)
     {
@@ -373,6 +395,57 @@ std::optional<std::string> MnNetInfo::AddEntry(Purpose purpose, CService service
 
     entries.push_back(candidate);
     return std::nullopt;
+}
+
+// TODO: Find a way to share code with CService overload, it's like 2/3rd overlapping
+std::optional<std::string> MnNetInfo::AddEntry(Purpose purpose, std::string addr, uint16_t port)
+{
+    if (purpose != Purpose::PLATFORM_API) {
+        return "domains allowed only for platform api";
+    }
+
+    NetInfo candidate{Extensions::DOMAINS, addr, port};
+    if (auto err_str = candidate.Validate(); err_str.has_value()) {
+        return err_str.value();
+    }
+
+    auto& entries{GetOrAddEntries(purpose)};
+    // i want to use std::set so we can skip having to check for duplicates
+    // but serialization code is unhappy if i do that
+    if (std::find(entries.begin(), entries.end(), candidate) != entries.end()) {
+        return "duplicate entry";
+    }
+
+    entries.push_back(candidate);
+    return std::nullopt;
+}
+
+std::optional<std::string> MnNetInfo::RemoveEntry(CService service)
+{
+    for (auto& [purpose, entries] : data) {
+        auto past_size{entries.size()};
+        entries.erase(std::remove_if(entries.begin(), entries.end(), [&service](auto input) -> bool {
+            auto _input{input.GetCService()};
+            return _input.has_value() && _input.value() == service;
+        }));
+        // it's okay to not go through every set of purposes because they should all be unique anyway
+        // TODO: enforce this
+        if (entries.size() > past_size) return std::nullopt;
+    }
+    return "unable to find entry";
+}
+
+std::optional<std::string> MnNetInfo::RemoveEntry(std::string addr)
+{
+    for (auto& [purpose, entries] : data) {
+        auto past_size{entries.size()};
+        entries.erase(std::remove_if(entries.begin(), entries.end(), [&addr](auto input) -> bool {
+            auto _input{input.GetString()}; // <--- only thing that differentiates it from RemoveEntry(CService)
+            return _input.has_value() && _input.value() == addr;
+        }));
+        if (entries.size() > past_size) return std::nullopt;
+    }
+    return "unable to find entry";
 }
 
 // Stub function to ensure compiler verifies serialization functions actually work
