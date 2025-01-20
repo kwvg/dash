@@ -151,6 +151,7 @@ class MnNetInfo
 private:
     struct NetInfo
     {
+    private:
         using NetAddrVariant = std::pair<CNetAddr::BIP155Network, CNetAddr>;
         using StrAddrVariant = std::pair<Extensions, std::string>;
 
@@ -159,6 +160,13 @@ private:
         std::variant<std::monostate, NetAddrVariant, StrAddrVariant> type_addr;
         uint16_t port;
 
+    private:
+        // Used in Validate()
+        static std::optional<std::string> ValidateNetAddr(const NetAddrVariant& input, const uint16_t& port);
+        // Used in Validate()
+        static std::optional<std::string> ValidateStrAddr(const StrAddrVariant& input, const uint16_t& port);
+
+    public:
         NetInfo() = default; // should be delete but deserialization code becomes very angry if we do
         ~NetInfo() = default;
 
@@ -240,6 +248,21 @@ private:
             type_addr = std::monostate{};
             port = 0;
         }
+
+        // Dispatch function to Validate{Net,Str}Addr()
+        std::optional<std::string> Validate()
+        {
+            return std::visit([this](auto&& input) -> std::optional<std::string> {
+                using T1 = std::decay_t<decltype(input)>;
+                if constexpr (std::is_same_v<T1, NetAddrVariant>) {
+                    return ValidateNetAddr(input, port);
+                } else if constexpr (std::is_same_v<T1, StrAddrVariant>) {
+                    return ValidateStrAddr(input, port);
+                } else {
+                    return "empty object, nothing to validate";
+                }
+            }, type_addr);
+        }
     };
 
     // The format corresponds to the on-disk format *and* validation rules. Any changes
@@ -264,6 +287,32 @@ public:
     }
 };
 
+std::optional<std::string> MnNetInfo::NetInfo::ValidateNetAddr(const NetAddrVariant& input, const uint16_t& port)
+{
+    const auto& [type, net_addr] = input;
+    if (!net_addr.IsValid()) {
+        return "invalid address";
+    }
+    if (IsBadPort(port)) {
+        return "bad port";
+    }
+    if (net_addr.IsLocal()) {
+        return "disallowed address, provided local address";
+    }
+    if (type == CNetAddr::BIP155Network::TORV2) {
+        return "disallowed type, TorV2 deprecated";
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> MnNetInfo::NetInfo::ValidateStrAddr(const StrAddrVariant& input, const uint16_t& port)
+{
+    if (IsBadPort(port) && port != 80 && port != 443) {
+        return "bad port";
+    }
+    return std::nullopt;
+}
+
 std::vector<MnNetInfo::NetInfo>& MnNetInfo::GetOrAddEntries(Purpose purpose) {
     for (auto& [_purpose, _entry] : data) {
         if (_purpose != purpose) continue;
@@ -277,27 +326,22 @@ std::vector<MnNetInfo::NetInfo>& MnNetInfo::GetOrAddEntries(Purpose purpose) {
 
 std::optional<std::string> MnNetInfo::AddEntry(Purpose purpose, CService service)
 {
-    if (!service.IsValid()) {
-        return "invalid address";
-    }
-    if (IsBadPort(service.GetPort())) {
-        return "bad port";
-    }
-    if (service.IsLocal()) {
-        return "disallowed address, provided local address";
-    }
     const auto opt_type = GetBIP155Service(service);
     if (!opt_type.has_value()) {
         return "disallowed address, cannot determine BIP155 type";
     }
 
     NetInfo candidate{opt_type.value(), service};
+    if (auto err_str = candidate.Validate(); err_str.has_value()) {
+        return err_str.value();
+    }
+
     auto& entries{GetOrAddEntries(purpose)};
     if (std::find(entries.begin(), entries.end(), candidate) != entries.end()) {
         return "duplicate entry";
     }
-    entries.push_back(candidate);
 
+    entries.push_back(candidate);
     return std::nullopt;
 }
 
