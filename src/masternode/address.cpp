@@ -8,6 +8,7 @@
 #include <chainparams.h>
 #include <evo/deterministicmns.h>
 #include <netaddress.h>
+#include <netbase.h>
 #include <protocol.h>
 #include <serialize.h>
 #include <util/check.h>
@@ -109,6 +110,17 @@ std::optional<CService> GetConnectionDetails(CDeterministicMNManager& dmnman, co
 // This doesn't do anything for now but should help us evaluate the kind of interface needed so we can
 // abstract currently deployed logic to resemble an interface that closely matches this one to make the
 // transition smoother.
+namespace {
+std::optional<CNetAddr::BIP155Network> GetBIP155Service(CNetAddr addr)
+{
+    if (addr.IsCJDNS()) return CNetAddr::BIP155Network::CJDNS;
+    else if (addr.IsTor()) return CNetAddr::BIP155Network::TORV3;
+    else if (addr.IsI2P()) return CNetAddr::BIP155Network::I2P;
+    else if (addr.IsIPv4()) return CNetAddr::BIP155Network::IPV4;
+    else if (addr.IsIPv6()) return CNetAddr::BIP155Network::IPV6;
+    else return std::nullopt;
+}
+} // anonymous namespace
 
 static constexpr uint8_t NETINFO_FORMAT_VERSION{1};
 
@@ -117,14 +129,11 @@ template<> struct is_serializable_enum<CNetAddr::BIP155Network> : std::true_type
 enum class Purpose : uint8_t
 {
     // Mandatory for all masternodes
-    CORE_P2P = 0x01,
+    CORE_P2P = 0,
     // Mandatory for all EvoNodes
-    PLATFORM_P2P = 0x02,
+    PLATFORM_P2P = 1,
     // Optional for EvoNodes
-    PLATFORM_API = 0x03,
-
-    // Optional for all masternodes, available on devnet only. Does nothing for now.
-    RESERVED_TESTING = 0x00
+    PLATFORM_API = 2
 };
 template<> struct is_serializable_enum<Purpose> : std::true_type {};
 
@@ -150,8 +159,33 @@ private:
         std::variant<std::monostate, NetAddrVariant, StrAddrVariant> type_addr;
         uint16_t port;
 
-        NetInfo() = default;
+        NetInfo() = default; // should be delete but deserialization code becomes very angry if we do
         ~NetInfo() = default;
+
+        NetInfo(CNetAddr::BIP155Network type, CService service) : type_addr{std::make_pair(type, service)}, port{service.GetPort()} {}
+        NetInfo(CNetAddr::BIP155Network type, CNetAddr netaddr, uint16_t port) : type_addr{std::make_pair(type, netaddr)}, port{port} {}
+        NetInfo(Extensions type, std::string straddr, uint16_t port) : type_addr{std::make_pair(type, straddr)}, port{port} {}
+
+        friend bool operator==(const NetInfo& a, const NetInfo& b) {
+            // Low hanging fruit
+            if (a.type_addr.index() != b.type_addr.index() || a.port != b.port) return false;
+            // Everything else
+            switch (a.type_addr.index()) {
+            case 0 /* std::monotype */: return true; // Two blanks will always equal each other
+            case 1 /* NetAddrVariant */: {
+                return std::get<NetAddrVariant>(a.type_addr) == std::get<NetAddrVariant>(b.type_addr);
+                break;
+            }
+            case 2 /* StrAddrVariant */: {
+                return std::get<StrAddrVariant>(a.type_addr) == std::get<StrAddrVariant>(b.type_addr);
+                break;
+            }
+            default: {
+                return false;
+            }
+            }
+            return false;
+        }
 
         template<typename Stream>
         void Serialize(Stream &s) const
@@ -208,30 +242,20 @@ private:
         }
     };
 
-    struct NetEntry
-    {
-        Purpose purpose;
-        std::vector<NetInfo> entries;
-
-        NetEntry() = default;
-        ~NetEntry() = default;
-
-        SERIALIZE_METHODS(NetEntry, obj)
-        {
-            READWRITE(obj.purpose);
-            READWRITE(obj.entries);
-        }
-    };
-
     // The format corresponds to the on-disk format *and* validation rules. Any changes
-    // to MnNetInfo, NetEntry, NetInfo, Purpose or Extensions will require incrementing
-    // this value.
+    // to MnNetInfo, NetInfo, Purpose or Extensions will require incrementing this value.
     uint8_t version{NETINFO_FORMAT_VERSION};
-    std::vector<NetEntry> data{};
+    std::map<Purpose, std::vector<NetInfo>> data{};
+
+    // Used by AddEntry()
+    std::vector<NetInfo>& GetOrAddEntries(Purpose purpose);
 
 public:
     MnNetInfo() = default;
     ~MnNetInfo() = default;
+
+    // Add or remove entry from set of entries
+    std::optional<std::string> AddEntry(Purpose purpose, CService service);
 
     SERIALIZE_METHODS(MnNetInfo, obj)
     {
@@ -239,6 +263,43 @@ public:
         READWRITE(obj.data);
     }
 };
+
+std::vector<MnNetInfo::NetInfo>& MnNetInfo::GetOrAddEntries(Purpose purpose) {
+    for (auto& [_purpose, _entry] : data) {
+        if (_purpose != purpose) continue;
+        return _entry;
+    }
+    auto [it, status] = data.try_emplace(purpose, std::vector<NetInfo>{});
+    assert(status); // We did just check to see if our value already existed, try_emplace
+                    // shouldn't fail.
+    return it->second;
+}
+
+std::optional<std::string> MnNetInfo::AddEntry(Purpose purpose, CService service)
+{
+    if (!service.IsValid()) {
+        return "invalid address";
+    }
+    if (IsBadPort(service.GetPort())) {
+        return "bad port";
+    }
+    if (service.IsLocal()) {
+        return "disallowed address, provided local address";
+    }
+    const auto opt_type = GetBIP155Service(service);
+    if (!opt_type.has_value()) {
+        return "disallowed address, cannot determine BIP155 type";
+    }
+
+    NetInfo candidate{opt_type.value(), service};
+    auto& entries{GetOrAddEntries(purpose)};
+    if (std::find(entries.begin(), entries.end(), candidate) != entries.end()) {
+        return "duplicate entry";
+    }
+    entries.push_back(candidate);
+
+    return std::nullopt;
+}
 
 // Stub function to ensure compiler verifies serialization functions actually work
 void TestSerializationMagic()
