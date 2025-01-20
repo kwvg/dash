@@ -120,9 +120,28 @@ std::optional<CNetAddr::BIP155Network> GetBIP155Service(CNetAddr addr)
     else if (addr.IsIPv6()) return CNetAddr::BIP155Network::IPV6;
     else return std::nullopt;
 }
+
+bool HasBadTLD(const std::string& str) {
+    const std::vector<std::string_view> blocklist{
+        ".local",
+        ".intranet",
+        ".internal",
+        ".private",
+        ".corp",
+        ".home",
+        ".lan",
+        ".home.arpa"
+    };
+    for (const auto& tld : blocklist) {
+        if (tld.size() > str.size()) continue;
+        if (std::equal(tld.rbegin(), tld.rend(), str.rbegin())) return true;
+    }
+    return false;
+}
 } // anonymous namespace
 
 static constexpr uint8_t NETINFO_FORMAT_VERSION{1};
+static constexpr std::string_view SAFE_CHARS_RFC1035{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-"};
 
 template<> struct is_serializable_enum<CNetAddr::BIP155Network> : std::true_type {};
 
@@ -290,8 +309,36 @@ std::optional<std::string> MnNetInfo::NetInfo::ValidateNetAddr(const NetAddrVari
 
 std::optional<std::string> MnNetInfo::NetInfo::ValidateStrAddr(const StrAddrVariant& input, const uint16_t& port)
 {
+    const auto& [type, str_addr] = input;
     if (IsBadPort(port) && port != 80 && port != 443) {
         return "bad port";
+    }
+    if (str_addr.length() > 253 || str_addr.length() < 4) {
+        return "bad domain length";
+    }
+    bool is_dotted;
+    for (char c : str_addr) {
+        if (SAFE_CHARS_RFC1035.find(c) == std::string::npos) {
+            return "prohibited domain character";
+        }
+    }
+    if (str_addr.at(0) == '.' || str_addr.at(str_addr.length() - 1) == '.') {
+        return "prohibited domain character position";
+    }
+    std::vector<std::string> labels{SplitString(str_addr, '.')};
+    if (labels.size() < 2) {
+        return "prohibited dotless";
+    }
+    if (HasBadTLD(str_addr)) {
+        return "prohibited tld";
+    }
+    for (const auto& label : labels) {
+        if (label.empty() || label.length() > 63) {
+            return "bad label length";
+        }
+        if (label.at(0) == '-' or label.at(label.length() - 1) == '-') {
+            return "prohibited label character position";
+        }
     }
     return std::nullopt;
 }
