@@ -174,25 +174,14 @@ private:
         NetInfo(CNetAddr::BIP155Network type, CNetAddr netaddr, uint16_t port) : type_addr{std::make_pair(type, netaddr)}, port{port} {}
         NetInfo(Extensions type, std::string straddr, uint16_t port) : type_addr{std::make_pair(type, straddr)}, port{port} {}
 
-        friend bool operator==(const NetInfo& a, const NetInfo& b) {
-            // Low hanging fruit
-            if (a.type_addr.index() != b.type_addr.index() || a.port != b.port) return false;
-            // Everything else
-            switch (a.type_addr.index()) {
-            case 0 /* std::monotype */: return true; // Two blanks will always equal each other
-            case 1 /* NetAddrVariant */: {
-                return std::get<NetAddrVariant>(a.type_addr) == std::get<NetAddrVariant>(b.type_addr);
-                break;
-            }
-            case 2 /* StrAddrVariant */: {
-                return std::get<StrAddrVariant>(a.type_addr) == std::get<StrAddrVariant>(b.type_addr);
-                break;
-            }
-            default: {
+        friend bool operator==(const NetInfo& lhs, const NetInfo& rhs) {
+            if (lhs.port != rhs.port) return false;
+            return std::visit([](auto&& lhs, auto&& rhs) -> bool {
+                if constexpr (std::is_same_v<std::decay_t<decltype(lhs)>, std::decay_t<decltype(rhs)>>) {
+                    return lhs == rhs;
+                }
                 return false;
-            }
-            }
-            return false;
+            }, lhs.type_addr, rhs.type_addr);
         }
 
         template<typename Stream>
@@ -200,7 +189,6 @@ private:
         {
             s << type_addr.index();
             switch(type_addr.index()) {
-            case 0 /* std::monotype */: return; // There's nothing more to serialize, bail out!
             case 1 /* NetAddrVariant */: {
                 s << std::get<NetAddrVariant>(type_addr);
                 break;
@@ -209,9 +197,7 @@ private:
                 s << std::get<StrAddrVariant>(type_addr);
                 break;
             }
-            default: {
-                throw std::ios_base::failure("invalid variant");
-            }
+            default /* std::monostate or something unexpected */: return;
             }
             s << port;
         }
@@ -223,7 +209,6 @@ private:
             uint8_t type_idx;
             s >> type_idx;
             switch (type_idx) {
-            case 0 /* std::monotype */: return; // Invalid data, nothing more to read!
             case 1 /* NetAddrVariant */: {
                 NetAddrVariant net_addr;
                 s >> net_addr;
@@ -236,9 +221,7 @@ private:
                 type_addr = str_addr;
                 break;
             }
-            default: {
-                throw std::ios_base::failure("invalid variation byte");
-            }
+            default /* std::monostate or something unexpected */: return;
             }
            s << port;
         }
