@@ -140,7 +140,6 @@ bool HasBadTLD(const std::string& str) {
 }
 } // anonymous namespace
 
-static constexpr uint8_t NETINFO_FORMAT_VERSION{1};
 static constexpr std::string_view SAFE_CHARS_RFC1035{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-"};
 
 template<> struct is_serializable_enum<CNetAddr::BIP155Network> : std::true_type {};
@@ -189,20 +188,9 @@ private:
         static std::optional<std::string> ValidateStrAddr(const StrAddrVariant& input, const uint16_t& port);
 
         // Used in RemoveEntry()
-        std::optional<CService> GetCService() const
-        {
-            const auto* ptr{std::get_if<NetAddrVariant>(&type_addr)};
-            if (ptr != nullptr) { return CService{ptr->second, port}; }
-            return std::nullopt;
-        }
-
+        std::optional<CService> GetCService() const;
         // Used in RemoveEntry()
-        std::optional<std::string> GetString() const
-        {
-            const auto* ptr{std::get_if<StrAddrVariant>(&type_addr)};
-            if (ptr != nullptr) { return ptr->second; }
-            return std::nullopt;
-        }
+        std::optional<std::string> GetString() const;
 
     public:
         NetInfo() = default; // should be delete but deserialization code becomes very angry if we do
@@ -212,15 +200,7 @@ private:
         NetInfo(CNetAddr::BIP155Network type, CNetAddr netaddr, uint16_t port) : type_addr{std::make_pair(type, netaddr)}, port{port} {}
         NetInfo(Extensions type, std::string straddr, uint16_t port) : type_addr{std::make_pair(type, straddr)}, port{port} {}
 
-        friend bool operator==(const NetInfo& lhs, const NetInfo& rhs) {
-            if (lhs.port != rhs.port) return false;
-            return std::visit([](auto&& lhs, auto&& rhs) -> bool {
-                if constexpr (std::is_same_v<std::decay_t<decltype(lhs)>, std::decay_t<decltype(rhs)>>) {
-                    return lhs == rhs;
-                }
-                return false;
-            }, lhs.type_addr, rhs.type_addr);
-        }
+        bool operator==(const NetInfo& rhs);
 
         template<typename Stream>
         void Serialize(Stream &s) const
@@ -271,20 +251,11 @@ private:
         }
 
         // Dispatch function to Validate{Net,Str}Addr()
-        std::optional<std::string> Validate()
-        {
-            return std::visit([this](auto&& input) -> std::optional<std::string> {
-                using T1 = std::decay_t<decltype(input)>;
-                if constexpr (std::is_same_v<T1, NetAddrVariant>) {
-                    return ValidateNetAddr(input, port);
-                } else if constexpr (std::is_same_v<T1, StrAddrVariant>) {
-                    return ValidateStrAddr(input, port);
-                } else {
-                    return "empty object, nothing to validate";
-                }
-            }, type_addr);
-        }
+        std::optional<std::string> Validate();
     };
+
+private:
+    static constexpr uint8_t NETINFO_FORMAT_VERSION{1};
 
     // The format corresponds to the on-disk format *and* validation rules. Any changes
     // to MnNetInfo, NetInfo, Purpose or Extensions will require incrementing this value.
@@ -310,6 +281,44 @@ public:
         READWRITE(obj.data);
     }
 };
+
+std::optional<CService> MnNetInfo::NetInfo::GetCService() const
+{
+    const auto* ptr{std::get_if<NetAddrVariant>(&type_addr)};
+    if (ptr != nullptr) { return CService{ptr->second, port}; }
+    return std::nullopt;
+}
+
+std::optional<std::string> MnNetInfo::NetInfo::GetString() const
+{
+    const auto* ptr{std::get_if<StrAddrVariant>(&type_addr)};
+    if (ptr != nullptr) { return ptr->second; }
+    return std::nullopt;
+}
+
+bool MnNetInfo::NetInfo::operator==(const NetInfo& rhs) {
+    if (port != rhs.port) return false;
+    return std::visit([](auto&& lhs, auto&& rhs) -> bool {
+        if constexpr (std::is_same_v<std::decay_t<decltype(lhs)>, std::decay_t<decltype(rhs)>>) {
+            return lhs == rhs;
+        }
+        return false;
+    }, type_addr, rhs.type_addr);
+}
+
+std::optional<std::string> MnNetInfo::NetInfo::Validate()
+{
+    return std::visit([this](auto&& input) -> std::optional<std::string> {
+        using T1 = std::decay_t<decltype(input)>;
+        if constexpr (std::is_same_v<T1, NetAddrVariant>) {
+            return ValidateNetAddr(input, port);
+        } else if constexpr (std::is_same_v<T1, StrAddrVariant>) {
+            return ValidateStrAddr(input, port);
+        } else {
+            return "empty object, nothing to validate";
+        }
+    }, type_addr);
+}
 
 std::optional<std::string> MnNetInfo::NetInfo::ValidateNetAddr(const NetAddrVariant& input, const uint16_t& port)
 {
