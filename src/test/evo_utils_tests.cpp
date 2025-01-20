@@ -77,4 +77,63 @@ BOOST_FIXTURE_TEST_CASE(mnaddr_tests, RegTestingSetup)
     }
 }
 
+BOOST_FIXTURE_TEST_CASE(netmninfo_tests, RegTestingSetup)
+{
+    // TODO: We should be implementing an interface (!!!)
+    MnNetInfo networkInfo;
+
+    // Check domain validation works as expected
+    auto check_bad_domain_and_port = [&networkInfo](std::string expected_err, std::string domain, uint16_t port) -> void {
+        auto err_opt{networkInfo.AddEntry(Purpose::PLATFORM_API, domain, port)};
+        BOOST_CHECK(err_opt.has_value());
+        BOOST_CHECK_EQUAL(err_opt.value(), expected_err);
+    };
+    const std::vector<std::pair</*expected_err=*/std::string, /*domain_str=*/std::string>> bad_domains{
+        // 3 (characters in domain) < 4 (minimum length)
+        { "bad domain length", "uwu" },
+        // no dotless allowed
+        { "prohibited dotless", "meow" },
+        // no empty label (trailing delimiter)
+        { "prohibited domain character position", "cat." },
+        // no empty label (leading delimiter)
+        { "prohibited domain character position", ".cat" },
+        // no empty label (extra delimiters)
+        { "bad label length", "a..dot..a" },
+        // no empty label (leading delimiter, but also bad TLD), should catch empty label first
+        { "prohibited domain character position", ".lan" },
+        // ' is not a valid character in domains
+        { "prohibited domain character", "meow's macbook pro.local" },
+        // .local is not allowed, bad TLD
+        { "prohibited tld", "meows-macbook-pro.local" },
+        // $*@?# are not valid characters in domains
+        { "prohibited domain character", "meow.go.8irfhj94w$*H@??#493#@" },
+        // trailing hyphens are not allowed
+        { "prohibited label character position", "-w-.me.ow" },
+        // 64 (characters in label) > 63 (maximum limit)
+        { "bad label length",
+          "yeowwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwch.ow.ie" },
+        // 306 (characters in domain) > 253 (maximum limit)
+        {"bad domain length",
+         "CatnipandsomeotherspeciesinthegenusNepetaisknownforitseffectsoncatbehaviourCatsrub"
+         "ontheplantrollonthegroundpawatitlickitandchewitSomeleapaboutandpurrsomecryoutCatsdoit"
+         "foraboutfivetofifteenminutesafterwhicholfactoryfatigueusuallysetsinThenepetalactone"
+         "incatnipactsasafelineattractantafteritentersthecatsno.se" }
+    };
+
+    // we don't allow ports <1024
+    check_bad_domain_and_port("bad port", "uwu", /*port=*/1);
+
+    // test domain validation with bad domain names
+    for (const auto& [expected_err, domain_str] : bad_domains) {
+        check_bad_domain_and_port(expected_err, domain_str, /*port=*/25555);
+    }
+
+    // hyphens are allowed if used properly
+    BOOST_CHECK(!networkInfo.AddEntry(Purpose::PLATFORM_API, "server-1.me.ow", 1443).has_value());
+    // even though <1024, excluded from bad ports list, allowed (HTTP)
+    BOOST_CHECK(!networkInfo.AddEntry(Purpose::PLATFORM_API, "server-3.me.ow", 80).has_value());
+    // even though <1024, excluded from bad ports list, allowed (HTTPS)
+    BOOST_CHECK(!networkInfo.AddEntry(Purpose::PLATFORM_API, "server-2.me.ow", 443).has_value());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
