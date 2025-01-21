@@ -128,12 +128,34 @@ BOOST_FIXTURE_TEST_CASE(netmninfo_tests, RegTestingSetup)
         check_bad_domain_and_port(expected_err, domain_str, /*port=*/25555);
     }
 
-    // hyphens are allowed if used properly
-    BOOST_CHECK(!networkInfo.AddEntry(Purpose::PLATFORM_API, "server-1.me.ow", 1443).has_value());
-    // even though <1024, excluded from bad ports list, allowed (HTTP)
-    BOOST_CHECK(!networkInfo.AddEntry(Purpose::PLATFORM_API, "server-3.me.ow", 80).has_value());
-    // even though <1024, excluded from bad ports list, allowed (HTTPS)
-    BOOST_CHECK(!networkInfo.AddEntry(Purpose::PLATFORM_API, "server-2.me.ow", 443).has_value());
+    auto check_good_domain_and_port = [&networkInfo](std::string domain, uint16_t port) {
+        BOOST_CHECK(!networkInfo.AddEntry(Purpose::PLATFORM_API, domain, port).has_value());
+        // Make sure that we don't get an empty entries list after inserting a new entry
+        auto domains_opt{networkInfo.GetDomainPorts(Purpose::PLATFORM_API)};
+        BOOST_CHECK(domains_opt.has_value());
+        // Make sure we're in that list
+        auto domains{domains_opt.value()};
+        DomainPort dp{domain, port};
+        BOOST_CHECK(std::find(domains.begin(), domains.end(), dp) != domains.end());
+        // Make sure we can't add ourselves again
+        auto err_opt{networkInfo.AddEntry(Purpose::PLATFORM_API, domain, port)};
+        BOOST_CHECK(err_opt.has_value());
+        BOOST_CHECK_EQUAL(err_opt.value(), "duplicate entry");
+    };
+
+    const std::vector<DomainPort> good_domains {
+        // hyphens are allowed if used properly
+        { "server-1.me.ow", 1443 },
+        // even though <1024, excluded from bad ports list, allowed (HTTP)
+        { "server-2.me.ow", 80 },
+        // even though <1024, excluded from bad ports list, allowed (HTTPS)
+        { "server-3.me.ow", 443 }
+    };
+
+    // test domain validation with bad domain names
+    for (const auto& [domain_str, port] : good_domains) {
+        check_good_domain_and_port(domain_str, port);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

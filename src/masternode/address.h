@@ -85,6 +85,8 @@ enum class Extensions : uint8_t
 };
 template<> struct is_serializable_enum<Extensions> : std::true_type {};
 
+using DomainPort = std::pair<std::string, uint16_t>;
+
 class MnNetInfo
 {
 private:
@@ -110,7 +112,7 @@ private:
         // Used in RemoveEntry()
         std::optional<CService> GetCService() const;
         // Used in RemoveEntry()
-        std::optional<std::string> GetString() const;
+        std::optional<DomainPort> GetDomainPort() const;
 
     public:
         NetInfo() = default; // should be delete but deserialization code becomes very angry if we do
@@ -193,7 +195,10 @@ public:
     std::optional<std::string> AddEntry(Purpose purpose, CService service);
     std::optional<std::string> AddEntry(Purpose purpose, std::string addr, uint16_t port);
     std::optional<std::string> RemoveEntry(CService service);
-    std::optional<std::string> RemoveEntry(std::string addr);
+    std::optional<std::string> RemoveEntry(DomainPort addr);
+
+    const std::optional<std::vector<CService>> GetAddrPorts(Purpose purpose) const;
+    const std::optional<std::vector<DomainPort>> GetDomainPorts(Purpose purpose) const;
 
     SERIALIZE_METHODS(MnNetInfo, obj)
     {

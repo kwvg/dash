@@ -149,10 +149,10 @@ std::optional<CService> MnNetInfo::NetInfo::GetCService() const
     return std::nullopt;
 }
 
-std::optional<std::string> MnNetInfo::NetInfo::GetString() const
+std::optional<DomainPort> MnNetInfo::NetInfo::GetDomainPort() const
 {
     const auto* ptr{std::get_if<StrAddrVariant>(&type_addr)};
-    if (ptr != nullptr) { return ptr->second; }
+    if (ptr != nullptr) { return std::make_pair(ptr->second, port); }
     return std::nullopt;
 }
 
@@ -304,17 +304,59 @@ std::optional<std::string> MnNetInfo::RemoveEntry(CService service)
     return "unable to find entry";
 }
 
-std::optional<std::string> MnNetInfo::RemoveEntry(std::string addr)
+std::optional<std::string> MnNetInfo::RemoveEntry(DomainPort addr)
 {
     for (auto& [purpose, entries] : data) {
         auto past_size{entries.size()};
         entries.erase(std::remove_if(entries.begin(), entries.end(), [&addr](auto input) -> bool {
-            auto _input{input.GetString()}; // <--- only thing that differentiates it from RemoveEntry(CService)
+            auto _input{input.GetDomainPort()}; // <--- only thing that differentiates it from RemoveEntry(CService)
             return _input.has_value() && _input.value() == addr;
         }));
         if (entries.size() > past_size) return std::nullopt;
     }
     return "unable to find entry";
+}
+
+const std::optional<std::vector<CService>> MnNetInfo::GetAddrPorts(Purpose purpose) const
+{
+    // TODO: less ugly way to do it?
+    const std::vector<MnNetInfo::NetInfo>* entries_ptr{nullptr};
+    for (auto& [_purpose, _entry] : data) {
+        if (_purpose != purpose) continue;
+        entries_ptr = &_entry; break;
+    }
+    if (entries_ptr == nullptr) return std::nullopt;
+
+    std::vector<CService> ret{};
+    for (const auto& entry : *entries_ptr) {
+        if (auto service = entry.GetCService(); service.has_value()) {
+            ret.push_back(service.value());
+        }
+    }
+    if (ret.empty()) return std::nullopt;
+
+    return ret;
+}
+
+const std::optional<std::vector<DomainPort>> MnNetInfo::GetDomainPorts(Purpose purpose) const
+{
+    // TODO: less ugly way to do it?
+    const std::vector<MnNetInfo::NetInfo>* entries_ptr{nullptr};
+    for (auto& [_purpose, _entry] : data) {
+        if (_purpose != purpose) continue;
+        entries_ptr = &_entry; break;
+    }
+    if (entries_ptr == nullptr) return std::nullopt;
+
+    std::vector<DomainPort> ret{};
+    for (const auto& entry : *entries_ptr) {
+        if (auto service = entry.GetDomainPort(); service.has_value()) {
+            ret.push_back(service.value());
+        }
+    }
+    if (ret.empty()) return std::nullopt;
+
+    return ret;
 }
 
 // Stub function to ensure compiler verifies serialization functions actually work
