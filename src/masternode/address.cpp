@@ -262,6 +262,10 @@ std::optional<std::string> MnNetInfo::AddEntry(Purpose purpose, CService service
         return "duplicate entry";
     }
 
+    if (entries.size() > MNADDR_ENTRIES_LIMIT) {
+        return "too many entries";
+    }
+
     entries.push_back(candidate);
     return std::nullopt;
 }
@@ -283,6 +287,10 @@ std::optional<std::string> MnNetInfo::AddEntry(Purpose purpose, std::string addr
     // but serialization code is unhappy if i do that
     if (std::find(entries.begin(), entries.end(), candidate) != entries.end()) {
         return "duplicate entry";
+    }
+
+    if (entries.size() > MNADDR_ENTRIES_LIMIT) {
+        return "too many entries";
     }
 
     entries.push_back(candidate);

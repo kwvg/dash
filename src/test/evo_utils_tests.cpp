@@ -6,6 +6,7 @@
 
 #include <chainparams.h>
 #include <masternode/address.h>
+#include <netbase.h>
 #include <validation.h>
 
 #include <llmq/params.h>
@@ -79,6 +80,7 @@ BOOST_FIXTURE_TEST_CASE(mnaddr_tests, RegTestingSetup)
 
 BOOST_FIXTURE_TEST_CASE(netmninfo_tests, RegTestingSetup)
 {
+    { // domain tests
     // TODO: We should be implementing an interface (!!!)
     MnNetInfo networkInfo;
 
@@ -155,6 +157,21 @@ BOOST_FIXTURE_TEST_CASE(netmninfo_tests, RegTestingSetup)
     // test domain validation with bad domain names
     for (const auto& [domain_str, port] : good_domains) {
         check_good_domain_and_port(domain_str, port);
+    }
+    } // end domain tests
+    {
+        MnNetInfo sizeTest;
+        CNetAddr netaddr{LookupHost("1.2.3.4", /*fAllowLookup=*/false).value()};
+        // Populate maximum entries
+        uint16_t port{9999}; // We need to increment the port so that we don't get told off for duplicate entries
+        for (size_t idx = 0; idx <= MNADDR_ENTRIES_LIMIT; idx++) {
+            BOOST_CHECK(!sizeTest.AddEntry(Purpose::CORE_P2P, CService{netaddr, port}).has_value());
+            port++;
+        }
+        // Going over the limit is disallowed
+        BOOST_CHECK_EQUAL(sizeTest.AddEntry(Purpose::CORE_P2P, CService{netaddr, port}).value(), "too many entries");
+        // The limit doesn't carry over to another purpose's entry list
+        BOOST_CHECK(!sizeTest.AddEntry(Purpose::PLATFORM_P2P, CService{netaddr, port}).has_value());
     }
 }
 

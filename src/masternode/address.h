@@ -64,6 +64,8 @@ std::optional<CService> GetConnectionDetails(CDeterministicMNManager& dmnman, co
 
 /* ---------------------- transaction format ---------------------------------------------------------------- */
 
+static constexpr uint8_t MNADDR_ENTRIES_LIMIT{32};
+
 // TODO: Currently this corresponds to the index, is this a good idea?
 enum class Purpose : uint8_t
 {
