@@ -8,6 +8,7 @@
 #include <evo/common.h>
 #include <netaddress.h>
 #include <serialize.h>
+#include <util/underlying.h>
 
 #include <optional>
 #include <string>
@@ -35,21 +36,21 @@ private:
     struct NetInfo
     {
     private:
-        using NetAddrVariant = std::pair<CNetAddr::BIP155Network, CNetAddr>;
-        using StrAddrVariant = std::pair<Extensions, std::string>;
+        using AddrVariant = std::variant<std::monostate, CNetAddr, std::string>;
 
         // Type of address, could be BIP155 type or an extension as defined in
         // Appendix C DIP3 extension. Serialized as uint8_t.
-        std::variant<std::monostate, NetAddrVariant, StrAddrVariant> type_addr;
+        uint8_t type;
+        AddrVariant addr;
         uint16_t port;
 
     private:
         friend class MnNetInfo;
 
         // Used in Validate()
-        static std::optional<std::string> ValidateNetAddr(const NetAddrVariant& input, const uint16_t& port);
+        static std::optional<std::string> ValidateNetAddr(const uint8_t& type, const CNetAddr& input, const uint16_t& port);
         // Used in Validate()
-        static std::optional<std::string> ValidateStrAddr(const StrAddrVariant& input, const uint16_t& port);
+        static std::optional<std::string> ValidateStrAddr(const uint8_t& type, const std::string& input, const uint16_t& port);
 
         // Used in RemoveEntry()
         std::optional<CService> GetCService() const;
@@ -60,23 +61,30 @@ private:
         NetInfo() = default; // should be delete but deserialization code becomes very angry if we do
         ~NetInfo() = default;
 
-        NetInfo(CNetAddr::BIP155Network type, CService service) : type_addr{std::make_pair(type, service)}, port{service.GetPort()} {}
-        NetInfo(CNetAddr::BIP155Network type, CNetAddr netaddr, uint16_t port) : type_addr{std::make_pair(type, netaddr)}, port{port} {}
-        NetInfo(Extensions type, std::string straddr, uint16_t port) : type_addr{std::make_pair(type, straddr)}, port{port} {}
+        NetInfo(CNetAddr::BIP155Network type, CService service) : type{type}, addr{service}, port{service.GetPort()} {}
+        NetInfo(CNetAddr::BIP155Network type, CNetAddr netaddr, uint16_t port) : type{type}, addr{netaddr}, port{port} {}
+        NetInfo(Extensions type, std::string straddr, uint16_t port) : type{ToUnderlying(type)}, addr{straddr}, port{port} {}
 
         bool operator==(const NetInfo& rhs);
 
         template<typename Stream>
         void Serialize(Stream &s) const
         {
-            s << type_addr.index();
-            switch(type_addr.index()) {
-            case 1 /* NetAddrVariant */: {
-                s << std::get<NetAddrVariant>(type_addr);
+            s << type;
+            switch (type) {
+            case 0x01: /* BIP155Network::IPV4 */
+            case 0x02: /* BIP155Network::IPV6 */
+            case 0x03: /* BIP155Network::TORV2 */
+            case 0x04: /* BIP155Network::TORV3 */
+            case 0x05: /* BIP155Network::I2P */
+            case 0x06: /* BIP155Network::CJDNS */
+            {
+                s << std::get<CNetAddr>(addr);
                 break;
             }
-            case 2 /* StrAddrVariant */: {
-                s << std::get<StrAddrVariant>(type_addr);
+            case 0xD0: /* Extensions::DOMAINS */
+            {
+                s << std::get<std::string>(addr);
                 break;
             }
             default /* std::monostate or something unexpected */: return;
@@ -88,19 +96,25 @@ private:
         void Unserialize(Stream &s)
         {
             Clear();
-            uint8_t type_idx;
-            s >> type_idx;
-            switch (type_idx) {
-            case 1 /* NetAddrVariant */: {
-                NetAddrVariant net_addr;
-                s >> net_addr;
-                type_addr = net_addr;
+            s >> type;
+            switch (type) {
+            case 0x01: /* BIP155Network::IPV4 */
+            case 0x02: /* BIP155Network::IPV6 */
+            case 0x03: /* BIP155Network::TORV2 */
+            case 0x04: /* BIP155Network::TORV3 */
+            case 0x05: /* BIP155Network::I2P */
+            case 0x06: /* BIP155Network::CJDNS */
+            {
+                CNetAddr obj;
+                s >> obj;
+                addr = obj;
                 break;
             }
-            case 2 /* StrAddrVariant */: {
-                StrAddrVariant str_addr;
-                s >> str_addr;
-                type_addr = str_addr;
+            case 0xD0: /* Extensions::DOMAINS */
+            {
+                std::string obj;
+                s >> obj;
+                addr = obj;
                 break;
             }
             default /* std::monostate or something unexpected */: return;
@@ -110,7 +124,8 @@ private:
 
         void Clear()
         {
-            type_addr = std::monostate{};
+            type = 0;
+            addr = std::monostate{};
             port = 0;
         }
 

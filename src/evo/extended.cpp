@@ -51,52 +51,51 @@ template<> struct is_serializable_enum<CNetAddr::BIP155Network> : std::true_type
 
 std::optional<CService> MnNetInfo::NetInfo::GetCService() const
 {
-    const auto* ptr{std::get_if<NetAddrVariant>(&type_addr)};
-    if (ptr != nullptr) { return CService{ptr->second, port}; }
+    const auto* ptr{std::get_if<CNetAddr>(&addr)};
+    if (ptr != nullptr) { return CService{*ptr, port}; }
     return std::nullopt;
 }
 
 std::optional<DomainPort> MnNetInfo::NetInfo::GetDomainPort() const
 {
-    const auto* ptr{std::get_if<StrAddrVariant>(&type_addr)};
-    if (ptr != nullptr) { return std::make_pair(ptr->second, port); }
+    const auto* ptr{std::get_if<std::string>(&addr)};
+    if (ptr != nullptr) { return std::make_pair(*ptr, port); }
     return std::nullopt;
 }
 
 bool MnNetInfo::NetInfo::operator==(const NetInfo& rhs) {
-    if (port != rhs.port) return false;
+    if (port != rhs.port || type != rhs.type) return false;
     return std::visit([](auto&& lhs, auto&& rhs) -> bool {
         if constexpr (std::is_same_v<std::decay_t<decltype(lhs)>, std::decay_t<decltype(rhs)>>) {
             return lhs == rhs;
         }
         return false;
-    }, type_addr, rhs.type_addr);
+    }, addr, rhs.addr);
 }
 
 std::optional<std::string> MnNetInfo::NetInfo::Validate()
 {
     return std::visit([this](auto&& input) -> std::optional<std::string> {
         using T1 = std::decay_t<decltype(input)>;
-        if constexpr (std::is_same_v<T1, NetAddrVariant>) {
-            return ValidateNetAddr(input, port);
-        } else if constexpr (std::is_same_v<T1, StrAddrVariant>) {
-            return ValidateStrAddr(input, port);
+        if constexpr (std::is_same_v<T1, CNetAddr>) {
+            return ValidateNetAddr(type, input, port);
+        } else if constexpr (std::is_same_v<T1, std::string>) {
+            return ValidateStrAddr(type, input, port);
         } else {
             return "empty object, nothing to validate";
         }
-    }, type_addr);
+    }, addr);
 }
 
-std::optional<std::string> MnNetInfo::NetInfo::ValidateNetAddr(const NetAddrVariant& input, const uint16_t& port)
+std::optional<std::string> MnNetInfo::NetInfo::ValidateNetAddr(const uint8_t& type, const CNetAddr& input, const uint16_t& port)
 {
-    const auto& [type, net_addr] = input;
-    if (!net_addr.IsValid()) {
+    if (!input.IsValid()) {
         return "invalid address";
     }
     if (IsBadPort(port)) {
         return "bad port";
     }
-    if (net_addr.IsLocal()) {
+    if (input.IsLocal()) {
         return "disallowed address, provided local address";
     }
     if (type == CNetAddr::BIP155Network::TORV2) {
@@ -105,29 +104,28 @@ std::optional<std::string> MnNetInfo::NetInfo::ValidateNetAddr(const NetAddrVari
     return std::nullopt;
 }
 
-std::optional<std::string> MnNetInfo::NetInfo::ValidateStrAddr(const StrAddrVariant& input, const uint16_t& port)
+std::optional<std::string> MnNetInfo::NetInfo::ValidateStrAddr(const uint8_t& type, const std::string& input, const uint16_t& port)
 {
-    const auto& [type, str_addr] = input;
     if (IsBadPort(port) && port != 80 && port != 443) {
         return "bad port";
     }
-    if (str_addr.length() > 253 || str_addr.length() < 4) {
+    if (input.length() > 253 || input.length() < 4) {
         return "bad domain length";
     }
     bool is_dotted;
-    for (char c : str_addr) {
+    for (char c : input) {
         if (SAFE_CHARS_RFC1035.find(c) == std::string::npos) {
             return "prohibited domain character";
         }
     }
-    if (str_addr.at(0) == '.' || str_addr.at(str_addr.length() - 1) == '.') {
+    if (input.at(0) == '.' || input.at(input.length() - 1) == '.') {
         return "prohibited domain character position";
     }
-    std::vector<std::string> labels{SplitString(str_addr, '.')};
+    std::vector<std::string> labels{SplitString(input, '.')};
     if (labels.size() < 2) {
         return "prohibited dotless";
     }
-    if (HasBadTLD(str_addr)) {
+    if (HasBadTLD(input)) {
         return "prohibited tld";
     }
     for (const auto& label : labels) {
