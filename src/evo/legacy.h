@@ -58,6 +58,8 @@ public:
     bool IsEmpty() const;
     MnNetStatus Validate() const;
     void Clear();
+
+    UniValue ToJson() const;
 };
 
 #endif // BITCOIN_EVO_LEGACY_H

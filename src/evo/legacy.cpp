@@ -95,3 +95,23 @@ void OldMnNetInfo::Clear()
 {
     addr = CService();
 }
+
+UniValue OldMnNetInfo::ToJson() const
+{
+    UniValue ret(UniValue::VOBJ);
+
+    // There's only one entry to consider so we do this instead of looping over
+    // all entries as we would with the newer format
+    auto make_arr = [](CService addr) {
+        UniValue obj(UniValue::VARR);
+        obj.push_back(addr.ToStringAddrPort()); // Should we separate the port and address?
+        return obj;
+    };
+
+    UniValue core(UniValue::VOBJ);
+    core.pushKV("p2p", make_arr(addr));
+
+    // Segmenting core as a distinct object allows for future extensibility
+    ret.pushKV("core", core);
+    return ret;
+}

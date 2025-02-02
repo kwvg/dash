@@ -167,7 +167,8 @@ static RPCHelpMan masternode_status()
     UniValue mnObj(UniValue::VOBJ);
     // keep compatibility with legacy status for now (TODO: get deprecated/removed later)
     mnObj.pushKV("outpoint", node.mn_activeman->GetOutPoint().ToStringShort());
-    mnObj.pushKV("service", node.mn_activeman->GetService().ToStringAddrPort());
+    mnObj.pushKV("service", node.mn_activeman->GetService().ToStringAddrPort()); // <--- we should probably keep this
+                                                                                 //      as it is?
     auto dmn = CHECK_NONFATAL(node.dmnman)->GetListAtChainTip().GetMN(node.mn_activeman->GetProTxHash());
     if (dmn) {
         mnObj.pushKV("proTxHash", dmn->proTxHash.ToString());
@@ -611,7 +612,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
                 strOutpoint.find(strFilter) == std::string::npos) return;
             UniValue objMN(UniValue::VOBJ);
             objMN.pushKV("proTxHash", dmn.proTxHash.ToString());
-            objMN.pushKV("address", dmn.pdmnState->addr.GetPrimaryService().ToStringAddrPort());
+            objMN.pushKV("addresses", dmn.pdmnState->addr.ToJson());
             objMN.pushKV("payee", payeeStr);
             objMN.pushKV("status", dmnToStatus(dmn));
             objMN.pushKV("type", std::string(GetMnType(dmn.nType).description));
