@@ -60,6 +60,7 @@ public:
     void Clear();
 
     UniValue ToJson() const;
+    std::string ToString() const;
 };
 
 #endif // BITCOIN_EVO_LEGACY_H

@@ -115,3 +115,10 @@ UniValue OldMnNetInfo::ToJson() const
     ret.pushKV("core", core);
     return ret;
 }
+
+std::string OldMnNetInfo::ToString() const
+{
+    // There's some extra padding to account for padding on the first line done by the calling function.
+    return strprintf("MnNetInfo()\n"
+                     "    CService(ip=%s, port=%u)\n", addr.ToStringAddr(), addr.GetPort());
+}
