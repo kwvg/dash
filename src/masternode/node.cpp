@@ -146,7 +146,7 @@ void CActiveMasternodeManager::InitInternal(const CBlockIndex* pindex)
 
     LogPrintf("CActiveMasternodeManager::Init -- proTxHash=%s, proTx=%s\n", dmn->proTxHash.ToString(), dmn->ToString());
 
-    if (m_info.service != dmn->pdmnState->addr) {
+    if (m_info.service != dmn->pdmnState->addr.GetPrimaryService()) {
         m_state = MasternodeState::SOME_ERROR;
         m_error = "Local address does not match the address from ProTx";
         LogPrintf("CActiveMasternodeManager::Init -- ERROR: %s\n", m_error);

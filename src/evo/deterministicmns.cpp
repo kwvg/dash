@@ -467,10 +467,10 @@ void CDeterministicMNList::AddMN(const CDeterministicMNCPtr& dmn, bool fBumpTota
         throw(std::runtime_error(strprintf("%s: Can't add a masternode %s with a duplicate collateralOutpoint=%s", __func__,
                 dmn->proTxHash.ToString(), dmn->collateralOutpoint.ToStringShort())));
     }
-    if (dmn->pdmnState->addr != CService() && !AddUniqueProperty(*dmn, dmn->pdmnState->addr)) {
+    if (!dmn->pdmnState->addr.IsEmpty() && !AddUniqueProperty(*dmn, dmn->pdmnState->addr)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't add a masternode %s with a duplicate address=%s", __func__,
-                                           dmn->proTxHash.ToString(), dmn->pdmnState->addr.ToStringAddrPort())));
+                                           dmn->proTxHash.ToString(), dmn->pdmnState->addr.GetPrimaryService().ToStringAddrPort())));
     }
     if (!AddUniqueProperty(*dmn, dmn->pdmnState->keyIDOwner)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
@@ -511,7 +511,7 @@ void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const std::s
     if (!UpdateUniqueProperty(*dmn, oldState->addr, pdmnState->addr)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't update a masternode %s with a duplicate address=%s", __func__,
-                                           oldDmn.proTxHash.ToString(), pdmnState->addr.ToStringAddrPort())));
+                                           oldDmn.proTxHash.ToString(), pdmnState->addr.GetPrimaryService().ToStringAddrPort())));
     }
     if (!UpdateUniqueProperty(*dmn, oldState->keyIDOwner, pdmnState->keyIDOwner)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
@@ -568,10 +568,10 @@ void CDeterministicMNList::RemoveMN(const uint256& proTxHash)
         throw(std::runtime_error(strprintf("%s: Can't delete a masternode %s with a collateralOutpoint=%s", __func__,
                 proTxHash.ToString(), dmn->collateralOutpoint.ToStringShort())));
     }
-    if (dmn->pdmnState->addr != CService() && !DeleteUniqueProperty(*dmn, dmn->pdmnState->addr)) {
+    if (!dmn->pdmnState->addr.IsEmpty() && !DeleteUniqueProperty(*dmn, dmn->pdmnState->addr)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't delete a masternode %s with a address=%s", __func__,
-                                           proTxHash.ToString(), dmn->pdmnState->addr.ToStringAddrPort())));
+                                           proTxHash.ToString(), dmn->pdmnState->addr.GetPrimaryService().ToStringAddrPort())));
     }
     if (!DeleteUniqueProperty(*dmn, dmn->pdmnState->keyIDOwner)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
@@ -798,7 +798,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
 
             auto dmnState = std::make_shared<CDeterministicMNState>(proTx);
             dmnState->nRegisteredHeight = nHeight;
-            if (proTx.addr == CService()) {
+            if (proTx.addr.IsEmpty()) {
                 // start in banned pdmnState as we need to wait for a ProUpServTx
                 dmnState->BanIfNotBanned(nHeight);
             }
@@ -1204,28 +1204,17 @@ void CDeterministicMNManager::CleanupCache(int nHeight)
 template <typename ProTx>
 static bool CheckService(const ProTx& proTx, TxValidationState& state)
 {
-    if (!proTx.addr.IsValid()) {
+    switch (proTx.addr.Validate()) {
+    case MnNetStatus::BadInput:
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-ipaddr");
-    }
-    if (Params().RequireRoutableExternalIP() && !proTx.addr.IsRoutable()) {
-        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-ipaddr");
-    }
-
-    // TODO: use real args here
-    static int mainnetDefaultPort = CreateChainParams(ArgsManager{}, CBaseChainParams::MAIN)->GetDefaultPort();
-    if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
-        if (proTx.addr.GetPort() != mainnetDefaultPort) {
-            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-ipaddr-port");
-        }
-    } else if (proTx.addr.GetPort() == mainnetDefaultPort) {
+    case MnNetStatus::BadPort:
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-ipaddr-port");
-    }
-
-    if (!proTx.addr.IsIPv4()) {
-        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-ipaddr");
-    }
-
-    return true;
+    case MnNetStatus::Success:
+        return true;
+    case MnNetStatus::Duplicate: /* Shouldn't be possible for a self-check */
+    case MnNetStatus::NotFound:  /* Shouldn't be possible for a self-check */
+        assert(false);
+    }  // no default case, so the compiler can warn about missing cases
 }
 
 template <typename ProTx>
@@ -1261,8 +1250,8 @@ static bool CheckPlatformFields(const ProTx& proTx, TxValidationState& state)
     }
 
     if (proTx.platformP2PPort == proTx.platformHTTPPort ||
-        proTx.platformP2PPort == proTx.addr.GetPort() ||
-        proTx.platformHTTPPort == proTx.addr.GetPort()) {
+        proTx.platformP2PPort == proTx.addr.GetPrimaryService().GetPort() ||
+        proTx.platformHTTPPort == proTx.addr.GetPrimaryService().GetPort()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-platform-dup-ports");
     }
 
@@ -1327,7 +1316,7 @@ bool CheckProRegTx(CDeterministicMNManager& dmnman, const CTransaction& tx, gsl:
 
     // It's allowed to set addr to 0, which will put the MN into PoSe-banned state and require a ProUpServTx to be issues later
     // If any of both is set, it must be valid however
-    if (opt_ptx->addr != CService() && !CheckService(*opt_ptx, state)) {
+    if (!opt_ptx->addr.IsEmpty() && !CheckService(*opt_ptx, state)) {
         // pass the state returned by the function above
         return false;
     }

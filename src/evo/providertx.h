@@ -6,6 +6,7 @@
 #define BITCOIN_EVO_PROVIDERTX_H
 
 #include <bls/bls.h>
+#include <evo/legacy.h>
 #include <evo/specialtx.h>
 #include <primitives/transaction.h>
 
@@ -35,7 +36,7 @@ public:
     MnType nType{MnType::Regular};
     uint16_t nMode{0};                                     // only 0 supported for now
     COutPoint collateralOutpoint{uint256(), (uint32_t)-1}; // if hash is null, we refer to a ProRegTx output
-    CService addr;
+    OldMnNetInfo addr;
     uint160 platformNodeID{};
     uint16_t platformP2PPort{0};
     uint16_t platformHTTPPort{0};
@@ -94,7 +95,7 @@ public:
         obj.pushKV("type", ToUnderlying(nType));
         obj.pushKV("collateralHash", collateralOutpoint.hash.ToString());
         obj.pushKV("collateralIndex", (int)collateralOutpoint.n);
-        obj.pushKV("service", addr.ToStringAddrPort());
+        obj.pushKV("service", addr.GetPrimaryService().ToStringAddrPort());
         obj.pushKV("ownerAddress", EncodeDestination(PKHash(keyIDOwner)));
         obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
 
@@ -130,7 +131,7 @@ public:
     uint16_t nVersion{LEGACY_BLS_VERSION}; // message version
     MnType nType{MnType::Regular};
     uint256 proTxHash;
-    CService addr;
+    OldMnNetInfo addr;
     uint160 platformNodeID{};
     uint16_t platformP2PPort{0};
     uint16_t platformHTTPPort{0};
@@ -179,7 +180,7 @@ public:
         obj.pushKV("version", nVersion);
         obj.pushKV("type", ToUnderlying(nType));
         obj.pushKV("proTxHash", proTxHash.ToString());
-        obj.pushKV("service", addr.ToStringAddrPort());
+        obj.pushKV("service", addr.GetPrimaryService().ToStringAddrPort());
         if (CTxDestination dest; ExtractDestination(scriptOperatorPayout, dest)) {
             obj.pushKV("operatorPayoutAddress", EncodeDestination(dest));
         }

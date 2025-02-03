@@ -51,7 +51,7 @@ public:
     CKeyID keyIDOwner;
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
-    CService addr;
+    OldMnNetInfo addr;
     CScript scriptPayout;
     CScript scriptOperatorPayout;
 
@@ -109,7 +109,7 @@ public:
     {
         nVersion = CProRegTx::LEGACY_BLS_VERSION;
         pubKeyOperator = CBLSLazyPublicKey();
-        addr = CService();
+        addr.Clear();
         scriptOperatorPayout = CScript();
         nRevocationReason = CProUpRevTx::REASON_NOT_SPECIFIED;
         platformNodeID = uint160();

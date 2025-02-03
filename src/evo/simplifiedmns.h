@@ -7,6 +7,7 @@
 
 #include <bls/bls.h>
 #include <evo/dmn_types.h>
+#include <evo/legacy.h>
 #include <merkleblock.h>
 #include <netaddress.h>
 #include <pubkey.h>
@@ -19,6 +20,7 @@ class CDeterministicMN;
 class CDeterministicMNList;
 class CDeterministicMNManager;
 class ChainstateManager;
+class OldMnNetInfo;
 
 extern RecursiveMutex cs_main;
 
@@ -36,7 +38,7 @@ public:
 
     uint256 proRegTxHash;
     uint256 confirmedHash;
-    CService service;
+    OldMnNetInfo addr;
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
     bool isValid{false};
@@ -54,7 +56,7 @@ public:
     {
         return proRegTxHash == rhs.proRegTxHash &&
                confirmedHash == rhs.confirmedHash &&
-               service == rhs.service &&
+               addr == rhs.addr &&
                pubKeyOperator == rhs.pubKeyOperator &&
                keyIDVoting == rhs.keyIDVoting &&
                isValid == rhs.isValid &&
@@ -77,7 +79,7 @@ public:
         READWRITE(
                 obj.proRegTxHash,
                 obj.confirmedHash,
-                obj.service,
+                obj.addr,
                 CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == LEGACY_BLS_VERSION)),
                 obj.keyIDVoting,
                 obj.isValid
