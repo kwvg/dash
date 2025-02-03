@@ -5,28 +5,15 @@
 #ifndef BITCOIN_EVO_LEGACY_H
 #define BITCOIN_EVO_LEGACY_H
 
+#include <evo/common.h>
 #include <netaddress.h>
 #include <serialize.h>
 
-#include <cstdint>
 #include <optional>
 
 class CService;
 
 class UniValue;
-
-enum MnNetStatus : uint8_t
-{
-    // Adding entries
-    Duplicate,
-    BadInput,
-    BadPort,
-
-    // Removing entries
-    NotFound,
-
-    Success
-};
 
 class OldMnNetInfo
 {
