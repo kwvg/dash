@@ -24,7 +24,7 @@ BOOST_AUTO_TEST_CASE(simplifiedmns_merkleroots)
 
         std::string ip = strprintf("%d.%d.%d.%d", 0, 0, 0, i);
         if (auto service = Lookup(ip, i, false); service.has_value()) {
-            BOOST_CHECK_EQUAL(smle.addr.AddEntry(service.value()), MnNetStatus::Success);
+            BOOST_CHECK_EQUAL(smle.addr.AddEntry(Purpose::CORE_P2P, service.value()), MnNetStatus::Success);
         } else {
             BOOST_REQUIRE(false);
         }

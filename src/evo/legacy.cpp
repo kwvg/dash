@@ -43,8 +43,15 @@ MnNetStatus OldMnNetInfo::ValidateService(CService service)
     return MnNetStatus::Success;
 }
 
-MnNetStatus OldMnNetInfo::AddEntry(CService service)
+MnNetStatus OldMnNetInfo::AddEntry(Purpose purpose, CService service)
 {
+    // Legacy format doesn't support anything other than storing Core P2P
+    // addresses, so the maximum entries for everything else is 0.
+    if (purpose != Purpose::CORE_P2P) {
+        return MnNetStatus::MaxLimit;
+    }
+
+    // Legacy format doesn't support multiple entries
     if (!IsEmpty()) {
         return MnNetStatus::Duplicate;
     }
@@ -55,10 +62,10 @@ MnNetStatus OldMnNetInfo::AddEntry(CService service)
     return ret;
 }
 
+// Implemented because interface assumes support for multiple entries.
 MnNetStatus OldMnNetInfo::RemoveEntry(CService service)
 {
     if (!IsEmpty() || service == CService()) {
-        // Should probably use Clear() if we want a full reset
         return MnNetStatus::NotFound;
     }
     if (service != addr) {
@@ -69,6 +76,9 @@ MnNetStatus OldMnNetInfo::RemoveEntry(CService service)
     return MnNetStatus::Success;
 }
 
+// The "primary" service is the service mandatory on all masternodes regardless of
+// type. In legacy format, that's the *only* address but in the extended format, it
+// will be the first entry of type CORE_P2P.
 const CService& OldMnNetInfo::GetPrimaryService() const
 {
     return addr;
@@ -120,5 +130,8 @@ std::string OldMnNetInfo::ToString() const
 {
     // There's some extra padding to account for padding on the first line done by the calling function.
     return strprintf("MnNetInfo()\n"
-                     "    CService(ip=%s, port=%u)\n", addr.ToStringAddr(), addr.GetPort());
+    // We're faking support for multiple purposes so that the ToString formatting remains more-or-less
+    // consistent when we switch over to the extended format.
+                     "    NetInfo(purpose=CORE_P2P)\n"
+                     "      CService(ip=%s, port=%u)\n", addr.ToStringAddr(), addr.GetPort());
 }

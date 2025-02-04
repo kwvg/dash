@@ -1212,6 +1212,7 @@ static bool CheckService(const ProTx& proTx, TxValidationState& state)
     case MnNetStatus::Success:
         return true;
     case MnNetStatus::Duplicate: /* Shouldn't be possible for a self-check */
+    case MnNetStatus::MaxLimit:  /* Shouldn't be possible for a self-check */
     case MnNetStatus::NotFound:  /* Shouldn't be possible for a self-check */
         assert(false);
     }  // no default case, so the compiler can warn about missing cases

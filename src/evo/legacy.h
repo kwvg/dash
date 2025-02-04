@@ -36,7 +36,7 @@ public:
         READWRITE(obj.addr);
     }
 
-    MnNetStatus AddEntry(CService service);
+    MnNetStatus AddEntry(Purpose purpose, CService service);
     MnNetStatus RemoveEntry(CService service);
 
     const CService& GetPrimaryService() const;
