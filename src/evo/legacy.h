@@ -15,7 +15,7 @@ class CService;
 
 class UniValue;
 
-class OldMnNetInfo
+class OldMnNetInfo : public interface::MnNetInfo
 {
 public:
     CService addr;
@@ -36,18 +36,18 @@ public:
         READWRITE(obj.addr);
     }
 
-    MnNetStatus AddEntry(Purpose purpose, CService service);
-    MnNetStatus RemoveEntry(CService service);
+    MnNetStatus AddEntry(Purpose purpose, CService service) override;
+    MnNetStatus RemoveEntry(CService service) override;
 
-    const CService& GetPrimaryService() const;
-    std::vector<uint8_t> GetKey() const;
+    const CService& GetPrimaryService() const override;
+    std::vector<uint8_t> GetKey() const override;
 
-    bool IsEmpty() const;
-    MnNetStatus Validate() const;
-    void Clear();
+    bool IsEmpty() const override;
+    MnNetStatus Validate() const override;
+    void Clear() override;
 
-    UniValue ToJson() const;
-    std::string ToString() const;
+    UniValue ToJson() const override;
+    std::string ToString() const override;
 };
 
 #endif // BITCOIN_EVO_LEGACY_H
