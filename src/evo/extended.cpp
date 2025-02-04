@@ -43,6 +43,14 @@ bool HasBadTLD(const std::string& str) {
     }
     return false;
 }
+bool IsAllowedPort(uint16_t port) {
+    switch (port) {
+    case 80:
+    case 443:
+        return true;
+    }
+    return false;
+}
 } // anonymous namespace
 
 static constexpr std::string_view SAFE_CHARS_RFC1035{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-"};
@@ -92,7 +100,7 @@ std::optional<std::string> MnNetInfo::NetInfo::ValidateNetAddr(const uint8_t& ty
     if (!input.IsValid()) {
         return "invalid address";
     }
-    if (IsBadPort(port)) {
+    if (IsBadPort(port) || port == 0) {
         return "bad port";
     }
     if (input.IsLocal()) {
@@ -106,7 +114,7 @@ std::optional<std::string> MnNetInfo::NetInfo::ValidateNetAddr(const uint8_t& ty
 
 std::optional<std::string> MnNetInfo::NetInfo::ValidateStrAddr(const uint8_t& type, const std::string& input, const uint16_t& port)
 {
-    if (IsBadPort(port) && port != 80 && port != 443) {
+    if ((IsBadPort(port) && !IsAllowedPort(port)) || port == 0) {
         return "bad port";
     }
     if (input.length() > 253 || input.length() < 4) {

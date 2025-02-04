@@ -92,6 +92,8 @@ BOOST_FIXTURE_TEST_CASE(extended_mninfo_tests, RegTestingSetup)
 
         // we don't allow ports <1024
         check_bad_domain_and_port("bad port", "uwu", /*port=*/1);
+        // port 0 is not on the bad ports list but is still disallowed
+        check_bad_domain_and_port("bad port", "uwu", /*port=*/0);
 
         // test domain validation with bad domain names
         for (const auto& [expected_err, domain_str] : bad_domains) {
