@@ -4,6 +4,7 @@
 
 #include <evo/extended.h>
 
+#include <chainparams.h>
 #include <netbase.h>
 #include <protocol.h>
 #include <util/check.h>
@@ -81,70 +82,70 @@ bool MnNetInfo::NetInfo::operator==(const NetInfo& rhs) {
     }, addr, rhs.addr);
 }
 
-std::optional<std::string> MnNetInfo::NetInfo::Validate()
+MnNetStatus MnNetInfo::NetInfo::Validate()
 {
-    return std::visit([this](auto&& input) -> std::optional<std::string> {
+    return std::visit([this](auto&& input) -> MnNetStatus {
         using T1 = std::decay_t<decltype(input)>;
         if constexpr (std::is_same_v<T1, CNetAddr>) {
             return ValidateNetAddr(type, input, port);
         } else if constexpr (std::is_same_v<T1, std::string>) {
             return ValidateStrAddr(type, input, port);
         } else {
-            return "empty object, nothing to validate";
+            return MnNetStatus::GenericError;
         }
     }, addr);
 }
 
-std::optional<std::string> MnNetInfo::NetInfo::ValidateNetAddr(const uint8_t& type, const CNetAddr& input, const uint16_t& port)
+MnNetStatus MnNetInfo::NetInfo::ValidateNetAddr(const uint8_t& type, const CNetAddr& input, const uint16_t& port)
 {
     if (!input.IsValid()) {
-        return "invalid address";
+        return MnNetStatus::BadInput;
     }
-    if (IsBadPort(port) || port == 0) {
-        return "bad port";
-    }
-    if (input.IsLocal()) {
-        return "disallowed address, provided local address";
+    if (Params().RequireRoutableExternalIP() && !input.IsRoutable()) {
+        return MnNetStatus::BadInput;
     }
     if (type == CNetAddr::BIP155Network::TORV2) {
-        return "disallowed type, TorV2 deprecated";
+        return MnNetStatus::BadInput; // TorV2 deprecated
     }
-    return std::nullopt;
+    if (IsBadPort(port) || port == 0) {
+        return MnNetStatus::BadPort;
+    }
+    return MnNetStatus::Success;
 }
 
-std::optional<std::string> MnNetInfo::NetInfo::ValidateStrAddr(const uint8_t& type, const std::string& input, const uint16_t& port)
+MnNetStatus MnNetInfo::NetInfo::ValidateStrAddr(const uint8_t& type, const std::string& input, const uint16_t& port)
 {
     if ((IsBadPort(port) && !IsAllowedPort(port)) || port == 0) {
-        return "bad port";
+        return MnNetStatus::BadPort;
     }
     if (input.length() > 253 || input.length() < 4) {
-        return "bad domain length";
+        return MnNetStatus::BadInput; // bad domain length
     }
     bool is_dotted;
     for (char c : input) {
         if (SAFE_CHARS_RFC1035.find(c) == std::string::npos) {
-            return "prohibited domain character";
+            return MnNetStatus::BadInput; // prohibited domain character
         }
     }
     if (input.at(0) == '.' || input.at(input.length() - 1) == '.') {
-        return "prohibited domain character position";
+        return MnNetStatus::BadInput; // prohibited domain character position
     }
     std::vector<std::string> labels{SplitString(input, '.')};
     if (labels.size() < 2) {
-        return "prohibited dotless";
+        return MnNetStatus::BadInput; // prohibited dotless
     }
     if (HasBadTLD(input)) {
-        return "prohibited tld";
+        return MnNetStatus::BadInput; // prohibited tld
     }
     for (const auto& label : labels) {
         if (label.empty() || label.length() > 63) {
-            return "bad label length";
+            return MnNetStatus::BadInput; // bad label length
         }
         if (label.at(0) == '-' or label.at(label.length() - 1) == '-') {
-            return "prohibited label character position";
+            return MnNetStatus::BadInput; // prohibited label character position
         }
     }
-    return std::nullopt;
+    return MnNetStatus::Success;
 }
 
 std::vector<MnNetInfo::NetInfo>& MnNetInfo::GetOrAddEntries(Purpose purpose) {
@@ -158,59 +159,61 @@ std::vector<MnNetInfo::NetInfo>& MnNetInfo::GetOrAddEntries(Purpose purpose) {
     return it->second;
 }
 
-std::optional<std::string> MnNetInfo::AddEntry(Purpose purpose, CService service)
+MnNetStatus MnNetInfo::AddEntry(Purpose purpose, CService service)
 {
     const auto opt_type = GetBIP155Service(service);
     if (!opt_type.has_value()) {
-        return "disallowed address, cannot determine BIP155 type";
+        return MnNetStatus::BadInput; // cannot determine BIP155 type
     }
 
     NetInfo candidate{opt_type.value(), service};
-    if (auto err_str = candidate.Validate(); err_str.has_value()) {
-        return err_str.value();
+    if (auto ret = candidate.Validate(); ret != MnNetStatus::Success) {
+        return ret;
     }
 
     auto& entries{GetOrAddEntries(purpose)};
     if (std::find(entries.begin(), entries.end(), candidate) != entries.end()) {
-        return "duplicate entry";
+        return MnNetStatus::Duplicate;
     }
 
     if (entries.size() > MNADDR_ENTRIES_LIMIT) {
-        return "too many entries";
+        return MnNetStatus::MaxLimit;
     }
 
     entries.push_back(candidate);
-    return std::nullopt;
+    return MnNetStatus::Success;
 }
 
 // TODO: Find a way to share code with CService overload, it's like 2/3rd overlapping
-std::optional<std::string> MnNetInfo::AddEntry(Purpose purpose, std::string addr, uint16_t port)
+MnNetStatus MnNetInfo::AddEntry(Purpose purpose, DomainPort service)
 {
+    const auto& [addr, port] = service;
+
     if (purpose != Purpose::PLATFORM_API) {
-        return "domains allowed only for platform api";
+        return MnNetStatus::BadInput; // domains allowed only for platform api
     }
 
     NetInfo candidate{Extensions::DOMAINS, addr, port};
-    if (auto err_str = candidate.Validate(); err_str.has_value()) {
-        return err_str.value();
+    if (auto ret = candidate.Validate(); ret != MnNetStatus::Success) {
+        return ret;
     }
 
     auto& entries{GetOrAddEntries(purpose)};
     // i want to use std::set so we can skip having to check for duplicates
     // but serialization code is unhappy if i do that
     if (std::find(entries.begin(), entries.end(), candidate) != entries.end()) {
-        return "duplicate entry";
+        return MnNetStatus::Duplicate;
     }
 
     if (entries.size() > MNADDR_ENTRIES_LIMIT) {
-        return "too many entries";
+        return MnNetStatus::MaxLimit;
     }
 
     entries.push_back(candidate);
-    return std::nullopt;
+    return MnNetStatus::Success;
 }
 
-std::optional<std::string> MnNetInfo::RemoveEntry(CService service)
+MnNetStatus MnNetInfo::RemoveEntry(CService service)
 {
     for (auto& [purpose, entries] : data) {
         auto past_size{entries.size()};
@@ -220,62 +223,62 @@ std::optional<std::string> MnNetInfo::RemoveEntry(CService service)
         }));
         // it's okay to not go through every set of purposes because they should all be unique anyway
         // TODO: enforce this
-        if (entries.size() > past_size) return std::nullopt;
+        if (entries.size() > past_size) return MnNetStatus::Success;
     }
-    return "unable to find entry";
+    return MnNetStatus::NotFound;
 }
 
-std::optional<std::string> MnNetInfo::RemoveEntry(DomainPort addr)
+MnNetStatus MnNetInfo::RemoveEntry(DomainPort service)
 {
     for (auto& [purpose, entries] : data) {
         auto past_size{entries.size()};
-        entries.erase(std::remove_if(entries.begin(), entries.end(), [&addr](auto input) -> bool {
+        entries.erase(std::remove_if(entries.begin(), entries.end(), [&service](auto input) -> bool {
             auto _input{input.GetDomainPort()}; // <--- only thing that differentiates it from RemoveEntry(CService)
-            return _input.has_value() && _input.value() == addr;
+            return _input.has_value() && _input.value() == service;
         }));
-        if (entries.size() > past_size) return std::nullopt;
+        if (entries.size() > past_size) return MnNetStatus::Success;
     }
-    return "unable to find entry";
+    return MnNetStatus::NotFound;
 }
 
-const std::optional<std::vector<CService>> MnNetInfo::GetAddrPorts(Purpose purpose) const
+const std::vector<CService> MnNetInfo::GetAddrPorts(Purpose purpose) const
 {
+    std::vector<CService> ret{};
+
     // TODO: less ugly way to do it?
     const std::vector<MnNetInfo::NetInfo>* entries_ptr{nullptr};
     for (auto& [_purpose, _entry] : data) {
         if (_purpose != purpose) continue;
         entries_ptr = &_entry; break;
     }
-    if (entries_ptr == nullptr) return std::nullopt;
+    if (entries_ptr == nullptr) return ret;
 
-    std::vector<CService> ret{};
     for (const auto& entry : *entries_ptr) {
         if (auto service = entry.GetCService(); service.has_value()) {
             ret.push_back(service.value());
         }
     }
-    if (ret.empty()) return std::nullopt;
 
     return ret;
 }
 
-const std::optional<std::vector<DomainPort>> MnNetInfo::GetDomainPorts(Purpose purpose) const
+const std::vector<DomainPort> MnNetInfo::GetDomainPorts(Purpose purpose) const
 {
+    std::vector<DomainPort> ret{};
+
     // TODO: less ugly way to do it?
     const std::vector<MnNetInfo::NetInfo>* entries_ptr{nullptr};
     for (auto& [_purpose, _entry] : data) {
         if (_purpose != purpose) continue;
         entries_ptr = &_entry; break;
     }
-    if (entries_ptr == nullptr) return std::nullopt;
+    if (entries_ptr == nullptr) return ret;
 
-    std::vector<DomainPort> ret{};
     for (const auto& entry : *entries_ptr) {
         if (auto service = entry.GetDomainPort(); service.has_value()) {
             ret.push_back(service.value());
         }
     }
-    if (ret.empty()) return std::nullopt;
 
     return ret;
 }

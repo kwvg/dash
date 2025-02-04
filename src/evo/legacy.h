@@ -36,7 +36,9 @@ public:
         READWRITE(obj.addr);
     }
 
+    MnNetStatus AddEntry(Purpose purpose, DomainPort service) override;
     MnNetStatus AddEntry(Purpose purpose, CService service) override;
+    MnNetStatus RemoveEntry(DomainPort service) override;
     MnNetStatus RemoveEntry(CService service) override;
 
     const CService& GetPrimaryService() const override;

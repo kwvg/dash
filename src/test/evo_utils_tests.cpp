@@ -53,66 +53,60 @@ BOOST_FIXTURE_TEST_CASE(extended_mninfo_tests, RegTestingSetup)
         MnNetInfo networkInfo;
 
         // Check domain validation works as expected
-        auto check_bad_domain_and_port = [&networkInfo](std::string expected_err, std::string domain, uint16_t port) -> void {
-            auto err_opt{networkInfo.AddEntry(Purpose::PLATFORM_API, domain, port)};
-            BOOST_CHECK(err_opt.has_value());
-            BOOST_CHECK_EQUAL(err_opt.value(), expected_err);
+        auto check_bad_domain_and_port = [&networkInfo](MnNetStatus expected_err, std::string domain, uint16_t port) -> void {
+            auto ret_code{networkInfo.AddEntry(Purpose::PLATFORM_API, {domain, port})};
+            BOOST_CHECK_EQUAL(ret_code, expected_err);
         };
-        const std::vector<std::pair</*expected_err=*/std::string, /*domain_str=*/std::string>> bad_domains{
+        const std::vector</*domain_str=*/std::string> bad_domains{
             // 3 (characters in domain) < 4 (minimum length)
-            { "bad domain length", "uwu" },
+            "uwu",
             // no dotless allowed
-            { "prohibited dotless", "meow" },
+            "meow",
             // no empty label (trailing delimiter)
-            { "prohibited domain character position", "cat." },
+            "cat.",
             // no empty label (leading delimiter)
-            { "prohibited domain character position", ".cat" },
+            ".cat",
             // no empty label (extra delimiters)
-            { "bad label length", "a..dot..a" },
+            "a..dot..a",
             // no empty label (leading delimiter, but also bad TLD), should catch empty label first
-            { "prohibited domain character position", ".lan" },
+            ".lan",
             // ' is not a valid character in domains
-            { "prohibited domain character", "meow's macbook pro.local" },
+            "meow's macbook pro.local",
             // .local is not allowed, bad TLD
-            { "prohibited tld", "meows-macbook-pro.local" },
+            "meows-macbook-pro.local",
             // $*@?# are not valid characters in domains
-            { "prohibited domain character", "meow.go.8irfhj94w$*H@??#493#@" },
+            "meow.go.8irfhj94w$*H@??#493#@",
             // trailing hyphens are not allowed
-            { "prohibited label character position", "-w-.me.ow" },
+            "-w-.me.ow",
             // 64 (characters in label) > 63 (maximum limit)
-            { "bad label length",
-            "yeowwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwch.ow.ie" },
+            "yeowwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwch.ow.ie",
             // 306 (characters in domain) > 253 (maximum limit)
-            {"bad domain length",
             "CatnipandsomeotherspeciesinthegenusNepetaisknownforitseffectsoncatbehaviourCatsrub"
             "ontheplantrollonthegroundpawatitlickitandchewitSomeleapaboutandpurrsomecryoutCatsdoit"
             "foraboutfivetofifteenminutesafterwhicholfactoryfatigueusuallysetsinThenepetalactone"
-            "incatnipactsasafelineattractantafteritentersthecatsno.se" }
+            "incatnipactsasafelineattractantafteritentersthecatsno.se"
         };
 
         // we don't allow ports <1024
-        check_bad_domain_and_port("bad port", "uwu", /*port=*/1);
+        check_bad_domain_and_port(MnNetStatus::BadPort, "uwu", /*port=*/1);
         // port 0 is not on the bad ports list but is still disallowed
-        check_bad_domain_and_port("bad port", "uwu", /*port=*/0);
+        check_bad_domain_and_port(MnNetStatus::BadPort, "uwu", /*port=*/0);
 
         // test domain validation with bad domain names
-        for (const auto& [expected_err, domain_str] : bad_domains) {
-            check_bad_domain_and_port(expected_err, domain_str, /*port=*/25555);
+        for (const auto& domain_str : bad_domains) {
+            check_bad_domain_and_port(MnNetStatus::BadInput, domain_str, /*port=*/25555);
         }
 
         auto check_good_domain_and_port = [&networkInfo](std::string domain, uint16_t port) {
-            BOOST_CHECK(!networkInfo.AddEntry(Purpose::PLATFORM_API, domain, port).has_value());
-            // Make sure that we don't get an empty entries list after inserting a new entry
-            auto domains_opt{networkInfo.GetDomainPorts(Purpose::PLATFORM_API)};
-            BOOST_CHECK(domains_opt.has_value());
-            // Make sure we're in that list
-            auto domains{domains_opt.value()};
             DomainPort dp{domain, port};
-            BOOST_CHECK(std::find(domains.begin(), domains.end(), dp) != domains.end());
+            auto ret_code{networkInfo.AddEntry(Purpose::PLATFORM_API, dp)};
+            BOOST_CHECK_EQUAL(ret_code, MnNetStatus::Success);
+            // Make sure that we don't get an empty entries list after inserting a new entry
+            auto domains{networkInfo.GetDomainPorts(Purpose::PLATFORM_API)};
+            BOOST_CHECK(!domains.empty());
             // Make sure we can't add ourselves again
-            auto err_opt{networkInfo.AddEntry(Purpose::PLATFORM_API, domain, port)};
-            BOOST_CHECK(err_opt.has_value());
-            BOOST_CHECK_EQUAL(err_opt.value(), "duplicate entry");
+            auto err_code{networkInfo.AddEntry(Purpose::PLATFORM_API, dp)};
+            BOOST_CHECK_EQUAL(err_code, MnNetStatus::Duplicate);
         };
 
         const std::vector<DomainPort> good_domains {
@@ -137,13 +131,13 @@ BOOST_FIXTURE_TEST_CASE(extended_mninfo_tests, RegTestingSetup)
         // Populate maximum entries
         uint16_t port{9999}; // We need to increment the port so that we don't get told off for duplicate entries
         for (size_t idx = 0; idx <= MNADDR_ENTRIES_LIMIT; idx++) {
-            BOOST_CHECK(!networkInfo.AddEntry(Purpose::CORE_P2P, CService{netaddr, port}).has_value());
+            BOOST_CHECK_EQUAL(networkInfo.AddEntry(Purpose::CORE_P2P, CService{netaddr, port}), MnNetStatus::Success);
             port++;
         }
         // Going over the limit is disallowed
-        BOOST_CHECK_EQUAL(networkInfo.AddEntry(Purpose::CORE_P2P, CService{netaddr, port}).value(), "too many entries");
+        BOOST_CHECK_EQUAL(networkInfo.AddEntry(Purpose::CORE_P2P, CService{netaddr, port}), MnNetStatus::MaxLimit);
         // The limit doesn't carry over to another purpose's entry list
-        BOOST_CHECK(!networkInfo.AddEntry(Purpose::PLATFORM_P2P, CService{netaddr, port}).has_value());
+        BOOST_CHECK_EQUAL(networkInfo.AddEntry(Purpose::PLATFORM_P2P, CService{netaddr, port}), MnNetStatus::Success);
     } // end service tests
 
 }

@@ -18,13 +18,15 @@ enum MnNetStatus : uint8_t
 {
     // Adding entries
     Duplicate,
-    BadInput,
-    BadPort,
     MaxLimit,
 
     // Removing entries
     NotFound,
 
+    // Validation
+    GenericError,
+    BadInput,
+    BadPort,
     Success
 };
 
@@ -40,6 +42,8 @@ enum class Purpose : uint8_t
 };
 template<> struct is_serializable_enum<Purpose> : std::true_type {};
 
+using DomainPort = std::pair<std::string, uint16_t>;
+
 namespace interface {
 // Interface shared between OldMnNetInfo and MnNetInfo
 // !!! Remember to define the operators ==, != and < as well !!!
@@ -47,9 +51,11 @@ class MnNetInfo
 {
 public:
     //! Validates and adds entry to list
+    virtual MnNetStatus AddEntry(Purpose purpose, DomainPort service) = 0;
     virtual MnNetStatus AddEntry(Purpose purpose, CService service) = 0;
 
     //! Validates and removes entry from list, we don't need purpose as we shouldn't allow duplicates
+    virtual MnNetStatus RemoveEntry(DomainPort service) = 0;
     virtual MnNetStatus RemoveEntry(CService service) = 0;
 
     //! Returns first entry of purpose CORE_P2P

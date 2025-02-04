@@ -43,6 +43,12 @@ MnNetStatus OldMnNetInfo::ValidateService(CService service)
     return MnNetStatus::Success;
 }
 
+// Domain names aren't supported in legacy format
+MnNetStatus OldMnNetInfo::AddEntry(Purpose purpose, DomainPort service)
+{
+    return MnNetStatus::MaxLimit;
+}
+
 MnNetStatus OldMnNetInfo::AddEntry(Purpose purpose, CService service)
 {
     // Legacy format doesn't support anything other than storing Core P2P
@@ -60,6 +66,12 @@ MnNetStatus OldMnNetInfo::AddEntry(Purpose purpose, CService service)
     if (ret != MnNetStatus::Success) return ret;
     addr = service;
     return ret;
+}
+
+// Domain names aren't supported in legacy format
+MnNetStatus OldMnNetInfo::RemoveEntry(DomainPort service)
+{
+    return MnNetStatus::NotFound;
 }
 
 // Implemented because interface assumes support for multiple entries.

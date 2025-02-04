@@ -1206,6 +1206,8 @@ static bool CheckService(const ProTx& proTx, TxValidationState& state)
 {
     switch (proTx.addr.Validate()) {
     case MnNetStatus::BadInput:
+    case MnNetStatus::GenericError: /* TODO: Reconsider this. We don't get GenericError
+                                             until something's gone horribly wrong */
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-ipaddr");
     case MnNetStatus::BadPort:
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-ipaddr-port");

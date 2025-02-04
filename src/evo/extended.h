@@ -28,8 +28,6 @@ enum class Extensions : uint8_t
 };
 template<> struct is_serializable_enum<Extensions> : std::true_type {};
 
-using DomainPort = std::pair<std::string, uint16_t>;
-
 class MnNetInfo
 {
 private:
@@ -48,9 +46,9 @@ private:
         friend class MnNetInfo;
 
         // Used in Validate()
-        static std::optional<std::string> ValidateNetAddr(const uint8_t& type, const CNetAddr& input, const uint16_t& port);
+        static MnNetStatus ValidateNetAddr(const uint8_t& type, const CNetAddr& input, const uint16_t& port);
         // Used in Validate()
-        static std::optional<std::string> ValidateStrAddr(const uint8_t& type, const std::string& input, const uint16_t& port);
+        static MnNetStatus ValidateStrAddr(const uint8_t& type, const std::string& input, const uint16_t& port);
 
         // Used in RemoveEntry()
         std::optional<CService> GetCService() const;
@@ -130,7 +128,7 @@ private:
         }
 
         // Dispatch function to Validate{Net,Str}Addr()
-        std::optional<std::string> Validate();
+        MnNetStatus Validate();
     };
 
 private:
@@ -149,13 +147,14 @@ public:
     ~MnNetInfo() = default;
 
     // Add or remove entry from set of entries
-    std::optional<std::string> AddEntry(Purpose purpose, CService service);
-    std::optional<std::string> AddEntry(Purpose purpose, std::string addr, uint16_t port);
-    std::optional<std::string> RemoveEntry(CService service);
-    std::optional<std::string> RemoveEntry(DomainPort addr);
+    MnNetStatus AddEntry(Purpose purpose, CService service);
+    MnNetStatus AddEntry(Purpose purpose, DomainPort service);
+    MnNetStatus RemoveEntry(CService service);
+    MnNetStatus RemoveEntry(DomainPort service);
 
-    const std::optional<std::vector<CService>> GetAddrPorts(Purpose purpose) const;
-    const std::optional<std::vector<DomainPort>> GetDomainPorts(Purpose purpose) const;
+    // Used in tests
+    const std::vector<CService> GetAddrPorts(Purpose purpose) const;
+    const std::vector<DomainPort> GetDomainPorts(Purpose purpose) const;
 
     SERIALIZE_METHODS(MnNetInfo, obj)
     {
