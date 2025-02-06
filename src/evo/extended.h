@@ -17,6 +17,8 @@
 class CDeterministicMNManager;
 class CService;
 
+class UniValue;
+
 static constexpr uint8_t MNADDR_ENTRIES_LIMIT{32};
 
 // All extensions should start with 0xDn where n is your extension number to avoid
@@ -129,6 +131,10 @@ private:
 
         // Dispatch function to Validate{Net,Str}Addr()
         MnNetStatus Validate();
+        // For debug logs
+        std::string ToString() const;
+        // For RPCs
+        std::string ToStringAddrPort() const;
     };
 
 private:
@@ -161,6 +167,9 @@ public:
         READWRITE(obj.version);
         READWRITE(obj.data);
     }
+
+    UniValue ToJson() const;
+    std::string ToString() const;
 };
 
 #endif // BITCOIN_EVO_EXTENDED_H

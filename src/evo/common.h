@@ -42,6 +42,8 @@ enum class Purpose : uint8_t
 };
 template<> struct is_serializable_enum<Purpose> : std::true_type {};
 
+std::string PurposeToString(Purpose purpose);
+
 using DomainPort = std::pair<std::string, uint16_t>;
 
 namespace interface {

@@ -11,6 +11,8 @@
 #include <util/strencodings.h>
 #include <version.h>
 
+#include <univalue.h>
+
 #include <vector>
 
 // This doesn't do anything for now but should help us evaluate the kind of interface needed so we can
@@ -92,6 +94,35 @@ MnNetStatus MnNetInfo::NetInfo::Validate()
             return ValidateStrAddr(type, input, port);
         } else {
             return MnNetStatus::GenericError;
+        }
+    }, addr);
+}
+
+std::string MnNetInfo::NetInfo::ToString() const
+{
+    return std::visit([this](auto&& input) -> std::string {
+        using T1 = std::decay_t<decltype(input)>;
+        if constexpr (std::is_same_v<T1, CNetAddr>) {
+            return strprintf("CService(ip=%s, port=%u)", input.ToStringAddr(), port);
+        } else if constexpr (std::is_same_v<T1, std::string>) {
+            return strprintf("DomainPort(addr=%s, port=%u)", input, port);
+        } else {
+            return "";
+        }
+    }, addr);
+}
+
+std::string MnNetInfo::NetInfo::ToStringAddrPort() const
+{
+    return std::visit([this](auto&& input) -> std::string {
+        using T1 = std::decay_t<decltype(input)>;
+        if constexpr (std::is_same_v<T1, CNetAddr>) {
+            // Can't use ToStringAddrPort() since we use CNetAddr, not CService
+            return strprintf("%s:%u", input.ToStringAddr(), port);
+        } else if constexpr (std::is_same_v<T1, std::string>) {
+            return strprintf("%s:%u", input, port);
+        } else {
+            return "";
         }
     }, addr);
 }
@@ -280,6 +311,52 @@ const std::vector<DomainPort> MnNetInfo::GetDomainPorts(Purpose purpose) const
         }
     }
 
+    return ret;
+}
+
+UniValue MnNetInfo::ToJson() const
+{
+    const auto make_arr = [&](Purpose purpose) -> UniValue {
+        UniValue obj(UniValue::VARR);
+        if (const auto it = data.find(purpose); it != data.end()) {
+            ASSERT_IF_DEBUG(!it->second.empty()); // If key is present, value shouldn't be empty
+            for (const auto& entry : it->second) {
+                // TODO: Should we separate address and port?
+                obj.push_back(entry.ToStringAddrPort());
+            }
+        }
+        return obj;
+    };
+
+    UniValue ret(UniValue::VOBJ), core(UniValue::VOBJ), platform(UniValue::VOBJ);
+    if (auto obj = make_arr(Purpose::CORE_P2P); !obj.empty()) {
+        core.pushKV("p2p", obj);
+        ret.pushKV("core", core);
+    }
+    if (auto obj = make_arr(Purpose::PLATFORM_P2P); !obj.empty()) {
+        platform.pushKV("p2p", obj);
+    }
+    if (auto obj = make_arr(Purpose::PLATFORM_API); !obj.empty()) {
+        platform.pushKV("api", obj);
+    }
+    if (!platform.empty()) {
+        ret.pushKV("platform", platform);
+    }
+
+    return ret;
+}
+
+std::string MnNetInfo::ToString() const
+{
+    // There's some extra padding to account for padding on the first line done by the calling function.
+    std::string ret{"MnNetInfo()\n"};
+    for (const auto [purpose, p_entries] : data) {
+        ASSERT_IF_DEBUG(!p_entries.empty()); // If key is present, value shouldn't be empty
+        ret += strprintf("    NetInfo(purpose=%s)\n", PurposeToString(purpose));
+        for (const auto entry : p_entries) {
+            ret += strprintf("      %s\n", entry.ToString());
+        }
+    }
     return ret;
 }
 
