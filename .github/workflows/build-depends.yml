@@ -61,10 +61,10 @@ jobs:
           path: |
             depends/built
             depends/${{ steps.setup.outputs.HOST }}
-          key: depends-${{ inputs.build-target }}-${{ steps.setup.outputs.DEP_HASH }}-${{ hashFiles('contrib/containers/ci/Dockerfile', 'depends/packages/*') }}
+          key: depends-${{ hashFiles('contrib/containers/ci/Dockerfile', 'depends/packages/*') }}-${{ inputs.build-target }}-${{ steps.setup.outputs.DEP_HASH }}
           restore-keys: |
-            depends-${{ inputs.build-target }}-${{ hashFiles('contrib/containers/ci/Dockerfile', 'depends/packages/*') }}
-            depends-${{ inputs.build-target }}
+            depends-${{ hashFiles('contrib/containers/ci/Dockerfile', 'depends/packages/*') }}-${{ inputs.build-target }}-
+            depends-${{ hashFiles('contrib/containers/ci/Dockerfile', 'depends/packages/*') }}-
 
       - name: Build depends
         run: env ${{ steps.setup.outputs.DEP_OPTS }} HOST=${{ steps.setup.outputs.HOST }} make -j$(nproc) -C depends
