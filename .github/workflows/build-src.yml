@@ -15,11 +15,17 @@ on:
         description: "Key needed to access cached depends"
         required: true
         type: string
+    outputs:
+      key:
+        description: "Key needed for restoring build outputs"
+        value: ${{ jobs.build-src.outputs.key }}
 
 jobs:
   build-src:
     name: Build source
     runs-on: ubuntu-24.04
+    outputs:
+      key:  ${{ steps.bundle.outputs.key }}
     container:
       image: ${{ inputs.container-path }}
       options: --user root
@@ -81,12 +87,21 @@ jobs:
           ./ci/dash/test_unittests.sh
         shell: bash
 
-      - name: Bundle artifacts
+      - name: Bundle outputs and artifacts
         id: bundle
         run: |
           export BUILD_TARGET="${{ inputs.build-target }}"
+          ./ci/dash/bundle-output.sh create
           ARTIFACT_PATH="/output" ./ci/dash/bundle-build.sh
+          echo "key=build-$(head -c 512 /dev/urandom | sha256sum | head -c 64)" >> "${GITHUB_OUTPUT}"
           echo "short-sha=$(git rev-parse --short=8 HEAD)" >> "${GITHUB_OUTPUT}"
+
+      - name: Save build outputs
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            output-${{ inputs.build-target }}.tar.zst
+          key: ${{ steps.bundle.outputs.key }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
