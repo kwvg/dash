@@ -5,6 +5,7 @@ on:
   pull_request_target:
 
 permissions:
+  actions: write
   contents: read
   packages: write
 

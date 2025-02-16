@@ -16,6 +16,9 @@ on:
         required: true
         type: string
 
+permissions:
+  actions: write
+
 env:
   INTEGRATION_TESTS_ARGS: "--extended --exclude feature_pruning,feature_dbcrash"
 
@@ -61,6 +64,14 @@ jobs:
           ( [ -d "testlogs" ] && echo "upload-logs=true" >> "${GITHUB_OUTPUT}" && ./ci/dash/bundle-logs.sh ) \
                               || echo "upload-logs=false" >> "${GITHUB_OUTPUT}"
         shell: bash
+
+      - name: Delete build outputs cache
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+          gh cache delete "${{ inputs.build-key }}"
+          echo "::warning:: Build outputs cache \"${{ inputs.build-key }}\" deleted on successful test run. Attempting to rerun \"${{ inputs.build-target }}-test\" will fail!"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Upload test logs
         uses: actions/upload-artifact@v4
