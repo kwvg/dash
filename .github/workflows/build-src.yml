@@ -97,6 +97,13 @@ jobs:
           echo "short-sha=$(git rev-parse --short=8 HEAD)" >> "${GITHUB_OUTPUT}"
 
       - name: Save build outputs
+        if: |
+          inputs.build-target == 'linux64'
+          || inputs.build-target == 'linux64_multiprocess'
+          || inputs.build-target == 'linux64_nowallet'
+          || inputs.build-target == 'linux64_sqlite'
+          || inputs.build-target == 'linux64_tsan'
+          || inputs.build-target == 'linux64_ubsan'
         uses: actions/cache/save@v4
         with:
           path: |
