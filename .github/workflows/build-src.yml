@@ -99,10 +99,8 @@ jobs:
       - name: Save build outputs
         if: |
           inputs.build-target == 'linux64'
-          || inputs.build-target == 'linux64_multiprocess'
           || inputs.build-target == 'linux64_nowallet'
           || inputs.build-target == 'linux64_sqlite'
-          || inputs.build-target == 'linux64_tsan'
           || inputs.build-target == 'linux64_ubsan'
         uses: actions/cache/save@v4
         with:
