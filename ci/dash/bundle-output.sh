@@ -55,6 +55,7 @@ if [ "${VERB}" = "create" ]; then
   tar ${EXCLUSIONS_ARG} --use-compress-program="zstd -T0 -5" -cf "${OUTPUT_ARCHIVE}" "build-ci";
 elif [ "${VERB}" = "extract" ]; then
   tar --use-compress-program="unzstd" -xf "${OUTPUT_ARCHIVE}";
+  rm "${OUTPUT_ARCHIVE}"; # Storage space is scarce, delete when we're done
 else
   echo "${SH_NAME}: Generic error";
   exit 1;
