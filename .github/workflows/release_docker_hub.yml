@@ -1,8 +1,7 @@
 name: Release to Docker Hub
 
 on:
-  release:
-    types: [published]
+  push:
 
 jobs:
   release:
