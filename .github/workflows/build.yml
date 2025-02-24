@@ -17,30 +17,6 @@ jobs:
     name: Build container
     uses: ./.github/workflows/build-container.yml
 
-  depends-arm-linux:
-    name: arm-linux-gnueabihf
-    uses: ./.github/workflows/build-depends.yml
-    needs: [container]
-    with:
-      build-target: arm-linux
-      container-path: ${{ needs.container.outputs.path }}
-
-  depends-linux64:
-    name: x86_64-pc-linux-gnu
-    uses: ./.github/workflows/build-depends.yml
-    needs: [container]
-    with:
-      build-target: linux64
-      container-path: ${{ needs.container.outputs.path }}
-
-  depends-linux64_multiprocess:
-    name: x86_64-pc-linux-gnu_multiprocess
-    uses: ./.github/workflows/build-depends.yml
-    needs: [container]
-    with:
-      build-target: linux64_multiprocess
-      container-path: ${{ needs.container.outputs.path }}
-
   depends-linux64_nowallet:
     name: x86_64-pc-linux-gnu_nowallet
     uses: ./.github/workflows/build-depends.yml
@@ -48,58 +24,6 @@ jobs:
     with:
       build-target: linux64_nowallet
       container-path: ${{ needs.container.outputs.path }}
-
-  depends-mac:
-    name: x86_64-apple-darwin
-    uses: ./.github/workflows/build-depends.yml
-    needs: [container]
-    with:
-      build-target: mac
-      container-path: ${{ needs.container.outputs.path }}
-
-  depends-win64:
-    name: x86_64-w64-mingw32
-    uses: ./.github/workflows/build-depends.yml
-    needs: [container]
-    with:
-      build-target: win64
-      container-path: ${{ needs.container.outputs.path }}
-
-  src-arm-linux:
-    name: arm-linux-build
-    uses: ./.github/workflows/build-src.yml
-    needs: [container, depends-arm-linux]
-    with:
-      build-target: arm-linux
-      container-path: ${{ needs.container.outputs.path }}
-      depends-key: ${{ needs.depends-arm-linux.outputs.key }}
-
-  src-linux64:
-    name: linux64-build
-    uses: ./.github/workflows/build-src.yml
-    needs: [container, depends-linux64]
-    with:
-      build-target: linux64
-      container-path: ${{ needs.container.outputs.path }}
-      depends-key: ${{ needs.depends-linux64.outputs.key }}
-
-  src-linux64_fuzz:
-    name: linux64_fuzz-build
-    uses: ./.github/workflows/build-src.yml
-    needs: [container, depends-linux64]
-    with:
-      build-target: linux64_fuzz
-      container-path: ${{ needs.container.outputs.path }}
-      depends-key: ${{ needs.depends-linux64.outputs.key }}
-
-  src-linux64_multiprocess:
-    name: linux64_multiprocess-build
-    uses: ./.github/workflows/build-src.yml
-    needs: [container, depends-linux64_multiprocess]
-    with:
-      build-target: linux64_multiprocess
-      container-path: ${{ needs.container.outputs.path }}
-      depends-key: ${{ needs.depends-linux64_multiprocess.outputs.key }}
 
   src-linux64_nowallet:
     name: linux64_nowallet-build
@@ -110,60 +34,6 @@ jobs:
       container-path: ${{ needs.container.outputs.path }}
       depends-key: ${{ needs.depends-linux64_nowallet.outputs.key }}
 
-  src-linux64_sqlite:
-    name: linux64_sqlite-build
-    uses: ./.github/workflows/build-src.yml
-    needs: [container, depends-linux64]
-    with:
-      build-target: linux64_sqlite
-      container-path: ${{ needs.container.outputs.path }}
-      depends-key: ${{ needs.depends-linux64.outputs.key }}
-
-  src-linux64_tsan:
-    name: linux64_tsan-build
-    uses: ./.github/workflows/build-src.yml
-    needs: [container, depends-linux64_multiprocess]
-    with:
-      build-target: linux64_tsan
-      container-path: ${{ needs.container.outputs.path }}
-      depends-key: ${{ needs.depends-linux64_multiprocess.outputs.key }}
-
-  src-linux64_ubsan:
-    name: linux64_ubsan-build
-    uses: ./.github/workflows/build-src.yml
-    needs: [container, depends-linux64]
-    with:
-      build-target: linux64_ubsan
-      container-path: ${{ needs.container.outputs.path }}
-      depends-key: ${{ needs.depends-linux64.outputs.key }}
-
-  src-mac:
-    name: mac-build
-    uses: ./.github/workflows/build-src.yml
-    needs: [container, depends-mac]
-    with:
-      build-target: mac
-      container-path: ${{ needs.container.outputs.path }}
-      depends-key: ${{ needs.depends-mac.outputs.key }}
-
-  src-win64:
-    name: win64-build
-    uses: ./.github/workflows/build-src.yml
-    needs: [container, depends-win64]
-    with:
-      build-target: win64
-      container-path: ${{ needs.container.outputs.path }}
-      depends-key: ${{ needs.depends-win64.outputs.key }}
-
-  test-linux64:
-    name: linux64-test
-    uses: ./.github/workflows/test-src.yml
-    needs: [container, depends-linux64, src-linux64]
-    with:
-      bundle-key: ${{ needs.src-linux64.outputs.key }}
-      build-target: linux64
-      container-path: ${{ needs.container.outputs.path }}
-
   test-linux64_nowallet:
     name: linux64_nowallet-test
     uses: ./.github/workflows/test-src.yml
@@ -171,22 +41,4 @@ jobs:
     with:
       bundle-key: ${{ needs.src-linux64_nowallet.outputs.key }}
       build-target: linux64_nowallet
-      container-path: ${{ needs.container.outputs.path }}
-
-  test-linux64_sqlite:
-    name: linux64_sqlite-test
-    uses: ./.github/workflows/test-src.yml
-    needs: [container, depends-linux64, src-linux64_sqlite]
-    with:
-      bundle-key: ${{ needs.src-linux64_sqlite.outputs.key }}
-      build-target: linux64_sqlite
-      container-path: ${{ needs.container.outputs.path }}
-
-  test-linux64_ubsan:
-    name: linux64_ubsan-test
-    uses: ./.github/workflows/test-src.yml
-    needs: [container, depends-linux64, src-linux64_ubsan]
-    with:
-      bundle-key: ${{ needs.src-linux64_ubsan.outputs.key }}
-      build-target: linux64_ubsan
       container-path: ${{ needs.container.outputs.path }}
