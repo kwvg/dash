@@ -2,7 +2,7 @@ name: Decide jobs
 
 env:
   # Allowlist of targets to build, drop targets you don't want to build
-  BUILD_TARGETS: ^(arm-linux|linux64|linux64_fuzz|linux64_multiprocess|linux64_nowallet|linux64_sqlite|linux64_tsan|linux64_ubsan|mac|win64)$
+  BUILD_TARGETS: ^(arm-linux|linux64)$
 
 on:
   workflow_call:
