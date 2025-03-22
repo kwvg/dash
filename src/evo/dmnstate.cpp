@@ -40,7 +40,10 @@ UniValue CDeterministicMNState::ToJson(MnType nType) const
     UniValue obj;
     obj.setObject();
     obj.pushKV("version", nVersion);
-    obj.pushKV("service", netInfo.GetPrimary().ToStringAddrPort());
+    if (IsServiceDeprecatedRPCEnabled()) {
+        obj.pushKV("service", netInfo.GetPrimary().ToStringAddrPort());
+    }
+    obj.pushKV("addresses", netInfo.ToJson());
     obj.pushKV("registeredHeight", nRegisteredHeight);
     obj.pushKV("lastPaidHeight", nLastPaidHeight);
     obj.pushKV("consecutivePayments", nConsecutivePayments);
@@ -75,7 +78,10 @@ UniValue CDeterministicMNStateDiff::ToJson(MnType nType) const
         obj.pushKV("version", state.nVersion);
     }
     if (fields & Field_netInfo) {
-        obj.pushKV("service", state.netInfo.GetPrimary().ToStringAddrPort());
+        if (IsServiceDeprecatedRPCEnabled()) {
+            obj.pushKV("service", state.netInfo.GetPrimary().ToStringAddrPort());
+        }
+        obj.pushKV("addresses", state.netInfo.ToJson());
     }
     if (fields & Field_nRegisteredHeight) {
         obj.pushKV("registeredHeight", state.nRegisteredHeight);

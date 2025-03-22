@@ -8,6 +8,8 @@
 #include <netbase.h>
 #include <util/system.h>
 
+#include <univalue.h>
+
 namespace {
 static std::unique_ptr<const CChainParams> g_main_params{nullptr};
 
@@ -19,6 +21,12 @@ const CChainParams& MainParams()
     return *g_main_params;
 }
 } // anonymous namespace
+
+bool IsServiceDeprecatedRPCEnabled()
+{
+    const auto args = gArgs.GetArgs("-deprecatedrpc");
+    return std::find(args.begin(), args.end(), "service") != args.end();
+}
 
 NetInfoStatus MnNetInfo::ValidateService(const CService& service)
 {
@@ -54,6 +62,25 @@ NetInfoStatus MnNetInfo::SetEntry(const std::string input)
         return ret;
     }
     return NetInfoStatus::BadInput;
+}
+
+UniValue MnNetInfo::ToJson() const
+{
+    UniValue ret(UniValue::VOBJ);
+
+    /* There's only one entry to consider so there's nothing to iterate through */
+    auto make_arr = [](CService addr) {
+        UniValue obj(UniValue::VARR);
+        obj.push_back(addr.ToStringAddrPort());
+        return obj;
+    };
+
+    UniValue core(UniValue::VOBJ);
+    core.pushKV("p2p", make_arr(addr));
+
+    /* Segmenting core as a distinct object allows for future extensibility */
+    ret.pushKV("core", core);
+    return ret;
 }
 
 std::string MnNetInfo::ToString() const

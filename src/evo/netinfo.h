@@ -10,6 +10,8 @@
 
 class CService;
 
+class UniValue;
+
 enum NetInfoStatus : uint8_t
 {
     BadInput,
@@ -54,9 +56,13 @@ public:
     const CService& GetPrimary() const { return addr; }
     bool IsEmpty() const { return *this == MnNetInfo(); }
     NetInfoStatus Validate() const { return ValidateService(addr); }
+    UniValue ToJson() const;
     std::string ToString() const;
 
     void Clear() { addr = CService(); }
 };
+
+/* Identical to IsDeprecatedRPCEnabled("service"). For use outside of RPC code. */
+bool IsServiceDeprecatedRPCEnabled();
 
 #endif // BITCOIN_EVO_LEGACY_H
