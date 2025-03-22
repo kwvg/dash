@@ -70,7 +70,7 @@ public:
     /* TODO: Reconsider external locking */
     [[nodiscard]] COutPoint GetOutPoint() const { READ_LOCK(cs); return m_info.outpoint; }
     [[nodiscard]] uint256 GetProTxHash() const { READ_LOCK(cs); return m_info.proTxHash; }
-    [[nodiscard]] CService GetService() const { READ_LOCK(cs); return m_info.service; }
+    [[nodiscard]] CService GetPrimary() const { READ_LOCK(cs); return m_info.service; }
     [[nodiscard]] CBLSPublicKey GetPubKey() const;
 
 private:

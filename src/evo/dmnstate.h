@@ -51,7 +51,7 @@ public:
     CKeyID keyIDOwner;
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
-    CService addr;
+    MnNetInfo netInfo;
     CScript scriptPayout;
     CScript scriptOperatorPayout;
 
@@ -66,7 +66,7 @@ public:
         keyIDOwner(proTx.keyIDOwner),
         pubKeyOperator(proTx.pubKeyOperator),
         keyIDVoting(proTx.keyIDVoting),
-        addr(proTx.addr),
+        netInfo(proTx.netInfo),
         scriptPayout(proTx.scriptPayout),
         platformNodeID(proTx.platformNodeID),
         platformP2PPort(proTx.platformP2PPort),
@@ -97,7 +97,7 @@ public:
         READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), obj.nVersion == CProRegTx::LEGACY_BLS_VERSION));
         READWRITE(
             obj.keyIDVoting,
-            obj.addr,
+            obj.netInfo,
             obj.scriptPayout,
             obj.scriptOperatorPayout,
             obj.platformNodeID,
@@ -109,7 +109,7 @@ public:
     {
         nVersion = CProRegTx::LEGACY_BLS_VERSION;
         pubKeyOperator = CBLSLazyPublicKey();
-        addr = CService();
+        netInfo.addr = CService();
         scriptOperatorPayout = CScript();
         nRevocationReason = CProUpRevTx::REASON_NOT_SPECIFIED;
         platformNodeID = uint160();
@@ -163,7 +163,7 @@ public:
         Field_keyIDOwner = 0x0100,
         Field_pubKeyOperator = 0x0200,
         Field_keyIDVoting = 0x0400,
-        Field_addr = 0x0800,
+        Field_netInfo = 0x0800,
         Field_scriptPayout = 0x1000,
         Field_scriptOperatorPayout = 0x2000,
         Field_nConsecutivePayments = 0x4000,
@@ -185,7 +185,7 @@ public:
     DMN_STATE_DIFF_LINE(keyIDOwner)                    \
     DMN_STATE_DIFF_LINE(pubKeyOperator)                \
     DMN_STATE_DIFF_LINE(keyIDVoting)                   \
-    DMN_STATE_DIFF_LINE(addr)                          \
+    DMN_STATE_DIFF_LINE(netInfo)                       \
     DMN_STATE_DIFF_LINE(scriptPayout)                  \
     DMN_STATE_DIFF_LINE(scriptOperatorPayout)          \
     DMN_STATE_DIFF_LINE(nConsecutivePayments)          \

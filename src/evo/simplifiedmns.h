@@ -7,6 +7,7 @@
 
 #include <bls/bls.h>
 #include <evo/dmn_types.h>
+#include <evo/netinfo.h>
 #include <merkleblock.h>
 #include <netaddress.h>
 #include <pubkey.h>
@@ -36,7 +37,7 @@ public:
 
     uint256 proRegTxHash;
     uint256 confirmedHash;
-    CService service;
+    MnNetInfo netInfo;
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
     bool isValid{false};
@@ -54,7 +55,7 @@ public:
     {
         return proRegTxHash == rhs.proRegTxHash &&
                confirmedHash == rhs.confirmedHash &&
-               service == rhs.service &&
+               netInfo == rhs.netInfo &&
                pubKeyOperator == rhs.pubKeyOperator &&
                keyIDVoting == rhs.keyIDVoting &&
                isValid == rhs.isValid &&
@@ -77,7 +78,7 @@ public:
         READWRITE(
                 obj.proRegTxHash,
                 obj.confirmedHash,
-                obj.service,
+                obj.netInfo,
                 CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == LEGACY_BLS_VERSION)),
                 obj.keyIDVoting,
                 obj.isValid

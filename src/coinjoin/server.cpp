@@ -175,13 +175,13 @@ PeerMsgRet CCoinJoinServer::ProcessDSQUEUE(const CNode& peer, CDataStream& vRecv
         //don't allow a few nodes to dominate the queuing process
         if (nLastDsq != 0 && nDsqThreshold > m_mn_metaman.GetDsqCount()) {
             LogPrint(BCLog::COINJOIN, "DSQUEUE -- Masternode %s is sending too many dsq messages\n",
-                     dmn->pdmnState->addr.ToStringAddrPort());
+                     dmn->pdmnState->netInfo.GetPrimary().ToStringAddrPort());
             return {};
         }
         m_mn_metaman.AllowMixing(dmn->proTxHash);
 
         LogPrint(BCLog::COINJOIN, "DSQUEUE -- new CoinJoin queue (%s) from masternode %s\n", dsq.ToString(),
-                 dmn->pdmnState->addr.ToStringAddrPort());
+                 dmn->pdmnState->netInfo.GetPrimary().ToStringAddrPort());
 
         TRY_LOCK(cs_vecqueue, lockRecv);
         if (!lockRecv) return {};
