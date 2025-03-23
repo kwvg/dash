@@ -52,6 +52,7 @@ public:
     }
 
     NetInfoStatus SetEntry(const std::string service);
+    std::vector<CService> GetEntries() const { return { addr }; }
 
     const CService& GetPrimary() const { return addr; }
     bool IsEmpty() const { return *this == MnNetInfo(); }
