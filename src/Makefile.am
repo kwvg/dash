@@ -774,6 +774,7 @@ libbitcoin_common_a_SOURCES = \
   core_read.cpp \
   core_write.cpp \
   deploymentinfo.cpp \
+  evo/netinfo.cpp \
   governance/common.cpp \
   init/common.cpp \
   key.cpp \
