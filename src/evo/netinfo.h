@@ -10,9 +10,14 @@
 
 class CService;
 
+enum NetInfoStatus : uint8_t
+{
+    Success
+};
+
 class MnNetInfo
 {
-public:
+private:
     CService addr;
 
 public:
@@ -27,7 +32,12 @@ public:
         READWRITE(obj.addr);
     }
 
-    const CService& GetPrimary() const { return addr; }    
+    NetInfoStatus AddEntry(CService service);
+
+    const CService& GetPrimary() const { return addr; }
+    bool IsEmpty() const { return *this == MnNetInfo(); }
+
+    void Clear() { addr = CService(); }
 };
 
 #endif // BITCOIN_EVO_NETINFO_H
