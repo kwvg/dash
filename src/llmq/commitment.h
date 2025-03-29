@@ -121,8 +121,7 @@ public:
 
     [[nodiscard]] UniValue ToJson() const
     {
-        UniValue obj;
-        obj.setObject();
+        UniValue obj(UniValue::VOBJ);
         obj.pushKV("version", int{nVersion});
         obj.pushKV("llmqType", ToUnderlying(llmqType));
         obj.pushKV("quorumHash", quorumHash.ToString());
@@ -168,8 +167,7 @@ public:
 
     [[nodiscard]] UniValue ToJson() const
     {
-        UniValue obj;
-        obj.setObject();
+        UniValue obj(UniValue::VOBJ);
         obj.pushKV("version", int{nVersion});
         obj.pushKV("height", int(nHeight));
         obj.pushKV("commitment", commitment.ToJson());

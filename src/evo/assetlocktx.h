@@ -128,8 +128,7 @@ public:
 
     [[nodiscard]] UniValue ToJson() const
     {
-        UniValue obj;
-        obj.setObject();
+        UniValue obj(UniValue::VOBJ);
         obj.pushKV("version", int(nVersion));
         obj.pushKV("index", int(index));
         obj.pushKV("fee", int(fee));
