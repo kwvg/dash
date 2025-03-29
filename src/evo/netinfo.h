@@ -54,6 +54,7 @@ public:
     const CService& GetPrimary() const { return addr; }
     bool IsEmpty() const { return *this == MnNetInfo(); }
     NetInfoStatus Validate() const { return ValidateService(addr); }
+    std::string ToString() const;
 
     void Clear() { addr = CService(); }
 };
