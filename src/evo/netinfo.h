@@ -13,6 +13,7 @@ class CService;
 enum NetInfoStatus : uint8_t
 {
     BadInput,
+    BadPort,
 
     Success
 };
@@ -21,6 +22,8 @@ constexpr std::string_view NISToString(const NetInfoStatus code) {
     switch (code) {
     case NetInfoStatus::BadInput:
         return "invalid network address";
+    case NetInfoStatus::BadPort:
+        return "invalid port";
     case NetInfoStatus::Success:
         return "success";
     } // no default case, so the compiler can warn about missing cases
@@ -30,6 +33,9 @@ class MnNetInfo
 {
 private:
     CService addr;
+
+private:
+    static NetInfoStatus ValidateService(const CService& service);
 
 public:
     MnNetInfo() = default;
@@ -47,6 +53,7 @@ public:
 
     const CService& GetPrimary() const { return addr; }
     bool IsEmpty() const { return *this == MnNetInfo(); }
+    NetInfoStatus Validate() const { return ValidateService(addr); }
 
     void Clear() { addr = CService(); }
 };
