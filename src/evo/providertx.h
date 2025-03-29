@@ -93,8 +93,7 @@ public:
 
     [[nodiscard]] UniValue ToJson() const
     {
-        UniValue obj;
-        obj.setObject();
+        UniValue obj(UniValue::VOBJ);
         obj.pushKV("version", nVersion);
         obj.pushKV("type", ToUnderlying(nType));
         obj.pushKV("collateralHash", collateralOutpoint.hash.ToString());
@@ -177,8 +176,7 @@ public:
 
     [[nodiscard]] UniValue ToJson() const
     {
-        UniValue obj;
-        obj.setObject();
+        UniValue obj(UniValue::VOBJ);
         obj.pushKV("version", nVersion);
         obj.pushKV("type", ToUnderlying(nType));
         obj.pushKV("proTxHash", proTxHash.ToString());
@@ -245,8 +243,7 @@ public:
 
     [[nodiscard]] UniValue ToJson() const
     {
-        UniValue obj;
-        obj.setObject();
+        UniValue obj(UniValue::VOBJ);
         obj.pushKV("version", nVersion);
         obj.pushKV("proTxHash", proTxHash.ToString());
         obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
@@ -311,8 +308,7 @@ public:
 
     [[nodiscard]] UniValue ToJson() const
     {
-        UniValue obj;
-        obj.setObject();
+        UniValue obj(UniValue::VOBJ);
         obj.pushKV("version", nVersion);
         obj.pushKV("proTxHash", proTxHash.ToString());
         obj.pushKV("reason", (int)nReason);
