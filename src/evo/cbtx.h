@@ -67,8 +67,7 @@ public:
 
     [[nodiscard]] UniValue ToJson() const
     {
-        UniValue obj;
-        obj.setObject();
+        UniValue obj(UniValue::VOBJ);
         obj.pushKV("version", (int)nVersion);
         obj.pushKV("height", nHeight);
         obj.pushKV("merkleRootMNList", merkleRootMNList.ToString());

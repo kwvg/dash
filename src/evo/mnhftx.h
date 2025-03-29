@@ -49,9 +49,7 @@ public:
 
     [[nodiscard]] UniValue ToJson() const
     {
-        UniValue obj;
-        obj.clear();
-        obj.setObject();
+        UniValue obj(UniValue::VOBJ);
         obj.pushKV("versionBit", (int)versionBit);
         obj.pushKV("quorumHash", quorumHash.ToString());
         obj.pushKV("sig", sig.ToString());
@@ -88,8 +86,7 @@ public:
 
     [[nodiscard]] UniValue ToJson() const
     {
-        UniValue obj;
-        obj.setObject();
+        UniValue obj(UniValue::VOBJ);
         obj.pushKV("version", (int)nVersion);
         obj.pushKV("signal", signal.ToJson());
         return obj;
