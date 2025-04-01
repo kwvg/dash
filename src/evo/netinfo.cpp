@@ -56,6 +56,11 @@ NetInfoStatus MnNetInfo::AddEntry(const std::string input)
     return NetInfoStatus::BadInput;
 }
 
+std::vector<CService> MnNetInfo::GetEntries() const
+{
+    return IsEmpty() ? std::vector<CService>() : std::vector<CService>({addr});
+}
+
 std::string MnNetInfo::ToString() const
 {
     // Extra padding to account for padding done by the calling function.
