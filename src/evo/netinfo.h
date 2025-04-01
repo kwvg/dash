@@ -67,6 +67,62 @@ constexpr std::string PurposeToString(const Purpose code) {
     } // no default case, so the compiler can warn about missing cases
 }
 
+class DomainStr
+{
+public:
+    enum class Status : uint8_t
+    {
+        BadChar,
+        BadCharPos,
+        BadDotless,
+        BadLabelCharPos,
+        BadLabelLen,
+        BadLen,
+        BadTLD,
+
+        Success
+    };
+
+    constexpr std::string_view StatusToString(const DomainStr::Status code) {
+        switch (code) {
+        case DomainStr::Status::BadChar:
+            return "invalid character";
+        case DomainStr::Status::BadCharPos:
+            return "bad domain character position";
+        case DomainStr::Status::BadDotless:
+            return "prohibited dotless";
+        case DomainStr::Status::BadLabelCharPos:
+            return "bad label character position";
+        case DomainStr::Status::BadLabelLen:
+            return "bad label length";
+        case DomainStr::Status::BadLen:
+            return "bad domain length";
+        case DomainStr::Status::BadTLD:
+            return "prohibited top level domain";
+        case DomainStr::Status::Success:
+            return "success";
+        } // no default case, so the compiler can warn about missing cases
+    }
+
+private:
+    std::string data;
+
+private:
+    static DomainStr::Status ValidateDomain(const std::string& input);
+
+public:
+    DomainStr() = default;
+    ~DomainStr() = default;
+
+    SERIALIZE_METHODS(DomainStr, obj)
+    {
+        READWRITE(obj.addr);
+    }
+
+    DomainStr::Status Set(const std::string& input);
+    DomainStr::Status Validate() const { return ValidateDomain(data); }
+};
+
 namespace {
 uint8_t GetBIP155FromService(const CService& service)
 {

@@ -24,7 +24,67 @@ const CChainParams& MainParams()
     if (!g_main_params) g_main_params = CreateChainParams(ArgsManager{}, CBaseChainParams::MAIN);
     return *g_main_params;
 }
+
+bool HasBadTLD(const std::string& str) {
+    const std::vector<std::string_view> blocklist{
+        ".local",
+        ".intranet",
+        ".internal",
+        ".private",
+        ".corp",
+        ".home",
+        ".lan",
+        ".home.arpa"
+    };
+    for (const auto& tld : blocklist) {
+        if (tld.size() > str.size()) continue;
+        if (std::equal(tld.rbegin(), tld.rend(), str.rbegin())) return true;
+    }
+    return false;
+}
+
+static constexpr std::string_view SAFE_CHARS_RFC1035{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-"};
 } // anonymous namespace
+
+DomainStr::Status DomainStr::ValidateDomain(const std::string& input)
+{
+    if (input.length() > 253 || input.length() < 4) {
+        return DomainStr::Status::BadLen;
+    }
+    for (char c : input) {
+        if (SAFE_CHARS_RFC1035.find(c) == std::string::npos) {
+            return DomainStr::Status::BadChar;
+        }
+    }
+    if (input.at(0) == '.' || input.at(input.length() - 1) == '.') {
+        return DomainStr::Status::BadCharPos;
+    }
+    std::vector<std::string> labels{SplitString(input, '.')};
+    if (labels.size() < 2) {
+        return DomainStr::Status::BadDotless;
+    }
+    if (HasBadTLD(input)) {
+        return DomainStr::Status::BadTLD;
+    }
+    for (const auto& label : labels) {
+        if (label.empty() || label.length() > 63) {
+            return DomainStr::Status::BadLabelLen;
+        }
+        if (label.at(0) == '-' or label.at(label.length() - 1) == '-') {
+            return DomainStr::Status::BadLabelCharPos;
+        }
+    }
+    return DomainStr::Status::Success;
+}
+
+DomainStr::Status DomainStr::Set(const std::string& input)
+{
+    const auto ret{ValidateDomain(input)};
+    if (ret == DomainStr::Status::Success) {
+        data = input;
+    }
+    return ret;
+}
 
 UniValue ArrFromService(CService addr)
 {
