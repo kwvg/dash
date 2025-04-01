@@ -42,7 +42,7 @@ UniValue CDeterministicMNState::ToJson(MnType nType) const
     if (IsServiceDeprecatedRPCEnabled()) {
         obj.pushKV("service", netInfo.GetPrimary().ToStringAddrPort());
     }
-    obj.pushKV("addresses", netInfo.ToJson());
+    obj.pushKV("addresses", MaybeAddPlatformNetInfo(*this, nType, netInfo.ToJson()));
     obj.pushKV("registeredHeight", nRegisteredHeight);
     obj.pushKV("lastPaidHeight", nLastPaidHeight);
     obj.pushKV("consecutivePayments", nConsecutivePayments);
@@ -54,8 +54,10 @@ UniValue CDeterministicMNState::ToJson(MnType nType) const
     obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
     if (nType == MnType::Evo) {
         obj.pushKV("platformNodeID", platformNodeID.ToString());
-        obj.pushKV("platformP2PPort", platformP2PPort);
-        obj.pushKV("platformHTTPPort", platformHTTPPort);
+        if (IsServiceDeprecatedRPCEnabled()) {
+            obj.pushKV("platformP2PPort", platformP2PPort);
+            obj.pushKV("platformHTTPPort", platformHTTPPort);
+        }
     }
 
     CTxDestination dest;
@@ -79,7 +81,6 @@ UniValue CDeterministicMNStateDiff::ToJson(MnType nType) const
         if (IsServiceDeprecatedRPCEnabled()) {
             obj.pushKV("service", state.netInfo.GetPrimary().ToStringAddrPort());
         }
-        obj.pushKV("addresses", state.netInfo.ToJson());
     }
     if (fields & Field_nRegisteredHeight) {
         obj.pushKV("registeredHeight", state.nRegisteredHeight);
@@ -127,11 +128,43 @@ UniValue CDeterministicMNStateDiff::ToJson(MnType nType) const
         if (fields & Field_platformNodeID) {
             obj.pushKV("platformNodeID", state.platformNodeID.ToString());
         }
-        if (fields & Field_platformP2PPort) {
+        if (IsServiceDeprecatedRPCEnabled() && (fields & Field_platformP2PPort)) {
             obj.pushKV("platformP2PPort", state.platformP2PPort);
         }
-        if (fields & Field_platformHTTPPort) {
+        if (IsServiceDeprecatedRPCEnabled() && (fields & Field_platformHTTPPort)) {
             obj.pushKV("platformHTTPPort", state.platformHTTPPort);
+        }
+    }
+    {
+        UniValue netInfoObj(UniValue::VOBJ);
+        if (fields & Field_netInfo) {
+            netInfoObj = state.netInfo.ToJson();
+        }
+        if (nType == MnType::Evo) {
+            auto unknownAddr = [](uint16_t port) -> UniValue {
+                UniValue obj(UniValue::VARR);
+                 // We don't know what the address is because it wasn't changed in the
+                 // diff but we still need to report the port number
+                obj.push_back(strprintf("????????:%d", port));
+                return obj;
+            };
+            if (fields & Field_platformP2PPort) {
+                netInfoObj.pushKV(
+                    ToLower(PurposeToString(Purpose::PLATFORM_P2P)),
+                    (fields & Field_netInfo) ? ArrFromService(CService(state.netInfo.GetPrimary(), state.platformP2PPort))
+                                             : unknownAddr(state.platformP2PPort)
+                );
+            }
+            if (fields & Field_platformHTTPPort) {
+                netInfoObj.pushKV(
+                    ToLower(PurposeToString(Purpose::PLATFORM_HTTP)),
+                    (fields & Field_netInfo) ? ArrFromService(CService(state.netInfo.GetPrimary(), state.platformHTTPPort))
+                                             : unknownAddr(state.platformHTTPPort)
+                );
+            }
+        }
+        if (!netInfoObj.empty()) {
+            obj.pushKV("addresses", netInfoObj);
         }
     }
     return obj;

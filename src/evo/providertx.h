@@ -102,7 +102,7 @@ public:
         if (IsServiceDeprecatedRPCEnabled()) {
             obj.pushKV("service", netInfo.GetPrimary().ToStringAddrPort());
         }
-        obj.pushKV("addresses", netInfo.ToJson());
+        obj.pushKV("addresses", MaybeAddPlatformNetInfo(*this, netInfo.ToJson()));
         obj.pushKV("ownerAddress", EncodeDestination(PKHash(keyIDOwner)));
         obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
 
@@ -113,8 +113,10 @@ public:
         obj.pushKV("operatorReward", (double)nOperatorReward / 100);
         if (nType == MnType::Evo) {
             obj.pushKV("platformNodeID", platformNodeID.ToString());
-            obj.pushKV("platformP2PPort", platformP2PPort);
-            obj.pushKV("platformHTTPPort", platformHTTPPort);
+            if (IsServiceDeprecatedRPCEnabled()) {
+                obj.pushKV("platformP2PPort", platformP2PPort);
+                obj.pushKV("platformHTTPPort", platformHTTPPort);
+            }
         }
         obj.pushKV("inputsHash", inputsHash.ToString());
         return obj;
@@ -187,14 +189,16 @@ public:
         if (IsServiceDeprecatedRPCEnabled()) {
             obj.pushKV("service", netInfo.GetPrimary().ToStringAddrPort());
         }
-        obj.pushKV("addresses", netInfo.ToJson());
+        obj.pushKV("addresses", MaybeAddPlatformNetInfo(*this, netInfo.ToJson()));
         if (CTxDestination dest; ExtractDestination(scriptOperatorPayout, dest)) {
             obj.pushKV("operatorPayoutAddress", EncodeDestination(dest));
         }
         if (nType == MnType::Evo) {
             obj.pushKV("platformNodeID", platformNodeID.ToString());
-            obj.pushKV("platformP2PPort", platformP2PPort);
-            obj.pushKV("platformHTTPPort", platformHTTPPort);
+            if (IsServiceDeprecatedRPCEnabled()) {
+                obj.pushKV("platformP2PPort", platformP2PPort);
+                obj.pushKV("platformHTTPPort", platformHTTPPort);
+            }
         }
         obj.pushKV("inputsHash", inputsHash.ToString());
         return obj;

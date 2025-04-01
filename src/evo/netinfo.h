@@ -8,7 +8,13 @@
 #include <netaddress.h>
 #include <serialize.h>
 
+class CDeterministicMN;
+class CDeterministicMNState;
+class CProRegTx;
+class CProUpServTx;
 class CService;
+class CSimplifiedMNListEntry;
+enum class MnType : uint16_t;
 
 class UniValue;
 
@@ -43,6 +49,10 @@ enum class Purpose : uint8_t
 {
     // Mandatory for masternodes
     CORE_P2P = 0,
+    // Mandatory for EvoNodes
+    PLATFORM_P2P = 1,
+    // Optional for EvoNodes
+    PLATFORM_HTTP = 2,
 };
 
 // Warning: Used in RPC code, altering existing values is a breaking change
@@ -50,6 +60,10 @@ constexpr std::string PurposeToString(const Purpose code) {
     switch (code) {
     case Purpose::CORE_P2P:
         return "CORE_P2P";
+    case Purpose::PLATFORM_HTTP:
+        return "PLATFORM_HTTP";
+    case Purpose::PLATFORM_P2P:
+        return "PLATFORM_P2P";
     } // no default case, so the compiler can warn about missing cases
 }
 
@@ -85,7 +99,17 @@ public:
     void Clear() { addr = CService(); }
 };
 
+/* Wraps a CService::ToStringAddrPort() into a UniValue array */
+UniValue ArrFromService(CService addr);
+
 /* Identical to IsDeprecatedRPCEnabled("service"). For use outside of RPC code. */
 bool IsServiceDeprecatedRPCEnabled();
+
+/* Populates a MnNetInfo::GetJson() output with platform network info. */
+UniValue MaybeAddPlatformNetInfo(const CDeterministicMN& dmn, UniValue arr);
+UniValue MaybeAddPlatformNetInfo(const CDeterministicMNState& obj, MnType type, UniValue arr);
+UniValue MaybeAddPlatformNetInfo(const CProRegTx& obj, UniValue arr);
+UniValue MaybeAddPlatformNetInfo(const CProUpServTx& obj, UniValue arr);
+UniValue MaybeAddPlatformNetInfo(const CSimplifiedMNListEntry& obj, MnType type, UniValue arr);
 
 #endif // BITCOIN_EVO_NETINFO_H
