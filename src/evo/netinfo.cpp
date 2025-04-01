@@ -79,6 +79,19 @@ UniValue MaybeAddPlatformNetInfo(const CSimplifiedMNListEntry& obj, MnType type,
     return MaybeAddPlatformNetInfo(obj, type, arr);
 }
 
+std::optional<CService> NetInfo::GetAddrPort() const
+{
+    if (IsTypeBIP155(type)) {
+        return CService(addr, port);
+    }
+    return std::nullopt;
+}
+
+std::string NetInfo::ToString() const
+{
+    return strprintf("%s:%d", addr.ToStringAddr(), port);
+}
+
 NetInfoStatus MnNetInfo::ValidateService(const CService& service)
 {
     if (!service.IsValid()) {
@@ -125,9 +138,9 @@ NetInfoStatus MnNetInfo::AddEntry(const Purpose purpose, const std::string input
     return NetInfoStatus::BadInput;
 }
 
-std::vector<CService> MnNetInfo::GetEntries() const
+std::vector<NetInfo> MnNetInfo::GetEntries() const
 {
-    return IsEmpty() ? std::vector<CService>() : std::vector<CService>({addr});
+    return IsEmpty() ? std::vector<NetInfo>() : std::vector<NetInfo>({addr});
 }
 
 UniValue MnNetInfo::ToJson() const

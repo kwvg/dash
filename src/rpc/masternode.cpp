@@ -567,7 +567,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
         if (strMode == "addr") {
             std::string strAddress;
             for (const auto& entry : dmn.pdmnState->netInfo.GetEntries()) {
-                strAddress += entry.ToStringAddrPort() + " ";
+                strAddress += entry.ToString() + " ";
             }
             strAddress.pop_back(); // Remove trailing space
             if (!strFilter.empty() && strAddress.find(strFilter) == std::string::npos &&
@@ -581,7 +581,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
                                     PadString(ToString(dmnToLastPaidTime(dmn)), 10),
                                     PadString(ToString(dmn.pdmnState->nLastPaidHeight), 6));
             for (const auto& entry : dmn.pdmnState->netInfo.GetEntries()) {
-                strFull += entry.ToStringAddrPort() + " ";
+                strFull += entry.ToString() + " ";
             }
             strFull.pop_back(); // Remove trailing space
             if (!strFilter.empty() && strFull.find(strFilter) == std::string::npos &&
@@ -593,7 +593,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
                                     dmn.pdmnState->nPoSePenalty,
                                     payeeStr);
             for (const auto& entry : dmn.pdmnState->netInfo.GetEntries()) {
-                strInfo += entry.ToStringAddrPort() + " ";
+                strInfo += entry.ToString() + " ";
             }
             strInfo.pop_back(); // Remove trailing space
             if (!strFilter.empty() && strInfo.find(strFilter) == std::string::npos &&
@@ -602,7 +602,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
         } else if (strMode == "json" || strMode == "recent" || strMode == "evo") {
             std::string strInfo{dmn.proTxHash.ToString() + " "};
             for (const auto& entry : dmn.pdmnState->netInfo.GetEntries()) {
-                strInfo += entry.ToStringAddrPort() + " ";
+                strInfo += entry.ToString() + " ";
             }
             strInfo.pop_back(); // Remove trailing space
             strInfo += strprintf("%s %s %s %s %s %s %s %s %s",

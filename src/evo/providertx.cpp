@@ -36,6 +36,11 @@ bool CProRegTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState&
     if (!scriptPayout.IsPayToPublicKeyHash() && !scriptPayout.IsPayToScriptHash()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-payee");
     }
+    for (const auto& entry : netInfo.GetEntries()) {
+        if (const auto service{entry.GetAddrPort()}; !service.has_value()) {
+            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-bad-addr");
+        }
+    }
 
     CTxDestination payoutDest;
     if (!ExtractDestination(scriptPayout, payoutDest)) {
@@ -104,6 +109,11 @@ bool CProUpServTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationSta
     }
     if (nVersion < ProTxVersion::BasicBLS && nType == MnType::Evo) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-evo-version");
+    }
+    for (const auto& entry : netInfo.GetEntries()) {
+        if (const auto service{entry.GetAddrPort()}; !service.has_value()) {
+            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-bad-addr");
+        }
     }
 
     return true;
