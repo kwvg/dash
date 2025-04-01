@@ -10,6 +10,8 @@
 
 class CService;
 
+class UniValue;
+
 enum NetInfoStatus : uint8_t
 {
     // Adding entries
@@ -37,6 +39,20 @@ constexpr std::string_view NISToString(const NetInfoStatus code) {
     } // no default case, so the compiler can warn about missing cases
 }
 
+enum class Purpose : uint8_t
+{
+    // Mandatory for masternodes
+    CORE_P2P = 0,
+};
+
+// Warning: Used in RPC code, altering existing values is a breaking change
+constexpr std::string PurposeToString(const Purpose code) {
+    switch (code) {
+    case Purpose::CORE_P2P:
+        return "CORE_P2P";
+    } // no default case, so the compiler can warn about missing cases
+}
+
 class MnNetInfo
 {
 private:
@@ -57,15 +73,19 @@ public:
         READWRITE(obj.addr);
     }
 
-    NetInfoStatus AddEntry(const std::string service);
+    NetInfoStatus AddEntry(const Purpose purpose, const std::string input);
     std::vector<CService> GetEntries() const;
 
     const CService& GetPrimary() const { return addr; }
     bool IsEmpty() const { return *this == MnNetInfo(); }
     NetInfoStatus Validate() const { return ValidateService(addr); }
+    UniValue ToJson() const;
     std::string ToString() const;
 
     void Clear() { addr = CService(); }
 };
+
+/* Identical to IsDeprecatedRPCEnabled("service"). For use outside of RPC code. */
+bool IsServiceDeprecatedRPCEnabled();
 
 #endif // BITCOIN_EVO_NETINFO_H

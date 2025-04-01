@@ -8,6 +8,8 @@
 #include <netbase.h>
 #include <util/system.h>
 
+#include <univalue.h>
+
 namespace {
 static std::unique_ptr<const CChainParams> g_main_params{nullptr};
 
@@ -19,6 +21,19 @@ const CChainParams& MainParams()
     return *g_main_params;
 }
 } // anonymous namespace
+
+UniValue ArrFromService(CService addr)
+{
+    UniValue obj(UniValue::VARR);
+    obj.push_back(addr.ToStringAddrPort());
+    return obj;
+}
+
+bool IsServiceDeprecatedRPCEnabled()
+{
+    const auto args = gArgs.GetArgs("-deprecatedrpc");
+    return std::find(args.begin(), args.end(), "service") != args.end();
+}
 
 NetInfoStatus MnNetInfo::ValidateService(const CService& service)
 {
@@ -44,10 +59,12 @@ NetInfoStatus MnNetInfo::ValidateService(const CService& service)
     return NetInfoStatus::Success;
 }
 
-NetInfoStatus MnNetInfo::AddEntry(const std::string input)
+NetInfoStatus MnNetInfo::AddEntry(const Purpose purpose, const std::string input)
 {
-    if (!IsEmpty()) {
-        // We only support one entry, so if we have anything, we're full
+    // We only support storing Core P2P addresses, so the max limit for any other
+    // purpose is 0 but even if it's a Core P2P address, we only support one entry,
+    // so if we have anything stored already, we're full.
+    if (purpose != Purpose::CORE_P2P || !IsEmpty()) {
         return NetInfoStatus::MaxLimit;
     }
     if (auto service = Lookup(input, /*portDefault=*/Params().GetDefaultPort(), /*fAllowLookup=*/false); service.has_value()) {
@@ -69,9 +86,18 @@ std::vector<CService> MnNetInfo::GetEntries() const
     return IsEmpty() ? std::vector<CService>() : std::vector<CService>({addr});
 }
 
+UniValue MnNetInfo::ToJson() const
+{
+    UniValue ret(UniValue::VOBJ);
+    ret.pushKV(ToLower(PurposeToString(Purpose::CORE_P2P)), ArrFromService(addr));
+    return ret;
+}
+
 std::string MnNetInfo::ToString() const
 {
-    // Extra padding to account for padding done by the calling function.
     return strprintf("MnNetInfo()\n"
-                     "    CService(ip=%s, port=%u)\n", addr.ToStringAddr(), addr.GetPort());
+    // Extra padding to account for padding done by the calling function.
+                     "    NetInfo(purpose=%s)\n"
+                     "      CService(ip=%s, port=%u)\n",
+                     PurposeToString(Purpose::CORE_P2P), addr.ToStringAddr(), addr.GetPort());
 }
