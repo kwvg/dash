@@ -46,9 +46,17 @@ NetInfoStatus MnNetInfo::ValidateService(const CService& service)
 
 NetInfoStatus MnNetInfo::AddEntry(const std::string& input)
 {
+    if (!IsEmpty()) {
+        // We only support one entry, so if we have anything, we're full
+        return NetInfoStatus::MaxLimit;
+    }
     if (auto service = Lookup(input, /*portDefault=*/Params().GetDefaultPort(), /*fAllowLookup=*/false); service.has_value()) {
         const auto ret = ValidateService(service.value());
         if (ret == NetInfoStatus::Success) {
+            if (service == addr) {
+                // Not possible since we allow only one value at most
+                return NetInfoStatus::Duplicate;
+            }
             addr = service.value();
         }
         return ret;

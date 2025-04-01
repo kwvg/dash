@@ -12,14 +12,22 @@ class CService;
 
 enum NetInfoStatus : uint8_t
 {
+    // Adding entries
+    Duplicate,
+    MaxLimit,
+
+    // Validation
     BadInput,
     BadPort,
-
     Success
 };
 
 constexpr std::string_view NISToString(const NetInfoStatus code) {
     switch (code) {
+    case NetInfoStatus::Duplicate:
+        return "duplicate";
+    case NetInfoStatus::MaxLimit:
+        return "too many entries";
     case NetInfoStatus::BadInput:
         return "invalid network address";
     case NetInfoStatus::BadPort:

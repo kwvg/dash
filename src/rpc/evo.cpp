@@ -74,13 +74,19 @@ static RPCArg GetRpcArg(const std::string& strParamName)
                 "The private key belonging to this address must be known in your wallet."}
         },
         {"ipAndPort",
-            {"ipAndPort", RPCArg::Type::STR, RPCArg::Optional::NO,
-                "IP and port in the form \"IP:PORT\". Must be unique on the network.\n"
-                "Can be set to an empty string, which will require a ProUpServTx afterwards."}
+            {"ipAndPort", RPCArg::Type::ARR, RPCArg::Optional::NO,
+                "Array of addresses in the form \"IP:PORT\". Must be unique on the network.\n"
+                "Can be set to an empty string, which will require a ProUpServTx afterwards.",
+                {
+                    {"address", RPCArg::Type::STR, RPCArg::Optional::NO, ""},
+                }}
         },
         {"ipAndPort_update",
-            {"ipAndPort", RPCArg::Type::STR, RPCArg::Optional::NO,
-                "IP and port in the form \"IP:PORT\". Must be unique on the network."}
+            {"ipAndPort", RPCArg::Type::ARR, RPCArg::Optional::NO,
+                "Array of addresses in the form \"IP:PORT\". Must be unique on the network.",
+                {
+                    {"address", RPCArg::Type::STR, RPCArg::Optional::NO, ""},
+                }}
         },
         {"operatorKey",
             {"operatorKey", RPCArg::Type::STR, RPCArg::Optional::NO,
@@ -680,9 +686,26 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
         paramIdx += 2;
     }
 
-    if (request.params[paramIdx].get_str() != "") {
-        if (auto entryRet = ptx.netInfo.AddEntry(request.params[paramIdx].get_str()); entryRet != NetInfoStatus::Success) {
-            throw std::runtime_error(strprintf("%s (%s)", NISToString(entryRet), request.params[paramIdx].get_str()));
+    {
+        auto tryAddEntry = [&](const std::string& input) -> void {
+            if (auto entryRet = ptx.netInfo.AddEntry(input); entryRet != NetInfoStatus::Success) {
+                throw std::runtime_error(strprintf("%s (%s)", NISToString(entryRet), input));
+            }
+        };
+
+        const auto& netInfoObj{request.params[paramIdx]};
+        if (netInfoObj.type() == UniValue::VSTR) {
+            const auto& entryStr{netInfoObj.get_str()};
+            // Empty values are allowed because we allow updating these fields later
+            if (!entryStr.empty()) {
+                tryAddEntry(entryStr);
+            }
+        } else {
+            // We don't allow empty values if specifying an array
+            RPCTypeCheckArgument(netInfoObj, UniValue::VARR);
+            for (unsigned int idx = 0; idx < netInfoObj.size(); idx++) {
+                tryAddEntry(netInfoObj[idx].get_str());
+            }
         }
     }
 
@@ -974,8 +997,23 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
 
     ptx.nVersion = dmn->pdmnState->nVersion;
 
-    if (auto entryRet = ptx.netInfo.AddEntry(request.params[1].get_str()); entryRet != NetInfoStatus::Success) {
-        throw std::runtime_error(strprintf("%s (%s)", NISToString(entryRet), request.params[1].get_str()));
+    {
+        auto tryAddEntry = [&](const std::string& input) -> void {
+            if (auto entryRet = ptx.netInfo.AddEntry(input); entryRet != NetInfoStatus::Success) {
+                throw std::runtime_error(strprintf("%s (%s)", NISToString(entryRet), input));
+            }
+        };
+
+        const auto& netInfoObj{request.params[1]};
+        // We don't allow specifying blank values under any case
+        if (netInfoObj.type() == UniValue::VSTR) {
+            tryAddEntry(netInfoObj.get_str());
+        } else {
+            RPCTypeCheckArgument(netInfoObj, UniValue::VARR);
+            for (unsigned int idx = 0; idx < netInfoObj.size(); idx++) {
+                tryAddEntry(netInfoObj[idx].get_str());
+            }
+        }
     }
 
     CBLSSecretKey keyOperator = ParseBLSSecretKey(request.params[2].get_str(), "operatorKey");
