@@ -41,7 +41,7 @@ public:
     MnType nType{MnType::Regular};
     uint16_t nMode{0};                                     // only 0 supported for now
     COutPoint collateralOutpoint{uint256(), (uint32_t)-1}; // if hash is null, we refer to a ProRegTx output
-    MnNetInfo netInfo;
+    std::shared_ptr<NetInfoInterface> netInfo;
     uint160 platformNodeID{};
     uint16_t platformP2PPort{0};
     uint16_t platformHTTPPort{0};
@@ -67,7 +67,7 @@ public:
                 obj.nType,
                 obj.nMode,
                 obj.collateralOutpoint,
-                obj.netInfo,
+                std::dynamic_pointer_cast<MnNetInfo>(obj.netInfo),
                 obj.keyIDOwner,
                 CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == ProTxVersion::LegacyBLS)),
                 obj.keyIDVoting,
@@ -100,9 +100,9 @@ public:
         obj.pushKV("collateralHash", collateralOutpoint.hash.ToString());
         obj.pushKV("collateralIndex", (int)collateralOutpoint.n);
         if (IsServiceDeprecatedRPCEnabled()) {
-            obj.pushKV("service", netInfo.GetPrimary().ToStringAddrPort());
+            obj.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
         }
-        obj.pushKV("addresses", MaybeAddPlatformNetInfo(*this, netInfo.ToJson()));
+        obj.pushKV("addresses", MaybeAddPlatformNetInfo(*this, netInfo->ToJson()));
         obj.pushKV("ownerAddress", EncodeDestination(PKHash(keyIDOwner)));
         obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
 
@@ -138,7 +138,7 @@ public:
     uint16_t nVersion{ProTxVersion::LegacyBLS}; // message version
     MnType nType{MnType::Regular};
     uint256 proTxHash;
-    MnNetInfo netInfo;
+    std::shared_ptr<NetInfoInterface> netInfo;
     uint160 platformNodeID{};
     uint16_t platformP2PPort{0};
     uint16_t platformHTTPPort{0};
@@ -161,7 +161,7 @@ public:
         }
         READWRITE(
                 obj.proTxHash,
-                obj.netInfo,
+                std::dynamic_pointer_cast<MnNetInfo>(obj.netInfo),
                 obj.scriptOperatorPayout,
                 obj.inputsHash
         );
@@ -187,9 +187,9 @@ public:
         obj.pushKV("type", ToUnderlying(nType));
         obj.pushKV("proTxHash", proTxHash.ToString());
         if (IsServiceDeprecatedRPCEnabled()) {
-            obj.pushKV("service", netInfo.GetPrimary().ToStringAddrPort());
+            obj.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
         }
-        obj.pushKV("addresses", MaybeAddPlatformNetInfo(*this, netInfo.ToJson()));
+        obj.pushKV("addresses", MaybeAddPlatformNetInfo(*this, netInfo->ToJson()));
         if (CTxDestination dest; ExtractDestination(scriptOperatorPayout, dest)) {
             obj.pushKV("operatorPayoutAddress", EncodeDestination(dest));
         }

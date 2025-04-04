@@ -45,7 +45,7 @@ UniValue MaybeAddPlatformNetInfo(const CDeterministicMN& dmn, const UniValue& ar
 {
     assert(arr.type() == UniValue::VOBJ);
     if (dmn.nType != MnType::Evo) return arr;
-    CNetAddr addr{Assert(dmn.pdmnState)->netInfo.GetPrimary()}; UniValue ret{arr};
+    CNetAddr addr{Assert(dmn.pdmnState)->netInfo->GetPrimary()}; UniValue ret{arr};
     ret.pushKV(PurposeToString(Purpose::PLATFORM_HTTP, /*lower=*/true), ArrFromService(CService(addr, dmn.pdmnState->platformHTTPPort)));
     ret.pushKV(PurposeToString(Purpose::PLATFORM_P2P, /*lower=*/true), ArrFromService(CService(addr, dmn.pdmnState->platformP2PPort)));
     return ret;
@@ -58,7 +58,7 @@ UniValue IMaybeAddPlatformNetInfo(const T1& obj, const MnType& type, const UniVa
 {
     assert(arr.type() == UniValue::VOBJ);
     if (type != MnType::Evo) return arr;
-    CNetAddr addr{obj.netInfo.GetPrimary()}; UniValue ret{arr};
+    CNetAddr addr{obj.netInfo->GetPrimary()}; UniValue ret{arr};
     ret.pushKV(PurposeToString(Purpose::PLATFORM_HTTP, /*lower=*/true), ArrFromService(CService(addr, obj.platformHTTPPort)));
     if constexpr (!std::is_same<T1, CSimplifiedMNListEntry>::value) /* CSimplifiedMNListEntry doesn't have this field */ {
         ret.pushKV(PurposeToString(Purpose::PLATFORM_P2P, /*lower=*/true), ArrFromService(CService(addr, obj.platformP2PPort)));

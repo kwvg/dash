@@ -69,7 +69,7 @@ std::string CSimplifiedMNListEntry::ToString() const
                      nVersion, ToUnderlying(nType), proRegTxHash.ToString(), confirmedHash.ToString(),
                      pubKeyOperator.ToString(), EncodeDestination(PKHash(keyIDVoting)),
                      isValid, payoutAddress, operatorPayoutAddress, platformHTTPPort, platformNodeID.ToString(),
-                     netInfo.ToString());
+                     netInfo->ToString());
 }
 
 UniValue CSimplifiedMNListEntry::ToJson(bool extended) const
@@ -80,9 +80,9 @@ UniValue CSimplifiedMNListEntry::ToJson(bool extended) const
     obj.pushKV("proRegTxHash", proRegTxHash.ToString());
     obj.pushKV("confirmedHash", confirmedHash.ToString());
     if (IsServiceDeprecatedRPCEnabled()) {
-        obj.pushKV("service", netInfo.GetPrimary().ToStringAddrPort());
+        obj.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
     }
-    obj.pushKV("addresses", MaybeAddPlatformNetInfo(*this, nType, netInfo.ToJson()));
+    obj.pushKV("addresses", MaybeAddPlatformNetInfo(*this, nType, netInfo->ToJson()));
     obj.pushKV("pubKeyOperator", pubKeyOperator.ToString());
     obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
     obj.pushKV("isValid", isValid);

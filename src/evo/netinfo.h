@@ -154,7 +154,24 @@ public:
 
 using NetInfoList = std::vector<std::reference_wrapper<const NetInfoEntry>>;
 
-class MnNetInfo
+class NetInfoInterface
+{
+public:
+    virtual ~NetInfoInterface() = default;
+
+    virtual NetInfoStatus AddEntry(const Purpose purpose, const std::string& input) = 0;
+    virtual NetInfoList GetEntries() const = 0;
+
+    virtual const CService& GetPrimary() const = 0;
+    virtual bool IsEmpty() const = 0;
+    virtual NetInfoStatus Validate() const = 0;
+    virtual UniValue ToJson() const = 0;
+    virtual std::string ToString() const = 0;
+
+    virtual void Clear() = 0;
+};
+
+class MnNetInfo final : public NetInfoInterface
 {
 private:
     // We still load/store a CService but we use a NetInfoEntry to help up avoid additional copies incurred
@@ -187,16 +204,22 @@ public:
         addr.type = GetBIP155FromService(addr.data);
     }
 
-    NetInfoStatus AddEntry(const Purpose purpose, const std::string& input);
-    NetInfoList GetEntries() const;
+    template <typename Stream>
+    MnNetInfo(deserialize_type, Stream& s)
+    {
+        s >> *this;
+    }
 
-    const CService& GetPrimary() const { return addr.data; }
-    bool IsEmpty() const { return *this == MnNetInfo(); }
-    NetInfoStatus Validate() const { return ValidateService(addr.data); }
-    UniValue ToJson() const;
-    std::string ToString() const;
+    NetInfoStatus AddEntry(const Purpose purpose, const std::string& input) override;
+    NetInfoList GetEntries() const override;
 
-    void Clear() { addr.Clear(); }
+    const CService& GetPrimary() const override { return addr.data; }
+    bool IsEmpty() const override { return *this == MnNetInfo(); }
+    NetInfoStatus Validate() const override { return ValidateService(addr.data); }
+    UniValue ToJson() const override;
+    std::string ToString() const override;
+
+    void Clear() override { addr.Clear(); }
 };
 
 /* Wraps a CService::ToStringAddrPort() into a UniValue array */
@@ -211,5 +234,13 @@ UniValue MaybeAddPlatformNetInfo(const CDeterministicMNState& obj, const MnType&
 UniValue MaybeAddPlatformNetInfo(const CProRegTx& obj, const UniValue& arr);
 UniValue MaybeAddPlatformNetInfo(const CProUpServTx& obj, const UniValue& arr);
 UniValue MaybeAddPlatformNetInfo(const CSimplifiedMNListEntry& obj, const MnType& type, const UniValue& arr);
+
+/* Selects NetInfoInterface implementation to use based on object version */
+template <typename T1>
+std::shared_ptr<NetInfoInterface> MakeNetInfo(const T1& obj)
+{
+    assert(obj.nVersion > 0);
+    return std::make_shared<MnNetInfo>();
+}
 
 #endif // BITCOIN_EVO_NETINFO_H

@@ -32,7 +32,7 @@ std::string CDeterministicMNState::ToString() const
                      "  %s",
                      nVersion, nRegisteredHeight, nLastPaidHeight, nPoSePenalty, nPoSeRevivedHeight, nPoSeBanHeight,
                      nRevocationReason, EncodeDestination(PKHash(keyIDOwner)), pubKeyOperator.ToString(),
-                     EncodeDestination(PKHash(keyIDVoting)), payoutAddress, operatorPayoutAddress, netInfo.ToString());
+                     EncodeDestination(PKHash(keyIDVoting)), payoutAddress, operatorPayoutAddress, netInfo->ToString());
 }
 
 UniValue CDeterministicMNState::ToJson(MnType nType) const
@@ -40,9 +40,9 @@ UniValue CDeterministicMNState::ToJson(MnType nType) const
     UniValue obj(UniValue::VOBJ);
     obj.pushKV("version", nVersion);
     if (IsServiceDeprecatedRPCEnabled()) {
-        obj.pushKV("service", netInfo.GetPrimary().ToStringAddrPort());
+        obj.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
     }
-    obj.pushKV("addresses", MaybeAddPlatformNetInfo(*this, nType, netInfo.ToJson()));
+    obj.pushKV("addresses", MaybeAddPlatformNetInfo(*this, nType, netInfo->ToJson()));
     obj.pushKV("registeredHeight", nRegisteredHeight);
     obj.pushKV("lastPaidHeight", nLastPaidHeight);
     obj.pushKV("consecutivePayments", nConsecutivePayments);
@@ -79,7 +79,7 @@ UniValue CDeterministicMNStateDiff::ToJson(MnType nType) const
     }
     if (fields & Field_netInfo) {
         if (IsServiceDeprecatedRPCEnabled()) {
-            obj.pushKV("service", state.netInfo.GetPrimary().ToStringAddrPort());
+            obj.pushKV("service", state.netInfo->GetPrimary().ToStringAddrPort());
         }
     }
     if (fields & Field_nRegisteredHeight) {
@@ -138,7 +138,7 @@ UniValue CDeterministicMNStateDiff::ToJson(MnType nType) const
     {
         UniValue netInfoObj(UniValue::VOBJ);
         if (fields & Field_netInfo) {
-            netInfoObj = state.netInfo.ToJson();
+            netInfoObj = state.netInfo->ToJson();
         }
         if (nType == MnType::Evo) {
             auto unknownAddr = [](uint16_t port) -> UniValue {
@@ -151,14 +151,14 @@ UniValue CDeterministicMNStateDiff::ToJson(MnType nType) const
             if (fields & Field_platformP2PPort) {
                 netInfoObj.pushKV(
                     PurposeToString(Purpose::PLATFORM_P2P, /*lower=*/true),
-                    (fields & Field_netInfo) ? ArrFromService(CService(state.netInfo.GetPrimary(), state.platformP2PPort))
+                    (fields & Field_netInfo) ? ArrFromService(CService(state.netInfo->GetPrimary(), state.platformP2PPort))
                                              : unknownAddr(state.platformP2PPort)
                 );
             }
             if (fields & Field_platformHTTPPort) {
                 netInfoObj.pushKV(
                     PurposeToString(Purpose::PLATFORM_HTTP, /*lower=*/true),
-                    (fields & Field_netInfo) ? ArrFromService(CService(state.netInfo.GetPrimary(), state.platformHTTPPort))
+                    (fields & Field_netInfo) ? ArrFromService(CService(state.netInfo->GetPrimary(), state.platformHTTPPort))
                                              : unknownAddr(state.platformHTTPPort)
                 );
             }

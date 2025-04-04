@@ -36,7 +36,7 @@ bool CProRegTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState&
     if (!scriptPayout.IsPayToPublicKeyHash() && !scriptPayout.IsPayToScriptHash()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-payee");
     }
-    for (const NetInfoEntry& entry : netInfo.GetEntries()) {
+    for (const NetInfoEntry& entry : netInfo->GetEntries()) {
         if (!entry.IsTriviallyValid()) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-terrible-addr");
         }
@@ -99,7 +99,7 @@ std::string CProRegTx::ToString() const
                      nVersion, ToUnderlying(nType), collateralOutpoint.ToStringShort(),
                      (double)nOperatorReward / 100, EncodeDestination(PKHash(keyIDOwner)), pubKeyOperator.ToString(),
                      EncodeDestination(PKHash(keyIDVoting)), payee, platformNodeID.ToString(), platformP2PPort,
-                     platformHTTPPort, netInfo.ToString());
+                     platformHTTPPort, netInfo->ToString());
 }
 
 bool CProUpServTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const
@@ -110,7 +110,7 @@ bool CProUpServTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationSta
     if (nVersion < ProTxVersion::BasicBLS && nType == MnType::Evo) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-evo-version");
     }
-    for (const NetInfoEntry& entry : netInfo.GetEntries()) {
+    for (const NetInfoEntry& entry : netInfo->GetEntries()) {
         if (!entry.IsTriviallyValid()) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-terrible-addr");
         }
@@ -131,7 +131,7 @@ std::string CProUpServTx::ToString() const
                      "platformNodeID=%s, platformP2PPort=%d, platformHTTPPort=%d)\n"
                      "  %s",
                      nVersion, ToUnderlying(nType), proTxHash.ToString(), payee,
-                     platformNodeID.ToString(), platformP2PPort, platformHTTPPort, netInfo.ToString());
+                     platformNodeID.ToString(), platformP2PPort, platformHTTPPort, netInfo->ToString());
 }
 
 bool CProUpRegTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const
