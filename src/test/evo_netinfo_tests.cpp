@@ -51,6 +51,14 @@ bool CheckIfSerSame(const CService& lhs, const MnNetInfo& rhs)
     return ss_lhs.GetSHA256() == ss_rhs.GetSHA256();
 }
 
+void ValidateNetInfoList(const NetInfoList& entries, const size_t expected_size)
+{
+    BOOST_CHECK_EQUAL(entries.size(), expected_size);
+    for (const NetInfoEntry& entry : entries) {
+        BOOST_CHECK(entry.IsTriviallyValid());
+    }
+}
+
 BOOST_AUTO_TEST_CASE(cservice_compatible)
 {
     // Empty values should be the same
@@ -64,12 +72,14 @@ BOOST_AUTO_TEST_CASE(cservice_compatible)
     BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::CORE_P2P, "1.1.1.1:1234"), NetInfoStatus::Success);
     BOOST_CHECK(CheckIfSerSame(service, netInfo));
     BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Success); // AddEntry() succeeded
+    ValidateNetInfoList(netInfo.GetEntries(), /*expected_size=*/1);
 
     // Lookup() failure, MnNetInfo should remain empty if Lookup() failed
     service = CService(); netInfo.Clear();
     BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::CORE_P2P, "example.com"), NetInfoStatus::BadInput); // Domain lookups are prohibited
     BOOST_CHECK(CheckIfSerSame(service, netInfo));
     BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::BadInput); // Empty values are invalid
+    BOOST_CHECK(netInfo.GetEntries().empty()); // NetInfoList should return nothing as nothing valid is stored
 }
 
 BOOST_AUTO_TEST_SUITE_END()

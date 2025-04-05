@@ -79,6 +79,39 @@ UniValue MaybeAddPlatformNetInfo(const CSimplifiedMNListEntry& obj, const MnType
     return IMaybeAddPlatformNetInfo(obj, type, arr);
 }
 
+std::optional<std::reference_wrapper<const CService>> NetInfoEntry::GetAddrPort() const
+{
+    if (IsTypeBIP155(type)) {
+        return data;
+    }
+    return std::nullopt;
+}
+
+// NetInfoEntry is a dumb object that doesn't enforce validation rules, that is the responsibility of
+// types that utilize NetInfoEntry (MnNetInfo and others). IsTriviallyValid() is there to check if a
+// NetInfoEntry object is properly constructed.
+bool NetInfoEntry::IsTriviallyValid() const
+{
+    // Empty underlying data isn't a valid entry
+    if (data == CService() || type == INVALID_TYPE) return false;
+    // Type code should be truthful as it decides what underlying type is used when (de)serializing
+    if (type != GetBIP155FromService(data)) return false;
+    // Underlying data should at least meet surface-level validity checks
+    if (!data.IsValid()) return false;
+    // Type code should be supported by NetInfoEntry
+    return IsTypeBIP155(type);
+}
+
+std::string NetInfoEntry::ToString() const
+{
+    return strprintf("CService(addr=%s, port=%d)", data.ToStringAddr(), data.GetPort());
+}
+
+std::string NetInfoEntry::ToStringAddrPort() const
+{
+    return data.ToStringAddrPort();
+}
+
 NetInfoStatus MnNetInfo::ValidateService(const CService& service)
 {
     if (!service.IsValid()) {
@@ -114,24 +147,24 @@ NetInfoStatus MnNetInfo::AddEntry(const Purpose purpose, const std::string& inpu
     if (auto service = Lookup(input, /*portDefault=*/Params().GetDefaultPort(), /*fAllowLookup=*/false); service.has_value()) {
         const auto ret = ValidateService(service.value());
         if (ret == NetInfoStatus::Success) {
-            if (service == addr) {
+            if (service == addr.data) {
                 // Not possible since we allow only one value at most
                 return NetInfoStatus::Duplicate;
             }
-            addr = service.value();
+            addr = NetInfoEntry(service.value());
         }
         return ret;
     }
     return NetInfoStatus::BadInput;
 }
 
-CServiceList MnNetInfo::GetEntries() const
+NetInfoList MnNetInfo::GetEntries() const
 {
-    CServiceList ret;
-    if (!IsEmpty()) {
+    NetInfoList ret;
+    if (!IsEmpty() && addr.IsTriviallyValid()) {
         ret.push_back(addr);
     }
-    // If CService is empty, we probably want to skip code that expects valid
+    // If NetInfoEntry is empty or invalid, we probably want to skip code that expects valid
     // entries to iterate through, so we return a blank set instead.
     return ret;
 }
@@ -139,7 +172,7 @@ CServiceList MnNetInfo::GetEntries() const
 UniValue MnNetInfo::ToJson() const
 {
     UniValue ret(UniValue::VOBJ);
-    ret.pushKV(PurposeToString(Purpose::CORE_P2P, /*lower=*/true), ArrFromService(addr));
+    ret.pushKV(PurposeToString(Purpose::CORE_P2P, /*lower=*/true), ArrFromService(addr.data));
     return ret;
 }
 
@@ -148,6 +181,6 @@ std::string MnNetInfo::ToString() const
     return strprintf("MnNetInfo()\n"
     // Extra padding to account for padding done by the calling function.
                      "    NetInfo(purpose=%s)\n"
-                     "      CService(addr=%s, port=%d)\n",
-                     PurposeToString(Purpose::CORE_P2P), addr.ToStringAddr(), addr.GetPort());
+                     "      %s\n",
+                     PurposeToString(Purpose::CORE_P2P), addr.ToString());
 }

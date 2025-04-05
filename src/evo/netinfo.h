@@ -68,12 +68,98 @@ constexpr std::string PurposeToString(const Purpose code, const bool lower = fal
     } // no default case, so the compiler can warn about missing cases
 }
 
-using CServiceList = std::vector<std::reference_wrapper<const CService>>;
+namespace {
+inline constexpr uint8_t GetBIP155FromService(const CService& service)
+{
+    if (service.IsIPv4())  return 0x01 /* BIP155Network::IPV4 */;
+    if (service.IsIPv6())  return 0x02 /* BIP155Network::IPV6 */;
+    if (service.IsTor())   return 0x04 /* BIP155Network::TORV3 */;
+    if (service.IsI2P())   return 0x05 /* BIP155Network::I2P */;
+    if (service.IsCJDNS()) return 0x06 /* BIP155Network::CJDNS */;
+    return 0xFF; /* invalid type */
+}
+
+inline constexpr bool IsTypeBIP155(const uint8_t& type)
+{
+    switch (type) {
+    case 0x01: /* BIP155Network::IPV4 */
+    case 0x02: /* BIP155Network::IPV6 */
+    case 0x04: /* BIP155Network::TORV3 */
+    case 0x05: /* BIP155Network::I2P */
+    case 0x06: /* BIP155Network::CJDNS */
+        return true;
+    default:
+        return false;
+    }
+}
+} // anonymous namespace
+
+class NetInfoEntry
+{
+private:
+    static constexpr uint8_t INVALID_TYPE{0xFF};
+
+    uint8_t type{INVALID_TYPE};
+    CService data;
+
+    // Used to directly read/write into members, needed to fake NetInfoEntry list in MnNetInfo
+    friend class MnNetInfo;
+
+public:
+    NetInfoEntry() = default;
+    ~NetInfoEntry() = default;
+
+    NetInfoEntry(const CService& service) : type{GetBIP155FromService(service)}, data{service} {}
+
+    bool operator<(const NetInfoEntry& rhs) const { return std::tie(type, data) < std::tie(rhs.type, rhs.data); }
+    bool operator==(const NetInfoEntry& rhs) const { return std::tie(type, data) == std::tie(rhs.type, rhs.data); }
+    bool operator!=(const NetInfoEntry& rhs) const { return !(*this == rhs); }
+
+    template<typename Stream>
+    void Serialize(Stream &s) const
+    {
+        s << type;
+        if (IsTypeBIP155(type)) {
+            s << data;
+        } else {
+            // Invalid type, bail out
+            return;
+        }
+    }
+
+    template<typename Stream>
+    void Unserialize(Stream &s)
+    {
+        Clear();
+        s >> type;
+        if (IsTypeBIP155(type)) {
+            s >> data;
+        } else {
+            // Invalid type, bail out
+            return;
+        }
+    }
+
+    void Clear()
+    {
+        type = INVALID_TYPE;
+        data = CService();
+    }
+
+    std::optional<std::reference_wrapper<const CService>> GetAddrPort() const;
+    bool IsTriviallyValid() const;
+    std::string ToString() const;
+    std::string ToStringAddrPort() const;
+};
+
+using NetInfoList = std::vector<std::reference_wrapper<const NetInfoEntry>>;
 
 class MnNetInfo
 {
 private:
-    CService addr;
+    // We still load/store a CService but we use a NetInfoEntry to help up avoid additional copies incurred
+    // by constructing NetInfoEntry in-place for GetEntries()
+    NetInfoEntry addr;
 
 private:
     static NetInfoStatus ValidateService(const CService& service);
@@ -85,21 +171,32 @@ public:
     bool operator==(const MnNetInfo& rhs) const { return addr == rhs.addr; }
     bool operator!=(const MnNetInfo& rhs) const { return !(*this == rhs); }
 
-    SERIALIZE_METHODS(MnNetInfo, obj)
+    template<typename Stream>
+    void Serialize(Stream &s) const
     {
-        READWRITE(obj.addr);
+        // We can safely discard NetInfoEntry::type as we can recalculate it on read
+        s << addr.data;
+    }
+
+    template<typename Stream>
+    void Unserialize(Stream &s)
+    {
+        Clear();
+        s >> addr.data;
+        // Refetch type to ensure NetInfoEntry::IsTriviallyValid() still passes
+        addr.type = GetBIP155FromService(addr.data);
     }
 
     NetInfoStatus AddEntry(const Purpose purpose, const std::string& input);
-    CServiceList GetEntries() const;
+    NetInfoList GetEntries() const;
 
-    const CService& GetPrimary() const { return addr; }
+    const CService& GetPrimary() const { return addr.data; }
     bool IsEmpty() const { return *this == MnNetInfo(); }
-    NetInfoStatus Validate() const { return ValidateService(addr); }
+    NetInfoStatus Validate() const { return ValidateService(addr.data); }
     UniValue ToJson() const;
     std::string ToString() const;
 
-    void Clear() { addr = CService(); }
+    void Clear() { addr.Clear(); }
 };
 
 /* Wraps a CService::ToStringAddrPort() into a UniValue array */
