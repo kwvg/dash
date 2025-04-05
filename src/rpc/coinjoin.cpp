@@ -429,7 +429,17 @@ static RPCHelpMan getcoinjoininfo()
                                     {RPCResult::Type::STR, "service", "The IP address and port of the masternode (DEPRECATED, returned only if config option -deprecatedrpc=service is passed)"},
                                     {RPCResult::Type::OBJ, "addresses", "Network addresses of the masternode",
                                     {
-                                        {RPCResult::Type::ARR, "core_p2p", "Addresses used to expose protocol P2P",
+                                        {RPCResult::Type::ARR, "core_p2p", /*optional=*/true, "Addresses used to expose protocol P2P",
+                                            {
+                                                {RPCResult::Type::STR, "address", ""},
+                                            }
+                                        },
+                                        {RPCResult::Type::ARR, "platform_http", /*optional=*/true, "Addresses used to expose Platform HTTP APIs",
+                                            {
+                                                {RPCResult::Type::STR, "address", ""},
+                                            }
+                                        },
+                                        {RPCResult::Type::ARR, "platform_p2p", /*optional=*/true, "Addresses used to expose Platform P2P",
                                             {
                                                 {RPCResult::Type::STR, "address", ""},
                                             }

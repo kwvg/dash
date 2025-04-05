@@ -82,12 +82,14 @@ UniValue CSimplifiedMNListEntry::ToJson(bool extended) const
     if (IsServiceDeprecatedRPCEnabled()) {
         obj.pushKV("service", netInfo.GetPrimary().ToStringAddrPort());
     }
-    obj.pushKV("addresses", netInfo.ToJson());
+    obj.pushKV("addresses", MaybeAddPlatformNetInfo(*this, nType, netInfo.ToJson()));
     obj.pushKV("pubKeyOperator", pubKeyOperator.ToString());
     obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
     obj.pushKV("isValid", isValid);
     if (nType == MnType::Evo) {
-        obj.pushKV("platformHTTPPort", platformHTTPPort);
+        if (IsServiceDeprecatedRPCEnabled()) {
+            obj.pushKV("platformHTTPPort", platformHTTPPort);
+        }
         obj.pushKV("platformNodeID", platformNodeID.ToString());
     }
 
