@@ -20,8 +20,14 @@ BOOST_AUTO_TEST_CASE(mnnetinfo_rules)
         {"1.1.1.1:8888", NetInfoStatus::Success},
         /* Valid IPv4 address, no port */
         {"1.1.1.1", NetInfoStatus::Success},
+        /* Valid IPv4 address, valid port */
+        {"1.1.1.1:9999", NetInfoStatus::BadPort}, // Mainnet P2P port on non-mainnet
+        /* Valid IPv4 address, valid port */
+        {"0.0.0.0:8888", NetInfoStatus::BadInput}, // Valid IPv4 formatting but invalid IPv4 address
         /* Valid IPv4 address, invalid port */
         {"1.1.1.1:99999", NetInfoStatus::BadInput}, // Port greater than uint16_t max
+        /* Valid IPv6 address, valid port */
+        {"[2606:4700:4700::1111]:8888", NetInfoStatus::BadInput}, // Only IPv4 allowed
         /* Valid domain address, valid port */
         {"example.com:8888", NetInfoStatus::BadInput}, // Domains are not allowed
         /* Invalid address, no port */
@@ -51,16 +57,19 @@ BOOST_AUTO_TEST_CASE(cservice_compatible)
     CService service;
     MnNetInfo netInfo;
     BOOST_CHECK(CheckIfSerSame(service, netInfo));
+    BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::BadInput); // Empty values are invalid
 
     // Valid IPv4 address
     service = LookupNumeric("1.1.1.1", 1234);
     BOOST_CHECK_EQUAL(netInfo.AddEntry("1.1.1.1:1234"), NetInfoStatus::Success);
     BOOST_CHECK(CheckIfSerSame(service, netInfo));
+    BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Success); // AddEntry() succeeded
 
     // Lookup() failure, MnNetInfo should remain empty if Lookup() failed
     service = CService(); netInfo.Clear();
     BOOST_CHECK_EQUAL(netInfo.AddEntry("example.com"), NetInfoStatus::BadInput); // Domain lookups are prohibited
     BOOST_CHECK(CheckIfSerSame(service, netInfo));
+    BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::BadInput); // Empty values are invalid
 }
 
 BOOST_AUTO_TEST_SUITE_END()
