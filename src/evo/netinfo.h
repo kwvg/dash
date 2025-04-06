@@ -385,6 +385,7 @@ private:
 
     NetInfoStatus ProcessCandidate(const Purpose& purpose, const NetInfoEntry& candidate);
     static NetInfoStatus ValidateService(const CService& service);
+    static NetInfoStatus ValidateDomainPort(const DomainPort& pair);
 
 public:
     ExtNetInfo() = default;

@@ -44,6 +44,15 @@ bool HasBadTLD(const std::string& str)
     return false;
 }
 
+bool IsAllowedPlatformHTTPPort(uint16_t port) {
+    switch (port) {
+    case 80:
+    case 443:
+        return true;
+    }
+    return false;
+}
+
 bool MatchCharsFilter(const std::string& input, const std::string_view& filter)
 {
     for (char c : input) {
@@ -55,6 +64,7 @@ bool MatchCharsFilter(const std::string& input, const std::string_view& filter)
 }
 
 static const CService empty_service{CService()};
+static constexpr std::string_view SAFE_CHARS_IPPORT{"1234567890.[]:"};
 static constexpr std::string_view SAFE_CHARS_RFC1035{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-"};
 } // anonymous namespace
 
@@ -299,6 +309,10 @@ NetInfoStatus MnNetInfo::AddEntry(const Purpose purpose, const std::string& inpu
     if (purpose != Purpose::CORE_P2P || !IsEmpty()) {
         return NetInfoStatus::MaxLimit;
     }
+    // Contains invalid characters, unlikely to pass Lookup(), fast-fail
+    if (!MatchCharsFilter(input, SAFE_CHARS_IPPORT)) {
+        return NetInfoStatus::BadInput;
+    }
     if (auto service = Lookup(input, /*portDefault=*/Params().GetDefaultPort(), /*fAllowLookup=*/false); service.has_value()) {
         const auto ret = ValidateService(service.value());
         if (ret == NetInfoStatus::Success) {
@@ -399,6 +413,18 @@ NetInfoStatus ExtNetInfo::ValidateService(const CService& service)
     return NetInfoStatus::Success;
 }
 
+NetInfoStatus ExtNetInfo::ValidateDomainPort(const DomainPort& service)
+{
+    if (service.Validate() != DomainPort::Status::Success) {
+        return NetInfoStatus::BadInput;
+    }
+    if ((IsBadPort(service.GetPort()) && !IsAllowedPlatformHTTPPort(service.GetPort())) || service.GetPort() == 0) {
+        return NetInfoStatus::BadPort;
+    }
+
+    return NetInfoStatus::Success;
+}
+
 NetInfoStatus ExtNetInfo::AddEntry(const Purpose purpose, const std::string& input)
 {
     if (!IsValidPurpose(static_cast<uint8_t>(purpose))) {
@@ -406,6 +432,29 @@ NetInfoStatus ExtNetInfo::AddEntry(const Purpose purpose, const std::string& inp
         return NetInfoStatus::Malformed;
     }
 
+    if (!MatchCharsFilter(input, SAFE_CHARS_IPPORT)) {
+        if (!MatchCharsFilter(input, SAFE_CHARS_RFC1035)) {
+            // Neither IP:port safe nor domain-safe, we can safely assume it's bad input
+            return NetInfoStatus::BadInput;
+        }
+
+        // Not IP:port safe but domain safe, treat as domain.
+        if (purpose != Purpose::PLATFORM_HTTP) {
+            // Domains only allowed for Platform HTTP(S) API
+            return NetInfoStatus::BadInput;
+        }
+
+        if (DomainPort service; service.Set(input) == DomainPort::Status::Success) {
+            const auto ret = ValidateDomainPort(service);
+            if (ret == NetInfoStatus::Success) {
+                return ProcessCandidate(purpose, NetInfoEntry(service));
+            }
+            return ret; /* ValidateDomainPort() failed */
+        }
+        return NetInfoStatus::BadInput; /* DomainPort::Set() failed */
+    }
+
+    // IP:port safe, try to parse it as IP:port
     if (auto service = Lookup(input, /*portDefault=*/Params().GetDefaultPort(), /*fAllowLookup=*/false); service.has_value()) {
         const auto ret = ValidateService(service.value());
         if (ret == NetInfoStatus::Success) {
@@ -467,6 +516,11 @@ NetInfoStatus ExtNetInfo::Validate() const
             if (const auto& service{entry.GetAddrPort()}; service.has_value()) {
                 if (auto ret{ValidateService(*service)}; ret != NetInfoStatus::Success) {
                     // Stores CService underneath but doesn't pass validation rules
+                    return ret;
+                }
+            } else if (const auto& service{entry.GetDomainPort()}; service.has_value()) {
+                if (auto ret{ValidateDomainPort(*service)}; ret != NetInfoStatus::Success) {
+                    // Stores DomainPort underneath but doesn't pass validation rules
                     return ret;
                 }
             } else {
