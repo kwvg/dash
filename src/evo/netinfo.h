@@ -257,6 +257,9 @@ UniValue MaybeAddPlatformNetInfo(const CSimplifiedMNListEntry& obj, const MnType
 class ExtNetInfo final : public NetInfoInterface
 {
 private:
+    static constexpr uint8_t NETINFO_FORMAT_VERSION{1};
+
+    uint8_t m_version{NETINFO_FORMAT_VERSION};
     std::map<Purpose, std::set<NetInfoEntry>> m_data{};
 
 private:
@@ -267,11 +270,15 @@ public:
     ExtNetInfo() = default;
     ~ExtNetInfo() = default;
 
-    bool operator==(const ExtNetInfo& rhs) const { return m_data == rhs.m_data; }
+    bool operator==(const ExtNetInfo& rhs) const { return m_version == rhs.m_version && m_data == rhs.m_data; }
     bool operator!=(const ExtNetInfo& rhs) const { return !(*this == rhs); }
 
     SERIALIZE_METHODS(ExtNetInfo, obj)
     {
+        READWRITE(obj.m_version);
+        if (obj.m_version == 0 || obj.m_version > NETINFO_FORMAT_VERSION) {
+            return; // Don't bother with unknown versions
+        }
         READWRITE(obj.m_data);
     }
 

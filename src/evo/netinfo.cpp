@@ -274,6 +274,11 @@ const CService& ExtNetInfo::GetPrimary() const
 
 NetInfoStatus ExtNetInfo::Validate() const
 {
+    if (m_version == 0 || m_version > NETINFO_FORMAT_VERSION) {
+        // Invalid version
+        return NetInfoStatus::Malformed;
+    }
+
     for (const auto& [purpose, p_entries] : m_data) {
         if (!IsValidPurpose(static_cast<uint8_t>(purpose))) {
             // Invalid purpose code
