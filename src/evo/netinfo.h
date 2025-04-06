@@ -29,6 +29,8 @@ constexpr std::string_view NISToString(const NetInfoStatus code) {
     } // no default case, so the compiler can warn about missing cases
 }
 
+using CServiceList = std::vector<std::reference_wrapper<const CService>>;
+
 class MnNetInfo
 {
 private:
@@ -50,6 +52,7 @@ public:
     }
 
     NetInfoStatus AddEntry(const std::string& service);
+    CServiceList GetEntries() const;
 
     const CService& GetPrimary() const { return addr; }
     bool IsEmpty() const { return *this == MnNetInfo(); }

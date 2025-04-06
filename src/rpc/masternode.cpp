@@ -565,34 +565,47 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
         }
 
         if (strMode == "addr") {
-            std::string strAddress = dmn.pdmnState->netInfo.GetPrimary().ToStringAddrPort();
+            std::string strAddress;
+            for (const CService& entry : dmn.pdmnState->netInfo.GetEntries()) {
+                strAddress += entry.ToStringAddrPort() + " ";
+            }
+            strAddress.pop_back(); // Remove trailing space
             if (!strFilter.empty() && strAddress.find(strFilter) == std::string::npos &&
                 strOutpoint.find(strFilter) == std::string::npos) return;
             obj.pushKV(strOutpoint, strAddress);
         } else if (strMode == "full") {
-            std::string strFull = strprintf("%s %s %s %s %s %s",
+            std::string strFull = strprintf("%s %s %s %s %s ",
                                     PadString(dmnToStatus(dmn), 18),
                                     dmn.pdmnState->nPoSePenalty,
                                     payeeStr,
                                     PadString(ToString(dmnToLastPaidTime(dmn)), 10),
-                                    PadString(ToString(dmn.pdmnState->nLastPaidHeight), 6),
-                                    dmn.pdmnState->netInfo.GetPrimary().ToStringAddrPort());
+                                    PadString(ToString(dmn.pdmnState->nLastPaidHeight), 6));
+            for (const CService& entry : dmn.pdmnState->netInfo.GetEntries()) {
+                strFull += entry.ToStringAddrPort() + " ";
+            }
+            strFull.pop_back(); // Remove trailing space
             if (!strFilter.empty() && strFull.find(strFilter) == std::string::npos &&
                 strOutpoint.find(strFilter) == std::string::npos) return;
             obj.pushKV(strOutpoint, strFull);
         } else if (strMode == "info") {
-            std::string strInfo = strprintf("%s %s %s %s",
+            std::string strInfo = strprintf("%s %s %s ",
                                     PadString(dmnToStatus(dmn), 18),
                                     dmn.pdmnState->nPoSePenalty,
-                                    payeeStr,
-                                    dmn.pdmnState->netInfo.GetPrimary().ToStringAddrPort());
+                                    payeeStr);
+            for (const CService& entry : dmn.pdmnState->netInfo.GetEntries()) {
+                strInfo += entry.ToStringAddrPort() + " ";
+            }
+            strInfo.pop_back(); // Remove trailing space
             if (!strFilter.empty() && strInfo.find(strFilter) == std::string::npos &&
                 strOutpoint.find(strFilter) == std::string::npos) return;
             obj.pushKV(strOutpoint, strInfo);
         } else if (strMode == "json" || strMode == "recent" || strMode == "evo") {
-            std::string strInfo = strprintf("%s %s %s %s %s %s %s %s %s %s %s",
-                                    dmn.proTxHash.ToString(),
-                                    dmn.pdmnState->netInfo.GetPrimary().ToStringAddrPort(),
+            std::string strInfo{dmn.proTxHash.ToString() + " "};
+            for (const CService& entry : dmn.pdmnState->netInfo.GetEntries()) {
+                strInfo += entry.ToStringAddrPort() + " ";
+            }
+            strInfo.pop_back(); // Remove trailing space
+            strInfo += strprintf("%s %s %s %s %s %s %s %s %s",
                                     payeeStr,
                                     dmnToStatus(dmn),
                                     dmn.pdmnState->nPoSePenalty,
