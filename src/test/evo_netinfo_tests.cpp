@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(mnnetinfo_rules)
     };
     for (const auto& [input, expected_ret] : vals) {
         MnNetInfo netInfo;
-        BOOST_CHECK_EQUAL(netInfo.AddEntry(input), expected_ret);
+        BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::CORE_P2P, input), expected_ret);
     }
 }
 
@@ -61,13 +61,13 @@ BOOST_AUTO_TEST_CASE(cservice_compatible)
 
     // Valid IPv4 address
     service = LookupNumeric("1.1.1.1", 1234);
-    BOOST_CHECK_EQUAL(netInfo.AddEntry("1.1.1.1:1234"), NetInfoStatus::Success);
+    BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::CORE_P2P, "1.1.1.1:1234"), NetInfoStatus::Success);
     BOOST_CHECK(CheckIfSerSame(service, netInfo));
     BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Success); // AddEntry() succeeded
 
     // Lookup() failure, MnNetInfo should remain empty if Lookup() failed
     service = CService(); netInfo.Clear();
-    BOOST_CHECK_EQUAL(netInfo.AddEntry("example.com"), NetInfoStatus::BadInput); // Domain lookups are prohibited
+    BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::CORE_P2P, "example.com"), NetInfoStatus::BadInput); // Domain lookups are prohibited
     BOOST_CHECK(CheckIfSerSame(service, netInfo));
     BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::BadInput); // Empty values are invalid
 }

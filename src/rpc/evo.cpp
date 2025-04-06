@@ -688,7 +688,7 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
 
     {
         auto tryAddEntry = [&](const std::string& input) -> void {
-            if (auto entryRet = ptx.netInfo.AddEntry(input); entryRet != NetInfoStatus::Success) {
+            if (auto entryRet = ptx.netInfo.AddEntry(Purpose::CORE_P2P, input); entryRet != NetInfoStatus::Success) {
                 throw std::runtime_error(strprintf("%s (%s)", NISToString(entryRet), input));
             }
         };
@@ -999,7 +999,7 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
 
     {
         auto tryAddEntry = [&](const std::string& input) -> void {
-            if (auto entryRet = ptx.netInfo.AddEntry(input); entryRet != NetInfoStatus::Success) {
+            if (auto entryRet = ptx.netInfo.AddEntry(Purpose::CORE_P2P, input); entryRet != NetInfoStatus::Success) {
                 throw std::runtime_error(strprintf("%s (%s)", NISToString(entryRet), input));
             }
         };
