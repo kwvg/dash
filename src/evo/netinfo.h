@@ -18,6 +18,8 @@ enum class MnType : uint16_t;
 
 class UniValue;
 
+static constexpr uint8_t EXTNETINFO_ENTRIES_LIMIT{32};
+
 enum NetInfoStatus : uint8_t
 {
     // Adding entries
@@ -27,6 +29,7 @@ enum NetInfoStatus : uint8_t
     // Validation
     BadInput,
     BadPort,
+    Malformed,
     Success
 };
 
@@ -40,6 +43,8 @@ constexpr std::string_view NISToString(const NetInfoStatus code) {
         return "invalid network address";
     case NetInfoStatus::BadPort:
         return "invalid port";
+    case NetInfoStatus::Malformed:
+        return "malformed";
     case NetInfoStatus::Success:
         return "success";
     } // no default case, so the compiler can warn about missing cases
@@ -55,6 +60,18 @@ enum class Purpose : uint8_t
     PLATFORM_HTTP = 2,
 };
 template<> struct is_serializable_enum<Purpose> : std::true_type {};
+
+inline constexpr bool IsValidPurpose(uint8_t purpose)
+{
+    switch (purpose) {
+    case 0x00: /* Purpose::CORE_P2P */
+    case 0x01: /* Purpose::PLATFORM_P2P */
+    case 0x02: /* Purpose::PLATFORM_HTTP */
+        return true;
+    default:
+        return false;
+    }
+}
 
 // Warning: Used in RPC code, altering existing values is a breaking change
 constexpr std::string PurposeToString(const Purpose code, const bool lower = false) {
@@ -164,6 +181,7 @@ public:
 
     virtual const CService& GetPrimary() const = 0;
     virtual bool IsEmpty() const = 0;
+    virtual bool CanStorePlatform() const = 0;
     virtual NetInfoStatus Validate() const = 0;
     virtual UniValue ToJson() const = 0;
     virtual std::string ToString() const = 0;
@@ -215,6 +233,7 @@ public:
 
     const CService& GetPrimary() const override { return addr.data; }
     bool IsEmpty() const override { return *this == MnNetInfo(); }
+    bool CanStorePlatform() const override { return false; }
     NetInfoStatus Validate() const override { return ValidateService(addr.data); }
     UniValue ToJson() const override;
     std::string ToString() const override;
@@ -234,6 +253,50 @@ UniValue MaybeAddPlatformNetInfo(const CDeterministicMNState& obj, const MnType&
 UniValue MaybeAddPlatformNetInfo(const CProRegTx& obj, const UniValue& arr);
 UniValue MaybeAddPlatformNetInfo(const CProUpServTx& obj, const UniValue& arr);
 UniValue MaybeAddPlatformNetInfo(const CSimplifiedMNListEntry& obj, const MnType& type, const UniValue& arr);
+
+class ExtNetInfo final : public NetInfoInterface
+{
+private:
+    std::map<Purpose, std::set<NetInfoEntry>> m_data{};
+
+private:
+    NetInfoStatus ProcessCandidate(const Purpose& purpose, const NetInfoEntry& candidate);
+    static NetInfoStatus ValidateService(const CService& service);
+
+public:
+    ExtNetInfo() = default;
+    ~ExtNetInfo() = default;
+
+    bool operator==(const ExtNetInfo& rhs) const { return m_data == rhs.m_data; }
+    bool operator!=(const ExtNetInfo& rhs) const { return !(*this == rhs); }
+
+    SERIALIZE_METHODS(ExtNetInfo, obj)
+    {
+        READWRITE(obj.m_data);
+    }
+
+    template <typename Stream>
+    ExtNetInfo(deserialize_type, Stream& s)
+    {
+        s >> *this;
+    }
+
+    NetInfoStatus AddEntry(const Purpose purpose, const std::string& input) override;
+    NetInfoList GetEntries() const override;
+
+    const CService& GetPrimary() const override;
+    bool IsEmpty() const override { return *this == ExtNetInfo(); }
+    bool CanStorePlatform() const override { return true; }
+    NetInfoStatus Validate() const override;
+    UniValue ToJson() const override;
+    std::string ToString() const override;
+
+    void Clear() override
+    {
+        m_version = NETINFO_FORMAT_VERSION;
+        m_data.clear();
+    }
+};
 
 /* Selects NetInfoInterface implementation to use based on object version */
 template <typename T1>

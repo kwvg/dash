@@ -24,6 +24,8 @@ const CChainParams& MainParams()
     if (!g_main_params) g_main_params = CreateChainParams(ArgsManager{}, CBaseChainParams::MAIN);
     return *g_main_params;
 }
+
+static const CService empty_service{CService()};
 } // anonymous namespace
 
 UniValue ArrFromService(const CService& addr)
@@ -44,10 +46,11 @@ bool IsServiceDeprecatedRPCEnabled()
 UniValue MaybeAddPlatformNetInfo(const CDeterministicMN& dmn, const UniValue& arr)
 {
     assert(arr.type() == UniValue::VOBJ);
+    if (Assert(dmn.pdmnState)->netInfo->CanStorePlatform()) return arr;
     if (dmn.nType != MnType::Evo) return arr;
-    CNetAddr addr{Assert(dmn.pdmnState)->netInfo->GetPrimary()}; UniValue ret{arr};
-    ret.pushKV(PurposeToString(Purpose::PLATFORM_HTTP, /*lower=*/true), ArrFromService(CService(addr, dmn.pdmnState->platformHTTPPort)));
-    ret.pushKV(PurposeToString(Purpose::PLATFORM_P2P, /*lower=*/true), ArrFromService(CService(addr, dmn.pdmnState->platformP2PPort)));
+    const CService& addr{Assert(dmn.pdmnState)->netInfo->GetPrimary()}; UniValue ret{arr};
+    ret.pushKV(PurposeToString(Purpose::PLATFORM_HTTP, /*lower=*/true), ArrFromService(CService(CNetAddr{addr}, dmn.pdmnState->platformHTTPPort)));
+    ret.pushKV(PurposeToString(Purpose::PLATFORM_P2P, /*lower=*/true), ArrFromService(CService(CNetAddr{addr}, dmn.pdmnState->platformP2PPort)));
     return ret;
 }
 
@@ -57,11 +60,12 @@ template <typename T1>
 UniValue IMaybeAddPlatformNetInfo(const T1& obj, const MnType& type, const UniValue& arr)
 {
     assert(arr.type() == UniValue::VOBJ);
+    if (obj.netInfo->CanStorePlatform()) return arr;
     if (type != MnType::Evo) return arr;
-    CNetAddr addr{obj.netInfo->GetPrimary()}; UniValue ret{arr};
-    ret.pushKV(PurposeToString(Purpose::PLATFORM_HTTP, /*lower=*/true), ArrFromService(CService(addr, obj.platformHTTPPort)));
+    const CService& addr{obj.netInfo->GetPrimary()}; UniValue ret{arr};
+    ret.pushKV(PurposeToString(Purpose::PLATFORM_HTTP, /*lower=*/true), ArrFromService(CService(CNetAddr{addr}, obj.platformHTTPPort)));
     if constexpr (!std::is_same<T1, CSimplifiedMNListEntry>::value) /* CSimplifiedMNListEntry doesn't have this field */ {
-        ret.pushKV(PurposeToString(Purpose::PLATFORM_P2P, /*lower=*/true), ArrFromService(CService(addr, obj.platformP2PPort)));
+        ret.pushKV(PurposeToString(Purpose::PLATFORM_P2P, /*lower=*/true), ArrFromService(CService(CNetAddr{addr}, obj.platformP2PPort)));
     }
     return ret;
 }
@@ -183,4 +187,155 @@ std::string MnNetInfo::ToString() const
                      "    NetInfo(purpose=%s)\n"
                      "      %s\n",
                      PurposeToString(Purpose::CORE_P2P), addr.ToString());
+}
+
+NetInfoStatus ExtNetInfo::ProcessCandidate(const Purpose& purpose, const NetInfoEntry& candidate)
+{
+    assert(candidate.IsTriviallyValid());
+
+    if (const auto& all_entries{GetEntries()};
+        std::find_if(all_entries.begin(), all_entries.end(), [candidate](const auto& obj){ return obj.get() == candidate; }) != all_entries.end()) {
+        // We don't allow duplicate entries even *across* different lists
+        return NetInfoStatus::Duplicate;
+    }
+    if (auto it{m_data.find(purpose)}; it != m_data.end()) {
+        // Existing entries list found, run some more sanity checks
+        auto& [_, entries] = *it;
+        if (entries.size() > EXTNETINFO_ENTRIES_LIMIT) {
+            return NetInfoStatus::MaxLimit;
+        }
+        entries.emplace(candidate);
+        return NetInfoStatus::Success;
+    } else {
+        // First entry for purpose code, create new entries list
+        auto [_, status] = m_data.try_emplace(purpose, std::set<NetInfoEntry>({candidate}));
+        assert(status); // We did just check to see if our value already existed, try_emplace shouldn't fail
+        return NetInfoStatus::Success;
+    }
+}
+
+NetInfoStatus ExtNetInfo::ValidateService(const CService& service)
+{
+    if (!service.IsValid()) {
+        return NetInfoStatus::BadInput;
+    }
+    if (Params().RequireRoutableExternalIP() && !service.IsRoutable()) {
+        return NetInfoStatus::BadInput;
+    }
+    if (!IsTypeBIP155(GetBIP155FromService(service))) {
+        return NetInfoStatus::BadInput;
+    }
+    if (IsBadPort(service.GetPort()) || service.GetPort() == 0) {
+        return NetInfoStatus::BadPort;
+    }
+
+    return NetInfoStatus::Success;
+}
+
+NetInfoStatus ExtNetInfo::AddEntry(const Purpose purpose, const std::string& input)
+{
+    if (!IsValidPurpose(static_cast<uint8_t>(purpose))) {
+        // Somebody tried to sneak in a bad value
+        return NetInfoStatus::Malformed;
+    }
+
+    if (auto service = Lookup(input, /*portDefault=*/Params().GetDefaultPort(), /*fAllowLookup=*/false); service.has_value()) {
+        const auto ret = ValidateService(service.value());
+        if (ret == NetInfoStatus::Success) {
+            return ProcessCandidate(purpose, NetInfoEntry(service.value()));
+        }
+        return ret; /* ValidateService() failed */
+    }
+    return NetInfoStatus::BadInput; /* Lookup() failed */
+}
+
+// Return all entries. Use in code where we check for duplicates.
+NetInfoList ExtNetInfo::GetEntries() const
+{
+    NetInfoList ret;
+    for (const auto& [_, entries] : m_data) {
+        ret.insert(ret.end(), entries.begin(), entries.end());
+    }
+    return ret;
+}
+
+const CService& ExtNetInfo::GetPrimary() const
+{
+    if (const auto& it{m_data.find(Purpose::CORE_P2P)}; it != m_data.end()) {
+        const auto& [_, entries] = *it;
+        if (!entries.empty()) {
+            if (const auto& service{entries.begin()->GetAddrPort()}; service.has_value()) {
+                return service.value();
+            }
+        }
+    }
+    return empty_service;
+}
+
+NetInfoStatus ExtNetInfo::Validate() const
+{
+    for (const auto& [purpose, p_entries] : m_data) {
+        if (!IsValidPurpose(static_cast<uint8_t>(purpose))) {
+            // Invalid purpose code
+            return NetInfoStatus::Malformed;
+        }
+        if (p_entries.empty()) {
+            // Purpose if present in map must have at least one entry
+            return NetInfoStatus::Malformed;
+        }
+        for (const auto& entry : p_entries) {
+            if (!entry.IsTriviallyValid()) {
+                // Trivially invalid NetInfoEntry, no point checking against consensus rules
+                return NetInfoStatus::Malformed;
+            }
+            if (const auto& service{entry.GetAddrPort()}; service.has_value()) {
+                if (auto ret{ValidateService(*service)}; ret != NetInfoStatus::Success) {
+                    // Stores CService underneath but doesn't pass validation rules
+                    return ret;
+                }
+            } else {
+                // Doesn't store valid type underneath
+                return NetInfoStatus::Malformed;
+            }
+        }
+    }
+    return NetInfoStatus::Success;
+}
+
+UniValue ExtNetInfo::ToJson() const
+{
+    UniValue ret(UniValue::VOBJ);
+    for (const auto& [purpose, p_entries] : m_data) {
+        if (!IsValidPurpose(static_cast<uint8_t>(purpose))) {
+            return UniValue(UniValue::VOBJ);
+        }
+        UniValue arr(UniValue::VARR);
+        for (const auto& entry : p_entries) {
+            arr.push_back(entry.ToStringAddrPort());
+        }
+        ret.pushKV(PurposeToString(purpose, /*lower=*/true), arr);
+    }
+    return ret;
+}
+
+std::string ExtNetInfo::ToString() const
+{
+    std::string ret{"ExtNetInfo()\n"};
+    for (const auto& [purpose, p_entries] : m_data) {
+        if (!IsValidPurpose(static_cast<uint8_t>(purpose))) {
+            return strprintf(
+                "ExtNetInfo()\n"
+                "    [invalid object]\n"
+            );
+        }
+        ret += strprintf("    NetInfo(purpose=%s)\n", PurposeToString(purpose));
+        if (p_entries.empty()) {
+            ret += strprintf("      [invalid list]\n");
+        } else {
+            for (const auto& entry : p_entries) {
+                ret += strprintf("      %s\n", entry.ToString());
+            }
+        }
+    }
+    return ret;
 }

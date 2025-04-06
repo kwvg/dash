@@ -1275,6 +1275,8 @@ static bool CheckService(const ProTx& proTx, TxValidationState& state)
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-ipaddr");
     case NetInfoStatus::BadPort:
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-ipaddr-port");
+    case NetInfoStatus::Malformed:
+        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-ipaddr-terrible");
     case NetInfoStatus::Success:
         return true;
     // Shouldn't be possible during self-checks
