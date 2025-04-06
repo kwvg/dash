@@ -25,8 +25,84 @@ const CChainParams& MainParams()
     return *g_main_params;
 }
 
+bool HasBadTLD(const std::string& str)
+{
+    const std::vector<std::string_view> blocklist{
+        ".local",
+        ".intranet",
+        ".internal",
+        ".private",
+        ".corp",
+        ".home",
+        ".lan",
+        ".home.arpa"
+    };
+    for (const auto& tld : blocklist) {
+        if (tld.size() > str.size()) continue;
+        if (std::equal(tld.rbegin(), tld.rend(), str.rbegin())) return true;
+    }
+    return false;
+}
+
+bool MatchCharsFilter(const std::string& input, const std::string_view& filter)
+{
+    for (char c : input) {
+        if (filter.find(c) == std::string::npos) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static const CService empty_service{CService()};
+static constexpr std::string_view SAFE_CHARS_RFC1035{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-"};
 } // anonymous namespace
+
+DomainPort::Status DomainPort::ValidateDomain(const std::string& input)
+{
+    if (input.length() > 253 || input.length() < 4) {
+        return DomainPort::Status::BadLen;
+    }
+    if (!MatchCharsFilter(input, SAFE_CHARS_RFC1035)) {
+        return DomainPort::Status::BadChar;
+    }
+    if (input.at(0) == '.' || input.at(input.length() - 1) == '.') {
+        return DomainPort::Status::BadCharPos;
+    }
+    std::vector<std::string> labels{SplitString(input, '.')};
+    if (labels.size() < 2) {
+        return DomainPort::Status::BadDotless;
+    }
+    if (HasBadTLD(input)) {
+        return DomainPort::Status::BadTLD;
+    }
+    for (const auto& label : labels) {
+        if (label.empty() || label.length() > 63) {
+            return DomainPort::Status::BadLabelLen;
+        }
+        if (label.at(0) == '-' or label.at(label.length() - 1) == '-') {
+            return DomainPort::Status::BadLabelCharPos;
+        }
+    }
+    return DomainPort::Status::Success;
+}
+
+DomainPort::Status DomainPort::Set(const std::string& input)
+{
+    std::string addr; uint16_t port{0};
+    SplitHostPort(input, port, addr);
+    if (port == 0) {
+        // Port not explicitly specified or set to 0
+        return DomainPort::Status::BadPort;
+    }
+
+    const auto ret{ValidateDomain(addr)};
+    if (ret == DomainPort::Status::Success) {
+        m_addr = addr;
+        m_port = port;
+    }
+    return ret;
+}
 
 UniValue ArrFromService(const CService& addr)
 {

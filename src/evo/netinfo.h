@@ -85,6 +85,74 @@ constexpr std::string PurposeToString(const Purpose code, const bool lower = fal
     } // no default case, so the compiler can warn about missing cases
 }
 
+class DomainPort
+{
+public:
+    enum class Status : uint8_t
+    {
+        BadChar,
+        BadCharPos,
+        BadDotless,
+        BadLabelCharPos,
+        BadLabelLen,
+        BadLen,
+        BadPort,
+        BadTLD,
+
+        Success
+    };
+
+    constexpr std::string_view StatusToString(const DomainPort::Status code) {
+        switch (code) {
+        case DomainPort::Status::BadChar:
+            return "invalid character";
+        case DomainPort::Status::BadCharPos:
+            return "bad domain character position";
+        case DomainPort::Status::BadDotless:
+            return "prohibited dotless";
+        case DomainPort::Status::BadLabelCharPos:
+            return "bad label character position";
+        case DomainPort::Status::BadLabelLen:
+            return "bad label length";
+        case DomainPort::Status::BadLen:
+            return "bad domain length";
+        case DomainPort::Status::BadPort:
+            return "bad port";
+        case DomainPort::Status::BadTLD:
+            return "prohibited top level domain";
+        case DomainPort::Status::Success:
+            return "success";
+        } // no default case, so the compiler can warn about missing cases
+    }
+
+private:
+    std::string m_addr;
+    uint16_t m_port;
+
+private:
+    static DomainPort::Status ValidateDomain(const std::string& input);
+
+public:
+    DomainPort() = default;
+    ~DomainPort() = default;
+
+    bool operator<(const DomainPort& rhs) const { return std::tie(m_addr, m_port) < std::tie(rhs.m_addr, rhs.m_port); }
+    bool operator==(const DomainPort& rhs) const { return std::tie(m_addr, m_port) == std::tie(rhs.m_addr, rhs.m_port); }
+    bool operator!=(const DomainPort& rhs) const { return !(*this == rhs); }
+
+    SERIALIZE_METHODS(DomainPort, obj)
+    {
+        READWRITE(obj.m_addr);
+        READWRITE(obj.m_port);
+    }
+
+    DomainPort::Status Set(const std::string& input);
+    DomainPort::Status Validate() const { return ValidateDomain(m_addr); }
+    uint16_t GetPort() const { return m_port; }
+    std::string ToStringAddr() const { return m_addr; }
+    std::string ToStringAddrPort() const { return strprintf("%s:%d", m_addr, m_port); }
+};
+
 namespace {
 inline constexpr uint8_t GetBIP155FromService(const CService& service)
 {
