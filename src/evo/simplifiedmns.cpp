@@ -38,7 +38,7 @@ CSimplifiedMNListEntry::CSimplifiedMNListEntry(const CDeterministicMN& dmn) :
     platformNodeID(dmn.pdmnState->platformNodeID),
     scriptPayout(dmn.pdmnState->scriptPayout),
     scriptOperatorPayout(dmn.pdmnState->scriptOperatorPayout),
-    nVersion(dmn.pdmnState->nVersion == ProTxVersion::LegacyBLS ? ProTxVersion::LegacyBLS : ProTxVersion::BasicBLS),
+    nVersion(CProRegTx::GetMaxVersion(/*is_basic_scheme_active=*/dmn.pdmnState->nVersion >= ProTxVersion::BasicBLS)),
     nType(dmn.nType)
 {
 }
