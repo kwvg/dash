@@ -163,6 +163,7 @@ public:
         data = CService();
     }
 
+    const uint8_t& GetType() const { return type; }
     std::optional<std::reference_wrapper<const CService>> GetAddrPort() const;
     bool IsTriviallyValid() const;
     std::string ToString() const;
@@ -263,6 +264,9 @@ private:
     std::map<Purpose, std::set<NetInfoEntry>> m_data{};
 
 private:
+    // Type expected of first (i.e. "primary") entry.
+    static constexpr uint8_t PRIMARY_ADDR_TYPE{/*BIP155Network::IPV4=*/0x01};
+
     NetInfoStatus ProcessCandidate(const Purpose& purpose, const NetInfoEntry& candidate);
     static NetInfoStatus ValidateService(const CService& service);
 

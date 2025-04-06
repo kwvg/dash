@@ -207,6 +207,13 @@ NetInfoStatus ExtNetInfo::ProcessCandidate(const Purpose& purpose, const NetInfo
         entries.emplace(candidate);
         return NetInfoStatus::Success;
     } else {
+        // The first entry is subject to additional restrictions, check if it obeys those rules
+        if (purpose == Purpose::CORE_P2P || purpose == Purpose::PLATFORM_P2P) {
+            if (candidate.GetType() != PRIMARY_ADDR_TYPE) {
+                // The first ("primary") entry may only be of the primary type
+                return NetInfoStatus::BadInput;
+            }
+        }
         // First entry for purpose code, create new entries list
         auto [_, status] = m_data.try_emplace(purpose, std::set<NetInfoEntry>({candidate}));
         assert(status); // We did just check to see if our value already existed, try_emplace shouldn't fail
@@ -291,6 +298,10 @@ NetInfoStatus ExtNetInfo::Validate() const
         for (const auto& entry : p_entries) {
             if (!entry.IsTriviallyValid()) {
                 // Trivially invalid NetInfoEntry, no point checking against consensus rules
+                return NetInfoStatus::Malformed;
+            }
+            if (entry == *p_entries.begin() && entry.GetType() != PRIMARY_ADDR_TYPE) {
+                // First entry must be of the primary type
                 return NetInfoStatus::Malformed;
             }
             if (const auto& service{entry.GetAddrPort()}; service.has_value()) {
