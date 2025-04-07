@@ -7,6 +7,7 @@
 
 #include <netaddress.h>
 #include <serialize.h>
+#include <util/underlying.h>
 
 class CDeterministicMN;
 class CDeterministicMNState;
@@ -153,6 +154,12 @@ public:
     std::string ToStringAddrPort() const { return strprintf("%s:%d", m_addr, m_port); }
 };
 
+enum class Extensions : uint8_t
+{
+    DOMAINS = 0xD0
+};
+template<> struct is_serializable_enum<Extensions> : std::true_type {};
+
 namespace {
 inline constexpr uint8_t GetBIP155FromService(const CService& service)
 {
@@ -177,12 +184,22 @@ inline constexpr bool IsTypeBIP155(const uint8_t& type)
         return false;
     }
 }
+
+inline constexpr bool IsTypeExtension(const uint8_t type)
+{
+    switch (type) {
+    case 0xD0: /* Extensions::DOMAINS */
+        return true;
+    default:
+        return false;
+    }
+}
 } // anonymous namespace
 
 class NetInfoEntry
 {
 private:
-    using AddrVariant = std::variant<std::monostate, CService>;
+    using AddrVariant = std::variant<std::monostate, CService, DomainPort>;
 
     static constexpr uint8_t INVALID_TYPE{0xFF};
 
@@ -197,6 +214,7 @@ public:
     ~NetInfoEntry() = default;
 
     NetInfoEntry(const CService& service) : type{GetBIP155FromService(service)}, data{service} {}
+    NetInfoEntry(const DomainPort& service) : type{ToUnderlying(Extensions::DOMAINS)}, data{service} {}
 
     bool operator<(const NetInfoEntry& rhs) const;
     bool operator==(const NetInfoEntry& rhs) const;
@@ -207,6 +225,8 @@ public:
     {
         s << type;
         if (const auto* data_ptr{std::get_if<CService>(&data)}; data_ptr != nullptr && IsTypeBIP155(type)) {
+            s << *data_ptr;
+        } else if (const auto* data_ptr{std::get_if<DomainPort>(&data)}; data_ptr != nullptr && IsTypeExtension(type)) {
             s << *data_ptr;
         } else {
             // Invalid type, bail out
@@ -219,6 +239,8 @@ public:
         auto size = ::GetSerializeSize(uint8_t{}, s.GetVersion());
         if (IsTypeBIP155(type)) {
             size += ::GetSerializeSize(CService{}, s.GetVersion());
+        } else if (IsTypeExtension(type)) {
+            size += ::GetSerializeSize(DomainPort{}, s.GetVersion());
         }
         s.seek(size);
     }
@@ -230,6 +252,10 @@ public:
         s >> type;
         if (IsTypeBIP155(type)) {
             CService obj;
+            s >> obj;
+            data = obj;
+        } else if (IsTypeExtension(type)) {
+            DomainPort obj;
             s >> obj;
             data = obj;
         } else {
@@ -246,6 +272,7 @@ public:
 
     const uint8_t& GetType() const { return type; }
     std::optional<std::reference_wrapper<const CService>> GetAddrPort() const;
+    std::optional<std::reference_wrapper<const DomainPort>> GetDomainPort() const;
     bool IsTriviallyValid() const;
     std::string ToString() const;
     std::string ToStringAddrPort() const;
