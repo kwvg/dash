@@ -114,10 +114,12 @@ inline constexpr bool IsTypeBIP155(const uint8_t& type)
 class NetInfoEntry
 {
 private:
+    using AddrVariant = std::variant<std::monostate, CService>;
+
     static constexpr uint8_t INVALID_TYPE{0xFF};
 
     uint8_t type{INVALID_TYPE};
-    CService data;
+    AddrVariant data;
 
     // Used to directly read/write into members, needed to fake NetInfoEntry list in MnNetInfo
     friend class MnNetInfo;
@@ -128,20 +130,29 @@ public:
 
     NetInfoEntry(const CService& service) : type{GetBIP155FromService(service)}, data{service} {}
 
-    bool operator<(const NetInfoEntry& rhs) const { return std::tie(type, data) < std::tie(rhs.type, rhs.data); }
-    bool operator==(const NetInfoEntry& rhs) const { return std::tie(type, data) == std::tie(rhs.type, rhs.data); }
+    bool operator<(const NetInfoEntry& rhs) const;
+    bool operator==(const NetInfoEntry& rhs) const;
     bool operator!=(const NetInfoEntry& rhs) const { return !(*this == rhs); }
 
     template<typename Stream>
     void Serialize(Stream &s) const
     {
         s << type;
-        if (IsTypeBIP155(type)) {
-            s << data;
+        if (const auto* data_ptr{std::get_if<CService>(&data)}; data_ptr != nullptr && IsTypeBIP155(type)) {
+            s << *data_ptr;
         } else {
             // Invalid type, bail out
             return;
         }
+    }
+
+    void Serialize(CSizeComputer& s) const
+    {
+        auto size = ::GetSerializeSize(uint8_t{}, s.GetVersion());
+        if (IsTypeBIP155(type)) {
+            size += ::GetSerializeSize(CService{}, s.GetVersion());
+        }
+        s.seek(size);
     }
 
     template<typename Stream>
@@ -150,7 +161,9 @@ public:
         Clear();
         s >> type;
         if (IsTypeBIP155(type)) {
-            s >> data;
+            CService obj;
+            s >> obj;
+            data = obj;
         } else {
             // Invalid type, bail out
             return;
@@ -160,7 +173,7 @@ public:
     void Clear()
     {
         type = INVALID_TYPE;
-        data = CService();
+        data = std::monostate{};
     }
 
     const uint8_t& GetType() const { return type; }
@@ -210,17 +223,25 @@ public:
     template<typename Stream>
     void Serialize(Stream &s) const
     {
-        // We can safely discard NetInfoEntry::type as we can recalculate it on read
-        s << addr.data;
+        if (const auto* data_ptr{std::get_if<CService>(&addr.data)}; data_ptr != nullptr && IsTypeBIP155(addr.type)) {
+            s << *data_ptr;
+        } else {
+            s << CService();
+        }
+    }
+
+    void Serialize(CSizeComputer& s) const
+    {
+        s.seek(::GetSerializeSize(CService{}, s.GetVersion()));
     }
 
     template<typename Stream>
     void Unserialize(Stream &s)
     {
         Clear();
-        s >> addr.data;
-        // Refetch type to ensure NetInfoEntry::IsTriviallyValid() still passes
-        addr.type = GetBIP155FromService(addr.data);
+        CService service;
+        s >> service;
+        addr = NetInfoEntry(service);
     }
 
     template <typename Stream>
@@ -232,10 +253,10 @@ public:
     NetInfoStatus AddEntry(const Purpose purpose, const std::string& input) override;
     NetInfoList GetEntries() const override;
 
-    const CService& GetPrimary() const override { return addr.data; }
+    const CService& GetPrimary() const override;
     bool IsEmpty() const override { return *this == MnNetInfo(); }
     bool CanStorePlatform() const override { return false; }
-    NetInfoStatus Validate() const override { return ValidateService(addr.data); }
+    NetInfoStatus Validate() const override { return ValidateService(GetPrimary()); }
     UniValue ToJson() const override;
     std::string ToString() const override;
 

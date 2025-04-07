@@ -83,10 +83,41 @@ UniValue MaybeAddPlatformNetInfo(const CSimplifiedMNListEntry& obj, const MnType
     return IMaybeAddPlatformNetInfo(obj, type, arr);
 }
 
+bool NetInfoEntry::operator==(const NetInfoEntry& rhs) const
+{
+    if (type != rhs.type) return false;
+    return std::visit([](auto&& lhs, auto&& rhs) -> bool {
+        if constexpr (std::is_same_v<std::decay_t<decltype(lhs)>, std::decay_t<decltype(rhs)>>) {
+            return lhs == rhs;
+        }
+        return false;
+    }, data, rhs.data);
+}
+
+bool NetInfoEntry::operator<(const NetInfoEntry& rhs) const
+{
+    if (type != rhs.type) return type < rhs.type;
+    return std::visit([](auto&& lhs, auto&& rhs) -> bool {
+        using T1 = std::decay_t<decltype(lhs)>;
+        using T2 = std::decay_t<decltype(rhs)>;
+        if constexpr (std::is_same_v<T1, T2>) {
+            // Both the same type, compare as usual
+            return lhs < rhs;
+        } else if constexpr (std::is_same_v<T1, std::monostate> && !std::is_same_v<T2, std::monostate>) {
+            // lhs is monostate and rhs is not, rhs is greater
+            return true;
+        } else if constexpr (!std::is_same_v<T1, std::monostate> && std::is_same_v<T2, std::monostate>) {
+            // rhs is monostate but lhs is not, lhs is greater
+            return false;
+        }
+        return false;
+    }, data, rhs.data);
+}
+
 std::optional<std::reference_wrapper<const CService>> NetInfoEntry::GetAddrPort() const
 {
-    if (IsTypeBIP155(type)) {
-        return data;
+    if (const auto* data_ptr{std::get_if<CService>(&data)}; data_ptr != nullptr && IsTypeBIP155(type)) {
+        return *data_ptr;
     }
     return std::nullopt;
 }
@@ -96,24 +127,46 @@ std::optional<std::reference_wrapper<const CService>> NetInfoEntry::GetAddrPort(
 // NetInfoEntry object is properly constructed.
 bool NetInfoEntry::IsTriviallyValid() const
 {
-    // Empty underlying data isn't a valid entry
-    if (data == CService() || type == INVALID_TYPE) return false;
-    // Type code should be truthful as it decides what underlying type is used when (de)serializing
-    if (type != GetBIP155FromService(data)) return false;
-    // Underlying data should at least meet surface-level validity checks
-    if (!data.IsValid()) return false;
-    // Type code should be supported by NetInfoEntry
-    return IsTypeBIP155(type);
+    if (std::holds_alternative<std::monostate>(data) || type == INVALID_TYPE) {
+        // Empty underlying data isn't a valid entry
+        return false;
+    } else if (const auto* data_ptr{std::get_if<CService>(&data)}; data_ptr != nullptr) {
+        const CService& service{*data_ptr};
+        // Type code should be truthful as it decides what underlying type is used when (de)serializing
+        if (type != GetBIP155FromService(service)) { return false; }
+        // Underlying data should at least meet surface-level validity checks
+        if (!service.IsValid()) return false;
+        // Type code should be supported by NetInfoEntry
+        if (!IsTypeBIP155(type)) return false;
+    } else {
+        // AddrVariant is storing another type but it is currently unsupported, shouldn't happen
+        assert(false);
+    }
+    return true;
 }
 
 std::string NetInfoEntry::ToString() const
 {
-    return strprintf("CService(addr=%s, port=%d)", data.ToStringAddr(), data.GetPort());
+    return std::visit([this](auto&& input) -> std::string {
+        using T1 = std::decay_t<decltype(input)>;
+        if constexpr (std::is_same_v<T1, CService>) {
+            return strprintf("CService(addr=%s, port=%d)", input.ToStringAddr(), input.GetPort());
+        } else {
+            return strprintf("[invalid entry]");
+        }
+    }, data);
 }
 
 std::string NetInfoEntry::ToStringAddrPort() const
 {
-    return data.ToStringAddrPort();
+    return std::visit([this](auto&& input) -> std::string {
+        using T1 = std::decay_t<decltype(input)>;
+        if constexpr (std::is_same_v<T1, CService>) {
+            return input.ToStringAddrPort();
+        } else {
+            return strprintf("[invalid entry]");
+        }
+    }, data);
 }
 
 NetInfoStatus MnNetInfo::ValidateService(const CService& service)
@@ -151,11 +204,12 @@ NetInfoStatus MnNetInfo::AddEntry(const Purpose purpose, const std::string& inpu
     if (auto service = Lookup(input, /*portDefault=*/Params().GetDefaultPort(), /*fAllowLookup=*/false); service.has_value()) {
         const auto ret = ValidateService(service.value());
         if (ret == NetInfoStatus::Success) {
-            if (service == addr.data) {
+            const auto candidate{NetInfoEntry(service.value())};
+            if (candidate == addr) {
                 // Not possible since we allow only one value at most
                 return NetInfoStatus::Duplicate;
             }
-            addr = NetInfoEntry(service.value());
+            addr = candidate;
         }
         return ret;
     }
@@ -173,10 +227,18 @@ NetInfoList MnNetInfo::GetEntries() const
     return ret;
 }
 
+const CService& MnNetInfo::GetPrimary() const
+{
+    if (const auto& service{addr.GetAddrPort()}; service.has_value()) {
+        return *service;
+    }
+    return empty_service;
+}
+
 UniValue MnNetInfo::ToJson() const
 {
     UniValue ret(UniValue::VOBJ);
-    ret.pushKV(PurposeToString(Purpose::CORE_P2P, /*lower=*/true), ArrFromService(addr.data));
+    ret.pushKV(PurposeToString(Purpose::CORE_P2P, /*lower=*/true), ArrFromService(GetPrimary()));
     return ret;
 }
 
