@@ -395,14 +395,13 @@ private:
     template <typename T>
     [[nodiscard]] uint256 GetUniquePropertyHash(const T& v) const
     {
-        static_assert(!std::is_same<T, CBLSPublicKey>(), "GetUniquePropertyHash cannot be templated against CBLSPublicKey");
+        static_assert(!std::is_same_v<std::decay_t<T>, CBLSPublicKey>, "GetUniquePropertyHash cannot be templated against CBLSPublicKey");
         return ::SerializeHash(v);
     }
     template <typename T>
     [[nodiscard]] bool AddUniqueProperty(const CDeterministicMN& dmn, const T& v)
     {
-        static const T nullValue;
-        if (v == nullValue) {
+        if (v == std::decay_t<decltype(v)>()) {
             return false;
         }
 
@@ -421,8 +420,7 @@ private:
     template <typename T>
     [[nodiscard]] bool DeleteUniqueProperty(const CDeterministicMN& dmn, const T& oldValue)
     {
-        static const T nullValue;
-        if (oldValue == nullValue) {
+        if (oldValue == std::decay_t<decltype(oldValue)>()) {
             return false;
         }
 
@@ -444,13 +442,12 @@ private:
         if (oldValue == newValue) {
             return true;
         }
-        static const T nullValue;
 
-        if (oldValue != nullValue && !DeleteUniqueProperty(dmn, oldValue)) {
+        if (oldValue != std::decay_t<decltype(oldValue)>() && !DeleteUniqueProperty(dmn, oldValue)) {
             return false;
         }
 
-        if (newValue != nullValue && !AddUniqueProperty(dmn, newValue)) {
+        if (newValue != std::decay_t<decltype(newValue)>() && !AddUniqueProperty(dmn, newValue)) {
             return false;
         }
         return true;
