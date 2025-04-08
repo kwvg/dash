@@ -1402,7 +1402,8 @@ static std::optional<ProTx> GetValidatedPayload(const CTransaction& tx, gsl::not
         return std::nullopt;
     }
     const bool is_basic_scheme_active{DeploymentActiveAfter(pindexPrev, Params().GetConsensus(), Consensus::DEPLOYMENT_V19)};
-    if (!opt_ptx->IsTriviallyValid(is_basic_scheme_active, state)) {
+    const bool is_extended_addr{false};
+    if (!opt_ptx->IsTriviallyValid(is_basic_scheme_active, is_extended_addr, state)) {
         // pass the state returned by the function above
         return std::nullopt;
     }

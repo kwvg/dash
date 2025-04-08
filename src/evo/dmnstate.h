@@ -100,7 +100,7 @@ public:
         READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), obj.nVersion == ProTxVersion::LegacyBLS));
         READWRITE(
             obj.keyIDVoting,
-            std::dynamic_pointer_cast<MnNetInfo>(obj.netInfo),
+            NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
             obj.scriptPayout,
             obj.scriptOperatorPayout,
             obj.platformNodeID,
@@ -238,23 +238,26 @@ public:
     {
         READWRITE(VARINT(obj.fields));
 
-        // NOTE: reading pubKeyOperator requires nVersion
-        bool read_pubkey{false};
+        bool read_version{false};
         boost::hana::for_each(members, [&](auto&& member) {
             // WARNING: For the constexpr, we are making the major assumption that there won't be more than
             //          one member of a given type. If this isn't true, *don't* use type comparison and use the
             //          mask to differentiate between members instead.
-            if constexpr (std::is_same_v<std::decay_t<decltype(member.get(obj.state))>, CBLSLazyPublicKey>) {
-                SER_READ(obj, read_pubkey = true);
+            using T1 = std::decay_t<decltype(member.get(obj.state))>;
+            // NOTE: reading pubKeyOperator or netInfo requires nVersion
+            if constexpr (std::is_same_v<T1, CBLSLazyPublicKey> || std::is_same_v<T1, std::shared_ptr<NetInfoInterface>>) {
+                SER_READ(obj, read_version = true);
+            }
+            if constexpr (std::is_same_v<T1, CBLSLazyPublicKey>) {
                 READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.state.pubKeyOperator), obj.state.nVersion == ProTxVersion::LegacyBLS));
-            } else if constexpr (std::is_same_v<std::decay_t<decltype(member.get(obj.state))>, std::shared_ptr<NetInfoInterface>>) {
-                READWRITE(std::dynamic_pointer_cast<MnNetInfo>(member.get(obj.state)));
+            } else if constexpr (std::is_same_v<T1, std::shared_ptr<NetInfoInterface>>) {
+                READWRITE(NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.state.netInfo), obj.state.nVersion >= ProTxVersion::ExtAddr));
             } else if (obj.fields & member.mask) {
                 READWRITE(member.get(obj.state));
             }
         });
 
-        if (read_pubkey) {
+        if (read_version) {
             SER_READ(obj, obj.fields |= Field_nVersion);
             SER_READ(obj, obj.state.pubKeyOperator.SetLegacy(obj.state.nVersion == ProTxVersion::LegacyBLS));
         }

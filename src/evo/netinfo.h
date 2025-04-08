@@ -5,6 +5,7 @@
 #ifndef BITCOIN_EVO_NETINFO_H
 #define BITCOIN_EVO_NETINFO_H
 
+#include <evo/common.h>
 #include <netaddress.h>
 #include <serialize.h>
 #include <util/underlying.h>
@@ -431,7 +432,49 @@ template <typename T1>
 std::shared_ptr<NetInfoInterface> MakeNetInfo(const T1& obj)
 {
     assert(obj.nVersion > 0);
+    if (obj.nVersion >= ProTxVersion::ExtAddr) {
+        return std::make_shared<ExtNetInfo>();
+    }
     return std::make_shared<MnNetInfo>();
 }
+
+class NetInfoSerWrapper
+{
+private:
+    std::shared_ptr<NetInfoInterface>& m_data;
+    bool m_is_extended;
+
+public:
+    NetInfoSerWrapper(std::shared_ptr<NetInfoInterface>& data, const bool is_extended)
+        : m_data{data}, m_is_extended{is_extended} {}
+    ~NetInfoSerWrapper() = default;
+
+    template<typename Stream>
+    void Serialize(Stream &s) const
+    {
+        if (const auto& ptr{std::dynamic_pointer_cast<ExtNetInfo>(m_data)}; ptr && m_is_extended) {
+            s << ptr;
+        } else if (const auto& ptr{std::dynamic_pointer_cast<MnNetInfo>(m_data)}; ptr) {
+            s << ptr;
+        } else {
+            throw std::ios_base::failure("Improperly constructed NetInfoInterface");
+        }
+    }
+
+    template<typename Stream>
+    void Unserialize(Stream &s)
+    {
+        m_data.reset();
+        if (m_is_extended) {
+            std::shared_ptr<ExtNetInfo> ptr;
+            s >> ptr;
+            m_data = std::move(ptr);
+        } else {
+            std::shared_ptr<MnNetInfo> ptr;
+            s >> ptr;
+            m_data = std::move(ptr);
+        }
+    }
+};
 
 #endif // BITCOIN_EVO_NETINFO_H
