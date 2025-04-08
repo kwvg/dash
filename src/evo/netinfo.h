@@ -12,8 +12,19 @@ class CService;
 
 enum NetInfoStatus : uint8_t
 {
+    BadInput,
     Success
 };
+
+constexpr std::string_view NISToString(const NetInfoStatus code) {
+    switch (code) {
+    case NetInfoStatus::BadInput:
+        return "invalid address";
+    case NetInfoStatus::Success:
+        return "success";
+    } // no default case, so the compiler can warn about missing cases
+    assert(false);
+}
 
 class MnNetInfo
 {
@@ -32,7 +43,7 @@ public:
         READWRITE(obj.m_addr);
     }
 
-    NetInfoStatus AddEntry(const CService& service);
+    NetInfoStatus AddEntry(const std::string& service);
 
     const CService& GetPrimary() const { return m_addr; }
     bool IsEmpty() const { return *this == MnNetInfo(); }
