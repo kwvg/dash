@@ -14,6 +14,10 @@ class CService;
 
 enum NetInfoStatus : uint8_t
 {
+    // Adding entries
+    MaxLimit,
+
+    // Validation
     BadInput,
     BadPort,
     Malformed,
@@ -22,6 +26,8 @@ enum NetInfoStatus : uint8_t
 
 constexpr std::string_view NISToString(const NetInfoStatus code) {
     switch (code) {
+    case NetInfoStatus::MaxLimit:
+        return "too many entries";
     case NetInfoStatus::BadInput:
         return "invalid address";
     case NetInfoStatus::BadPort:

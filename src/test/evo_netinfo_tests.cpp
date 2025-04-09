@@ -56,6 +56,14 @@ BOOST_AUTO_TEST_CASE(mnnetinfo_rules)
             ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/1);
         }
     }
+
+    {
+        // MnNetInfo only stores one value, overwriting prohibited
+        MnNetInfo netInfo;
+        BOOST_CHECK_EQUAL(netInfo.AddEntry("1.1.1.1:8888"), NetInfoStatus::Success);
+        BOOST_CHECK_EQUAL(netInfo.AddEntry("1.1.1.2:8888"), NetInfoStatus::MaxLimit);
+        ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/1);
+    }
 }
 
 bool CheckIfSerSame(const CService& lhs, const MnNetInfo& rhs)
@@ -79,7 +87,7 @@ BOOST_AUTO_TEST_CASE(cservice_compatible)
     BOOST_CHECK(CheckIfSerSame(service, netInfo));
 
     // Valid IPv4 address, default P2P port implied
-    service = LookupNumeric("1.1.1.1", Params().GetDefaultPort());
+    service = LookupNumeric("1.1.1.1", Params().GetDefaultPort()); netInfo.Clear();
     BOOST_CHECK_EQUAL(netInfo.AddEntry("1.1.1.1"), NetInfoStatus::Success);
     BOOST_CHECK(CheckIfSerSame(service, netInfo));
 
