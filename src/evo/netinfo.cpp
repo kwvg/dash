@@ -212,6 +212,11 @@ NetInfoStatus ExtNetInfo::ProcessCandidate(const NetInfoEntry& candidate)
 {
     assert(candidate.IsTriviallyValid());
 
+    if (m_data.empty()) {
+        if (candidate.GetType() != EXTNETINFO_PRIMARY_ADDR_TYPE) {
+            return NetInfoStatus::BadInput;
+        }
+    }
     if (m_data.size() >= EXTNETINFO_ENTRIES_LIMIT) {
         return NetInfoStatus::MaxLimit;
     }
@@ -293,6 +298,10 @@ NetInfoStatus ExtNetInfo::Validate() const
     for (const auto& entry : m_data) {
         if (!entry.IsTriviallyValid()) {
             // Trivially invalid NetInfoEntry, no point checking against consensus rules
+            return NetInfoStatus::Malformed;
+        }
+        if (entry == *m_data.begin() && entry.GetType() != EXTNETINFO_PRIMARY_ADDR_TYPE) {
+            // First entry must be of the primary type
             return NetInfoStatus::Malformed;
         }
         if (const auto& service{entry.GetAddrPort()}; service.has_value()) {

@@ -33,8 +33,8 @@ static const std::vector<
     // Port greater than uint16_t max
     {"1.1.1.1:99999", NetInfoStatus::BadInput, NetInfoStatus::BadInput},
     // - Non-IPv4 addresses are prohibited in MnNetInfo
-    // - Any valid BIP155 address is allowed in ExtNetInfo
-    {"[2606:4700:4700::1111]:8888", NetInfoStatus::BadInput, NetInfoStatus::Success},
+    // - The first address must be IPv4 and therefore is not allowed in ExtNetInfo
+    {"[2606:4700:4700::1111]:8888", NetInfoStatus::BadInput, NetInfoStatus::BadInput},
     // Domains are not allowed
     {"example.com:8888", NetInfoStatus::BadInput, NetInfoStatus::BadInput},
     // Incorrectly formatted IPv4 address
@@ -106,6 +106,16 @@ BOOST_AUTO_TEST_CASE(extnetinfo_rules)
         }
         BOOST_CHECK_EQUAL(netInfo.AddEntry("1.1.1.33:10032"), NetInfoStatus::MaxLimit);
         ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/32);
+    }
+
+    {
+        // ExtNetInfo allows storing non-IPv4 addresses if they aren't the first entry
+        ExtNetInfo netInfo;
+        BOOST_CHECK_EQUAL(netInfo.AddEntry("[2606:4700:4700::1111]:8888"), NetInfoStatus::BadInput);
+        BOOST_CHECK_EQUAL(netInfo.AddEntry("1.1.1.1:8888"), NetInfoStatus::Success);
+        BOOST_CHECK_EQUAL(netInfo.AddEntry("[2606:4700:4700::1111]:8888"), NetInfoStatus::Success);
+        BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Success);
+        ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/2);
     }
 }
 
