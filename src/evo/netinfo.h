@@ -14,6 +14,7 @@ class CService;
 
 static constexpr uint8_t EXTNETINFO_ENTRIES_LIMIT{32};
 static constexpr uint8_t EXTNETINFO_FORMAT_VERSION{1};
+static constexpr uint8_t EXTNETINFO_PRIMARY_ADDR_TYPE{/*BIP155Network::IPV4=*/0x01};
 
 enum NetInfoStatus : uint8_t
 {
@@ -133,6 +134,7 @@ public:
     }
 
     std::optional<std::reference_wrapper<const CService>> GetAddrPort() const;
+    const uint8_t& GetType() const { return m_type; }
     bool IsTriviallyValid() const;
     std::string ToString() const;
     std::string ToStringAddrPort() const;
