@@ -95,8 +95,14 @@ BOOST_AUTO_TEST_CASE(extnetinfo_rules)
     {
         // ExtNetInfo can store up to 32 entries, check limit enforcement
         ExtNetInfo netInfo;
+        const uint64_t rand{std::max(uint64_t{1}, GetRand(EXTNETINFO_ENTRIES_LIMIT))};
         for (size_t idx = 1; idx <= EXTNETINFO_ENTRIES_LIMIT; idx++) {
-            BOOST_CHECK_EQUAL(netInfo.AddEntry(strprintf("1.1.1.%d:%d", idx, 9999 + idx)), NetInfoStatus::Success);
+            auto fn = [&](){ return netInfo.AddEntry(strprintf("1.1.1.%d:%d", idx, 9999 + idx)); };
+            BOOST_CHECK_EQUAL(fn(), NetInfoStatus::Success);
+            if (rand == idx) {
+                // Additionally check that attempting to add the same entry again fails
+                BOOST_CHECK_EQUAL(fn(), NetInfoStatus::Duplicate);
+            }
         }
         BOOST_CHECK_EQUAL(netInfo.AddEntry("1.1.1.33:10032"), NetInfoStatus::MaxLimit);
         ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/32);
