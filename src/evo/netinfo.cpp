@@ -222,9 +222,11 @@ NetInfoStatus ExtNetInfo::ProcessCandidate(const uint8_t purpose, const NetInfoE
         entries.push_back(candidate);
         return NetInfoStatus::Success;
     } else {
-        // The first entry may only be of the primary type
-        if (candidate.GetType() != EXTNETINFO_PRIMARY_ADDR_TYPE) {
-            return NetInfoStatus::BadInput;
+        if (purpose == Purpose::CORE_P2P || purpose == Purpose::PLATFORM_P2P) {
+            // The first entry may only be of the primary type
+            if (candidate.GetType() != EXTNETINFO_PRIMARY_ADDR_TYPE) {
+                return NetInfoStatus::BadInput;
+            }
         }
         // First entry for purpose code, create new entries list
         auto [_, status] = m_data.try_emplace(purpose, std::vector<NetInfoEntry>({candidate}));
@@ -253,7 +255,7 @@ NetInfoStatus ExtNetInfo::ValidateService(const CService& service)
 
 NetInfoStatus ExtNetInfo::AddEntry(const uint8_t purpose, const std::string& input)
 {
-    if (purpose != Purpose::CORE_P2P) {
+    if (!IsValidPurpose(purpose)) {
         return NetInfoStatus::MaxLimit;
     }
     // Contains invalid characters, unlikely to pass Lookup(), fast-fail
@@ -330,9 +332,11 @@ NetInfoStatus ExtNetInfo::Validate() const
                 // Trivially invalid NetInfoEntry, no point checking against consensus rules
                 return NetInfoStatus::Malformed;
             }
-            if (entry == *entries.begin() && entry.GetType() != EXTNETINFO_PRIMARY_ADDR_TYPE) {
-                // First entry must be of the primary type
-                return NetInfoStatus::Malformed;
+            if (purpose == Purpose::CORE_P2P || purpose == Purpose::PLATFORM_P2P) {
+                if (entry == *entries.begin() && entry.GetType() != EXTNETINFO_PRIMARY_ADDR_TYPE) {
+                    // First entry must be of the primary type
+                    return NetInfoStatus::Malformed;
+                }
             }
             if (const auto& service{entry.GetAddrPort()}; service.has_value()) {
                 if (auto ret{ValidateService(*service)}; ret != NetInfoStatus::Success) {

@@ -36,8 +36,22 @@ bool CProRegTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState&
     if (!scriptPayout.IsPayToPublicKeyHash() && !scriptPayout.IsPayToScriptHash()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-payee");
     }
-    if (!netInfo->IsEmpty() && !netInfo->HasEntries(Purpose::CORE_P2P)) {
-        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
+    if (!netInfo->IsEmpty()) {
+        // CORE_P2P mandatory for all nodes
+        if (!netInfo->HasEntries(Purpose::CORE_P2P)) {
+            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
+        }
+        if (nType == MnType::Regular) {
+            // Regular nodes shouldn't populate Platform-specific fields
+            if (!netInfo->HasEntries(Purpose::PLATFORM_HTTP) || !netInfo->HasEntries(Purpose::PLATFORM_P2P)) {
+                return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-addr-terrible");
+            }
+        } else if (nType == MnType::Evo) {
+            // PLATFORM_HTTP mandatory for EvoNodes
+            if (!netInfo->HasEntries(Purpose::PLATFORM_HTTP)) {
+                return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
+            }
+        }
     }
     for (const NetInfoEntry& entry : netInfo->GetEntries()) {
         if (!entry.IsTriviallyValid()) {
@@ -113,8 +127,24 @@ bool CProUpServTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationSta
     if (nVersion < ProTxVersion::BasicBLS && nType == MnType::Evo) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-evo-version");
     }
-    if (netInfo->IsEmpty() || !netInfo->HasEntries(Purpose::CORE_P2P)) {
+    if (netInfo->IsEmpty()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
+    } else {
+        // CORE_P2P mandatory for all nodes
+        if (!netInfo->HasEntries(Purpose::CORE_P2P)) {
+            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
+        }
+        if (nType == MnType::Regular) {
+            // Regular nodes shouldn't populate Platform-specific fields
+            if (!netInfo->HasEntries(Purpose::PLATFORM_HTTP) || !netInfo->HasEntries(Purpose::PLATFORM_P2P)) {
+                return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-addr-terrible");
+            }
+        } else if (nType == MnType::Evo) {
+            // PLATFORM_HTTP mandatory for EvoNodes
+            if (!netInfo->HasEntries(Purpose::PLATFORM_HTTP)) {
+                return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
+            }
+        }
     }
     for (const NetInfoEntry& entry : netInfo->GetEntries()) {
         if (!entry.IsTriviallyValid()) {

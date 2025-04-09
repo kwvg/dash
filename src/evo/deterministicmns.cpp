@@ -1271,9 +1271,23 @@ void CDeterministicMNManager::CleanupCache(int nHeight)
 template <typename ProTx>
 static bool CheckService(const ProTx& proTx, TxValidationState& state)
 {
+    // CORE_P2P mandatory for all nodes
     if (!proTx.netInfo->HasEntries(Purpose::CORE_P2P)) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
     }
+    if (proTx.nType == MnType::Regular) {
+        // Regular nodes shouldn't populate Platform-specific fields
+        if (!proTx.netInfo->HasEntries(Purpose::PLATFORM_HTTP) || !proTx.netInfo->HasEntries(Purpose::PLATFORM_P2P)) {
+            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-addr-terrible");
+        }
+    } else if (proTx.nType == MnType::Evo) {
+        // PLATFORM_HTTP mandatory for EvoNodes
+        if (!proTx.netInfo->HasEntries(Purpose::PLATFORM_HTTP)) {
+            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
+        }
+    }
+
+    // Validate contents
     switch (proTx.netInfo->Validate()) {
     case NetInfoStatus::BadInput:
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo");
