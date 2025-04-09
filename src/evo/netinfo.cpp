@@ -162,7 +162,12 @@ NetInfoStatus MnNetInfo::AddEntry(const std::string& input)
     if (auto service = Lookup(addr, /*portDefault=*/port, /*fAllowLookup=*/false); service.has_value()) {
         const auto ret = ValidateService(service.value());
         if (ret == NetInfoStatus::Success) {
-            m_addr = NetInfoEntry{service.value()};
+            const auto candidate{NetInfoEntry(service.value())};
+            if (candidate == m_addr) {
+                // Not possible since we allow only one value at most
+                return NetInfoStatus::Duplicate;
+            }
+            m_addr = candidate;
         }
         return ret;
     }
@@ -209,6 +214,9 @@ NetInfoStatus ExtNetInfo::ProcessCandidate(const NetInfoEntry& candidate)
 
     if (m_data.size() >= EXTNETINFO_ENTRIES_LIMIT) {
         return NetInfoStatus::MaxLimit;
+    }
+    if (std::find(m_data.begin(), m_data.end(), candidate) != m_data.end()) {
+        return NetInfoStatus::Duplicate;
     }
     m_data.push_back(candidate);
 
@@ -275,6 +283,9 @@ NetInfoStatus ExtNetInfo::Validate() const
 {
     if (m_data.empty()) {
         return NetInfoStatus::Malformed;
+    }
+    if (std::set<NetInfoEntry> set{m_data.begin(), m_data.end()}; set.size() != m_data.size()) {
+        return NetInfoStatus::Duplicate;
     }
     for (const auto& entry : m_data) {
         if (!entry.IsTriviallyValid()) {

@@ -17,6 +17,7 @@ static constexpr uint8_t EXTNETINFO_ENTRIES_LIMIT{32};
 enum NetInfoStatus : uint8_t
 {
     // Adding entries
+    Duplicate,
     MaxLimit,
 
     // Validation
@@ -28,6 +29,8 @@ enum NetInfoStatus : uint8_t
 
 constexpr std::string_view NISToString(const NetInfoStatus code) {
     switch (code) {
+    case NetInfoStatus::Duplicate:
+        return "duplicate";
     case NetInfoStatus::MaxLimit:
         return "too many entries";
     case NetInfoStatus::BadInput:
