@@ -40,8 +40,12 @@ static const std::vector<
     // - Non-IPv4 addresses are prohibited in MnNetInfo
     // - The first address must be IPv4 and therefore is not allowed in ExtNetInfo
     {{Purpose::CORE_P2P, "[2606:4700:4700::1111]:8888"}, NetInfoStatus::BadInput, NetInfoStatus::BadInput},
-    // Domains are not allowed
+    // Domains are not allowed for Core P2P or Platform P2P
     {{Purpose::CORE_P2P, "example.com:8888"}, NetInfoStatus::BadInput, NetInfoStatus::BadInput},
+    {{Purpose::PLATFORM_P2P, "example.com:8888"}, NetInfoStatus::MaxLimit, NetInfoStatus::BadInput},
+    // - MnNetInfo doesn't allow storing anything except a Core P2P address
+    // - ExtNetInfo can store Platform HTTP addresses *as domains*
+    {{Purpose::PLATFORM_HTTP, "example.com:8888"}, NetInfoStatus::MaxLimit, NetInfoStatus::Success},
     // Incorrectly formatted IPv4 address
     {{Purpose::CORE_P2P, "1..1.1.1:8888"}, NetInfoStatus::BadInput, NetInfoStatus::BadInput},
     // Missing address
@@ -122,20 +126,23 @@ BOOST_AUTO_TEST_CASE(domainport_rules)
     };
 
     for (const auto& [addr, retval] : domain_vals) {
-        DomainPort service;
+        DomainPort service; ExtNetInfo netInfo;
         BOOST_CHECK_EQUAL(service.Set(addr, 1234), retval);
         if (retval != DomainPort::Status::Success) {
             BOOST_CHECK_EQUAL(service.Validate(), DomainPort::Status::Malformed); // Empty values report as Malformed
+            BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::PLATFORM_HTTP, service.ToStringAddrPort()), NetInfoStatus::BadInput);
         } else {
             BOOST_CHECK_EQUAL(service.Validate(), DomainPort::Status::Success);
+            BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::PLATFORM_HTTP, service.ToStringAddrPort()), NetInfoStatus::Success);
         }
     }
 
     {
         // DomainPort requires non-zero ports
-        DomainPort service;
+        DomainPort service; ExtNetInfo netInfo;
         BOOST_CHECK_EQUAL(service.Set("example.com", 0), DomainPort::Status::BadPort);
         BOOST_CHECK_EQUAL(service.Validate(), DomainPort::Status::Malformed);
+        BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::PLATFORM_HTTP, service.ToStringAddrPort()), NetInfoStatus::BadInput);
     }
 
     {
@@ -222,6 +229,34 @@ BOOST_AUTO_TEST_CASE(extnetinfo_rules)
         BOOST_CHECK(netInfo.HasEntries(Purpose::CORE_P2P));
         BOOST_CHECK(netInfo.HasEntries(!Purpose::PLATFORM_P2P));
         ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/5);
+    }
+
+    {
+        // ExtNetInfo has additional rules for domains
+        const std::vector<std::pair</*input=*/std::string, /*expected_ret=*/NetInfoStatus>> test_vals{
+            // Port 21 (FTP) is below the privileged ports threshold (1023), not allowed
+            {"example.com:21", NetInfoStatus::BadPort},
+            // Port 80 (HTTP) is below the privileged ports threshold (1023) but still allowed
+            {"example.com:80", NetInfoStatus::Success},
+            // Port 443 (HTTPS) is below the privileged ports threshold (1023) but still allowed
+            {"example.com:443", NetInfoStatus::Success},
+            // .local is a prohibited TLD
+            {"meows-macbook-pro.local:7777", NetInfoStatus::BadInput},
+        };
+        for (const auto& [input, expected_ret] : test_vals) {
+            ExtNetInfo netInfo;
+            BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::PLATFORM_HTTP, input), expected_ret);
+            if (expected_ret != NetInfoStatus::Success) {
+                // An empty ExtNetInfo is considered malformed
+                BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Malformed);
+                BOOST_CHECK(!netInfo.HasEntries(Purpose::PLATFORM_HTTP));
+                BOOST_CHECK(netInfo.GetEntries().empty());
+            } else {
+                BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Success);
+                BOOST_CHECK(netInfo.HasEntries(Purpose::PLATFORM_HTTP));
+                ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/1);
+            }
+        }
     }
 }
 
