@@ -281,6 +281,9 @@ const CService& ExtNetInfo::GetPrimary() const
 
 NetInfoStatus ExtNetInfo::Validate() const
 {
+    if (m_version == 0 || m_version > EXTNETINFO_FORMAT_VERSION) {
+        return NetInfoStatus::Malformed;
+    }
     if (m_data.empty()) {
         return NetInfoStatus::Malformed;
     }

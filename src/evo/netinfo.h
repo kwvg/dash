@@ -13,6 +13,7 @@
 class CService;
 
 static constexpr uint8_t EXTNETINFO_ENTRIES_LIMIT{32};
+static constexpr uint8_t EXTNETINFO_FORMAT_VERSION{1};
 
 enum NetInfoStatus : uint8_t
 {
@@ -210,6 +211,7 @@ public:
 class ExtNetInfo final : public NetInfoInterface
 {
 private:
+    uint8_t m_version{EXTNETINFO_FORMAT_VERSION};
     std::vector<NetInfoEntry> m_data{};
 
 private:
@@ -222,11 +224,15 @@ public:
 
     ~ExtNetInfo() = default;
 
-    bool operator==(const ExtNetInfo& rhs) const { return m_data == rhs.m_data; }
+    bool operator==(const ExtNetInfo& rhs) const { return m_version == rhs.m_version && m_data == rhs.m_data; }
     bool operator!=(const ExtNetInfo& rhs) const { return !(*this == rhs); }
 
     SERIALIZE_METHODS(ExtNetInfo, obj)
     {
+        READWRITE(obj.m_version);
+        if (obj.m_version == 0 || obj.m_version > EXTNETINFO_FORMAT_VERSION) {
+            return; // Don't bother with unknown versions
+        }
         READWRITE(obj.m_data);
     }
 
@@ -240,6 +246,7 @@ public:
 
     void Clear() override
     {
+        m_version = EXTNETINFO_FORMAT_VERSION;
         m_data.clear();
     }
 };
