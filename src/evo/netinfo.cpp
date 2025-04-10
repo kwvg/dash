@@ -13,6 +13,7 @@ static std::unique_ptr<const CChainParams> g_main_params{nullptr};
 static const CService empty_service{CService()};
 
 static constexpr std::string_view SAFE_CHARS_IPPORT{"1234567890.[]:"};
+static constexpr std::string_view SAFE_CHARS_RFC1035{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-"};
 
 const bool IsNodeOnMainnet() { return Params().NetworkIDString() == CBaseChainParams::MAIN; }
 const CChainParams& MainParams()
@@ -32,6 +33,57 @@ bool MatchCharsFilter(const std::string& input, const std::string_view& filter)
     return true;
 }
 } // anonymous namespace
+
+DomainPort::Status DomainPort::ValidateDomain(const std::string& addr)
+{
+    if (addr.length() > 253 || addr.length() < 4) {
+        return DomainPort::Status::BadLen;
+    }
+    if (!MatchCharsFilter(addr, SAFE_CHARS_RFC1035)) {
+        return DomainPort::Status::BadChar;
+    }
+    if (addr.at(0) == '.' || addr.at(addr.length() - 1) == '.') {
+        return DomainPort::Status::BadCharPos;
+    }
+    std::vector<std::string> labels{SplitString(addr, '.')};
+    if (labels.size() < 2) {
+        return DomainPort::Status::BadDotless;
+    }
+    for (const auto& label : labels) {
+        if (label.empty() || label.length() > 63) {
+            return DomainPort::Status::BadLabelLen;
+        }
+        if (label.at(0) == '-' or label.at(label.length() - 1) == '-') {
+            return DomainPort::Status::BadLabelCharPos;
+        }
+    }
+    return DomainPort::Status::Success;
+}
+
+DomainPort::Status DomainPort::Set(const std::string& addr, const uint16_t port)
+{
+    if (port == 0) {
+        return DomainPort::Status::BadPort;
+    }
+    const auto ret{ValidateDomain(addr)};
+    if (ret == DomainPort::Status::Success) {
+        // Convert to lowercase to avoid duplication by changing case (domains are case-insensitive)
+        m_addr = ToLower(addr);
+        m_port = port;
+    }
+    return ret;
+}
+
+DomainPort::Status DomainPort::Validate() const
+{
+    if (m_addr.empty() || m_addr != ToLower(m_addr)) {
+        return DomainPort::Status::Malformed;
+    }
+    if (m_port == 0) {
+        return DomainPort::Status::BadPort;
+    }
+    return ValidateDomain(m_addr);
+}
 
 bool NetInfoEntry::operator==(const NetInfoEntry& rhs) const
 {

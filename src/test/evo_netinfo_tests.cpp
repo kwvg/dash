@@ -5,9 +5,10 @@
 #include <test/util/setup_common.h>
 
 #include <chainparams.h>
+#include <evo/netinfo.h>
 #include <netbase.h>
 #include <streams.h>
-#include <evo/netinfo.h>
+#include <util/strencodings.h>
 
 #include <boost/test/unit_test.hpp>
 
@@ -17,7 +18,7 @@ static const std::vector<
         /*expected_ret_mn=*/NetInfoStatus,
         /*expected_ret_ext=*/NetInfoStatus
     >
-> vals{
+> addr_vals{
     // Address and port specified
     {{Purpose::CORE_P2P, "1.1.1.1:8888"}, NetInfoStatus::Success, NetInfoStatus::Success},
     // - Port should default to default P2P core with MnNetInfo
@@ -64,7 +65,7 @@ void ValidateGetEntries(const NetInfoList& entries, const size_t expected_size)
 
 BOOST_AUTO_TEST_CASE(mnnetinfo_rules)
 {
-    for (const auto& [input, expected_ret, _] : vals) {
+    for (const auto& [input, expected_ret, _] : addr_vals) {
         const auto& [purpose, addr] = input;
         MnNetInfo netInfo;
         BOOST_CHECK_EQUAL(netInfo.AddEntry(purpose, addr), expected_ret);
@@ -100,9 +101,56 @@ BOOST_AUTO_TEST_CASE(mnnetinfo_rules)
     }
 }
 
+BOOST_AUTO_TEST_CASE(domainport_rules)
+{
+    static const std::vector<std::pair</*addr=*/std::string, /*retval=*/DomainPort::Status>> domain_vals{
+        {"awa", DomainPort::Status::BadLen}, // 3 (characters in domain) < 4 (minimum length)
+        {"meow", DomainPort::Status::BadDotless},
+        {"cat.", DomainPort::Status::BadCharPos}, // no empty label (trailing delimiter)
+        {".cat", DomainPort::Status::BadCharPos}, // no empty label (leading delimiter)
+        {"a..dot..a", DomainPort::Status::BadLabelLen}, // no empty label (extra delimiters)
+        {"meow's macbook pro.local", DomainPort::Status::BadChar}, // ' is not a valid character in domains
+        {"-w-.me.ow", DomainPort::Status::BadLabelCharPos}, // trailing hyphens are not allowed
+        // 64 (characters in label) > 63 (maximum limit)
+        {"yeowwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwch.ow.ie", DomainPort::Status::BadLabelLen},
+        // 278 (characters in domain) > 253 (maximum limit)
+        {"Loremipsumdolorsitametconsecteturadipiscingelitseddoeiusmodtempor"
+         "incididuntutlaboreetdoloremagnaaliquaUtenimadminimveniamquisnostrud"
+         "exercitationullamcolaborisnisiutaliquipexeacommodoconsequatDuisaute"
+         "iruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariat.ur", DomainPort::Status::BadLen},
+        {"server-1.me.ow", DomainPort::Status::Success}
+    };
+
+    for (const auto& [addr, retval] : domain_vals) {
+        DomainPort service;
+        BOOST_CHECK_EQUAL(service.Set(addr, 1234), retval);
+        if (retval != DomainPort::Status::Success) {
+            BOOST_CHECK_EQUAL(service.Validate(), DomainPort::Status::Malformed); // Empty values report as Malformed
+        } else {
+            BOOST_CHECK_EQUAL(service.Validate(), DomainPort::Status::Success);
+        }
+    }
+
+    {
+        // DomainPort requires non-zero ports
+        DomainPort service;
+        BOOST_CHECK_EQUAL(service.Set("example.com", 0), DomainPort::Status::BadPort);
+        BOOST_CHECK_EQUAL(service.Validate(), DomainPort::Status::Malformed);
+    }
+
+    {
+        // DomainPort stores the domain in lower-case
+        DomainPort lhs, rhs;
+        BOOST_CHECK_EQUAL(lhs.Set("example.com", 1738), DomainPort::Status::Success);
+        BOOST_CHECK_EQUAL(rhs.Set(ToUpper("example.com"), 1738), DomainPort::Status::Success);
+        BOOST_CHECK_EQUAL(lhs.ToStringAddr(), rhs.ToStringAddr());
+        BOOST_CHECK(lhs == rhs);
+    }
+}
+
 BOOST_AUTO_TEST_CASE(extnetinfo_rules)
 {
-    for (const auto& [input, _, expected_ret] : vals) {
+    for (const auto& [input, _, expected_ret] : addr_vals) {
         const auto& [purpose, addr] = input;
         ExtNetInfo netInfo;
         BOOST_CHECK_EQUAL(netInfo.AddEntry(purpose, addr), expected_ret);
