@@ -1271,6 +1271,9 @@ void CDeterministicMNManager::CleanupCache(int nHeight)
 template <typename ProTx>
 static bool CheckService(const ProTx& proTx, TxValidationState& state)
 {
+    if (!proTx.netInfo->HasEntries(Purpose::CORE_P2P)) {
+        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
+    }
     switch (proTx.netInfo->Validate()) {
     case NetInfoStatus::BadInput:
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo");
