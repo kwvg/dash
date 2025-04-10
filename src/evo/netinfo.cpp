@@ -145,11 +145,11 @@ NetInfoStatus MnNetInfo::AddEntry(const std::string& input)
     return NetInfoStatus::BadInput;
 }
 
-CServiceList MnNetInfo::GetEntries() const
+NetInfoList MnNetInfo::GetEntries() const
 {
-    CServiceList ret;
+    NetInfoList ret;
     if (!IsEmpty()) {
-        ret.push_back(GetPrimary());
+        ret.push_back(m_addr);
     }
     // If MnNetInfo is empty, we probably don't expect any entries to show up, so
     // we return a blank set instead.
