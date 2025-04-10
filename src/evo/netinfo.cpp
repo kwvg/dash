@@ -24,6 +24,36 @@ const CChainParams& MainParams()
     return *g_main_params;
 }
 
+bool HasBadTLD(const std::string& str)
+{
+    const std::vector<std::string_view> blocklist{
+        ".local",
+        ".intranet",
+        ".internal",
+        ".private",
+        ".corp",
+        ".home",
+        ".lan",
+        ".home.arpa",
+        ".onion",
+        ".i2p"
+    };
+    for (const auto& tld : blocklist) {
+        if (tld.size() > str.size()) continue;
+        if (std::equal(tld.rbegin(), tld.rend(), str.rbegin())) return true;
+    }
+    return false;
+}
+
+bool IsAllowedPlatformHTTPPort(uint16_t port) {
+    switch (port) {
+    case 80:
+    case 443:
+        return true;
+    }
+    return false;
+}
+
 bool MatchCharsFilter(const std::string& input, const std::string_view& filter)
 {
     for (char c : input) {
@@ -291,6 +321,10 @@ NetInfoStatus ExtNetInfo::ProcessCandidate(const uint8_t purpose, const NetInfoE
         // We don't allow duplicate entries even *across* different lists
         return NetInfoStatus::Duplicate;
     }
+    if (candidate.GetType() == Extensions::DOMAINS && purpose != Purpose::PLATFORM_HTTP) {
+        // Domains only allowed for Platform HTTP(S) API
+        return NetInfoStatus::BadInput;
+    }
     if (auto it{m_data.find(purpose)}; it != m_data.end()) {
         // Existing entries list found, run some more sanity checks
         auto& [_, entries] = *it;
@@ -331,6 +365,21 @@ NetInfoStatus ExtNetInfo::ValidateService(const CService& service)
     return NetInfoStatus::Success;
 }
 
+NetInfoStatus ExtNetInfo::ValidateDomainPort(const DomainPort& service)
+{
+    if ((IsBadPort(service.GetPort()) && !IsAllowedPlatformHTTPPort(service.GetPort())) || service.GetPort() == 0) {
+        return NetInfoStatus::BadPort;
+    }
+    if (service.Validate() != DomainPort::Status::Success) {
+        return NetInfoStatus::BadInput;
+    }
+    if (HasBadTLD(service.ToStringAddr())) {
+        return NetInfoStatus::BadInput;
+    }
+
+    return NetInfoStatus::Success;
+}
+
 NetInfoStatus ExtNetInfo::AddEntry(const uint8_t purpose, const std::string& input)
 {
     if (!IsValidPurpose(purpose)) {
@@ -341,11 +390,25 @@ NetInfoStatus ExtNetInfo::AddEntry(const uint8_t purpose, const std::string& inp
     // it uses a fallback value of 0, which will return a NetInfoStatus::BadPort
     std::string addr; uint16_t port{0};
     SplitHostPort(input, port, addr);
-    // Contains invalid characters, unlikely to pass Lookup(), fast-fail
+
     if (!MatchCharsFilter(addr, SAFE_CHARS_IPV4_6)) {
-        return NetInfoStatus::BadInput;
+        if (!MatchCharsFilter(addr, SAFE_CHARS_RFC1035)) {
+            // Neither IP:port safe nor domain-safe, we can safely assume it's bad input
+            return NetInfoStatus::BadInput;
+        }
+
+        // Not IP:port safe but domain safe, treat as domain.
+        if (DomainPort service; service.Set(addr, port) == DomainPort::Status::Success) {
+            const auto ret = ValidateDomainPort(service);
+            if (ret == NetInfoStatus::Success) {
+                return ProcessCandidate(purpose, NetInfoEntry(service));
+            }
+            return ret; /* ValidateDomainPort() failed */
+        }
+        return NetInfoStatus::BadInput; /* DomainPort::Set() failed */
     }
 
+    // IP:port safe, try to parse it as IP:port
     if (auto service = Lookup(addr, /*portDefault=*/port, /*fAllowLookup=*/false); service.has_value()) {
         const auto ret = ValidateService(service.value());
         if (ret == NetInfoStatus::Success) {
@@ -423,6 +486,15 @@ NetInfoStatus ExtNetInfo::Validate() const
             if (const auto& service{entry.GetAddrPort()}; service.has_value()) {
                 if (auto ret{ValidateService(*service)}; ret != NetInfoStatus::Success) {
                     // Stores CService underneath but doesn't pass validation rules
+                    return ret;
+                }
+            } else if (const auto& service{entry.GetDomainPort()}; service.has_value()) {
+                if (purpose != Purpose::PLATFORM_HTTP) {
+                    // Domains only allowed for Platform HTTP(S) API
+                    return NetInfoStatus::BadInput;
+                }
+                if (auto ret{ValidateDomainPort(*service)}; ret != NetInfoStatus::Success) {
+                    // Stores DomainPort underneath but doesn't pass validation rules
                     return ret;
                 }
             } else {
