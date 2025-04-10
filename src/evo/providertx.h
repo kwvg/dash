@@ -6,6 +6,7 @@
 #define BITCOIN_EVO_PROVIDERTX_H
 
 #include <bls/bls.h>
+#include <evo/netinfo.h>
 #include <evo/specialtx.h>
 #include <primitives/transaction.h>
 
@@ -40,7 +41,7 @@ public:
     MnType nType{MnType::Regular};
     uint16_t nMode{0};                                     // only 0 supported for now
     COutPoint collateralOutpoint{uint256(), (uint32_t)-1}; // if hash is null, we refer to a ProRegTx output
-    CService addr;
+    MnNetInfo netInfo;
     uint160 platformNodeID{};
     uint16_t platformP2PPort{0};
     uint16_t platformHTTPPort{0};
@@ -66,7 +67,7 @@ public:
                 obj.nType,
                 obj.nMode,
                 obj.collateralOutpoint,
-                obj.addr,
+                obj.netInfo,
                 obj.keyIDOwner,
                 CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == ProTxVersion::LegacyBLS)),
                 obj.keyIDVoting,
@@ -98,7 +99,7 @@ public:
         obj.pushKV("type", ToUnderlying(nType));
         obj.pushKV("collateralHash", collateralOutpoint.hash.ToString());
         obj.pushKV("collateralIndex", (int)collateralOutpoint.n);
-        obj.pushKV("service", addr.ToStringAddrPort());
+        obj.pushKV("service", netInfo.m_addr.ToStringAddrPort());
         obj.pushKV("ownerAddress", EncodeDestination(PKHash(keyIDOwner)));
         obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
 
@@ -132,7 +133,7 @@ public:
     uint16_t nVersion{ProTxVersion::LegacyBLS}; // message version
     MnType nType{MnType::Regular};
     uint256 proTxHash;
-    CService addr;
+    MnNetInfo netInfo;
     uint160 platformNodeID{};
     uint16_t platformP2PPort{0};
     uint16_t platformHTTPPort{0};
@@ -155,7 +156,7 @@ public:
         }
         READWRITE(
                 obj.proTxHash,
-                obj.addr,
+                obj.netInfo,
                 obj.scriptOperatorPayout,
                 obj.inputsHash
         );
@@ -180,7 +181,7 @@ public:
         obj.pushKV("version", nVersion);
         obj.pushKV("type", ToUnderlying(nType));
         obj.pushKV("proTxHash", proTxHash.ToString());
-        obj.pushKV("service", addr.ToStringAddrPort());
+        obj.pushKV("service", netInfo.m_addr.ToStringAddrPort());
         if (CTxDestination dest; ExtractDestination(scriptOperatorPayout, dest)) {
             obj.pushKV("operatorPayoutAddress", EncodeDestination(dest));
         }
