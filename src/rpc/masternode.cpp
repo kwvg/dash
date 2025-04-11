@@ -566,7 +566,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
 
         if (strMode == "addr") {
             std::string strAddress;
-            for (const NetInfoEntry& entry : dmn.pdmnState->netInfo.GetEntries()) {
+            for (const NetInfoEntry& entry : dmn.pdmnState->netInfo->GetEntries()) {
                 strAddress += entry.ToStringAddrPort() + " ";
             }
             strAddress.pop_back(); // Remove trailing space
@@ -580,7 +580,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
                                     payeeStr,
                                     PadString(ToString(dmnToLastPaidTime(dmn)), 10),
                                     PadString(ToString(dmn.pdmnState->nLastPaidHeight), 6));
-            for (const NetInfoEntry& entry : dmn.pdmnState->netInfo.GetEntries()) {
+            for (const NetInfoEntry& entry : dmn.pdmnState->netInfo->GetEntries()) {
                 strFull += entry.ToStringAddrPort() + " ";
             }
             strFull.pop_back(); // Remove trailing space
@@ -592,7 +592,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
                                     PadString(dmnToStatus(dmn), 18),
                                     dmn.pdmnState->nPoSePenalty,
                                     payeeStr);
-            for (const NetInfoEntry& entry : dmn.pdmnState->netInfo.GetEntries()) {
+            for (const NetInfoEntry& entry : dmn.pdmnState->netInfo->GetEntries()) {
                 strInfo += entry.ToStringAddrPort() + " ";
             }
             strInfo.pop_back(); // Remove trailing space
@@ -601,7 +601,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
             obj.pushKV(strOutpoint, strInfo);
         } else if (strMode == "json" || strMode == "recent" || strMode == "evo") {
             std::string strInfo{dmn.proTxHash.ToString() + " "};
-            for (const NetInfoEntry& entry : dmn.pdmnState->netInfo.GetEntries()) {
+            for (const NetInfoEntry& entry : dmn.pdmnState->netInfo->GetEntries()) {
                 strInfo += entry.ToStringAddrPort() + " ";
             }
             strInfo.pop_back(); // Remove trailing space
@@ -619,7 +619,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
                 strOutpoint.find(strFilter) == std::string::npos) return;
             UniValue objMN(UniValue::VOBJ);
             objMN.pushKV("proTxHash", dmn.proTxHash.ToString());
-            objMN.pushKV("address", dmn.pdmnState->netInfo.GetPrimary().ToStringAddrPort());
+            objMN.pushKV("address", dmn.pdmnState->netInfo->GetPrimary().ToStringAddrPort());
             objMN.pushKV("payee", payeeStr);
             objMN.pushKV("status", dmnToStatus(dmn));
             objMN.pushKV("type", std::string(GetMnType(dmn.nType).description));
