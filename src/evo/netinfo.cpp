@@ -138,7 +138,7 @@ NetInfoStatus MnNetInfo::AddEntry(const std::string& input)
     if (auto service = Lookup(input, /*portDefault=*/Params().GetDefaultPort(), /*fAllowLookup=*/false); service.has_value()) {
         const auto ret = ValidateService(service.value());
         if (ret == NetInfoStatus::Success) {
-            m_addr = service.value();
+            m_addr = NetInfoEntry{service.value()};
         }
         return ret;
     }
@@ -149,16 +149,32 @@ CServiceList MnNetInfo::GetEntries() const
 {
     CServiceList ret;
     if (!IsEmpty()) {
-        ret.push_back(m_addr);
+        ret.push_back(GetPrimary());
     }
     // If MnNetInfo is empty, we probably don't expect any entries to show up, so
     // we return a blank set instead.
     return ret;
 }
 
+const CService& MnNetInfo::GetPrimary() const
+{
+    if (const auto& service{m_addr.GetAddrPort()}; service.has_value()) {
+        return *service;
+    }
+    return empty_service;
+}
+
+NetInfoStatus MnNetInfo::Validate() const
+{
+    if (!m_addr.IsTriviallyValid()) {
+        return NetInfoStatus::Malformed;
+    }
+    return ValidateService(GetPrimary());
+}
+
 std::string MnNetInfo::ToString() const
 {
     // Extra padding to account for padding done by the calling function.
     return strprintf("MnNetInfo()\n"
-                     "    CService(ip=%s, port=%u)\n", m_addr.ToStringAddr(), m_addr.GetPort());
+                     "    %s\n", m_addr.ToString());
 }
