@@ -12,6 +12,8 @@
 
 class CService;
 
+static constexpr uint8_t EXTNETINFO_ENTRIES_LIMIT{32};
+
 enum NetInfoStatus : uint8_t
 {
     // Adding entries
@@ -45,6 +47,8 @@ inline constexpr uint8_t GetSupportedServiceType(const CService& service)
 {
     if (service.IsIPv4()) {
         return 0x01; /* BIP155Network::IPV4 */
+    } else if (service.IsIPv6() && !service.IsCJDNS()) {
+        return 0x02; /* BIP155Network::IPV6 */
     }
     return 0xFF; /* invalid type */
 }
@@ -53,6 +57,7 @@ inline constexpr bool IsSupportedServiceType(const uint8_t& type)
 {
     switch (type) {
     case 0x01: /* BIP155Network::IPV4 */
+    case 0x02: /* BIP155Network::IPV6 */
         return true;
     default:
         return false;
@@ -197,6 +202,43 @@ public:
     std::string ToString() const override;
 
     void Clear() override { m_addr.Clear(); }
+};
+
+class ExtNetInfo final : public NetInfoInterface
+{
+private:
+    std::vector<NetInfoEntry> m_data{};
+
+private:
+    NetInfoStatus ProcessCandidate(const NetInfoEntry& candidate);
+    static NetInfoStatus ValidateService(const CService& service);
+
+public:
+    ExtNetInfo() = default;
+    template <typename Stream> ExtNetInfo(deserialize_type, Stream& s) { s >> *this; }
+
+    ~ExtNetInfo() = default;
+
+    bool operator==(const ExtNetInfo& rhs) const { return m_data == rhs.m_data; }
+    bool operator!=(const ExtNetInfo& rhs) const { return !(*this == rhs); }
+
+    SERIALIZE_METHODS(ExtNetInfo, obj)
+    {
+        READWRITE(obj.m_data);
+    }
+
+    NetInfoStatus AddEntry(const std::string& input) override;
+    NetInfoList GetEntries() const override;
+
+    const CService& GetPrimary() const override;
+    bool IsEmpty() const override { return *this == ExtNetInfo(); }
+    NetInfoStatus Validate() const override;
+    std::string ToString() const override;
+
+    void Clear() override
+    {
+        m_data.clear();
+    }
 };
 
 /* Selects NetInfoInterface implementation to use based on object version */
