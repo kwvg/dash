@@ -14,6 +14,8 @@ static const CService empty_service{CService()};
 
 static constexpr std::string_view SAFE_CHARS_IPPORT{"1234567890.[]:"};
 static constexpr std::string_view SAFE_CHARS_RFC1035{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-"};
+static constexpr std::array<std::string_view, 8> TLDS_BAD{".corp", ".home", ".home.arpa", ".internal", ".intranet", ".lan", ".local", ".private"};
+static constexpr std::array<std::string_view, 2> TLDS_SPECIAL{".i2p", ".onion"};
 
 const bool IsNodeOnMainnet() { return Params().NetworkIDString() == CBaseChainParams::MAIN; }
 const CChainParams& MainParams()
@@ -23,23 +25,13 @@ const CChainParams& MainParams()
     return *g_main_params;
 }
 
-bool HasBadTLD(const std::string& str)
+template <typename T1>
+bool MatchSuffix(const std::string& str, const T1& list)
 {
-    const std::vector<std::string_view> blocklist{
-        ".local",
-        ".intranet",
-        ".internal",
-        ".private",
-        ".corp",
-        ".home",
-        ".lan",
-        ".home.arpa",
-        ".onion",
-        ".i2p"
-    };
-    for (const auto& tld : blocklist) {
-        if (tld.size() > str.size()) continue;
-        if (std::equal(tld.rbegin(), tld.rend(), str.rbegin())) return true;
+    if (str.empty()) return false;
+    for (const auto& suffix : list) {
+        if (suffix.size() > str.size()) continue;
+        if (std::equal(suffix.rbegin(), suffix.rend(), str.rbegin())) return true;
     }
     return false;
 }
@@ -353,7 +345,10 @@ NetInfoStatus ExtNetInfo::ValidateService(const CService& service)
     if (!IsSupportedServiceType(GetSupportedServiceType(service))) {
         return NetInfoStatus::BadInput;
     }
-    if (IsBadPort(service.GetPort()) || service.GetPort() == 0) {
+    if (service.IsI2P() && service.GetPort() != I2P_SAM31_PORT) {
+        // I2P SAM 3.1 and earlier don't support arbitrary ports
+        return NetInfoStatus::BadPort;
+    } else if (!service.IsI2P() && (IsBadPort(service.GetPort()) || service.GetPort() == 0)) {
         return NetInfoStatus::BadPort;
     }
 
@@ -368,7 +363,7 @@ NetInfoStatus ExtNetInfo::ValidateDomainPort(const DomainPort& service)
     if (service.Validate() != DomainPort::Status::Success) {
         return NetInfoStatus::BadInput;
     }
-    if (HasBadTLD(service.ToStringAddr())) {
+    if (MatchSuffix(service.ToStringAddr(), TLDS_BAD) || MatchSuffix(service.ToStringAddr(), TLDS_SPECIAL)) {
         return NetInfoStatus::BadInput;
     }
 
@@ -392,15 +387,27 @@ NetInfoStatus ExtNetInfo::AddEntry(const uint8_t purpose, const std::string& inp
             return NetInfoStatus::BadInput;
         }
 
-        // Not IP:port safe but domain safe, treat as domain.
-        if (DomainPort service; service.Set(addr, port) == DomainPort::Status::Success) {
+        // Not IP:port safe but domain safe
+        if (MatchSuffix(addr, TLDS_SPECIAL)) {
+            // Special domain, try storing it as CService
+            CNetAddr netaddr;
+            if (netaddr.SetSpecial(addr)) {
+                CService service{netaddr, port};
+                const auto ret = ValidateService(service);
+                if (ret == NetInfoStatus::Success) {
+                    return ProcessCandidate(purpose, NetInfoEntry(service));
+                }
+                return ret; /* ValidateService() failed */
+            }
+        } else if (DomainPort service; service.Set(addr, port) == DomainPort::Status::Success) {
+            // Regular domain
             const auto ret = ValidateDomainPort(service);
             if (ret == NetInfoStatus::Success) {
                 return ProcessCandidate(purpose, NetInfoEntry(service));
             }
             return ret; /* ValidateDomainPort() failed */
         }
-        return NetInfoStatus::BadInput; /* DomainPort::Set() failed */
+        return NetInfoStatus::BadInput; /* CService::SetSpecial() or DomainPort::Set() failed */
     }
 
     // IP:port safe, try to parse it as IP:port

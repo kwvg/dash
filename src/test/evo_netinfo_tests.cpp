@@ -46,6 +46,14 @@ static const std::vector<
     // - MnNetInfo doesn't allow storing anything except a Core P2P address
     // - ExtNetInfo can store Platform HTTP addresses *as domains*
     {{Purpose::PLATFORM_HTTP, "example.com:8888"}, NetInfoStatus::MaxLimit, NetInfoStatus::Success},
+    // ExtNetInfo can store onion addresses but must have non-zero port
+    {{Purpose::PLATFORM_HTTP, "pg6mmjiyjmcrsslvykfwnntlaru7p5svn6y2ymmju6nubxndf4pscryd.onion:0"}, NetInfoStatus::MaxLimit, NetInfoStatus::BadPort},
+    // ExtNetInfo can store onion addresses
+    {{Purpose::PLATFORM_HTTP, "pg6mmjiyjmcrsslvykfwnntlaru7p5svn6y2ymmju6nubxndf4pscryd.onion:8888"}, NetInfoStatus::MaxLimit, NetInfoStatus::Success},
+    // ExtNetInfo can store I2P addresses as long as it uses port 0
+    {{Purpose::PLATFORM_HTTP, "udhdrtrcetjm5sxzskjyr5ztpeszydbh4dpl3pl4utgqqw2v4jna.b32.i2p:0"}, NetInfoStatus::MaxLimit, NetInfoStatus::Success},
+    // ExtNetInfo can store I2P addresses but non-zero ports are not allowed
+    {{Purpose::PLATFORM_HTTP, "udhdrtrcetjm5sxzskjyr5ztpeszydbh4dpl3pl4utgqqw2v4jna.b32.i2p:8888"}, NetInfoStatus::MaxLimit, NetInfoStatus::BadPort},
     // Incorrectly formatted IPv4 address
     {{Purpose::CORE_P2P, "1..1.1.1:8888"}, NetInfoStatus::BadInput, NetInfoStatus::BadInput},
     // Missing address
