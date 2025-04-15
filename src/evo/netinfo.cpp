@@ -113,6 +113,10 @@ bool NetInfoEntry::operator<(const NetInfoEntry& rhs) const
             if constexpr (std::is_same_v<T1, T2>) {
                 // Both the same type, compare as usual
                 return lhs < rhs;
+            } else if constexpr ((std::is_same_v<T1, CService> || std::is_same_v<T1, DomainPort>) &&
+                                 (std::is_same_v<T2, CService> || std::is_same_v<T2, DomainPort>)) {
+                // Differing types but both implement ToStringAddrPort()
+                return lhs.ToStringAddrPort() < rhs.ToStringAddrPort();
             } else if constexpr (std::is_same_v<T1, std::monostate> && !std::is_same_v<T2, std::monostate>) {
                 // lhs is monostate and rhs is not, rhs is greater
                 return true;
@@ -128,6 +132,14 @@ bool NetInfoEntry::operator<(const NetInfoEntry& rhs) const
 std::optional<std::reference_wrapper<const CService>> NetInfoEntry::GetAddrPort() const
 {
     if (const auto* data_ptr{std::get_if<CService>(&m_data)}; data_ptr != nullptr && IsSupportedServiceType(m_type)) {
+        return *data_ptr;
+    }
+    return std::nullopt;
+}
+
+std::optional<std::reference_wrapper<const DomainPort>> NetInfoEntry::GetDomainPort() const
+{
+    if (const auto* data_ptr{std::get_if<DomainPort>(&m_data)}; data_ptr != nullptr && IsTypeExtension(m_type)) {
         return *data_ptr;
     }
     return std::nullopt;
@@ -152,6 +164,13 @@ bool NetInfoEntry::IsTriviallyValid() const
                 if (!input.IsValid()) return false;
                 // Type code should be supported by NetInfoEntry
                 if (!IsSupportedServiceType(m_type)) return false;
+            } else if constexpr (std::is_same_v<T1, DomainPort>) {
+                // Type code should be truthful as it decides what underlying type is used when (de)serializing
+                if (m_type != Extensions::DOMAINS) return false;
+                // Underlying data should at least meet surface-level validity checks
+                if (input.Validate() != DomainPort::Status::Success) return false;
+                // Type code should be supported by NetInfoEntry
+                if (!IsTypeExtension(m_type)) return false;
             } else {
                 return false;
             }
@@ -167,6 +186,8 @@ std::string NetInfoEntry::ToString() const
             using T1 = std::decay_t<decltype(input)>;
             if constexpr (std::is_same_v<T1, CService>) {
                 return strprintf("CService(addr=%s, port=%u)", input.ToStringAddr(), input.GetPort());
+            } else if constexpr (std::is_same_v<T1, DomainPort>) {
+                return strprintf("DomainPort(addr=%s, port=%u)", input.ToStringAddr(), input.GetPort());
             } else {
                 return strprintf("[invalid entry]");
             }
@@ -179,7 +200,7 @@ std::string NetInfoEntry::ToStringAddrPort() const
     return std::visit(
         [](auto&& input) -> std::string {
             using T1 = std::decay_t<decltype(input)>;
-            if constexpr (std::is_same_v<T1, CService>) {
+            if constexpr (std::is_same_v<T1, CService> || std::is_same_v<T1, DomainPort>) {
                 return input.ToStringAddrPort();
             } else {
                 return strprintf("[invalid entry]");
