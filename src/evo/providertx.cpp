@@ -24,6 +24,11 @@ bool IsNetInfoTriviallyValid(const ProTx& proTx, bool is_extended_addr, TxValida
         if (proTx.netInfo->HasEntries(Purpose::PLATFORM_HTTP) || proTx.netInfo->HasEntries(Purpose::PLATFORM_P2P)) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-terrible");
         }
+    } else if (is_extended_addr && proTx.nType == MnType::Evo) {
+        // PLATFORM_P2P mandatory for EvoNodes
+        if (!proTx.netInfo->HasEntries(Purpose::PLATFORM_P2P)) {
+            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
+        }
     }
     return true;
 }
