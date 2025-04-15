@@ -51,7 +51,7 @@ void trivialvalidation_runner(const std::string& json)
             txType = test[1].get_str();
             BOOST_CHECK(test[2].get_str() == "basic" || test[2].get_str() == "legacy");
             bool is_basic_bls = test[2].get_str() == "basic";
-            bool is_extended_addr{false};
+            bool is_extended_addr{false}; // TODO: Introduce trivial validation test vectors for extended addresses
             // Raw transaction
             CDataStream stream(ParseHex(test[3].get_str()), SER_NETWORK, PROTOCOL_VERSION);
             stream >> tx;
