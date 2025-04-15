@@ -82,6 +82,13 @@ constexpr std::string PurposeToString(const uint8_t purpose) {
     return "";
 }
 
+namespace Extensions {
+enum : uint8_t
+{
+    DOMAINS = 0xD0,
+};
+} // namespace Purpose
+
 class DomainPort
 {
 public:
@@ -172,6 +179,16 @@ inline constexpr bool IsSupportedServiceType(const uint8_t& type)
         return false;
     }
 }
+
+inline constexpr bool IsTypeExtension(const uint8_t& type)
+{
+    switch (type) {
+    case Extensions::DOMAINS:
+        return true;
+    default:
+        return false;
+    }
+}
 } // anonymous namespace
 
 class NetInfoEntry
@@ -180,12 +197,13 @@ private:
     static constexpr uint8_t INVALID_TYPE{0xFF};
 
     uint8_t m_type{INVALID_TYPE};
-    std::variant<std::monostate, CService> m_data{std::monostate{}};
+    std::variant<std::monostate, CService, DomainPort> m_data{std::monostate{}};
 
     friend class MnNetInfo;
 
 public:
     NetInfoEntry() = default;
+    NetInfoEntry(const DomainPort& service) : m_type{Extensions::DOMAINS}, m_data{service} {}
     NetInfoEntry(const CService& service) : m_type{GetSupportedServiceType(service)}, m_data{service} {}
     template <typename Stream> NetInfoEntry(deserialize_type, Stream& s) { s >> *this; }
 
@@ -201,6 +219,8 @@ public:
         s << m_type;
         if (const auto* data_ptr{std::get_if<CService>(&m_data)}; data_ptr != nullptr && IsSupportedServiceType(m_type)) {
             s << *data_ptr;
+        } else if (const auto* data_ptr{std::get_if<DomainPort>(&m_data)}; data_ptr != nullptr && IsTypeExtension(m_type)) {
+            s << *data_ptr;
         } else {
             // Invalid type, bail out
             return;
@@ -212,6 +232,8 @@ public:
         auto size = ::GetSerializeSize(uint8_t{}, s.GetVersion());
         if (IsSupportedServiceType(m_type)) {
             size += ::GetSerializeSize(CService{}, s.GetVersion());
+        } else if (IsTypeExtension(m_type)) {
+            size += ::GetSerializeSize(DomainPort{}, s.GetVersion());
         }
         s.seek(size);
     }
@@ -223,6 +245,10 @@ public:
         s >> m_type;
         if (IsSupportedServiceType(m_type)) {
             CService obj;
+            s >> obj;
+            m_data = obj;
+        } else if (IsTypeExtension(m_type)) {
+            DomainPort obj;
             s >> obj;
             m_data = obj;
         } else {
@@ -238,6 +264,7 @@ public:
     }
 
     std::optional<std::reference_wrapper<const CService>> GetAddrPort() const;
+    std::optional<std::reference_wrapper<const DomainPort>> GetDomainPort() const;
     const uint8_t& GetType() const { return m_type; }
     bool IsTriviallyValid() const;
     std::string ToString() const;
