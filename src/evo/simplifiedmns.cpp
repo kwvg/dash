@@ -79,7 +79,10 @@ UniValue CSimplifiedMNListEntry::ToJson(bool extended) const
     obj.pushKV("nType", ToUnderlying(nType));
     obj.pushKV("proRegTxHash", proRegTxHash.ToString());
     obj.pushKV("confirmedHash", confirmedHash.ToString());
-    obj.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
+    if (IsServiceDeprecatedRPCEnabled()) {
+        obj.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
+    }
+    obj.pushKV("addresses", netInfo->ToJson());
     obj.pushKV("pubKeyOperator", pubKeyOperator.ToString());
     obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
     obj.pushKV("isValid", isValid);

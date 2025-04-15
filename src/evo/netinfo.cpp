@@ -8,6 +8,8 @@
 #include <netbase.h>
 #include <util/system.h>
 
+#include <univalue.h>
+
 namespace {
 static std::unique_ptr<const CChainParams> g_main_params{nullptr};
 static const CService empty_service{CService()};
@@ -106,6 +108,19 @@ DomainPort::Status DomainPort::Validate() const
         return DomainPort::Status::BadPort;
     }
     return ValidateDomain(m_addr);
+}
+
+UniValue ArrFromService(const CService& addr)
+{
+    UniValue obj(UniValue::VARR);
+    obj.push_back(addr.ToStringAddrPort());
+    return obj;
+}
+
+bool IsServiceDeprecatedRPCEnabled()
+{
+    const auto args = gArgs.GetArgs("-deprecatedrpc");
+    return std::find(args.begin(), args.end(), "service") != args.end();
 }
 
 bool NetInfoEntry::operator==(const NetInfoEntry& rhs) const
@@ -294,6 +309,13 @@ NetInfoStatus MnNetInfo::Validate() const
         return NetInfoStatus::Malformed;
     }
     return ValidateService(GetPrimary());
+}
+
+UniValue MnNetInfo::ToJson() const
+{
+    UniValue ret(UniValue::VOBJ);
+    ret.pushKV(PurposeToString(Purpose::CORE_P2P, /*lower=*/true), ArrFromService(GetPrimary()));
+    return ret;
 }
 
 std::string MnNetInfo::ToString() const
@@ -512,6 +534,19 @@ NetInfoStatus ExtNetInfo::Validate() const
         }
     }
     return NetInfoStatus::Success;
+}
+
+UniValue ExtNetInfo::ToJson() const
+{
+    UniValue ret(UniValue::VOBJ);
+    for (const auto& [purpose, p_entries] : m_data) {
+        UniValue arr(UniValue::VARR);
+        for (const auto& entry : p_entries) {
+            arr.push_back(entry.ToStringAddrPort());
+        }
+        ret.pushKV(PurposeToString(purpose, /*lower=*/true), arr);
+    }
+    return ret;
 }
 
 std::string ExtNetInfo::ToString() const

@@ -12,6 +12,8 @@
 
 class CService;
 
+class UniValue;
+
 static constexpr uint8_t EXTNETINFO_ENTRIES_LIMIT{32};
 static constexpr uint8_t EXTNETINFO_FORMAT_VERSION{1};
 static constexpr uint8_t EXTNETINFO_PRIMARY_ADDR_TYPE{/*BIP155Network::IPV4=*/0x01};
@@ -70,14 +72,15 @@ inline constexpr bool IsValidPurpose(const uint8_t purpose)
     return false;
 }
 
-constexpr std::string PurposeToString(const uint8_t purpose) {
+// Warning: Used in RPC code, altering existing values is a breaking change
+constexpr std::string PurposeToString(const uint8_t purpose, const bool lower = false) {
     switch (purpose) {
     case Purpose::CORE_P2P:
-        return "CORE_P2P";
+        return lower ? "core_p2p" : "CORE_P2P";
     case Purpose::PLATFORM_P2P:
-        return "PLATFORM_P2P";
+        return lower ? "platform_p2p" : "PLATFORM_P2P";
     case Purpose::PLATFORM_HTTP:
-        return "PLATFORM_HTTP";
+        return lower ? "platform_http" : "PLATFORM_HTTP";
     }
     return "";
 }
@@ -157,6 +160,9 @@ public:
     std::string ToStringAddr() const { return m_addr; }
     std::string ToStringAddrPort() const { return strprintf("%s:%d", m_addr, m_port); }
 };
+
+/* Identical to IsDeprecatedRPCEnabled("service"). For use outside of RPC code. */
+bool IsServiceDeprecatedRPCEnabled();
 
 namespace {
 inline constexpr uint8_t GetSupportedServiceType(const CService& service)
@@ -295,6 +301,7 @@ public:
     virtual bool CanStorePlatform() const = 0;
     virtual bool IsEmpty() const = 0;
     virtual NetInfoStatus Validate() const = 0;
+    virtual UniValue ToJson() const = 0;
     virtual std::string ToString() const = 0;
 
     virtual void Clear() = 0;
@@ -349,6 +356,7 @@ public:
     bool IsEmpty() const override { return *this == MnNetInfo(); }
     bool CanStorePlatform() const override { return false; }
     NetInfoStatus Validate() const override;
+    UniValue ToJson() const override;
     std::string ToString() const override;
 
     void Clear() override { m_addr.Clear(); }
@@ -391,6 +399,7 @@ public:
     bool IsEmpty() const override { return *this == ExtNetInfo(); }
     bool CanStorePlatform() const override { return true; }
     NetInfoStatus Validate() const override;
+    UniValue ToJson() const override;
     std::string ToString() const override;
 
     void Clear() override
