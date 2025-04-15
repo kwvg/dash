@@ -1245,9 +1245,7 @@ void CDeterministicMNManager::CleanupCache(int nHeight)
 template <typename ProTx>
 static bool CheckService(const ProTx& proTx, TxValidationState& state)
 {
-    if (!proTx.netInfo->HasEntries(Purpose::CORE_P2P)) {
-        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
-    }
+    // Validate contents
     switch (proTx.netInfo->Validate()) {
     case NetInfoStatus::BadInput:
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo");
@@ -1364,7 +1362,7 @@ bool CheckProRegTx(CDeterministicMNManager& dmnman, const CTransaction& tx, gsl:
 
     // It's allowed to set addr to 0, which will put the MN into PoSe-banned state and require a ProUpServTx to be issues later
     // If any of both is set, it must be valid however
-    if (!opt_ptx->netInfo->IsEmpty() && !CheckService(*opt_ptx, state)) {
+    if (!opt_ptx->netInfo->IsEmpty() && (!IsNetInfoTriviallyValid(*opt_ptx, state) || !CheckService(*opt_ptx, state))) {
         // pass the state returned by the function above
         return false;
     }
@@ -1483,7 +1481,7 @@ bool CheckProUpServTx(CDeterministicMNManager& dmnman, const CTransaction& tx, g
         return false;
     }
 
-    if (!CheckService(*opt_ptx, state)) {
+    if (!IsNetInfoTriviallyValid(*opt_ptx, state) || !CheckService(*opt_ptx, state)) {
         // pass the state returned by the function above
         return false;
     }
