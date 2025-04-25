@@ -10,6 +10,7 @@
 
 namespace {
 static std::unique_ptr<const CChainParams> g_main_params{nullptr};
+static const CService empty_service{CService()};
 
 bool IsNodeOnMainnet() { return Params().NetworkIDString() == CBaseChainParams::MAIN; }
 const CChainParams& MainParams()
@@ -19,6 +20,94 @@ const CChainParams& MainParams()
     return *g_main_params;
 }
 } // anonymous namespace
+
+bool NetInfoEntry::operator==(const NetInfoEntry& rhs) const
+{
+    if (m_type != rhs.m_type) return false;
+    return std::visit([](auto&& lhs, auto&& rhs) -> bool {
+        if constexpr (std::is_same_v<std::decay_t<decltype(lhs)>, std::decay_t<decltype(rhs)>>) {
+            return lhs == rhs;
+        }
+        return false;
+    }, m_data, rhs.m_data);
+}
+
+bool NetInfoEntry::operator<(const NetInfoEntry& rhs) const
+{
+    if (m_type != rhs.m_type) return m_type < rhs.m_type;
+    return std::visit([](auto&& lhs, auto&& rhs) -> bool {
+        using T1 = std::decay_t<decltype(lhs)>;
+        using T2 = std::decay_t<decltype(rhs)>;
+        if constexpr (std::is_same_v<T1, T2>) {
+            // Both the same type, compare as usual
+            return lhs < rhs;
+        } else if constexpr (std::is_same_v<T1, std::monostate> && !std::is_same_v<T2, std::monostate>) {
+            // lhs is monostate and rhs is not, rhs is greater
+            return true;
+        } else if constexpr (!std::is_same_v<T1, std::monostate> && std::is_same_v<T2, std::monostate>) {
+            // rhs is monostate but lhs is not, lhs is greater
+            return false;
+        }
+        return false;
+    }, m_data, rhs.m_data);
+}
+
+std::optional<std::reference_wrapper<const CService>> NetInfoEntry::GetAddrPort() const
+{
+    if (const auto* data_ptr{std::get_if<CService>(&m_data)}; data_ptr != nullptr && IsSupportedServiceType(m_type)) {
+        return *data_ptr;
+    }
+    return std::nullopt;
+}
+
+// NetInfoEntry is a dumb object that doesn't enforce validation rules, that is the responsibility of
+// types that utilize NetInfoEntry (MnNetInfo and others). IsTriviallyValid() is there to check if a
+// NetInfoEntry object is properly constructed.
+bool NetInfoEntry::IsTriviallyValid() const
+{
+    if (m_type == INVALID_TYPE) return false;
+    return std::visit([this](auto&& input) -> bool {
+        using T1 = std::decay_t<decltype(input)>;
+        if constexpr (std::is_same_v<T1, std::monostate>) {
+            // Empty underlying data isn't a valid entry
+            return false;
+        } else if constexpr (std::is_same_v<T1, CService>) {
+            // Type code should be truthful as it decides what underlying type is used when (de)serializing
+            if (m_type != GetSupportedServiceType(input)) return false;
+            // Underlying data should at least meet surface-level validity checks
+            if (!input.IsValid()) return false;
+            // Type code should be supported by NetInfoEntry
+            if (!IsSupportedServiceType(m_type)) return false;
+        } else {
+            return false;
+        }
+        return true;
+    }, m_data);
+}
+
+std::string NetInfoEntry::ToString() const
+{
+    return std::visit([](auto&& input) -> std::string {
+        using T1 = std::decay_t<decltype(input)>;
+        if constexpr (std::is_same_v<T1, CService>) {
+            return strprintf("CService(addr=%s, port=%d)", input.ToStringAddr(), input.GetPort());
+        } else {
+            return strprintf("[invalid entry]");
+        }
+    }, m_data);
+}
+
+std::string NetInfoEntry::ToStringAddrPort() const
+{
+    return std::visit([](auto&& input) -> std::string {
+        using T1 = std::decay_t<decltype(input)>;
+        if constexpr (std::is_same_v<T1, CService>) {
+            return input.ToStringAddrPort();
+        } else {
+            return strprintf("[invalid entry]");
+        }
+    }, m_data);
+}
 
 NetInfoStatus MnNetInfo::ValidateService(const CService& service)
 {
