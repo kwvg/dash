@@ -7,14 +7,14 @@
 #include <evo/chainhelper.h>
 #include <evo/deterministicmns.h>
 #include <governance/classes.h>
-#include <index/txindex.h>
-#include <node/blockstorage.h>
-#include <node/context.h>
 #include <governance/governance.h>
+#include <index/txindex.h>
 #include <masternode/node.h>
 #include <masternode/payments.h>
 #include <net.h>
 #include <netbase.h>
+#include <node/blockstorage.h>
+#include <node/context.h>
 #include <rpc/blockchain.h>
 #include <rpc/evo_util.h>
 #include <rpc/server.h>

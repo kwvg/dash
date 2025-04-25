@@ -4,9 +4,9 @@
 
 #include <evo/simplifiedmns.h>
 
-#include <evo/cbtx.h>
 #include <core_io.h>
 #include <deploymentstatus.h>
+#include <evo/cbtx.h>
 #include <evo/deterministicmns.h>
 #include <evo/specialtx.h>
 #include <llmq/blockprocessor.h>

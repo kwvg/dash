@@ -143,18 +143,16 @@ UniValue CDeterministicMNStateDiff::ToJson(MnType nType) const
         }
         if (nType == MnType::Evo) {
             if (fields & Field_platformHTTPPort) {
-                netInfoObj.pushKV(
-                    PurposeToString(Purpose::PLATFORM_HTTP, /*lower=*/true),
-                    (fields & Field_netInfo) ? ArrFromService(CService{state.netInfo->GetPrimary(), state.platformHTTPPort})
-                                             : ArrFromPort(state.platformHTTPPort)
-                );
+                netInfoObj.pushKV(PurposeToString(Purpose::PLATFORM_HTTP, /*lower=*/true),
+                                  (fields & Field_netInfo)
+                                      ? ArrFromService(CService{state.netInfo->GetPrimary(), state.platformHTTPPort})
+                                      : ArrFromPort(state.platformHTTPPort));
             }
             if (fields & Field_platformP2PPort) {
-                netInfoObj.pushKV(
-                    PurposeToString(Purpose::PLATFORM_P2P, /*lower=*/true),
-                    (fields & Field_netInfo) ? ArrFromService(CService{state.netInfo->GetPrimary(), state.platformP2PPort})
-                                             : ArrFromPort(state.platformP2PPort)
-                );
+                netInfoObj.pushKV(PurposeToString(Purpose::PLATFORM_P2P, /*lower=*/true),
+                                  (fields & Field_netInfo)
+                                      ? ArrFromService(CService{state.netInfo->GetPrimary(), state.platformP2PPort})
+                                      : ArrFromPort(state.platformP2PPort));
             }
         }
         if (!netInfoObj.empty()) {
