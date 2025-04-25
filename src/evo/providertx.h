@@ -6,6 +6,7 @@
 #define BITCOIN_EVO_PROVIDERTX_H
 
 #include <bls/bls.h>
+#include <evo/common.h>
 #include <evo/netinfo.h>
 #include <evo/specialtx.h>
 #include <primitives/transaction.h>
@@ -22,21 +23,14 @@
 
 class TxValidationState;
 
-namespace ProTxVersion {
-enum : uint16_t {
-    LegacyBLS = 1,
-    BasicBLS  = 2,
-};
-} // namespace ProTxVersion
-
 class CProRegTx
 {
 public:
     static constexpr auto SPECIALTX_TYPE = TRANSACTION_PROVIDER_REGISTER;
 
-    [[nodiscard]] static constexpr uint16_t GetMaxVersion(const bool is_basic_scheme_active)
+    [[nodiscard]] static constexpr uint16_t GetMaxVersion(const bool is_basic_scheme_active, const bool is_extended_addr)
     {
-        return is_basic_scheme_active ? ProTxVersion::BasicBLS : ProTxVersion::LegacyBLS;
+        return is_extended_addr ? ProTxVersion::ExtAddr : (is_basic_scheme_active ? ProTxVersion::BasicBLS : ProTxVersion::LegacyBLS);
     }
 
     uint16_t nVersion{ProTxVersion::LegacyBLS}; // message version
@@ -60,7 +54,7 @@ public:
         READWRITE(
                 obj.nVersion
         );
-        if (obj.nVersion == 0 || obj.nVersion > GetMaxVersion(/*is_basic_scheme_active=*/true)) {
+        if (obj.nVersion == 0 || obj.nVersion > GetMaxVersion(/*is_basic_scheme_active=*/true, /*is_extended_addr=*/true)) {
             // unknown version, bail out early
             return;
         }
@@ -69,7 +63,7 @@ public:
                 obj.nType,
                 obj.nMode,
                 obj.collateralOutpoint,
-                NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo)),
+                NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
                 obj.keyIDOwner,
                 CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == ProTxVersion::LegacyBLS)),
                 obj.keyIDVoting,
@@ -124,7 +118,7 @@ public:
         return obj;
     }
 
-    bool IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const;
+    bool IsTriviallyValid(bool is_basic_scheme_active, bool is_extended_addr, TxValidationState& state) const;
 };
 
 class CProUpServTx
@@ -132,9 +126,9 @@ class CProUpServTx
 public:
     static constexpr auto SPECIALTX_TYPE = TRANSACTION_PROVIDER_UPDATE_SERVICE;
 
-    [[nodiscard]] static constexpr uint16_t GetMaxVersion(const bool is_basic_scheme_active)
+    [[nodiscard]] static constexpr uint16_t GetMaxVersion(const bool is_basic_scheme_active, const bool is_extended_addr)
     {
-        return is_basic_scheme_active ? ProTxVersion::BasicBLS : ProTxVersion::LegacyBLS;
+        return is_extended_addr ? ProTxVersion::ExtAddr : (is_basic_scheme_active ? ProTxVersion::BasicBLS : ProTxVersion::LegacyBLS);
     }
 
     uint16_t nVersion{ProTxVersion::LegacyBLS}; // message version
@@ -153,7 +147,7 @@ public:
         READWRITE(
                 obj.nVersion
         );
-        if (obj.nVersion == 0 || obj.nVersion > GetMaxVersion(/*is_basic_scheme_active=*/true)) {
+        if (obj.nVersion == 0 || obj.nVersion > GetMaxVersion(/*is_basic_scheme_active=*/true, /*is_extended_addr=*/true)) {
             // unknown version, bail out early
             return;
         }
@@ -163,7 +157,7 @@ public:
         }
         READWRITE(
                 obj.proTxHash,
-                NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo)),
+                NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
                 obj.scriptOperatorPayout,
                 obj.inputsHash
         );
@@ -206,7 +200,7 @@ public:
         return obj;
     }
 
-    bool IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const;
+    bool IsTriviallyValid(bool is_basic_scheme_active, bool is_extended_addr, TxValidationState& state) const;
 };
 
 class CProUpRegTx
@@ -268,7 +262,7 @@ public:
         return obj;
     }
 
-    bool IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const;
+    bool IsTriviallyValid(bool is_basic_scheme_active, bool is_extended_addr, TxValidationState& state) const;
 };
 
 class CProUpRevTx
@@ -329,7 +323,7 @@ public:
         return obj;
     }
 
-    bool IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const;
+    bool IsTriviallyValid(bool is_basic_scheme_active, bool is_extended_addr, TxValidationState& state) const;
 };
 
 template <typename ProTx>
@@ -343,6 +337,6 @@ static bool CheckInputsHash(const CTransaction& tx, const ProTx& proTx, TxValida
 }
 
 template <typename ProTx>
-bool IsNetInfoTriviallyValid(const ProTx& proTx, TxValidationState& state);
+bool IsNetInfoTriviallyValid(const ProTx& proTx, bool is_extended_addr, TxValidationState& state);
 
 #endif // BITCOIN_EVO_PROVIDERTX_H

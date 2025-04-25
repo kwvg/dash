@@ -114,7 +114,7 @@ static CMutableTransaction CreateProRegTx(const CChain& active_chain, const CTxM
     operatorKeyRet.MakeNewKey();
 
     CProRegTx proTx;
-    proTx.nVersion = CProRegTx::GetMaxVersion(!bls::bls_legacy_scheme);
+    proTx.nVersion = CProRegTx::GetMaxVersion(!bls::bls_legacy_scheme, /*is_extended_addr=*/false);
     proTx.netInfo = MakeNetInfo(proTx);
     proTx.collateralOutpoint.n = 0;
     BOOST_CHECK_EQUAL(proTx.netInfo->AddEntry(Purpose::CORE_P2P, strprintf("1.1.1.1:%d", port)), NetInfoStatus::Success);

@@ -13,7 +13,7 @@
 #include <util/underlying.h>
 
 template <typename ProTx>
-bool IsNetInfoTriviallyValid(const ProTx& proTx, TxValidationState& state)
+bool IsNetInfoTriviallyValid(const ProTx& proTx, bool is_extended_addr, TxValidationState& state)
 {
     // CORE_P2P mandatory for all nodes
     if (!proTx.netInfo->HasEntries(Purpose::CORE_P2P)) {
@@ -28,9 +28,9 @@ bool IsNetInfoTriviallyValid(const ProTx& proTx, TxValidationState& state)
     return true;
 }
 
-bool CProRegTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const
+bool CProRegTx::IsTriviallyValid(bool is_basic_scheme_active, bool is_extended_addr, TxValidationState& state) const
 {
-    if (nVersion == 0 || nVersion > GetMaxVersion(is_basic_scheme_active)) {
+    if (nVersion == 0 || nVersion > GetMaxVersion(is_basic_scheme_active, is_extended_addr)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-version");
     }
     if (nVersion < ProTxVersion::BasicBLS && nType == MnType::Evo) {
@@ -52,7 +52,7 @@ bool CProRegTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState&
     if (!scriptPayout.IsPayToPublicKeyHash() && !scriptPayout.IsPayToScriptHash()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-payee");
     }
-    if (!netInfo->IsEmpty() && !IsNetInfoTriviallyValid(*this, state)) {
+    if (!netInfo->IsEmpty() && !IsNetInfoTriviallyValid(*this, is_extended_addr, state)) {
         // pass the state returned by the function above
         return false;
     }
@@ -122,9 +122,9 @@ std::string CProRegTx::ToString() const
                      platformHTTPPort, netInfo->ToString());
 }
 
-bool CProUpServTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const
+bool CProUpServTx::IsTriviallyValid(bool is_basic_scheme_active, bool is_extended_addr, TxValidationState& state) const
 {
-    if (nVersion == 0 || nVersion > GetMaxVersion(is_basic_scheme_active)) {
+    if (nVersion == 0 || nVersion > GetMaxVersion(is_basic_scheme_active, is_extended_addr)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-version");
     }
     if (nVersion < ProTxVersion::BasicBLS && nType == MnType::Evo) {
@@ -133,7 +133,7 @@ bool CProUpServTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationSta
     if (netInfo->IsEmpty()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
     }
-    if (!IsNetInfoTriviallyValid(*this, state)) {
+    if (!IsNetInfoTriviallyValid(*this, is_extended_addr, state)) {
         // pass the state returned by the function above
         return false;
     }
@@ -161,7 +161,7 @@ std::string CProUpServTx::ToString() const
                      platformNodeID.ToString(), platformP2PPort, platformHTTPPort, netInfo->ToString());
 }
 
-bool CProUpRegTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const
+bool CProUpRegTx::IsTriviallyValid(bool is_basic_scheme_active, bool is_extended_addr, TxValidationState& state) const
 {
     if (nVersion == 0 || nVersion > GetMaxVersion(is_basic_scheme_active)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-version");
@@ -194,7 +194,7 @@ std::string CProUpRegTx::ToString() const
         nVersion, proTxHash.ToString(), pubKeyOperator.ToString(), EncodeDestination(PKHash(keyIDVoting)), payee);
 }
 
-bool CProUpRevTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const
+bool CProUpRevTx::IsTriviallyValid(bool is_basic_scheme_active, bool is_extended_addr, TxValidationState& state) const
 {
     if (nVersion == 0 || nVersion > GetMaxVersion(is_basic_scheme_active)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-version");

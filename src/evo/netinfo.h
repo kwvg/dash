@@ -5,6 +5,7 @@
 #ifndef BITCOIN_EVO_NETINFO_H
 #define BITCOIN_EVO_NETINFO_H
 
+#include <evo/common.h>
 #include <netaddress.h>
 #include <serialize.h>
 
@@ -423,6 +424,9 @@ template <typename T1>
 std::shared_ptr<NetInfoInterface> MakeNetInfo(const T1& obj)
 {
     assert(obj.nVersion > 0);
+    if (obj.nVersion >= ProTxVersion::ExtAddr) {
+        return std::make_shared<ExtNetInfo>();
+    }
     return std::make_shared<MnNetInfo>();
 }
 
@@ -430,11 +434,12 @@ class NetInfoSerWrapper
 {
 private:
     std::shared_ptr<NetInfoInterface>& m_data;
+    const bool m_is_extended{false};
 
 public:
     NetInfoSerWrapper() = delete;
     NetInfoSerWrapper(const NetInfoSerWrapper&) = delete;
-    NetInfoSerWrapper(std::shared_ptr<NetInfoInterface>& data) : m_data{data} {}
+    NetInfoSerWrapper(std::shared_ptr<NetInfoInterface>& data, const bool is_extended) : m_data{data}, m_is_extended{is_extended} {}
     template <typename Stream> NetInfoSerWrapper(deserialize_type, Stream& s) { s >> *this; }
 
     ~NetInfoSerWrapper() = default;
@@ -442,7 +447,9 @@ public:
     template<typename Stream>
     void Serialize(Stream &s) const
     {
-        if (const auto& ptr{std::dynamic_pointer_cast<MnNetInfo>(m_data)}; ptr) {
+        if (const auto& ptr{std::dynamic_pointer_cast<ExtNetInfo>(m_data)}; ptr && m_is_extended) {
+            s << ptr;
+        } else if (const auto& ptr{std::dynamic_pointer_cast<MnNetInfo>(m_data)}; ptr) {
             s << ptr;
         } else {
             throw std::ios_base::failure("Improperly constructed NetInfoInterface");
@@ -451,16 +458,26 @@ public:
 
     void Serialize(CSizeComputer& s) const
     {
-        s.seek(::GetSerializeSize(MnNetInfo{}, s.GetVersion()));
+        if (m_is_extended) {
+            s.seek(::GetSerializeSize(ExtNetInfo{}, s.GetVersion()));
+        } else {
+            s.seek(::GetSerializeSize(MnNetInfo{}, s.GetVersion()));
+        }
     }
 
     template<typename Stream>
     void Unserialize(Stream &s)
     {
         m_data.reset();
-        std::shared_ptr<MnNetInfo> ptr;
-        s >> ptr;
-        m_data = std::move(ptr);
+        if (m_is_extended) {
+            std::shared_ptr<ExtNetInfo> ptr;
+            s >> ptr;
+            m_data = std::move(ptr);
+        } else {
+            std::shared_ptr<MnNetInfo> ptr;
+            s >> ptr;
+            m_data = std::move(ptr);
+        }
     }
 };
 

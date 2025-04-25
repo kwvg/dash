@@ -651,7 +651,7 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
 
     CProRegTx ptx;
     ptx.nType = mnType;
-    ptx.nVersion = CProRegTx::GetMaxVersion(/*is_basic_scheme_active=*/!use_legacy);
+    ptx.nVersion = CProRegTx::GetMaxVersion(/*is_basic_scheme_active=*/!use_legacy, /*is_extended_addr=*/false);
     ptx.netInfo = MakeNetInfo(ptx);
 
     if (action == ProTxRegisterAction::Fund) {
