@@ -169,6 +169,8 @@ inline constexpr uint8_t GetSupportedServiceType(const CService& service)
         return 0x04; /* BIP155Network::TORV3 */
     } else if (service.IsI2P()) {
         return 0x05; /* BIP155Network::I2P */
+    } else if (service.IsCJDNS()) {
+        return 0x06; /* BIP155Network::CJDNS */
     }
     return 0xFF; /* invalid type */
 }
@@ -180,6 +182,7 @@ inline constexpr bool IsSupportedServiceType(const uint8_t& type)
     case 0x02: /* BIP155Network::IPV6 */
     case 0x04: /* BIP155Network::TORV3 */
     case 0x05: /* BIP155Network::I2P */
+    case 0x06: /* BIP155Network::CJDNS */
         return true;
     default:
         return false;

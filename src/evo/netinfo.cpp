@@ -416,10 +416,11 @@ NetInfoStatus ExtNetInfo::AddEntry(const uint8_t purpose, const std::string& inp
     }
 
     // IP:port safe, try to parse it as IP:port
-    if (auto service = Lookup(addr, /*portDefault=*/port, /*fAllowLookup=*/false); service.has_value()) {
-        const auto ret = ValidateService(service.value());
+    if (auto service_opt = Lookup(addr, /*portDefault=*/port, /*fAllowLookup=*/false); service_opt.has_value()) {
+        const auto service{MaybeFlipIPv6toCJDNS(service_opt.value())};
+        const auto ret = ValidateService(service);
         if (ret == NetInfoStatus::Success) {
-            return ProcessCandidate(purpose, NetInfoEntry(service.value()));
+            return ProcessCandidate(purpose, NetInfoEntry(service));
         }
         return ret; /* ValidateService() failed */
     }
