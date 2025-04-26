@@ -292,6 +292,7 @@ public:
 
     virtual const CService& GetPrimary() const = 0;
     virtual bool HasEntries(uint8_t purpose) const = 0;
+    virtual bool CanStorePlatform() const = 0;
     virtual bool IsEmpty() const = 0;
     virtual NetInfoStatus Validate() const = 0;
     virtual std::string ToString() const = 0;
@@ -346,6 +347,7 @@ public:
     const CService& GetPrimary() const override;
     bool HasEntries(uint8_t purpose) const override { return purpose == Purpose::CORE_P2P && !IsEmpty(); }
     bool IsEmpty() const override { return *this == MnNetInfo(); }
+    bool CanStorePlatform() const override { return false; }
     NetInfoStatus Validate() const override;
     std::string ToString() const override;
 
@@ -387,6 +389,7 @@ public:
     const CService& GetPrimary() const override;
     bool HasEntries(uint8_t purpose) const override;
     bool IsEmpty() const override { return *this == ExtNetInfo(); }
+    bool CanStorePlatform() const override { return true; }
     NetInfoStatus Validate() const override;
     std::string ToString() const override;
 
