@@ -82,7 +82,7 @@ UniValue CSimplifiedMNListEntry::ToJson(bool extended) const
     if (IsServiceDeprecatedRPCEnabled()) {
         obj.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
     }
-    obj.pushKV("addresses", netInfo->ToJson());
+    obj.pushKV("addresses", NetInfoJson(*this, nType));
     obj.pushKV("pubKeyOperator", pubKeyOperator.ToString());
     obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
     obj.pushKV("isValid", isValid);

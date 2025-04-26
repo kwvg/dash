@@ -161,6 +161,12 @@ public:
     std::string ToStringAddrPort() const { return strprintf("%s:%d", m_addr, m_port); }
 };
 
+/* Takes a port and gives it a dummy address, wraps it into a UniValue array */
+UniValue ArrFromPort(const uint16_t& port);
+
+/* Wraps a CService::ToStringAddrPort() into a UniValue array */
+UniValue ArrFromService(const CService& addr);
+
 /* Identical to IsDeprecatedRPCEnabled("service"). For use outside of RPC code. */
 bool IsServiceDeprecatedRPCEnabled();
 

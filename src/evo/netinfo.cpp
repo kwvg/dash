@@ -110,6 +110,13 @@ DomainPort::Status DomainPort::Validate() const
     return ValidateDomain(m_addr);
 }
 
+UniValue ArrFromPort(const uint16_t& port)
+{
+    UniValue obj(UniValue::VARR);
+    obj.push_back(strprintf("255.255.255.255:%d", port));
+    return obj;
+}
+
 UniValue ArrFromService(const CService& addr)
 {
     UniValue obj(UniValue::VARR);

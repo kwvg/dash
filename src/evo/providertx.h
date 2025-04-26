@@ -15,8 +15,10 @@
 #include <key_io.h>
 #include <netaddress.h>
 #include <pubkey.h>
-#include <univalue.h>
+#include <rpc/evo_util.h>
 #include <util/underlying.h>
+
+#include <univalue.h>
 
 class TxValidationState;
 
@@ -102,7 +104,7 @@ public:
         if (IsServiceDeprecatedRPCEnabled()) {
             obj.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
         }
-        obj.pushKV("addresses", netInfo->ToJson());
+        obj.pushKV("addresses", NetInfoJson(*this));
         obj.pushKV("ownerAddress", EncodeDestination(PKHash(keyIDOwner)));
         obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
 
@@ -187,7 +189,7 @@ public:
         if (IsServiceDeprecatedRPCEnabled()) {
             obj.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
         }
-        obj.pushKV("addresses", netInfo->ToJson());
+        obj.pushKV("addresses", NetInfoJson(*this));
         if (CTxDestination dest; ExtractDestination(scriptOperatorPayout, dest)) {
             obj.pushKV("operatorPayoutAddress", EncodeDestination(dest));
         }
