@@ -301,6 +301,7 @@ public:
 
     virtual NetInfoStatus AddEntry(const uint8_t purpose, const std::string& service) = 0;
     virtual NetInfoList GetEntries() const = 0;
+    virtual NetInfoList GetEntries(const uint8_t purpose) const = 0;
 
     virtual const CService& GetPrimary() const = 0;
     virtual bool HasEntries(uint8_t purpose) const = 0;
@@ -356,6 +357,7 @@ public:
 
     NetInfoStatus AddEntry(const uint8_t purpose, const std::string& service) override;
     NetInfoList GetEntries() const override;
+    NetInfoList GetEntries(const uint8_t purpose) const override;
 
     const CService& GetPrimary() const override;
     bool HasEntries(uint8_t purpose) const override { return purpose == Purpose::CORE_P2P && !IsEmpty(); }
@@ -399,6 +401,7 @@ public:
 
     NetInfoStatus AddEntry(const uint8_t purpose, const std::string& input) override;
     NetInfoList GetEntries() const override;
+    NetInfoList GetEntries(const uint8_t purpose) const override;
 
     const CService& GetPrimary() const override;
     bool HasEntries(uint8_t purpose) const override;

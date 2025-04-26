@@ -116,8 +116,8 @@ public:
         if (nType == MnType::Evo) {
             obj.pushKV("platformNodeID", platformNodeID.ToString());
             if (IsServiceDeprecatedRPCEnabled()) {
-                obj.pushKV("platformP2PPort", platformP2PPort);
-                obj.pushKV("platformHTTPPort", platformHTTPPort);
+                obj.pushKV("platformP2PPort", GetPlatformP2PPort(*this));
+                obj.pushKV("platformHTTPPort", GetPlatformHTTPPort(*this));
             }
         }
         obj.pushKV("inputsHash", inputsHash.ToString());
@@ -198,8 +198,8 @@ public:
         if (nType == MnType::Evo) {
             obj.pushKV("platformNodeID", platformNodeID.ToString());
             if (IsServiceDeprecatedRPCEnabled()) {
-                obj.pushKV("platformP2PPort", platformP2PPort);
-                obj.pushKV("platformHTTPPort", platformHTTPPort);
+                obj.pushKV("platformP2PPort", GetPlatformP2PPort(*this));
+                obj.pushKV("platformHTTPPort", GetPlatformHTTPPort(*this));
             }
         }
         obj.pushKV("inputsHash", inputsHash.ToString());

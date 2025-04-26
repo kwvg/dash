@@ -629,8 +629,8 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
             if (dmn.nType == MnType::Evo) {
                 objMN.pushKV("platformNodeID", dmn.pdmnState->platformNodeID.ToString());
                 if (IsDeprecatedRPCEnabled("service")) {
-                    objMN.pushKV("platformP2PPort", dmn.pdmnState->platformP2PPort);
-                    objMN.pushKV("platformHTTPPort", dmn.pdmnState->platformHTTPPort);
+                    objMN.pushKV("platformP2PPort", GetPlatformP2PPort(*dmn.pdmnState, dmn.nType));
+                    objMN.pushKV("platformHTTPPort", GetPlatformHTTPPort(*dmn.pdmnState, dmn.nType));
                 }
             }
             objMN.pushKV("pospenaltyscore", dmn.pdmnState->nPoSePenalty);

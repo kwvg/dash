@@ -302,6 +302,14 @@ NetInfoList MnNetInfo::GetEntries() const
     return ret;
 }
 
+NetInfoList MnNetInfo::GetEntries(const uint8_t purpose) const
+{
+    if (purpose == Purpose::CORE_P2P) {
+        return GetEntries();
+    }
+    return NetInfoList{};
+}
+
 const CService& MnNetInfo::GetPrimary() const
 {
     if (const auto& service{m_addr.GetAddrPort()}; service.has_value()) {
@@ -460,6 +468,16 @@ NetInfoList ExtNetInfo::GetEntries() const
 {
     NetInfoList ret;
     for (const auto& [_, entries] : m_data) {
+        ret.insert(ret.end(), entries.begin(), entries.end());
+    }
+    return ret;
+}
+
+NetInfoList ExtNetInfo::GetEntries(const uint8_t purpose) const
+{
+    NetInfoList ret;
+    if (const auto& it{m_data.find(purpose)}; it != m_data.end()) {
+        const auto& [_, entries] = *it;
         ret.insert(ret.end(), entries.begin(), entries.end());
     }
     return ret;
