@@ -13,6 +13,7 @@ static std::unique_ptr<const CChainParams> g_main_params{nullptr};
 static const CService empty_service{CService()};
 
 static constexpr std::string_view SAFE_CHARS_IPV4{"1234567890."};
+static constexpr std::string_view SAFE_CHARS_IPV4_6{"abcdefABCDEF1234567890.:[]"};
 
 bool IsNodeOnMainnet() { return Params().NetworkIDString() == CBaseChainParams::MAIN; }
 const CChainParams& MainParams()
@@ -200,4 +201,104 @@ std::string MnNetInfo::ToString() const
     // Extra padding to account for padding done by the calling function.
     return strprintf("MnNetInfo()\n"
                      "    %s\n", m_addr.ToString());
+}
+
+NetInfoStatus ExtNetInfo::ProcessCandidate(const NetInfoEntry& candidate)
+{
+    assert(candidate.IsTriviallyValid());
+
+    if (m_data.size() >= EXTNETINFO_ENTRIES_LIMIT) {
+        return NetInfoStatus::MaxLimit;
+    }
+    m_data.push_back(candidate);
+
+    return NetInfoStatus::Success;
+}
+
+NetInfoStatus ExtNetInfo::ValidateService(const CService& service)
+{
+    if (!service.IsValid()) {
+        return NetInfoStatus::BadInput;
+    }
+    if (Params().RequireRoutableExternalIP() && !service.IsRoutable()) {
+        return NetInfoStatus::BadInput;
+    }
+    if (!IsSupportedServiceType(GetSupportedServiceType(service))) {
+        return NetInfoStatus::BadInput;
+    }
+    if (IsBadPort(service.GetPort()) || service.GetPort() == 0) {
+        return NetInfoStatus::BadPort;
+    }
+
+    return NetInfoStatus::Success;
+}
+
+NetInfoStatus ExtNetInfo::AddEntry(const std::string& input)
+{
+    // We don't allow assuming ports, so we set the default value to 0 so that if no port is specified
+    // it uses a fallback value of 0, which will return a NetInfoStatus::BadPort
+    std::string addr; uint16_t port{0};
+    SplitHostPort(input, port, addr);
+    // Contains invalid characters, unlikely to pass Lookup(), fast-fail
+    if (!MatchCharsFilter(addr, SAFE_CHARS_IPV4_6)) {
+        return NetInfoStatus::BadInput;
+    }
+
+    if (auto service = Lookup(addr, /*portDefault=*/port, /*fAllowLookup=*/false); service.has_value()) {
+        const auto ret = ValidateService(service.value());
+        if (ret == NetInfoStatus::Success) {
+            return ProcessCandidate(NetInfoEntry(service.value()));
+        }
+        return ret; /* ValidateService() failed */
+    }
+    return NetInfoStatus::BadInput; /* Lookup() failed */
+}
+
+NetInfoList ExtNetInfo::GetEntries() const
+{
+    NetInfoList ret;
+    ret.insert(ret.end(), m_data.begin(), m_data.end());
+    return ret;
+}
+
+const CService& ExtNetInfo::GetPrimary() const
+{
+    if (!m_data.empty()) {
+        if (const auto& service{m_data.begin()->GetAddrPort()}; service.has_value()) {
+            return service.value();
+        }
+    }
+    return empty_service;
+}
+
+NetInfoStatus ExtNetInfo::Validate() const
+{
+    if (m_data.empty()) {
+        return NetInfoStatus::Malformed;
+    }
+    for (const auto& entry : m_data) {
+        if (!entry.IsTriviallyValid()) {
+            // Trivially invalid NetInfoEntry, no point checking against consensus rules
+            return NetInfoStatus::Malformed;
+        }
+        if (const auto& service{entry.GetAddrPort()}; service.has_value()) {
+            if (auto ret{ValidateService(*service)}; ret != NetInfoStatus::Success) {
+                // Stores CService underneath but doesn't pass validation rules
+                return ret;
+            }
+        } else {
+            // Doesn't store valid type underneath
+            return NetInfoStatus::Malformed;
+        }
+    }
+    return NetInfoStatus::Success;
+}
+
+std::string ExtNetInfo::ToString() const
+{
+    std::string ret{"ExtNetInfo()\n"};
+    for (const auto& entry : m_data) {
+        ret += strprintf("    %s\n", entry.ToString());
+    }
+    return ret;
 }
