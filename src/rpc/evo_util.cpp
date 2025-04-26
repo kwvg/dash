@@ -13,6 +13,13 @@
 
 #include <univalue.h>
 
+namespace {
+bool IsNumeric(const std::string_view& input)
+{
+    return input.find_first_not_of("0123456789") == std::string::npos;
+}
+} // anonymous namespace
+
 template <typename T1>
 void ProcessNetInfoCore(T1& ptx, const UniValue& input, const bool optional)
 {
@@ -55,23 +62,40 @@ void ProcessNetInfoPlatform(T1& ptx, const UniValue& input_p2p, const UniValue& 
 {
     CHECK_NONFATAL(ptx.netInfo);
 
-    if (!input_p2p.isNum() && !input_p2p.isStr()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid param for platformP2PPort, must be number");
-    }
-    if (int32_t port{ParseInt32V(input_p2p, "platformP2PPort")}; port >= 1 && port <= std::numeric_limits<uint16_t>::max()) {
-        ptx.platformP2PPort = static_cast<uint16_t>(port);
-    } else {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "platformP2PPort must be a valid port [1-65535]");
-    }
-
-    if (!input_http.isNum() && !input_http.isStr()) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid param for platformHTTPPort, must be number");
-    }
-    if (int32_t port{ParseInt32V(input_http, "platformHTTPPort")}; port >= 1 && port <= std::numeric_limits<uint16_t>::max()) {
-        ptx.platformHTTPPort = static_cast<uint16_t>(port);
-    } else {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "platformHTTPPort must be a valid port [1-65535]");
-    }
+    auto process_field = [&](uint16_t& maybe_target, const UniValue& input, const uint8_t& purpose, const std::string& field_name) {
+        if (!input.isNum() && !input.isStr()) {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Invalid param for %s, must be number or string", field_name));
+        }
+        if (!IsNumeric(input.getValStr())) {
+            // Cannot be parsed as a number (port) so must be an addr:port string
+            if (!ptx.netInfo->CanStorePlatform()) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("ProTx version disallows storing addresses in %s (must specify port number only)", field_name));
+            }
+            if (auto entryRet = ptx.netInfo->AddEntry(purpose, input.get_str()); entryRet != NetInfoStatus::Success) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Error setting %s[0] to '%s' (%s)", field_name, input.get_str(), NISToString(entryRet)));
+            }
+        } else if (int32_t port{0}; ParseInt32(input.getValStr(), &port) && port >= 1 && port <= std::numeric_limits<uint16_t>::max()) {
+            // Valid port
+            if (!ptx.netInfo->CanStorePlatform()) {
+                maybe_target = static_cast<uint16_t>(port);
+            } else {
+                // We cannot store *only* a port number in netInfo so we need to associate it with the primary service of CORE_P2P manually
+                if (!ptx.netInfo->HasEntries(Purpose::CORE_P2P)) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Must specify coreP2PAddrs in order to set %s", field_name));
+                }
+                const CService service{CNetAddr{ptx.netInfo->GetPrimary()}, static_cast<uint16_t>(port)};
+                CHECK_NONFATAL(service.IsValid());
+                if (auto entryRet = ptx.netInfo->AddEntry(purpose, service.ToStringAddrPort()); entryRet != NetInfoStatus::Success) {
+                    throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Error setting %s[0] to '%s' (%s)", field_name, service.ToStringAddrPort(), NISToString(entryRet)));
+                }
+            }
+        } else {
+            // Invalid port
+            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("%s must be a valid port [1-65535]", field_name));
+        }
+    };
+    process_field(ptx.platformP2PPort, input_p2p, Purpose::PLATFORM_P2P, "platformP2PAddrs");
+    process_field(ptx.platformHTTPPort, input_http, Purpose::PLATFORM_HTTP, "platformHTTPAddrs");
 }
 template void ProcessNetInfoPlatform(CProRegTx& ptx, const UniValue& input_p2p, const UniValue& input_http);
 template void ProcessNetInfoPlatform(CProUpServTx& ptx, const UniValue& input_p2p, const UniValue& input_http);
