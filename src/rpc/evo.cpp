@@ -709,7 +709,7 @@ static UniValue protx_register_common_wrapper(const JSONRPCRequest& request,
         }
         ptx.platformNodeID.SetHex(request.params[paramIdx + 6].get_str());
 
-        ProcessNetInfoPlatform(ptx, request.params[paramIdx + 7], request.params[paramIdx + 8]);
+        ProcessNetInfoPlatform(ptx, request.params[paramIdx + 7], request.params[paramIdx + 8], /*optional=*/true);
 
         paramIdx += 3;
     }
@@ -969,7 +969,7 @@ static UniValue protx_update_service_common_wrapper(const JSONRPCRequest& reques
         }
         ptx.platformNodeID.SetHex(request.params[paramIdx].get_str());
 
-        ProcessNetInfoPlatform(ptx, request.params[paramIdx + 1], request.params[paramIdx + 2]);
+        ProcessNetInfoPlatform(ptx, request.params[paramIdx + 1], request.params[paramIdx + 2], /*optional=*/false);
 
         paramIdx += 3;
     }
