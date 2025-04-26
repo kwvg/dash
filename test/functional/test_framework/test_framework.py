@@ -48,6 +48,7 @@ from .util import (
     check_json_precision,
     copy_datadir,
     force_finish_mnsync,
+    get_bip9_details,
     get_chain_conf_names,
     get_datadir_path,
     initialize_datadir,
@@ -1247,8 +1248,26 @@ class DashTestFramework(BitcoinTestFramework):
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", spork17_value)
         self.wait_for_sporks_same()
 
+    def activate_ehf_by_name(self, name, expected_activation_height=None):
+        self.nodes[0].sporkupdate("SPORK_24_TEST_EHF", 0)
+        self.wait_for_sporks_same()
+        assert get_bip9_details(self.nodes[0], name)['ehf']
+        ehf_height = 0
+        while ehf_height == 0:
+            time.sleep(1)
+            try:
+                ehf_height = get_bip9_details(self.nodes[0], name)['ehf_height']
+            except KeyError:
+                pass
+            self.nodes[0].generate(1)
+            self.sync_all()
+        self.activate_by_name(name, expected_activation_height)
+
     def activate_v20(self, expected_activation_height=None):
         self.activate_by_name('v20', expected_activation_height)
+
+    def activate_extaddr(self, expected_activation_height=None):
+        self.activate_by_name('extaddr', expected_activation_height)
 
     def activate_mn_rr(self, expected_activation_height=None):
         self.activate_by_name('mn_rr', expected_activation_height)
