@@ -104,6 +104,20 @@ class Node:
             test.log.debug(f"Registered {'Evo' if self.is_evo else 'regular'} masternode with collateral_txid={self.collateral_txid}, "
                            f"collateral_vout={self.collateral_vout}, provider_txid={self.provider_txid}")
 
+    def update_mn(self, test: BitcoinTestFramework, addrs_core_p2p, addrs_platform_http = None, addrs_platform_p2p = None):
+        update_txid: str = ""
+        if self.is_evo:
+            assert(addrs_platform_http and addrs_platform_p2p)
+            update_txid = self.node.protx('update_service_evo', self.provider_txid, addrs_core_p2p, self.operator_sk, self.platform_nodeid,
+                                          addrs_platform_p2p, addrs_platform_http, "", self.address_funds)
+        else:
+            update_txid = self.node.protx('update_service', self.provider_txid, addrs_core_p2p, self.operator_sk, "",
+                                          self.address_funds)
+        self.bury_tx(test, update_txid, 1)
+        assert_equal(self.is_mn_visible(), True)
+        test.log.debug(f"Updated {'Evo' if self.is_evo else 'regular'} masternode with collateral_txid={self.collateral_txid}, "
+                       f"collateral_vout={self.collateral_vout}, provider_txid={self.provider_txid}")
+
 class NetInfoTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 3
@@ -126,7 +140,10 @@ class NetInfoTest(BitcoinTestFramework):
         node_masternode.generate_collateral(self)
 
         node_masternode.register_mn(self, True, "127.0.0.1:9998")
+        node_masternode.update_mn(self, "127.0.0.1:9998")
+
         node_evonode.register_mn(self, True, "127.0.0.1:9997", "19998", "29998")
+        node_evonode.update_mn(self, "127.0.0.1:9997", "19998", "29998")
 
 if __name__ == "__main__":
     NetInfoTest().main()
