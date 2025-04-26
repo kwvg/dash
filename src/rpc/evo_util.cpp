@@ -33,7 +33,46 @@ inline UniValue NetInfoJsonInternal(const T1& obj, const MnType& type)
     }
     return ret;
 }
+
+template <typename T1>
+inline int32_t GetPlatformPortInternal(const T1& obj, const bool is_http, const MnType& type)
+{
+    CHECK_NONFATAL(type == MnType::Evo);
+
+    const int32_t err_ret{-1};
+    if (!obj.netInfo->CanStorePlatform()) {
+        // The port is stored in dedicated fields, just return those
+        if (is_http) { return obj.platformHTTPPort; }
+        if constexpr (!std::is_same<T1, CSimplifiedMNListEntry>::value) /* CSimplifiedMNListEntry doesn't have this field */ {
+            if (!is_http) { return obj.platformP2PPort; }
+        }
+        return err_ret;
+    }
+
+    // We can only retrieve the port *if* there is a PLATFORM_{HTTP,P2P} entry that shares the same address as
+    // CORE_P2P's first entry, otherwise give up.
+    CNetAddr primary_addr{obj.netInfo->GetPrimary()};
+    CHECK_NONFATAL(primary_addr.IsValid());
+    for (const NetInfoEntry& entry : obj.netInfo->GetEntries(is_http ? Purpose::PLATFORM_HTTP : Purpose::PLATFORM_P2P)) {
+        if (const auto& service_opt{entry.GetAddrPort()}; service_opt.has_value()) {
+            if (const CNetAddr addr{service_opt.value()}; addr == primary_addr) {
+                CHECK_NONFATAL(addr.IsValid());
+                return service_opt.value().get().GetPort();
+            }
+        }
+    }
+    return err_ret;
+}
 } // anonymous namespace
+
+int32_t GetPlatformHTTPPort(const CProRegTx& obj) { return GetPlatformPortInternal(obj, /*is_http=*/true, obj.nType); }
+int32_t GetPlatformHTTPPort(const CProUpServTx& obj) { return GetPlatformPortInternal(obj, /*is_http=*/true, obj.nType); }
+int32_t GetPlatformHTTPPort(const CDeterministicMNState& obj, const MnType& type) { return GetPlatformPortInternal(obj, /*is_http=*/true, type); }
+int32_t GetPlatformHTTPPort(const CSimplifiedMNListEntry& obj, const MnType& type) { return GetPlatformPortInternal(obj, /*is_http=*/true, type); }
+
+int32_t GetPlatformP2PPort(const CProRegTx& obj) { return GetPlatformPortInternal(obj, /*is_http=*/false, obj.nType); }
+int32_t GetPlatformP2PPort(const CProUpServTx& obj) { return GetPlatformPortInternal(obj, /*is_http=*/false, obj.nType); }
+int32_t GetPlatformP2PPort(const CDeterministicMNState& obj, const MnType& type) { return GetPlatformPortInternal(obj, /*is_http=*/false, type); }
 
 UniValue NetInfoJson(const CProRegTx& obj) { return NetInfoJsonInternal(obj, obj.nType); }
 UniValue NetInfoJson(const CProUpServTx& obj) { return NetInfoJsonInternal(obj, obj.nType); }

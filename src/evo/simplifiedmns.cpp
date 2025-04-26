@@ -88,7 +88,7 @@ UniValue CSimplifiedMNListEntry::ToJson(bool extended) const
     obj.pushKV("isValid", isValid);
     if (nType == MnType::Evo) {
         if (IsServiceDeprecatedRPCEnabled()) {
-            obj.pushKV("platformHTTPPort", platformHTTPPort);
+            obj.pushKV("platformHTTPPort", GetPlatformHTTPPort(*this, nType));
         }
         obj.pushKV("platformNodeID", platformNodeID.ToString());
     }

@@ -15,6 +15,15 @@ enum class MnType : uint16_t;
 
 class UniValue;
 
+int32_t GetPlatformHTTPPort(const CProRegTx& obj);
+int32_t GetPlatformHTTPPort(const CProUpServTx& obj);
+int32_t GetPlatformHTTPPort(const CDeterministicMNState& obj, const MnType& type);
+int32_t GetPlatformHTTPPort(const CSimplifiedMNListEntry& obj, const MnType& type);
+
+int32_t GetPlatformP2PPort(const CProRegTx& obj);
+int32_t GetPlatformP2PPort(const CProUpServTx& obj);
+int32_t GetPlatformP2PPort(const CDeterministicMNState& obj, const MnType& type);
+
 /* Returns netInfo::GetJson() with data from platform fields. */
 UniValue NetInfoJson(const CProRegTx& obj);
 UniValue NetInfoJson(const CProUpServTx& obj);
