@@ -44,42 +44,48 @@ class Node:
         chain_tip = test.generate(self.node, depth)[0]
         assert_equal(self.node.getrawtransaction(txid, 1, chain_tip)['confirmations'], depth)
 
-    def generate_addresses(self):
-        if not self.address_collateral:
+    def generate_addresses(self, force_all: bool = False):
+        if not self.address_collateral or force_all:
             self.address_collateral = self.node.getnewaddress()
-        if not self.address_funds:
+        if not self.address_funds or force_all:
             self.address_funds = self.node.getnewaddress()
-        if not self.address_owner:
+        if not self.address_owner or force_all:
             self.address_owner = self.node.getnewaddress()
-        if not self.address_reward:
+        if not self.address_reward or force_all:
             self.address_reward = self.node.getnewaddress()
-        if not self.address_voting:
+        if not self.address_voting or force_all:
             self.address_voting = self.node.getnewaddress()
-        if not self.operator_pk or not self.operator_sk:
+        if not self.operator_pk or not self.operator_sk or force_all:
             bls_ret = self.node.bls('generate')
             self.operator_pk = bls_ret['public']
             self.operator_sk = bls_ret['secret']
 
     def generate_collateral(self, test: BitcoinTestFramework):
-        amount_collateral = EVONODE_COLLATERAL if self.is_evo else MASTERNODE_COLLATERAL
-        while self.node.getbalance() < amount_collateral:
+        while self.node.getbalance() < self.get_collateral_value():
             test.bump_mocktime(1)
             test.generate(self.node, 10, sync_fun=test.no_op)
 
-        self.collateral_txid = self.node.sendmany("", {self.address_collateral: amount_collateral, self.address_funds: 1})
+        self.collateral_txid = self.node.sendmany("", {self.address_collateral: self.get_collateral_value(), self.address_funds: 1})
         self.bury_tx(test, self.collateral_txid, 1)
-        for txout in self.node.getrawtransaction(self.collateral_txid, 1)['vout']:
-            if txout['value'] == Decimal(amount_collateral):
-                self.collateral_vout = txout['n']
-                break
-        assert self.collateral_vout is not None
+        self.collateral_vout = self.get_vout_by_value(self.collateral_txid, Decimal(self.get_collateral_value()))
+        assert self.collateral_vout != -1
 
-    def is_mn_visible(self) -> bool:
+    def get_collateral_value(self) -> int:
+        return EVONODE_COLLATERAL if self.is_evo else MASTERNODE_COLLATERAL
+
+    def get_vout_by_value(self, txid: str, value: Decimal) -> int:
+        for txout in self.node.getrawtransaction(txid, 1)['vout']:
+            if txout['value'] == value:
+                return txout['n']
+        return -1
+
+    def is_mn_visible(self, _protx_hash = None) -> bool:
+        protx_hash = _protx_hash or self.provider_txid
         mn_list = self.node.masternodelist()
         mn_visible = False
         for mn_entry in mn_list:
             dmn = mn_list.get(mn_entry)
-            if dmn['proTxHash'] == self.provider_txid:
+            if dmn['proTxHash'] == protx_hash:
                 assert_equal(dmn['type'], "Evo" if self.is_evo else "Regular")
                 mn_visible = True
         return mn_visible
@@ -118,6 +124,44 @@ class Node:
         test.log.debug(f"Updated {'Evo' if self.is_evo else 'regular'} masternode with collateral_txid={self.collateral_txid}, "
                        f"collateral_vout={self.collateral_vout}, provider_txid={self.provider_txid}")
 
+    def destroy_mn(self, test: BitcoinTestFramework):
+        # Get UTXO from address used to pay fees
+        address_funds_unspent = self.node.listunspent(0, 99999, [self.address_funds])[0]
+        address_funds_value = address_funds_unspent['amount']
+
+        # Reserve new address for collateral and fee spending
+        new_address_collateral = self.node.getnewaddress()
+        new_address_funds = self.node.getnewaddress()
+
+        # Create transaction to spend old collateral and fee change
+        raw_tx = self.node.createrawtransaction([
+                { 'txid': self.collateral_txid, 'vout': self.collateral_vout },
+                { 'txid': address_funds_unspent['txid'], 'vout': address_funds_unspent['vout'] }
+            ], [
+                {new_address_collateral: float(self.get_collateral_value())},
+                {new_address_funds: float(address_funds_value - Decimal(0.001))}
+            ])
+        raw_tx = self.node.signrawtransactionwithwallet(raw_tx)['hex']
+
+        # Send that transaction, resulting txid is new collateral
+        new_collateral_txid = self.node.sendrawtransaction(raw_tx)
+        self.bury_tx(test, new_collateral_txid, 1)
+        new_collateral_vout = self.get_vout_by_value(new_collateral_txid, Decimal(self.get_collateral_value()))
+        assert new_collateral_vout != -1
+
+        # Old masternode entry should be dead
+        assert_equal(self.is_mn_visible(self.provider_txid), False)
+        test.log.debug(f"Destroyed {'Evo' if self.is_evo else 'regular'} masternode with collateral_txid={self.collateral_txid}, "
+                       f"collateral_vout={self.collateral_vout}, provider_txid={self.provider_txid}")
+
+        # Generate fresh addresses (and overwrite some of them with addresses used here)
+        self.generate_addresses(True)
+        self.address_collateral = new_address_collateral
+        self.address_funds = new_address_funds
+        self.collateral_txid = new_collateral_txid
+        self.collateral_vout = new_collateral_vout
+        self.provider_txid = ""
+
 class NetInfoTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 3
@@ -140,10 +184,16 @@ class NetInfoTest(BitcoinTestFramework):
         node_masternode.generate_collateral(self)
 
         node_masternode.register_mn(self, True, "127.0.0.1:9998")
-        node_masternode.update_mn(self, "127.0.0.1:9998")
-
         node_evonode.register_mn(self, True, "127.0.0.1:9997", "19998", "29998")
+
+        node_masternode.update_mn(self, "127.0.0.1:9998")
         node_evonode.update_mn(self, "127.0.0.1:9997", "19998", "29998")
+
+        node_masternode.destroy_mn(self)
+        node_evonode.destroy_mn(self)
+
+        node_masternode.register_mn(self, True, "127.0.0.1:9998")
+        node_evonode.register_mn(self, True, "127.0.0.1:9997", "19998", "29998")
 
 if __name__ == "__main__":
     NetInfoTest().main()
