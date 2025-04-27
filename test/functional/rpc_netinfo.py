@@ -12,6 +12,7 @@ from test_framework.script import (
 )
 from test_framework.test_framework import (
     BitcoinTestFramework,
+    p2p_port,
     EVONODE_COLLATERAL,
     MASTERNODE_COLLATERAL
 )
@@ -90,7 +91,7 @@ class Node:
                 mn_visible = True
         return mn_visible
 
-    def register_mn(self, test: BitcoinTestFramework, submit: bool, addrs_core_p2p, addrs_platform_http = None, addrs_platform_p2p = None):
+    def register_mn(self, test: BitcoinTestFramework, submit: bool, addrs_core_p2p, addrs_platform_http = None, addrs_platform_p2p = None) -> str:
         protx_output: str = ""
         if self.is_evo:
             assert(addrs_platform_http and addrs_platform_p2p)
@@ -109,8 +110,11 @@ class Node:
             assert_equal(self.is_mn_visible(), True)
             test.log.debug(f"Registered {'Evo' if self.is_evo else 'regular'} masternode with collateral_txid={self.collateral_txid}, "
                            f"collateral_vout={self.collateral_vout}, provider_txid={self.provider_txid}")
+            test.restart_node(self.node.index, extra_args=self.node.extra_args + [f'-masternodeblsprivkey={self.operator_sk}'])
+            return self.provider_txid
+        return ""
 
-    def update_mn(self, test: BitcoinTestFramework, addrs_core_p2p, addrs_platform_http = None, addrs_platform_p2p = None):
+    def update_mn(self, test: BitcoinTestFramework, addrs_core_p2p, addrs_platform_http = None, addrs_platform_p2p = None) -> str:
         update_txid: str = ""
         if self.is_evo:
             assert(addrs_platform_http and addrs_platform_p2p)
@@ -123,6 +127,7 @@ class Node:
         assert_equal(self.is_mn_visible(), True)
         test.log.debug(f"Updated {'Evo' if self.is_evo else 'regular'} masternode with collateral_txid={self.collateral_txid}, "
                        f"collateral_vout={self.collateral_vout}, provider_txid={self.provider_txid}")
+        return update_txid
 
     def destroy_mn(self, test: BitcoinTestFramework):
         # Get UTXO from address used to pay fees
@@ -162,38 +167,133 @@ class Node:
         self.collateral_vout = new_collateral_vout
         self.provider_txid = ""
 
+        # Restart node sans masternodeblsprivkey
+        test.restart_node(self.node.index, extra_args=self.node.extra_args)
+
 class NetInfoTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 3
         self.extra_args = [
             ["-dip3params=2:2"],
-            ["-dip3params=2:2"],
-            ["-deprecatedrpc=service", "-dip3params=2:2"]
+            ["-deprecatedrpc=service", "-dip3params=2:2"],
+            ["-dip3params=2:2"]
         ]
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
 
+    def check_netinfo_fields(self, val, core_p2p_port: int, platform_http_port = None, platform_p2p_port = None):
+        assert_equal(val['core_p2p'][0], f"127.0.0.1:{core_p2p_port}")
+        if platform_http_port:
+            assert_equal(val['platform_http'][0], f"127.0.0.1:{platform_http_port}")
+        if platform_p2p_port:
+            assert_equal(val['platform_p2p'][0], f"127.0.0.1:{platform_p2p_port}")
+
+    # TODO: Cover CDeterministicMNStateDiff
     def run_test(self):
-        node_evonode: Node = Node(self.nodes[0], True)
-        node_masternode: Node = Node(self.nodes[1], False)
-        node_simple: TestNode = self.nodes[2]
+        node_evo: Node = Node(self.nodes[0], True)
+        node_evo.generate_collateral(self)
 
-        # Initial setup for masternodes
-        node_evonode.generate_collateral(self)
-        node_masternode.generate_collateral(self)
+        node_simple: TestNode = self.nodes[1]
 
-        node_masternode.register_mn(self, True, "127.0.0.1:9998")
-        node_evonode.register_mn(self, True, "127.0.0.1:9997", "19998", "29998")
+        # netInfo is represented with JSON in CProRegTx, CProUpServTx, CDeterministicMNState and CSimplifiedMNListEntry,
+        # so we need to test calls that rely on these underlying implementations. Start by collecting RPC responses.
+        self.log.info("Collect JSON RPC responses from node")
 
-        node_masternode.update_mn(self, "127.0.0.1:9998")
-        node_evonode.update_mn(self, "127.0.0.1:9997", "19998", "29998")
+        # CProRegTx::ToJson() <- TxToUniv() <- TxToJSON() <- getrawtransaction
+        proregtx_hash = node_evo.register_mn(self, True, f"127.0.0.1:{p2p_port(node_evo.node.index)}", "19998", "29998")
+        proregtx_rpc = node_evo.node.getrawtransaction(proregtx_hash, True)
 
-        node_masternode.destroy_mn(self)
-        node_evonode.destroy_mn(self)
+        # CDeterministicMNState::ToJson() <- CDeterministicMN::pdmnState <- masternode_status
+        masternode_status = node_evo.node.masternode('status')
 
-        node_masternode.register_mn(self, True, "127.0.0.1:9998")
-        node_evonode.register_mn(self, True, "127.0.0.1:9997", "19998", "29998")
+        # Generate deprecation-disabled response to avoid having to re-create a masternode again later on
+        self.restart_node(node_evo.node.index, extra_args=node_evo.node.extra_args +
+                          [f'-masternodeblsprivkey={node_evo.operator_sk}', '-deprecatedrpc=service'])
+        self.connect_nodes(node_evo.node.index, node_simple.index) # Needed as restarts don't reconnect nodes
+        masternode_status_depr = node_evo.node.masternode('status')
+
+        # Stop actively running the masternode so we can issue a CProUpServTx (and enable the deprecation)
+        self.restart_node(node_evo.node.index, extra_args=node_evo.node.extra_args)
+        self.connect_nodes(node_evo.node.index, node_simple.index) # Needed as restarts don't reconnect nodes
+
+        # CProUpServTx::ToJson() <- TxToUniv() <- TxToJSON() <- getrawtransaction
+        proupservtx_hash = node_evo.update_mn(self, f"127.0.0.1:{p2p_port(node_evo.node.index)}", "19998", "29998")
+        proupservtx_rpc = node_evo.node.getrawtransaction(proupservtx_hash, True)
+
+        # CSimplifiedMNListEntry::ToJson() <- CSimplifiedMNListDiff::mnList <- CSimplifiedMNListDiff::ToJson() <- protx_diff
+        masternode_active_height: int = masternode_status['dmnState']['registeredHeight']
+        protx_diff_rpc = node_evo.node.protx('diff', masternode_active_height - 1, masternode_active_height)
+
+        self.log.info("Test RPCs return an 'addresses' field")
+        assert "addresses" in proregtx_rpc['proRegTx'].keys()
+        assert "addresses" in masternode_status['dmnState'].keys()
+        assert "addresses" in proupservtx_rpc['proUpServTx'].keys()
+        assert "addresses" in protx_diff_rpc['mnList'][0].keys()
+
+        self.log.info("Test 'addresses' report for each purpose code correctly")
+        self.check_netinfo_fields(proregtx_rpc['proRegTx']['addresses'], p2p_port(node_evo.node.index), "19998", "29998")
+        self.check_netinfo_fields(masternode_status['dmnState']['addresses'], p2p_port(node_evo.node.index), "19998", "29998")
+        self.check_netinfo_fields(proupservtx_rpc['proUpServTx']['addresses'], p2p_port(node_evo.node.index), "19998", "29998")
+        # Note: CSimplifiedMNListEntry doesn't store 'platformP2PPort' at all
+        self.check_netinfo_fields(protx_diff_rpc['mnList'][0]['addresses'], p2p_port(node_evo.node.index), "19998", platform_p2p_port=None)
+
+        self.log.info("Test RPCs by default no longer return a 'service' field")
+        assert "service" not in proregtx_rpc['proRegTx'].keys()
+        assert "service" not in masternode_status['dmnState'].keys()
+        assert "service" not in proupservtx_rpc['proUpServTx'].keys()
+        assert "service" not in protx_diff_rpc['mnList'][0].keys()
+        # "service" in "masternode status" is exempt from the deprecation as the primary address is
+        # relevant on the host node as opposed to expressing payload information in most other RPCs.
+        assert "service" in masternode_status.keys()
+
+        self.log.info("Test RPCs by default no longer return a 'platformP2PPort' field")
+        assert "platformP2PPort" not in proregtx_rpc['proRegTx'].keys()
+        assert "platformP2PPort" not in masternode_status['dmnState'].keys()
+        assert "platformP2PPort" not in proupservtx_rpc['proUpServTx'].keys()
+        assert "platformP2PPort" not in protx_diff_rpc['mnList'][0].keys()
+
+        self.log.info("Test RPCs by default no longer return a 'platformHTTPPort' field")
+        assert "platformHTTPPort" not in proregtx_rpc['proRegTx'].keys()
+        assert "platformHTTPPort" not in masternode_status['dmnState'].keys()
+        assert "platformHTTPPort" not in proupservtx_rpc['proUpServTx'].keys()
+        assert "platformHTTPPort" not in protx_diff_rpc['mnList'][0].keys()
+
+        node_evo.destroy_mn(self) # Shut down previous masternode
+        self.connect_nodes(node_evo.node.index, node_simple.index) # Needed as restarts don't reconnect nodes
+
+        self.log.info("Collect RPC responses from node with -deprecatedrpc=service")
+
+        # Re-use chain activity from earlier
+        proregtx_rpc = node_simple.getrawtransaction(proregtx_hash, True)
+        proupservtx_rpc = node_simple.getrawtransaction(proupservtx_hash, True)
+        protx_diff_rpc = node_simple.protx('diff', masternode_active_height - 1, masternode_active_height)
+        masternode_status = masternode_status_depr # Pull in response generated from earlier
+
+        self.log.info("Test RPCs return 'addresses' even with -deprecatedrpc=service")
+        assert "addresses" in proregtx_rpc['proRegTx'].keys()
+        assert "addresses" in masternode_status['dmnState'].keys()
+        assert "addresses" in proupservtx_rpc['proUpServTx'].keys()
+        assert "addresses" in protx_diff_rpc['mnList'][0].keys()
+
+        self.log.info("Test RPCs return 'service' with -deprecatedrpc=service")
+        assert "service" in proregtx_rpc['proRegTx'].keys()
+        assert "service" in masternode_status['dmnState'].keys()
+        assert "service" in proupservtx_rpc['proUpServTx'].keys()
+        assert "service" in protx_diff_rpc['mnList'][0].keys()
+
+        self.log.info("Test RPCs return 'platformP2PPort' with -deprecatedrpc=service")
+        assert "platformP2PPort" in proregtx_rpc['proRegTx'].keys()
+        assert "platformP2PPort" in masternode_status['dmnState'].keys()
+        assert "platformP2PPort" in proupservtx_rpc['proUpServTx'].keys()
+        # CSimplifiedMNListEntry doesn't store 'platformP2PPort' at all
+        assert "platformP2PPort" not in protx_diff_rpc['mnList'][0].keys()
+
+        self.log.info("Test RPCs return 'platformHTTPPort' with -deprecatedrpc=service")
+        assert "platformHTTPPort" in proregtx_rpc['proRegTx'].keys()
+        assert "platformHTTPPort" in masternode_status['dmnState'].keys()
+        assert "platformHTTPPort" in proupservtx_rpc['proUpServTx'].keys()
+        assert "platformHTTPPort" in protx_diff_rpc['mnList'][0].keys()
 
 if __name__ == "__main__":
     NetInfoTest().main()
