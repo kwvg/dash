@@ -1209,6 +1209,8 @@ static bool CheckService(const ProTx& proTx, TxValidationState& state)
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo");
     case NetInfoStatus::BadPort:
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-port");
+    case NetInfoStatus::Malformed:
+        return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-bad");
     case NetInfoStatus::Success:
         return true;
     } // no default case, so the compiler can warn about missing cases
