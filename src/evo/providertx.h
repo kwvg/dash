@@ -15,8 +15,9 @@
 #include <key_io.h>
 #include <netaddress.h>
 #include <pubkey.h>
-#include <univalue.h>
 #include <util/underlying.h>
+
+#include <univalue.h>
 
 class TxValidationState;
 

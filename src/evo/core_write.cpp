@@ -9,6 +9,7 @@
 #include <evo/netinfo.h>
 #include <evo/providertx.h>
 #include <llmq/commitment.h>
+#include <rpc/evo_util.h>
 
 #include <univalue.h>
 
@@ -70,7 +71,7 @@
     if (IsServiceDeprecatedRPCEnabled()) {
         ret.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
     }
-    ret.pushKV("addresses", netInfo->ToJson());
+    ret.pushKV("addresses", NetInfoJson(*this));
     ret.pushKV("ownerAddress", EncodeDestination(PKHash(keyIDOwner)));
     ret.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
     if (CTxDestination dest; ExtractDestination(scriptPayout, dest)) {
@@ -120,7 +121,7 @@
     if (IsServiceDeprecatedRPCEnabled()) {
         ret.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
     }
-    ret.pushKV("addresses", netInfo->ToJson());
+    ret.pushKV("addresses", NetInfoJson(*this));
     if (CTxDestination dest; ExtractDestination(scriptOperatorPayout, dest)) {
         ret.pushKV("operatorPayoutAddress", EncodeDestination(dest));
     }

@@ -5,7 +5,21 @@
 #ifndef BITCOIN_RPC_EVO_UTIL_H
 #define BITCOIN_RPC_EVO_UTIL_H
 
+#include <cstdint>
+
+class CDeterministicMNState;
+class CProRegTx;
+class CProUpServTx;
+class CSimplifiedMNListEntry;
+enum class MnType : uint16_t;
+
 class UniValue;
+
+/* Returns netInfo::GetJson() with data from platform fields. */
+UniValue NetInfoJson(const CProRegTx& obj);
+UniValue NetInfoJson(const CProUpServTx& obj);
+UniValue NetInfoJson(const CDeterministicMNState& obj, const MnType& type);
+UniValue NetInfoJson(const CSimplifiedMNListEntry& obj, const MnType& type);
 
 template <typename T1>
 void ProcessNetInfoCore(T1& ptx, const UniValue& input, const bool optional);

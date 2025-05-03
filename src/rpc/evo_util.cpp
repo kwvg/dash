@@ -4,8 +4,10 @@
 
 #include <rpc/evo_util.h>
 
+#include <evo/deterministicmns.h>
 #include <evo/netinfo.h>
 #include <evo/providertx.h>
+#include <evo/simplifiedmns.h>
 #include <rpc/util.h>
 #include <rpc/protocol.h>
 #include <rpc/request.h>
@@ -18,7 +20,25 @@ bool IsNumeric(const std::string_view& input)
 {
     return input.find_first_not_of("0123456789") == std::string::npos;
 }
+
+template <typename T1>
+inline UniValue NetInfoJsonInternal(const T1& obj, const MnType& type)
+{
+    UniValue ret{obj.netInfo->ToJson()};
+    if (obj.netInfo->CanStorePlatform() || type != MnType::Evo) return ret;
+    const CService& addr{obj.netInfo->GetPrimary()};
+    ret.pushKV(PurposeToString(Purpose::PLATFORM_HTTP, /*lower=*/true), ArrFromService(CService(CNetAddr{addr}, obj.platformHTTPPort)));
+    if constexpr (!std::is_same<T1, CSimplifiedMNListEntry>::value) /* CSimplifiedMNListEntry doesn't have this field */ {
+        ret.pushKV(PurposeToString(Purpose::PLATFORM_P2P, /*lower=*/true), ArrFromService(CService(CNetAddr{addr}, obj.platformP2PPort)));
+    }
+    return ret;
+}
 } // anonymous namespace
+
+UniValue NetInfoJson(const CProRegTx& obj) { return NetInfoJsonInternal(obj, obj.nType); }
+UniValue NetInfoJson(const CProUpServTx& obj) { return NetInfoJsonInternal(obj, obj.nType); }
+UniValue NetInfoJson(const CDeterministicMNState& obj, const MnType& type) { return NetInfoJsonInternal(obj, type); }
+UniValue NetInfoJson(const CSimplifiedMNListEntry& obj, const MnType& type) { return NetInfoJsonInternal(obj, type); }
 
 template <typename T1>
 void ProcessNetInfoCore(T1& ptx, const UniValue& input, const bool optional)

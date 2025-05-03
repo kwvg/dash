@@ -7,6 +7,7 @@
 
 #include <chainparams.h>
 #include <consensus/validation.h>
+#include <rpc/evo_util.h>
 #include <script/standard.h>
 #include <validationinterface.h>
 
@@ -42,7 +43,7 @@ UniValue CDeterministicMNState::ToJson(MnType nType) const
     if (IsServiceDeprecatedRPCEnabled()) {
         obj.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
     }
-    obj.pushKV("addresses", netInfo->ToJson());
+    obj.pushKV("addresses", NetInfoJson(*this, nType));
     obj.pushKV("registeredHeight", nRegisteredHeight);
     obj.pushKV("lastPaidHeight", nLastPaidHeight);
     obj.pushKV("consecutivePayments", nConsecutivePayments);
@@ -79,7 +80,6 @@ UniValue CDeterministicMNStateDiff::ToJson(MnType nType) const
         if (IsServiceDeprecatedRPCEnabled()) {
             obj.pushKV("service", state.netInfo->GetPrimary().ToStringAddrPort());
         }
-        obj.pushKV("addresses", state.netInfo->ToJson());
     }
     if (fields & Field_nRegisteredHeight) {
         obj.pushKV("registeredHeight", state.nRegisteredHeight);
@@ -132,6 +132,31 @@ UniValue CDeterministicMNStateDiff::ToJson(MnType nType) const
         }
         if (fields & Field_platformHTTPPort) {
             obj.pushKV("platformHTTPPort", state.platformHTTPPort);
+        }
+    }
+    {
+        UniValue netInfoObj(UniValue::VOBJ);
+        if (fields & Field_netInfo) {
+            netInfoObj = state.netInfo->ToJson();
+        }
+        if (nType == MnType::Evo) {
+            if (fields & Field_platformHTTPPort) {
+                netInfoObj.pushKV(
+                    PurposeToString(Purpose::PLATFORM_HTTP, /*lower=*/true),
+                    (fields & Field_netInfo) ? ArrFromService(CService{state.netInfo->GetPrimary(), state.platformHTTPPort})
+                                             : ArrFromPort(state.platformHTTPPort)
+                );
+            }
+            if (fields & Field_platformP2PPort) {
+                netInfoObj.pushKV(
+                    PurposeToString(Purpose::PLATFORM_P2P, /*lower=*/true),
+                    (fields & Field_netInfo) ? ArrFromService(CService{state.netInfo->GetPrimary(), state.platformP2PPort})
+                                             : ArrFromPort(state.platformP2PPort)
+                );
+            }
+        }
+        if (!netInfoObj.empty()) {
+            obj.pushKV("addresses", netInfoObj);
         }
     }
     return obj;

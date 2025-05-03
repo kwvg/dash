@@ -16,6 +16,7 @@
 #include <net.h>
 #include <netbase.h>
 #include <rpc/blockchain.h>
+#include <rpc/evo_util.h>
 #include <rpc/server.h>
 #include <rpc/server_util.h>
 #include <rpc/util.h>
@@ -618,7 +619,7 @@ static RPCHelpMan masternodelist_helper(bool is_composite)
             if (IsDeprecatedRPCEnabled("service")) {
                 objMN.pushKV("address", dmn.pdmnState->netInfo->GetPrimary().ToStringAddrPort());
             }
-            objMN.pushKV("addresses", dmn.pdmnState->netInfo->ToJson());
+            objMN.pushKV("addresses", NetInfoJson(*dmn.pdmnState, dmn.nType));
             objMN.pushKV("payee", payeeStr);
             objMN.pushKV("status", dmnToStatus(dmn));
             objMN.pushKV("type", std::string(GetMnType(dmn.nType).description));

@@ -8,11 +8,12 @@
 #include <core_io.h>
 #include <deploymentstatus.h>
 #include <evo/deterministicmns.h>
+#include <evo/specialtx.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/commitment.h>
 #include <llmq/quorums.h>
 #include <node/blockstorage.h>
-#include <evo/specialtx.h>
+#include <rpc/evo_util.h>
 
 #include <pubkey.h>
 #include <serialize.h>
@@ -81,7 +82,7 @@ UniValue CSimplifiedMNListEntry::ToJson(bool extended) const
     if (IsServiceDeprecatedRPCEnabled()) {
         obj.pushKV("service", netInfo->GetPrimary().ToStringAddrPort());
     }
-    obj.pushKV("addresses", netInfo->ToJson());
+    obj.pushKV("addresses", NetInfoJson(*this, nType));
     obj.pushKV("pubKeyOperator", pubKeyOperator.ToString());
     obj.pushKV("votingAddress", EncodeDestination(PKHash(keyIDVoting)));
     obj.pushKV("isValid", isValid);
