@@ -282,7 +282,9 @@ BOOST_AUTO_TEST_CASE(extnetinfo_rules)
     {
         // ExtNetInfo can recognize CJDNS addresses
         ExtNetInfo netInfo;
-        BOOST_CHECK_EQUAL(NISToString(netInfo.AddEntry(Purpose::PLATFORM_HTTP, "[fc00:3344:5566:7788:9900:aabb:ccdd:eeff]:1234")), NISToString(NetInfoStatus::Success));
+        BOOST_CHECK_EQUAL(NISToString(netInfo.AddEntry(Purpose::PLATFORM_HTTP,
+                                                       "[fc00:3344:5566:7788:9900:aabb:ccdd:eeff]:1234")),
+                          NISToString(NetInfoStatus::Success));
         BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Success);
         BOOST_CHECK(netInfo.HasEntries(Purpose::PLATFORM_HTTP));
         ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/1);
