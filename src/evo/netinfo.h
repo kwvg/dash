@@ -7,6 +7,7 @@
 
 #include <netaddress.h>
 #include <serialize.h>
+#include <streams.h>
 
 #include <variant>
 
@@ -72,8 +73,10 @@ public:
     bool operator!=(const NetInfoEntry& rhs) const { return !(*this == rhs); }
 
     template <typename Stream>
-    void Serialize(Stream& s) const
+    void Serialize(Stream& s_) const
     {
+        OverrideStream<Stream> s(&s_, s_.GetType(), s_.GetVersion() | ADDRV2_FORMAT);
+
         switch (m_type) {
         case NetInfoType::Service: {
             if (const auto* data_ptr{std::get_if<CService>(&m_data)}; data_ptr != nullptr) {
@@ -97,15 +100,17 @@ public:
     {
         auto size = ::GetSerializeSize(uint8_t{}, s.GetVersion());
         if (m_type == NetInfoType::Service) {
-            size += ::GetSerializeSize(CService{}, s.GetVersion());
+            size += ::GetSerializeSize(CService{}, s.GetVersion() | ADDRV2_FORMAT);
         }
         s.seek(size);
     }
 
     template <typename Stream>
-    void Unserialize(Stream& s)
+    void Unserialize(Stream& s_)
     {
         Clear();
+
+        OverrideStream<Stream> s(&s_, s_.GetType(), s_.GetVersion() | ADDRV2_FORMAT);
 
         s >> m_type;
         switch (m_type) {
