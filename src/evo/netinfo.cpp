@@ -153,19 +153,19 @@ NetInfoStatus MnNetInfo::AddEntry(const std::string& input)
         const auto ret = ValidateService(service.value());
         if (ret == NetInfoStatus::Success) {
             m_addr = NetInfoEntry{service.value()};
-            ASSERT_IF_DEBUG(GetPrimary() != empty_service);
+            ASSERT_IF_DEBUG(m_addr.GetAddrPort().has_value());
         }
         return ret;
     }
     return NetInfoStatus::BadInput;
 }
 
-CServiceList MnNetInfo::GetEntries() const
+NetInfoList MnNetInfo::GetEntries() const
 {
-    CServiceList ret;
+    NetInfoList ret;
     if (!IsEmpty()) {
-        ASSERT_IF_DEBUG(GetPrimary() != empty_service);
-        ret.push_back(GetPrimary());
+        ASSERT_IF_DEBUG(m_addr.GetAddrPort().has_value());
+        ret.push_back(m_addr);
     }
     // If MnNetInfo is empty, we probably don't expect any entries to show up, so
     // we return a blank set instead.
