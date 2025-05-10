@@ -68,6 +68,7 @@ public:
         m_type = NetInfoType::Service;
         m_data = service;
     }
+    template <typename Stream> NetInfoEntry(deserialize_type, Stream& s) { s >> *this; }
 
     ~NetInfoEntry() = default;
 
@@ -150,7 +151,26 @@ public:
 
 using NetInfoList = std::vector<std::reference_wrapper<const NetInfoEntry>>;
 
-class MnNetInfo
+class NetInfoInterface
+{
+public:
+    static bool IsEqual(const std::shared_ptr<NetInfoInterface>& lhs, const std::shared_ptr<NetInfoInterface>& rhs);
+
+public:
+    virtual ~NetInfoInterface() = default;
+
+    virtual NetInfoStatus AddEntry(const std::string& service) = 0;
+    virtual NetInfoList GetEntries() const = 0;
+
+    virtual const CService& GetPrimary() const = 0;
+    virtual bool IsEmpty() const = 0;
+    virtual NetInfoStatus Validate() const = 0;
+    virtual std::string ToString() const = 0;
+
+    virtual void Clear() = 0;
+};
+
+class MnNetInfo final : public NetInfoInterface
 {
 private:
     NetInfoEntry m_addr{};
@@ -160,6 +180,8 @@ private:
 
 public:
     MnNetInfo() = default;
+    template <typename Stream> MnNetInfo(deserialize_type, Stream& s) { s >> *this; }
+
     ~MnNetInfo() = default;
 
     bool operator==(const MnNetInfo& rhs) const { return m_addr == rhs.m_addr; }
@@ -188,15 +210,63 @@ public:
         m_addr = NetInfoEntry{service};
     }
 
-    NetInfoStatus AddEntry(const std::string& service);
-    NetInfoList GetEntries() const;
+    NetInfoStatus AddEntry(const std::string& service) override;
+    NetInfoList GetEntries() const override;
 
-    const CService& GetPrimary() const;
-    bool IsEmpty() const { return *this == MnNetInfo(); }
-    NetInfoStatus Validate() const;
-    std::string ToString() const;
+    const CService& GetPrimary() const override;
+    bool IsEmpty() const override { return *this == MnNetInfo(); }
+    NetInfoStatus Validate() const override;
+    std::string ToString() const override;
 
-    void Clear() { m_addr.Clear(); }
+    void Clear() override { m_addr.Clear(); }
+};
+
+/* Selects NetInfoInterface implementation to use based on object version */
+template <typename T1>
+std::shared_ptr<NetInfoInterface> MakeNetInfo(const T1& obj)
+{
+    assert(obj.nVersion > 0);
+    return std::make_shared<MnNetInfo>();
+}
+
+class NetInfoSerWrapper
+{
+private:
+    std::shared_ptr<NetInfoInterface>& m_data;
+
+public:
+    NetInfoSerWrapper() = delete;
+    NetInfoSerWrapper(const NetInfoSerWrapper&) = delete;
+    NetInfoSerWrapper(std::shared_ptr<NetInfoInterface>& data) :
+        m_data{data}
+    {
+    }
+    template <typename Stream> NetInfoSerWrapper(deserialize_type, Stream& s) { s >> *this; }
+
+    ~NetInfoSerWrapper() = default;
+
+    template <typename Stream>
+    void Serialize(Stream& s) const
+    {
+        if (const auto& ptr{std::dynamic_pointer_cast<MnNetInfo>(m_data)}; ptr != nullptr) {
+            s << ptr;
+        } else {
+            throw std::ios_base::failure("Improperly constructed NetInfoInterface");
+        }
+    }
+
+    void Serialize(CSizeComputer& s) const
+    {
+        s.seek(::GetSerializeSize(MnNetInfo{}, s.GetVersion()));
+    }
+
+    template <typename Stream>
+    void Unserialize(Stream& s)
+    {
+        std::shared_ptr<MnNetInfo> ptr;
+        s >> ptr;
+        m_data = std::move(ptr);
+    }
 };
 
 #endif // BITCOIN_EVO_NETINFO_H
