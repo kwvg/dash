@@ -391,6 +391,7 @@ private:
         DMNL_NO_TEMPLATE(CBLSPublicKey);
         DMNL_NO_TEMPLATE(MnNetInfo);
         DMNL_NO_TEMPLATE(NetInfoEntry);
+        DMNL_NO_TEMPLATE(NetInfoInterface);
 #undef DMNL_NO_TEMPLATE
         return ::SerializeHash(v);
     }
