@@ -82,15 +82,23 @@ void TestMnNetInfo(const TestVectors& vals)
     }
 }
 
-void TestExtNetInfo(const TestVectors& vals, bool insert_dummy = false)
+void TestExtNetInfo(const TestVectors& vals, bool request_dummy = false)
 {
     for (const auto& [input, _, expected_ret] : vals) {
         const auto& [purpose, addr] = input;
         const bool expected_success{expected_ret == NetInfoStatus::Success};
+        const bool is_core_p2p{purpose == Purpose::CORE_P2P};
+        const bool insert_dummy{is_core_p2p || request_dummy};
         ExtNetInfo netInfo;
         if (insert_dummy) {
-            // Needed if validating entries of non-primary types
-            BOOST_CHECK_EQUAL(netInfo.AddEntry(purpose, "4.3.2.1:9998"), NetInfoStatus::Success);
+            // Entries could get rejected because a CORE_P2P entry wasn't added first
+            BOOST_CHECK_EQUAL(
+                netInfo.AddEntry(Purpose::CORE_P2P, strprintf("4.3.2.1:%u", Params().GetDefaultPort())),
+                NetInfoStatus::Success);
+            if (!is_core_p2p) {
+                // If we are validating non-primary types, we need to add a primary type entry
+                BOOST_CHECK_EQUAL(netInfo.AddEntry(purpose, "4.3.2.1:9998"), NetInfoStatus::Success);
+            }
         }
         BOOST_CHECK_EQUAL(netInfo.AddEntry(purpose, addr), expected_ret);
         if (!insert_dummy && !expected_success) {
@@ -103,7 +111,7 @@ void TestExtNetInfo(const TestVectors& vals, bool insert_dummy = false)
             BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Success);
             BOOST_CHECK(netInfo.HasEntries(purpose));
             // This will differentiate
-            ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/(insert_dummy && expected_success) ? 2 : 1);
+            ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/insert_dummy ? (is_core_p2p ? 2 : 3) : 1);
         }
     }
 }
@@ -132,7 +140,29 @@ BOOST_AUTO_TEST_CASE(mnnetinfo_rules_main)
     }
 }
 
-BOOST_AUTO_TEST_CASE(extnetinfo_rules_main) { TestExtNetInfo(addr_vals_main); }
+BOOST_AUTO_TEST_CASE(extnetinfo_rules_main)
+{
+    TestExtNetInfo(addr_vals_main);
+
+    {
+        // ExtNetInfo requires adding a CORE_P2P entry before adding an entry for any other purpose
+        ExtNetInfo netInfo;
+        BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::PLATFORM_HTTPS, "1.1.1.1:443"), NetInfoStatus::MissingData);
+        BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::PLATFORM_P2P, "1.1.1.1:26656"), NetInfoStatus::MissingData);
+
+        // Emptiness checks
+        BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Malformed);
+        BOOST_CHECK(netInfo.IsEmpty() && netInfo.GetEntries().empty());
+
+        BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::CORE_P2P, "1.1.1.1:9999"), NetInfoStatus::Success);
+        BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::PLATFORM_HTTPS, "1.1.1.1:443"), NetInfoStatus::Success);
+        BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::PLATFORM_P2P, "1.1.1.1:26656"), NetInfoStatus::Success);
+
+        // Presence checks
+        BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Success);
+        ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/3);
+    }
+}
 
 static const TestVectors addr_vals_reg{
     // - MnNetInfo doesn't mind using port 0
@@ -246,7 +276,7 @@ BOOST_FIXTURE_TEST_CASE(extnetinfo_rules_reg, RegTestingSetup)
             // DomainPort isn't used for storing privacy network TLDs like .onion
             {{Purpose::PLATFORM_HTTPS, "pg6mmjiyjmcrsslvykfwnntlaru7p5svn6y2ymmju6nubxndf4pscryd:9998"}, NetInfoStatus::MaxLimit, NetInfoStatus::BadInput},
         };
-        TestExtNetInfo(domain_vals, /*insert_dummy=*/true);
+        TestExtNetInfo(domain_vals, /*request_dummy=*/true);
     }
 
     // Privacy network entry checks
