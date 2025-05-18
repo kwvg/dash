@@ -356,9 +356,22 @@ NetInfoStatus ExtNetInfo::ProcessCandidate(const uint8_t purpose, const NetInfoE
         entries.push_back(candidate);
         return NetInfoStatus::Success;
     } else {
-        if (purpose != Purpose::CORE_P2P && m_data.find(Purpose::CORE_P2P) == m_data.end()) {
-            // May not register with any other purpose code if CORE_P2P is not defined first
-            return NetInfoStatus::MissingData;
+        if (purpose != Purpose::CORE_P2P) {
+            if (m_data.find(Purpose::CORE_P2P) == m_data.end()) {
+                // May not register with any other purpose code if CORE_P2P is not defined first
+                return NetInfoStatus::MissingData;
+            }
+            if (auto service_opt{candidate.GetAddrPort()}) {
+                const CService& primary_service{GetPrimary()};
+                assert(primary_service != empty_service && primary_service.IsValid());
+                if (primary_service.ToStringAddr() != service_opt->get().ToStringAddr()) {
+                    // The primary address of non-CORE_P2P must share the same address
+                    return NetInfoStatus::BadInput;
+                }
+            } else {
+                // Primary addresses are always expected to be a CService
+                return NetInfoStatus::Malformed;
+            }
         }
         // First entry for purpose code, create new entries list
         auto [_, status] = m_data.try_emplace(purpose, std::vector<NetInfoEntry>({candidate}));
@@ -517,14 +530,27 @@ NetInfoStatus ExtNetInfo::Validate() const
                 // Trivially invalid NetInfoEntry, no point checking against consensus rules
                 return NetInfoStatus::Malformed;
             }
+            const bool is_primary{entry == *entries.begin()};
             if (const auto& service_opt{entry.GetAddrPort()}) {
-                if (auto ret{ValidateService(*service_opt, purpose, /*is_primary=*/entry == *entries.begin())};
+                if (auto ret{ValidateService(*service_opt, purpose, is_primary)};
                     ret != NetInfoStatus::Success) {
                     // Stores CService underneath but doesn't pass validation rules
                     return ret;
                 }
+                if (is_primary && purpose != Purpose::CORE_P2P) {
+                    assert(has_core_p2p);
+                    const CService& primary_service{GetPrimary()};
+                    assert(primary_service != empty_service && primary_service.IsValid());
+                    if (primary_service.ToStringAddr() != service_opt->get().ToStringAddr()) {
+                        // The primary address of non-CORE_P2P must share the same address
+                        // TODO: Consider relaxing this requirement in subsequent versions
+                        return NetInfoStatus::BadInput;
+                    }
+                }
             } else {
                 // Doesn't store valid type underneath
+                // TODO: Add bail out if primary address and not CService, currently branch-identical to this
+                //       condition as no other type is supported.
                 return NetInfoStatus::Malformed;
             }
         }
