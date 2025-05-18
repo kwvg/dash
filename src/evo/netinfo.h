@@ -14,6 +14,8 @@
 
 class CService;
 
+class UniValue;
+
 enum class NetInfoStatus : uint8_t {
     // Managing entries
     BadInput,
@@ -149,6 +151,7 @@ public:
     virtual const CService& GetPrimary() const = 0;
     virtual bool IsEmpty() const = 0;
     virtual NetInfoStatus Validate() const = 0;
+    virtual UniValue ToJson() const = 0;
     virtual std::string ToString() const = 0;
 
     virtual void Clear() = 0;
@@ -200,6 +203,7 @@ public:
     const CService& GetPrimary() const override;
     bool IsEmpty() const override { return *this == MnNetInfo(); }
     NetInfoStatus Validate() const override;
+    UniValue ToJson() const override;
     std::string ToString() const override;
 
     void Clear() override { m_addr.Clear(); }
