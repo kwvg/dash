@@ -26,7 +26,8 @@ void ProcessNetInfoCore(T1& ptx, const UniValue& input, const bool optional)
         if (!optional && input.get_str().empty()) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Empty param for coreP2PAddrs not allowed");
         } else if (!input.get_str().empty()) {
-            if (auto entryRet = ptx.netInfo->AddEntry(input.get_str()); entryRet != NetInfoStatus::Success) {
+            if (auto entryRet = ptx.netInfo->AddEntry(Purpose::CORE_P2P, input.get_str());
+                entryRet != NetInfoStatus::Success) {
                 throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Error setting coreP2PAddrs[0] to '%s' (%s)",
                                                                     input.get_str(), NISToString(entryRet)));
             }
@@ -42,7 +43,8 @@ void ProcessNetInfoCore(T1& ptx, const UniValue& input, const bool optional)
                     throw JSONRPCError(RPC_INVALID_PARAMETER,
                                        strprintf("Invalid param for coreP2PAddrs[%d], must be string", idx));
                 }
-                if (auto entryRet = ptx.netInfo->AddEntry(entry.get_str()); entryRet != NetInfoStatus::Success) {
+                if (auto entryRet = ptx.netInfo->AddEntry(Purpose::CORE_P2P, entry.get_str());
+                    entryRet != NetInfoStatus::Success) {
                     throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Error setting coreP2PAddrs[%d] to '%s' (%s)",
                                                                         idx, entry.get_str(), NISToString(entryRet)));
                 }
