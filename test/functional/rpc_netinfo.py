@@ -5,7 +5,8 @@
 """Test network information fields across RPCs."""
 
 from test_framework.util import (
-    assert_equal
+    assert_equal,
+    assert_raises_rpc_error
 )
 from test_framework.script import (
     hash160
@@ -21,6 +22,8 @@ from test_framework.test_node import TestNode
 from _decimal import Decimal
 from random import randint
 
+# See CMainParams in src/chainparams.cpp
+DEFAULT_PORT_MAINNET_CORE_P2P = 9999
 # See CRegTestParams in src/chainparams.cpp
 DEFAULT_PORT_PLATFORM_P2P = 22200
 DEFAULT_PORT_PLATFORM_HTTP = 22201
@@ -99,19 +102,31 @@ class Node:
                 mn_visible = True
         return mn_visible
 
-    def register_mn(self, test: BitcoinTestFramework, submit: bool, addrs_core_p2p, addrs_platform_p2p = None, addrs_platform_http = None) -> str:
+    def register_mn(self, test: BitcoinTestFramework, submit: bool, addrs_core_p2p, addrs_platform_p2p = None, addrs_platform_http = None, code = None, msg = None) -> str:
+        assert (code and msg) or (not code and not msg)
         protx_output: str = ""
         if self.is_evo:
             assert addrs_platform_http and addrs_platform_p2p
             self.platform_nodeid = hash160(b'%d' % randint(1, 65535)).hex()
-            protx_output = self.node.protx(
-                "register_evo", self.collateral_txid, self.collateral_vout, addrs_core_p2p, self.address_owner, self.operator_pk,
-                self.address_voting, 0, self.address_reward, self.platform_nodeid, addrs_platform_p2p, addrs_platform_http,
-                self.address_funds, submit)
+            if code and msg:
+                assert_raises_rpc_error(
+                    code, msg, self.node.protx, "register_evo", self.collateral_txid, self.collateral_vout, addrs_core_p2p, self.address_owner, self.operator_pk,
+                    self.address_voting, 0, self.address_reward, self.platform_nodeid, addrs_platform_p2p, addrs_platform_http, self.address_funds, submit)
+                return ""
+            else:
+                protx_output = self.node.protx(
+                    "register_evo", self.collateral_txid, self.collateral_vout, addrs_core_p2p, self.address_owner, self.operator_pk,
+                    self.address_voting, 0, self.address_reward, self.platform_nodeid, addrs_platform_p2p, addrs_platform_http, self.address_funds, submit)
         else:
-            protx_output = self.node.protx(
-                "register", self.collateral_txid, self.collateral_vout, addrs_core_p2p, self.address_owner, self.operator_pk,
-                self.address_voting, 0, self.address_reward, self.address_funds, submit)
+            if code and msg:
+                assert_raises_rpc_error(
+                    code, msg, self.node.protx, "register", self.collateral_txid, self.collateral_vout, addrs_core_p2p, self.address_owner, self.operator_pk,
+                    self.address_voting, 0, self.address_reward, self.address_funds, submit)
+                return ""
+            else:
+                protx_output = self.node.protx(
+                    "register", self.collateral_txid, self.collateral_vout, addrs_core_p2p, self.address_owner, self.operator_pk,
+                    self.address_voting, 0, self.address_reward, self.address_funds, submit)
         if not submit:
             return ""
         self.provider_txid = protx_output
@@ -197,6 +212,45 @@ class NetInfoTest(BitcoinTestFramework):
         self.node_simple: TestNode = self.nodes[1]
 
         self.node_evo.generate_collateral(self)
+
+        self.test_validation()
+        self.test_deprecation()
+
+    def test_validation(self):
+        self.log.info("Test input validation for masternode address fields")
+
+        # Using mainnet P2P port gets refused
+        self.node_evo.register_mn(self, False, f"127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}",
+                                  DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
+                                  -8, f"Error setting coreP2PAddrs[0] to '127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}' (invalid port)")
+
+        # Arrays of addresses are recognized by coreP2PAddrs (but get refused for too many entries)
+        self.node_evo.register_mn(self, False, [f"127.0.0.1:{self.node_evo.port_p2p}", f"127.0.0.2:{self.node_evo.port_p2p}"],
+                                  DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
+                                  -8, f"Error setting coreP2PAddrs[1] to '127.0.0.2:{self.node_evo.port_p2p}' (too many entries)")
+
+        # platformP2PPort and platformHTTPPort doesn't accept non-numeric inputs
+        self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}", DEFAULT_PORT_PLATFORM_HTTP,
+                                  -8, f"platformP2PPort must be a 32bit integer (not '127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}')")
+        self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}"], DEFAULT_PORT_PLATFORM_HTTP,
+                                  -8, "Invalid param for platformP2PPort, must be number")
+        self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", DEFAULT_PORT_PLATFORM_P2P, f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}",
+                                  -8, f"platformHTTPPort must be a 32bit integer (not '127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}')")
+        self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", DEFAULT_PORT_PLATFORM_P2P, [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}"],
+                                  -8, "Invalid param for platformHTTPPort, must be number")
+
+        # platformP2PPort and platformHTTPPort must be within acceptable range (i.e. a valid port number)
+        self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", "0", DEFAULT_PORT_PLATFORM_HTTP,
+                                  -8, "platformP2PPort must be a valid port [1-65535]")
+        self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", "65536", DEFAULT_PORT_PLATFORM_HTTP,
+                                  -8, "platformP2PPort must be a valid port [1-65535]")
+        self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", DEFAULT_PORT_PLATFORM_P2P, "0",
+                                  -8, "platformHTTPPort must be a valid port [1-65535]")
+        self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", DEFAULT_PORT_PLATFORM_P2P, "65536",
+                                  -8, "platformHTTPPort must be a valid port [1-65535]")
+
+    def test_deprecation(self):
+        self.log.info("Test output masternode address fields for consistency")
 
         # netInfo is represented with JSON in CProRegTx, CProUpServTx, CDeterministicMNState and CSimplifiedMNListEntry,
         # so we need to test calls that rely on these underlying implementations. Start by collecting RPC responses.
