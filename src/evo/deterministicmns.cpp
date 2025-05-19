@@ -897,8 +897,10 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
             newState->scriptOperatorPayout = opt_proTx->scriptOperatorPayout;
             if (opt_proTx->nType == MnType::Evo) {
                 newState->platformNodeID = opt_proTx->platformNodeID;
-                newState->platformP2PPort = opt_proTx->platformP2PPort;
-                newState->platformHTTPPort = opt_proTx->platformHTTPPort;
+                if (opt_proTx->nVersion < ProTxVersion::ExtAddr) {
+                    newState->platformP2PPort = opt_proTx->platformP2PPort;
+                    newState->platformHTTPPort = opt_proTx->platformHTTPPort;
+                }
             }
             if (newState->IsBanned()) {
                 // only revive when all keys are set
@@ -1264,39 +1266,42 @@ static bool CheckService(const ProTx& proTx, bool is_extended_addr, TxValidation
 }
 
 template <typename ProTx>
-static bool CheckPlatformFields(const ProTx& proTx, TxValidationState& state)
+static bool CheckPlatformFields(const ProTx& proTx, bool is_extended_addr, TxValidationState& state)
 {
     if (proTx.platformNodeID.IsNull()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-platform-nodeid");
     }
 
-    // TODO: use real args here
-    static int mainnetPlatformP2PPort = CreateChainParams(ArgsManager{}, CBaseChainParams::MAIN)->GetDefaultPlatformP2PPort();
-    if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
-        if (proTx.platformP2PPort != mainnetPlatformP2PPort) {
+    if (is_extended_addr) {
+        // platformHTTPPort and platformP2PPort have been subsumed by netInfo. They should always be zero.
+        if (proTx.platformP2PPort != 0) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-platform-p2p-port");
         }
+        if (proTx.platformHTTPPort != 0) {
+            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-platform-http-port");
+        }
+        return true;
     }
 
     // TODO: use real args here
-    static int mainnetPlatformHTTPPort = CreateChainParams(ArgsManager{}, CBaseChainParams::MAIN)->GetDefaultPlatformHTTPPort();
+    const auto main_params{CreateChainParams(ArgsManager{}, CBaseChainParams::MAIN)};
     if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
-        if (proTx.platformHTTPPort != mainnetPlatformHTTPPort) {
+        if (proTx.platformP2PPort != main_params->GetDefaultPlatformP2PPort()) {
+            return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-platform-p2p-port");
+        }
+        if (proTx.platformHTTPPort != main_params->GetDefaultPlatformHTTPPort()) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-platform-http-port");
         }
     }
-
-    // TODO: use real args here
-    static int mainnetDefaultP2PPort = CreateChainParams(ArgsManager{}, CBaseChainParams::MAIN)->GetDefaultPort();
-    if (proTx.platformP2PPort == mainnetDefaultP2PPort) {
+    if (proTx.platformP2PPort == main_params->GetDefaultPort()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-platform-p2p-port");
     }
-    if (proTx.platformHTTPPort == mainnetDefaultP2PPort) {
+    if (proTx.platformHTTPPort == main_params->GetDefaultPort()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-platform-http-port");
     }
 
-    if (proTx.platformP2PPort == proTx.platformHTTPPort || proTx.platformP2PPort == proTx.netInfo->GetPrimary().GetPort() ||
-        proTx.platformHTTPPort == proTx.netInfo->GetPrimary().GetPort()) {
+    const uint16_t core_port{proTx.netInfo->GetPrimary().GetPort()};
+    if (proTx.platformP2PPort == proTx.platformHTTPPort || proTx.platformP2PPort == core_port || proTx.platformHTTPPort == core_port) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-platform-dup-ports");
     }
 
@@ -1369,7 +1374,7 @@ bool CheckProRegTx(CDeterministicMNManager& dmnman, const CTransaction& tx, gsl:
     }
 
     if (opt_ptx->nType == MnType::Evo) {
-        if (!CheckPlatformFields(*opt_ptx, state)) {
+        if (!CheckPlatformFields(*opt_ptx, is_extended_addr, state)) {
             return false;
         }
     }
@@ -1490,7 +1495,7 @@ bool CheckProUpServTx(CDeterministicMNManager& dmnman, const CTransaction& tx, g
     }
 
     if (opt_ptx->nType == MnType::Evo) {
-        if (!CheckPlatformFields(*opt_ptx, state)) {
+        if (!CheckPlatformFields(*opt_ptx, is_extended_addr, state)) {
             return false;
         }
     }
