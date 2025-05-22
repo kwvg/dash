@@ -317,6 +317,7 @@ public:
         m_data{data},
         m_is_extended{is_extended}
     {
+        assert(m_is_extended);
     }
     template <typename Stream> NetInfoSerWrapper(deserialize_type, Stream& s) { s >> *this; }
 
