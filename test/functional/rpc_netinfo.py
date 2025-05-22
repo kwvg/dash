@@ -275,7 +275,7 @@ class NetInfoTest(BitcoinTestFramework):
         self.connect_nodes(self.node_evo.node_idx, self.node_simple.index) # Needed as restarts don't reconnect nodes
 
         # CProUpServTx::ToJson() <- TxToUniv() <- TxToJSON() <- getrawtransaction
-        proupservtx_hash = self.node_evo.update_mn(self, f"127.0.0.1:{self.node_evo.port_p2p}", "22200", "22201")
+        proupservtx_hash = self.node_evo.update_mn(self, f"127.0.0.1:{self.node_evo.port_p2p}", "22201", "22200")
         proupservtx_rpc = self.node_evo.node.getrawtransaction(proupservtx_hash, True)
 
         # CSimplifiedMNListEntry::ToJson() <- CSimplifiedMNListDiff::mnList <- CSimplifiedMNListDiff::ToJson() <- protx_diff
