@@ -62,7 +62,7 @@ public:
                 obj.nType,
                 obj.nMode,
                 obj.collateralOutpoint,
-                NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
+                NetInfoSerWrapper<decltype(obj)>(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
                 obj.keyIDOwner,
                 CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == ProTxVersion::LegacyBLS)),
                 obj.keyIDVoting,
@@ -132,7 +132,7 @@ public:
         }
         READWRITE(
                 obj.proTxHash,
-                NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
+                NetInfoSerWrapper<decltype(obj)>(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
                 obj.scriptOperatorPayout,
                 obj.inputsHash
         );

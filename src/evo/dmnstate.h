@@ -101,7 +101,7 @@ public:
         READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), obj.nVersion == ProTxVersion::LegacyBLS));
         READWRITE(
             obj.keyIDVoting,
-            NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
+            NetInfoSerWrapper<decltype(obj)>(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
             obj.scriptPayout,
             obj.scriptOperatorPayout,
             obj.platformNodeID);
@@ -251,24 +251,14 @@ public:
 
         boost::hana::for_each(members, [&](auto&& member) {
             using BaseType = std::decay_t<decltype(member)>;
-            // NOTE: reading pubKeyOperator or netInfo requires nVersion
-            if constexpr (BaseType::mask == Field_netInfo || BaseType::mask == Field_pubKeyOperator) {
+            if constexpr (BaseType::mask == Field_netInfo) {
                 if (obj.fields & member.mask) {
                     SER_READ(obj, obj.fields |= Field_nVersion);
                 }
             }
-            if constexpr (BaseType::mask == Field_pubKeyOperator) {
+            if constexpr (BaseType::mask == Field_netInfo) {
                 if ((obj.fields & member.mask) && (obj.fields & Field_nVersion)) {
-                    auto& pubKeyOperator{const_cast<CBLSLazyPublicKey&>(obj.state.pubKeyOperator)};
-                    if (ser_action.ForRead()) {
-                        pubKeyOperator.SetLegacy(/*specificLegacyScheme=*/obj.state.nVersion == ProTxVersion::LegacyBLS);
-                    }
-                    READWRITE(CBLSLazyPublicKeyVersionWrapper(pubKeyOperator,
-                                                              /*legacy=*/obj.state.nVersion == ProTxVersion::LegacyBLS));
-                }
-            } else if constexpr (BaseType::mask == Field_netInfo) {
-                if ((obj.fields & member.mask) && (obj.fields & Field_nVersion)) {
-                    READWRITE(NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.state.netInfo),
+                    READWRITE(NetInfoSerWrapper<decltype(obj)>(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.state.netInfo),
                                                 /*is_extended=*/obj.state.nVersion >= ProTxVersion::ExtAddr));
                 }
             } else {
