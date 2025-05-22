@@ -479,6 +479,7 @@ void CDeterministicMNList::AddMN(const CDeterministicMNCPtr& dmn, bool fBumpTota
                                                    __func__, dmn->proTxHash.ToString(), service.ToStringAddrPort()));
             }
         } else {
+            mnUniquePropertyMap = mnUniquePropertyMapSaved;
             throw std::runtime_error(
                 strprintf("%s: Can't add a masternode %s with invalid address", __func__, dmn->proTxHash.ToString()));
         }
@@ -519,38 +520,41 @@ void CDeterministicMNList::UpdateMN(const CDeterministicMN& oldDmn, const std::s
     // Using this temporary map as a checkpoint to roll back to in case of any issues.
     decltype(mnUniquePropertyMap) mnUniquePropertyMapSaved = mnUniquePropertyMap;
 
-    const auto updateNetInfo = [&]() {
-        if (oldState->netInfo != pdmnState->netInfo) {
+    auto updateNetInfo = [this](const CDeterministicMN& dmn,
+                                const std::shared_ptr<NetInfoInterface>& oldInfo,
+                                const std::shared_ptr<NetInfoInterface>& newInfo) -> std::string {
+        if (!NetInfoInterface::IsEqual(oldInfo, newInfo)) {
             // We track each individual entry in netInfo as opposed to netInfo itself (preventing us from
             // using UpdateUniqueProperty()), so we need to successfully purge all old entries and insert
             // new entries to successfully update.
-            for (const NetInfoEntry& old_entry : oldState->netInfo->GetEntries()) {
-                if (const auto& service_opt{old_entry.GetAddrPort()}; service_opt.has_value()) {
+            for (const NetInfoEntry& old_entry : oldInfo->GetEntries()) {
+                if (const auto& service_opt{old_entry.GetAddrPort()}) {
                     const CService& service{service_opt.value()};
-                    if (!DeleteUniqueProperty(*dmn, service)) {
-                        return strprintf("internal error"); // This shouldn't be possible
+                    if (!DeleteUniqueProperty(dmn, service)) {
+                        return "internal error"; // This shouldn't be possible
                     }
                 } else {
-                    return strprintf("invalid address");
+                    return "invalid address";
                 }
             }
-            for (const NetInfoEntry& new_entry : pdmnState->netInfo->GetEntries()) {
-                if (const auto& service_opt{new_entry.GetAddrPort()}; service_opt.has_value()) {
+            for (const NetInfoEntry& new_entry : newInfo->GetEntries()) {
+                if (const auto& service_opt{new_entry.GetAddrPort()}) {
                     const CService& service{service_opt.value()};
-                    if (!AddUniqueProperty(*dmn, service)) {
+                    if (!AddUniqueProperty(dmn, service)) {
                         return strprintf("duplicate (%s)", service.ToStringAddrPort());
                     }
                 } else {
-                    return strprintf("invalid address");
+                    return "invalid address";
                 }
             }
         }
-        return strprintf("");
-    }();
-    if (!updateNetInfo.empty()) {
+        return "";
+    };
+
+    if (auto ret = updateNetInfo(*dmn, oldState->netInfo, pdmnState->netInfo); !ret.empty()) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
         throw(std::runtime_error(strprintf("%s: Can't update masternode %s with addresses, reason=%s", __func__,
-                                           oldDmn.proTxHash.ToString(), updateNetInfo)));
+                                           oldDmn.proTxHash.ToString(), ret)));
     }
     if (!UpdateUniqueProperty(*dmn, oldState->keyIDOwner, pdmnState->keyIDOwner)) {
         mnUniquePropertyMap = mnUniquePropertyMapSaved;
@@ -616,6 +620,7 @@ void CDeterministicMNList::RemoveMN(const uint256& proTxHash)
                                                    proTxHash.ToString(), service.ToStringAddrPort()));
             }
         } else {
+            mnUniquePropertyMap = mnUniquePropertyMapSaved;
             throw std::runtime_error(strprintf("%s: Can't delete a masternode %s with invalid address", __func__,
                                                dmn->proTxHash.ToString()));
         }
@@ -893,6 +898,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
             }
 
             auto newState = std::make_shared<CDeterministicMNState>(*dmn->pdmnState);
+            newState->nVersion = opt_proTx->nVersion;
             newState->netInfo = opt_proTx->netInfo;
             newState->scriptOperatorPayout = opt_proTx->scriptOperatorPayout;
             if (opt_proTx->nType == MnType::Evo) {
@@ -932,11 +938,8 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
             auto newState = std::make_shared<CDeterministicMNState>(*dmn->pdmnState);
             if (newState->pubKeyOperator != opt_proTx->pubKeyOperator) {
                 // reset all operator related fields and put MN into PoSe-banned state in case the operator key changes
-                newState->ResetOperatorFields();
+                newState->ResetOperatorFields(opt_proTx->nVersion);
                 newState->BanIfNotBanned(nHeight);
-                // we update pubKeyOperator here, make sure state version matches
-                newState->nVersion = opt_proTx->nVersion;
-                newState->netInfo = MakeNetInfo(*newState);
                 newState->pubKeyOperator = opt_proTx->pubKeyOperator;
             }
             newState->keyIDVoting = opt_proTx->keyIDVoting;
@@ -959,7 +962,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, gsl::no
                 return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-protx-hash");
             }
             auto newState = std::make_shared<CDeterministicMNState>(*dmn->pdmnState);
-            newState->ResetOperatorFields();
+            newState->ResetOperatorFields(/*nVersion_=*/ProTxVersion::LegacyBLS);
             newState->BanIfNotBanned(nHeight);
             newState->nRevocationReason = opt_proTx->nReason;
 
@@ -1237,12 +1240,8 @@ void CDeterministicMNManager::CleanupCache(int nHeight)
 }
 
 template <typename ProTx>
-static bool CheckService(const ProTx& proTx, bool is_extended_addr, TxValidationState& state)
+static bool CheckService(const ProTx& proTx, TxValidationState& state)
 {
-    if (!IsNetInfoTriviallyValid(proTx, is_extended_addr, state)) {
-        // pass the state returned by the function above
-        return false;
-    }
     switch (proTx.netInfo->Validate()) {
     case NetInfoStatus::BadAddress:
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-addr");
@@ -1367,13 +1366,13 @@ bool CheckProRegTx(CDeterministicMNManager& dmnman, const CTransaction& tx, gsl:
 
     // It's allowed to set addr to 0, which will put the MN into PoSe-banned state and require a ProUpServTx to be issues later
     // If any of both is set, it must be valid however
-    const bool is_extended_addr{DeploymentActiveAfter(pindexPrev, Params().GetConsensus(), Consensus::DEPLOYMENT_V23)};
-    if (!opt_ptx->netInfo->IsEmpty() && !CheckService(*opt_ptx, is_extended_addr, state)) {
+    if (!opt_ptx->netInfo->IsEmpty() && !CheckService(*opt_ptx, state)) {
         // pass the state returned by the function above
         return false;
     }
 
     if (opt_ptx->nType == MnType::Evo) {
+        const bool is_extended_addr{DeploymentActiveAfter(pindexPrev, Params().GetConsensus(), Consensus::DEPLOYMENT_V23)};
         if (!CheckPlatformFields(*opt_ptx, is_extended_addr, state)) {
             return false;
         }
@@ -1488,14 +1487,13 @@ bool CheckProUpServTx(CDeterministicMNManager& dmnman, const CTransaction& tx, g
         return false;
     }
 
-    const bool is_extended_addr{DeploymentActiveAfter(pindexPrev, Params().GetConsensus(), Consensus::DEPLOYMENT_V23)};
-    if (!CheckService(*opt_ptx, is_extended_addr, state)) {
+    if (!CheckService(*opt_ptx, state)) {
         // pass the state returned by the function above
         return false;
     }
 
     if (opt_ptx->nType == MnType::Evo) {
-        if (!CheckPlatformFields(*opt_ptx, is_extended_addr, state)) {
+        if (!CheckPlatformFields(*opt_ptx, /*is_extended_addr=*/opt_ptx->nVersion >= ProTxVersion::ExtAddr, state)) {
             return false;
         }
     }

@@ -7,6 +7,7 @@
 
 #include <bls/bls.h>
 #include <crypto/sha256.h>
+#include <evo/netinfo.h>
 #include <evo/providertx.h>
 #include <netaddress.h>
 #include <pubkey.h>
@@ -111,9 +112,9 @@ public:
         }
     }
 
-    void ResetOperatorFields()
+    void ResetOperatorFields(uint64_t nVersion_)
     {
-        nVersion = ProTxVersion::LegacyBLS;
+        nVersion = nVersion_;
         pubKeyOperator = CBLSLazyPublicKey();
         netInfo = MakeNetInfo(*this);
         scriptOperatorPayout = CScript();
@@ -222,13 +223,21 @@ public:
     CDeterministicMNStateDiff(const CDeterministicMNState& a, const CDeterministicMNState& b)
     {
         boost::hana::for_each(members, [&](auto&& member) {
-            if (member.get(a) != member.get(b)) {
-                member.get(state) = member.get(b);
-                fields |= member.mask;
+            using BaseType = std::decay_t<decltype(member)>;
+            if constexpr (BaseType::mask == Field_netInfo) {
+                if (!NetInfoInterface::IsEqual(member.get(a), member.get(b))) {
+                    member.get(state) = member.get(b);
+                    fields |= member.mask;
+                }
+            } else {
+                if (member.get(a) != member.get(b)) {
+                    member.get(state) = member.get(b);
+                    fields |= member.mask;
+                }
             }
         });
         if ((fields & Field_netInfo) || (fields & Field_pubKeyOperator)) {
-            // pubKeyOperator needs nVersion
+            // netInfo and pubKeyOperator need nVersion
             state.nVersion = b.nVersion;
             fields |= Field_nVersion;
         }

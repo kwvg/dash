@@ -24,7 +24,8 @@ bool IsNetInfoTriviallyValid(const ProTx& proTx, bool is_extended_addr, TxValida
         if (proTx.netInfo->HasEntries(Purpose::PLATFORM_HTTPS) || proTx.netInfo->HasEntries(Purpose::PLATFORM_P2P)) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-bad");
         }
-    } else if (is_extended_addr && proTx.nType == MnType::Evo) {
+    }
+    if (is_extended_addr && proTx.nType == MnType::Evo) {
         // Platform fields are mandatory for EvoNodes
         if (!proTx.netInfo->HasEntries(Purpose::PLATFORM_HTTPS) || !proTx.netInfo->HasEntries(Purpose::PLATFORM_P2P)) {
             return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
@@ -139,7 +140,7 @@ bool CProUpServTx::IsTriviallyValid(bool is_basic_scheme_active, bool is_extende
     if (netInfo->IsEmpty()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
     }
-    if (!IsNetInfoTriviallyValid(*this, is_extended_addr, state)) {
+    if (!IsNetInfoTriviallyValid(*this, /*is_extended_addr=*/nVersion >= ProTxVersion::ExtAddr, state)) {
         // pass the state returned by the function above
         return false;
     }

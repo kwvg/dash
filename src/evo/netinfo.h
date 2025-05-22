@@ -129,7 +129,7 @@ public:
     template <typename Stream>
     void Serialize(Stream& s_) const
     {
-        OverrideStream<Stream> s(&s_, s_.GetType(), s_.GetVersion() | ADDRV2_FORMAT);
+        OverrideStream<Stream> s(&s_, /*nType=*/0, s_.GetVersion() | ADDRV2_FORMAT);
         if (const auto* data_ptr{std::get_if<CService>(&m_data)};
             m_type == NetInfoType::Service && data_ptr && data_ptr->IsValid()) {
             s << m_type << *data_ptr;
@@ -138,19 +138,10 @@ public:
         }
     }
 
-    void Serialize(CSizeComputer& s) const
-    {
-        auto size = ::GetSerializeSize(uint8_t{}, s.GetVersion());
-        if (m_type == NetInfoType::Service) {
-            size += ::GetSerializeSize(CService{}, s.GetVersion() | ADDRV2_FORMAT);
-        }
-        s.seek(size);
-    }
-
     template <typename Stream>
     void Unserialize(Stream& s_)
     {
-        OverrideStream<Stream> s(&s_, s_.GetType(), s_.GetVersion() | ADDRV2_FORMAT);
+        OverrideStream<Stream> s(&s_, /*nType=*/0, s_.GetVersion() | ADDRV2_FORMAT);
         s >> m_type;
         if (m_type == NetInfoType::Service) {
             m_data = CService{};
@@ -228,11 +219,6 @@ public:
         } else {
             s << CService{};
         }
-    }
-
-    void Serialize(CSizeComputer& s) const
-    {
-        s.seek(::GetSerializeSize(CService{}, s.GetVersion()));
     }
 
     template <typename Stream>
@@ -341,21 +327,12 @@ public:
     {
         if (const auto ptr{std::dynamic_pointer_cast<ExtNetInfo>(m_data)}) {
             assert(m_is_extended);
-            s << ptr;
+            s << *ptr;
         } else if (const auto ptr{std::dynamic_pointer_cast<MnNetInfo>(m_data)}) {
             assert(!m_is_extended);
-            s << ptr;
+            s << *ptr;
         } else {
             throw std::ios_base::failure("Improperly constructed NetInfoInterface");
-        }
-    }
-
-    void Serialize(CSizeComputer& s) const
-    {
-        if (m_is_extended) {
-            s.seek(::GetSerializeSize(ExtNetInfo{}, s.GetVersion()));
-        } else {
-            s.seek(::GetSerializeSize(MnNetInfo{}, s.GetVersion()));
         }
     }
 
@@ -363,13 +340,13 @@ public:
     void Unserialize(Stream& s)
     {
         if (m_is_extended) {
-            std::shared_ptr<ExtNetInfo> ptr;
-            s >> ptr;
-            m_data = std::move(ptr);
+            ExtNetInfo obj;
+            s >> obj;
+            m_data = std::make_shared<ExtNetInfo>(std::move(obj));
         } else {
-            std::shared_ptr<MnNetInfo> ptr;
-            s >> ptr;
-            m_data = std::move(ptr);
+            MnNetInfo obj;
+            s >> obj;
+            m_data = std::make_shared<MnNetInfo>(std::move(obj));
         }
     }
 };
