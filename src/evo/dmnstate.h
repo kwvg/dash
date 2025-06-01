@@ -97,7 +97,7 @@ public:
         READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), obj.nVersion == ProTxVersion::LegacyBLS));
         READWRITE(
             obj.keyIDVoting,
-            NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
+            NetInfoSerWrapper<decltype(obj)>(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
             obj.scriptPayout,
             obj.scriptOperatorPayout,
             obj.platformNodeID,
@@ -256,8 +256,7 @@ public:
             } else if constexpr (BaseType::mask == Field_netInfo) {
                 if (obj.fields & member.mask) {
                     // As nVersion is stored after netInfo, we use a magic word to determine the underlying implementation
-                    // TODO: Implement this
-                    READWRITE(NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.state.netInfo), /*is_extended=*/false));
+                    READWRITE(NetInfoSerWrapper<decltype(obj)>(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.state.netInfo), /*is_extended=*/false));
                 }
             } else {
                 if (obj.fields & member.mask) {
