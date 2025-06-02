@@ -235,15 +235,15 @@ class NetInfoTest(BitcoinTestFramework):
         self.test_deprecation()
 
     def test_validation_common(self):
-        # platformP2PPort and platformHTTPPort must be within acceptable range (i.e. a valid port number)
+        # platformP2PAddrs and platformHTTPAddrs must be within acceptable range (i.e. a valid port number)
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", "0", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "platformP2PPort must be a valid port [1-65535]")
+                                  -8, "platformP2PAddrs must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", "65536", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "platformP2PPort must be a valid port [1-65535]")
+                                  -8, "platformP2PAddrs must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", DEFAULT_PORT_PLATFORM_P2P, "0",
-                                  -8, "platformHTTPPort must be a valid port [1-65535]")
+                                  -8, "platformHTTPAddrs must be a valid port [1-65535]")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", DEFAULT_PORT_PLATFORM_P2P, "65536",
-                                  -8, "platformHTTPPort must be a valid port [1-65535]")
+                                  -8, "platformHTTPAddrs must be a valid port [1-65535]")
 
     def test_validation_legacy(self):
         # Using mainnet P2P port gets refused
@@ -256,15 +256,15 @@ class NetInfoTest(BitcoinTestFramework):
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
                                   -8, f"Error setting coreP2PAddrs[1] to '127.0.0.2:{self.node_evo.port_p2p}' (too many entries)")
 
-        # platformP2PPort and platformHTTPPort doesn't accept non-numeric inputs
+        # platformP2PAddrs and platformHTTPAddrs doesn't accept non-numeric inputs
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}", DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing addresses in platformP2PPort (must specify port number only)")
+                                  -8, "ProTx version disallows storing addresses in platformP2PAddrs (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_P2P}"], DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, "ProTx version disallows storing addresses in platformP2PPort (must specify port number only)")
+                                  -8, "ProTx version disallows storing addresses in platformP2PAddrs (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", DEFAULT_PORT_PLATFORM_P2P, f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}",
-                                  -8, "ProTx version disallows storing addresses in platformHTTPPort (must specify port number only)")
+                                  -8, "ProTx version disallows storing addresses in platformHTTPAddrs (must specify port number only)")
         self.node_evo.register_mn(self, False, f"127.0.0.1:{self.node_evo.port_p2p}", DEFAULT_PORT_PLATFORM_P2P, [f"127.0.0.1:{DEFAULT_PORT_PLATFORM_HTTP}"],
-                                  -8, "ProTx version disallows storing addresses in platformHTTPPort (must specify port number only)")
+                                  -8, "ProTx version disallows storing addresses in platformHTTPAddrs (must specify port number only)")
 
     def test_deprecation(self):
         # netInfo is represented with JSON in CProRegTx, CProUpServTx, CDeterministicMNState and CSimplifiedMNListEntry,
