@@ -187,9 +187,7 @@ public:
 
         SerializationOpBase(s, CSerActionUnserialize());
 
-        size_t len{0};
-        len = ReadCompactSize(s);
-        for (size_t i = 0; i < len; i++) {
+        for (size_t to_read = ReadCompactSize(s); to_read > 0; --to_read) {
             AddMN(std::make_shared<CDeterministicMN>(deserialize, s), /*fBumpTotalCount=*/false);
         }
     }
@@ -497,24 +495,19 @@ public:
         updatedMNs.clear();
         removedMns.clear();
 
-        size_t len{0};
-        len = ReadCompactSize(s);
-        for (size_t i = 0; i < len; i++) {
+        for (size_t to_read = ReadCompactSize(s); to_read > 0; --to_read) {
             addedMNs.push_back(std::make_shared<CDeterministicMN>(deserialize, s));
         }
 
-        uint64_t internalId{0};
-        len = ReadCompactSize(s);
-        for (size_t i = 0; i < len; i++) {
-            internalId = ReadVarInt<Stream, VarIntMode::DEFAULT, uint64_t>(s);
+        for (size_t to_read = ReadCompactSize(s); to_read > 0; --to_read) {
+            uint64_t internalId = ReadVarInt<Stream, VarIntMode::DEFAULT, uint64_t>(s);
             // CDeterministicMNState can have newer fields but doesn't need migration logic here as CDeterministicMNStateDiff
             // is always serialised using a bitmask and new fields have a new bit guide value, so we are good to continue.
             updatedMNs.emplace(internalId, CDeterministicMNStateDiff(deserialize, s));
         }
 
-        len = ReadCompactSize(s);
-        for (size_t i = 0; i < len; i++) {
-            internalId = ReadVarInt<Stream, VarIntMode::DEFAULT, uint64_t>(s);
+        for (size_t to_read = ReadCompactSize(s); to_read > 0; --to_read) {
+            uint64_t internalId = ReadVarInt<Stream, VarIntMode::DEFAULT, uint64_t>(s);
             removedMns.emplace(internalId);
         }
     }
