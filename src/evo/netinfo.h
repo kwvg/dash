@@ -8,6 +8,7 @@
 #include <netaddress.h>
 #include <serialize.h>
 #include <streams.h>
+#include <util/check.h>
 
 #include <variant>
 
@@ -71,6 +72,8 @@ public:
         m_type = NetInfoType::Service;
         m_data = service;
     }
+    template <typename Stream>
+    NetInfoEntry(deserialize_type, Stream& s) { s >> *this; }
 
     ~NetInfoEntry() = default;
 
@@ -134,6 +137,9 @@ private:
 
 public:
     MnNetInfo() = default;
+    template <typename Stream>
+    MnNetInfo(deserialize_type, Stream& s) { s >> *this; }
+
     ~MnNetInfo() = default;
 
     bool operator==(const MnNetInfo& rhs) const { return m_addr == rhs.m_addr; }
@@ -171,6 +177,46 @@ public:
     std::string ToString() const;
 
     void Clear() { m_addr.Clear(); }
+};
+
+std::unique_ptr<MnNetInfo> MakeNetInfo();
+
+namespace util {
+template <typename T1>
+std::unique_ptr<T1> copy_unique(const std::unique_ptr<T1>& ptr)
+{
+    return ptr ? std::make_unique<T1>(*ptr) : nullptr;
+}
+} // namespace util
+
+class NetInfoSerWrapper
+{
+private:
+    std::unique_ptr<MnNetInfo>& m_data;
+
+public:
+    NetInfoSerWrapper() = delete;
+    NetInfoSerWrapper(const NetInfoSerWrapper&) = delete;
+    NetInfoSerWrapper(std::unique_ptr<MnNetInfo>& data) :
+        m_data{data}
+    {
+    }
+    template <typename Stream>
+    NetInfoSerWrapper(deserialize_type, Stream& s) { s >> *this; }
+
+    ~NetInfoSerWrapper() = default;
+
+    template <typename Stream>
+    void Serialize(Stream& s) const
+    {
+        s << *Assert(m_data);
+    }
+
+    template <typename Stream>
+    void Unserialize(Stream& s)
+    {
+        m_data = std::make_unique<MnNetInfo>(deserialize, s);
+    }
 };
 
 #endif // BITCOIN_EVO_NETINFO_H

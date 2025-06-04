@@ -147,6 +147,11 @@ std::string NetInfoEntry::ToStringAddrPort() const
         m_data);
 }
 
+std::unique_ptr<MnNetInfo> MakeNetInfo()
+{
+    return std::make_unique<MnNetInfo>();
+}
+
 NetInfoStatus MnNetInfo::ValidateService(const CService& service)
 {
     if (!service.IsValid()) {

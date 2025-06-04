@@ -35,7 +35,7 @@ class CSimplifiedMNListEntry
 public:
     uint256 proRegTxHash;
     uint256 confirmedHash;
-    MnNetInfo netInfo;
+    std::unique_ptr<MnNetInfo> netInfo{MakeNetInfo()};
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
     bool isValid{false};
@@ -53,7 +53,7 @@ public:
     {
         return proRegTxHash == rhs.proRegTxHash &&
                confirmedHash == rhs.confirmedHash &&
-               netInfo == rhs.netInfo &&
+               ((netInfo && rhs.netInfo) ? (*netInfo == *rhs.netInfo) : (netInfo == rhs.netInfo)) &&
                pubKeyOperator == rhs.pubKeyOperator &&
                keyIDVoting == rhs.keyIDVoting &&
                isValid == rhs.isValid &&
@@ -76,7 +76,7 @@ public:
         READWRITE(
                 obj.proRegTxHash,
                 obj.confirmedHash,
-                obj.netInfo,
+                NetInfoSerWrapper(const_cast<std::unique_ptr<MnNetInfo>&>(obj.netInfo)),
                 CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == ProTxVersion::LegacyBLS)),
                 obj.keyIDVoting,
                 obj.isValid

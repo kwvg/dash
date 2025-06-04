@@ -54,7 +54,7 @@ public:
     CKeyID keyIDOwner;
     CBLSLazyPublicKey pubKeyOperator;
     CKeyID keyIDVoting;
-    MnNetInfo netInfo;
+    std::unique_ptr<MnNetInfo> netInfo{MakeNetInfo()};
     CScript scriptPayout;
     CScript scriptOperatorPayout;
 
@@ -69,7 +69,7 @@ public:
         keyIDOwner(proTx.keyIDOwner),
         pubKeyOperator(proTx.pubKeyOperator),
         keyIDVoting(proTx.keyIDVoting),
-        netInfo(proTx.netInfo),
+        netInfo(util::copy_unique(proTx.netInfo)),
         scriptPayout(proTx.scriptPayout),
         platformNodeID(proTx.platformNodeID),
         platformP2PPort(proTx.platformP2PPort),
@@ -96,7 +96,7 @@ public:
         READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), obj.nVersion == ProTxVersion::LegacyBLS));
         READWRITE(
             obj.keyIDVoting,
-            obj.netInfo,
+            NetInfoSerWrapper(const_cast<std::unique_ptr<MnNetInfo>&>(obj.netInfo)),
             obj.scriptPayout,
             obj.scriptOperatorPayout,
             obj.platformNodeID,
@@ -108,7 +108,7 @@ public:
     {
         nVersion = ProTxVersion::LegacyBLS;
         pubKeyOperator = CBLSLazyPublicKey();
-        netInfo.Clear();
+        netInfo = MakeNetInfo();
         scriptOperatorPayout = CScript();
         nRevocationReason = CProUpRevTx::REASON_NOT_SPECIFIED;
         platformNodeID = uint160();
@@ -215,8 +215,13 @@ public:
     CDeterministicMNStateDiff(const CDeterministicMNState& a, const CDeterministicMNState& b)
     {
         boost::hana::for_each(members, [&](auto&& member) {
+            using BaseType = std::decay_t<decltype(member)>;
             if (member.get(a) != member.get(b)) {
-                member.get(state) = member.get(b);
+                if constexpr (BaseType::mask == Field_netInfo) {
+                    member.get(state) = util::copy_unique(member.get(b));
+                } else {
+                    member.get(state) = member.get(b);
+                }
                 fields |= member.mask;
             }
         });
@@ -244,6 +249,10 @@ public:
                     SER_READ(obj, read_pubkey = true);
                     READWRITE(CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.state.pubKeyOperator), obj.state.nVersion == ProTxVersion::LegacyBLS));
                 }
+            } else if constexpr (BaseType::mask == Field_netInfo) {
+                if (obj.fields & member.mask) {
+                    READWRITE(NetInfoSerWrapper(const_cast<std::unique_ptr<MnNetInfo>&>(obj.state.netInfo)));
+                }
             } else {
                 if (obj.fields & member.mask) {
                     READWRITE(member.get(obj.state));
@@ -260,7 +269,10 @@ public:
     void ApplyToState(CDeterministicMNState& target) const
     {
         boost::hana::for_each(members, [&](auto&& member) {
-            if (fields & member.mask) {
+            using BaseType = std::decay_t<decltype(member)>;
+            if constexpr (BaseType::mask == Field_netInfo) {
+                member.get(target) = util::copy_unique(member.get(state));
+            } else {
                 member.get(target) = member.get(state);
             }
         });
