@@ -27,12 +27,22 @@ namespace ProTxVersion {
 enum : uint16_t {
     LegacyBLS = 1,
     BasicBLS  = 2,
+    ExtAddr   = 3,
 };
 
 /** Get highest permissible ProTx version based on flags set. */
-[[nodiscard]] constexpr uint16_t GetMax(const bool is_basic_scheme_active)
+[[nodiscard]] constexpr uint16_t GetMax(const bool is_basic_scheme_active, const bool is_extended_addr)
 {
-    return is_basic_scheme_active ? ProTxVersion::BasicBLS : ProTxVersion::LegacyBLS;
+    if (is_basic_scheme_active) {
+        if (is_extended_addr) {
+            // Requires *both* forks to be active to use extended addresses. is_basic_scheme_active could
+            // be set to false due to RPC specialization, so we must evaluate is_extended_addr *last* to
+            // avoid accidentally upgrading a legacy BLS node to basic BLS due to v23 activation.
+            return ProTxVersion::ExtAddr;
+        }
+        return ProTxVersion::BasicBLS;
+    }
+    return ProTxVersion::LegacyBLS;
 }
 
 /** Get highest permissible ProTx version based on deployment status
@@ -69,7 +79,7 @@ public:
         READWRITE(
                 obj.nVersion
         );
-        if (obj.nVersion == 0 || obj.nVersion > ProTxVersion::GetMax(/*is_basic_scheme_active=*/true)) {
+        if (obj.nVersion == 0 || obj.nVersion > ProTxVersion::GetMax(/*is_basic_scheme_active=*/true, /*is_extended_addr=*/true)) {
             // unknown version, bail out early
             return;
         }
@@ -78,7 +88,7 @@ public:
                 obj.nType,
                 obj.nMode,
                 obj.collateralOutpoint,
-                NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo)),
+                NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
                 obj.keyIDOwner,
                 CBLSLazyPublicKeyVersionWrapper(const_cast<CBLSLazyPublicKey&>(obj.pubKeyOperator), (obj.nVersion == ProTxVersion::LegacyBLS)),
                 obj.keyIDVoting,
@@ -129,7 +139,7 @@ public:
         READWRITE(
                 obj.nVersion
         );
-        if (obj.nVersion == 0 || obj.nVersion > ProTxVersion::GetMax(/*is_basic_scheme_active=*/true)) {
+        if (obj.nVersion == 0 || obj.nVersion > ProTxVersion::GetMax(/*is_basic_scheme_active=*/true, /*is_extended_addr=*/true)) {
             // unknown version, bail out early
             return;
         }
@@ -139,7 +149,7 @@ public:
         }
         READWRITE(
                 obj.proTxHash,
-                NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo)),
+                NetInfoSerWrapper(const_cast<std::shared_ptr<NetInfoInterface>&>(obj.netInfo), obj.nVersion >= ProTxVersion::ExtAddr),
                 obj.scriptOperatorPayout,
                 obj.inputsHash
         );
@@ -182,7 +192,7 @@ public:
         READWRITE(
                 obj.nVersion
         );
-        if (obj.nVersion == 0 || obj.nVersion > ProTxVersion::GetMax(/*is_basic_scheme_active=*/true)) {
+        if (obj.nVersion == 0 || obj.nVersion > ProTxVersion::GetMax(/*is_basic_scheme_active=*/true, /*is_extended_addr=*/true)) {
             // unknown version, bail out early
             return;
         }
@@ -233,7 +243,7 @@ public:
         READWRITE(
                 obj.nVersion
         );
-        if (obj.nVersion == 0 || obj.nVersion > ProTxVersion::GetMax(/*is_basic_scheme_active=*/true)) {
+        if (obj.nVersion == 0 || obj.nVersion > ProTxVersion::GetMax(/*is_basic_scheme_active=*/true, /*is_extended_addr=*/true)) {
             // unknown version, bail out early
             return;
         }

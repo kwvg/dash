@@ -18,7 +18,8 @@ namespace ProTxVersion {
 {
     return ProTxVersion::GetMax(
            is_basic_override ? *is_basic_override
-                             : DeploymentActiveAfter(pindexPrev, Params().GetConsensus(), Consensus::DEPLOYMENT_V19));
+                             : DeploymentActiveAfter(pindexPrev, Params().GetConsensus(), Consensus::DEPLOYMENT_V19),
+           DeploymentActiveAfter(pindexPrev, Params().GetConsensus(), Consensus::DEPLOYMENT_V23));
 }
 } // namespace ProTxVersion
 
@@ -45,6 +46,9 @@ bool CProRegTx::IsTriviallyValid(gsl::not_null<const CBlockIndex*> pindexPrev, T
     }
     if (!scriptPayout.IsPayToPublicKeyHash() && !scriptPayout.IsPayToScriptHash()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-payee");
+    }
+    if (netInfo->CanStorePlatform() != (nVersion == ProTxVersion::ExtAddr)) {
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-netinfo-version");
     }
     for (const NetInfoEntry& entry : netInfo->GetEntries()) {
         if (!entry.IsTriviallyValid()) {
@@ -119,6 +123,9 @@ bool CProUpServTx::IsTriviallyValid(gsl::not_null<const CBlockIndex*> pindexPrev
     }
     if (nVersion < ProTxVersion::BasicBLS && nType == MnType::Evo) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-evo-version");
+    }
+    if (netInfo->CanStorePlatform() != (nVersion == ProTxVersion::ExtAddr)) {
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-netinfo-version");
     }
     if (netInfo->IsEmpty()) {
         return state.Invalid(TxValidationResult::TX_BAD_SPECIAL, "bad-protx-netinfo-empty");
