@@ -7,14 +7,24 @@
 
 #include <chainparams.h>
 #include <consensus/validation.h>
+#include <deploymentstatus.h>
 #include <hash.h>
 #include <script/standard.h>
 #include <tinyformat.h>
 #include <util/underlying.h>
 
-bool CProRegTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const
+namespace ProTxVersion {
+[[nodiscard]] uint16_t GetMaxFromDeployment(gsl::not_null<const CBlockIndex*> pindexPrev, std::optional<bool> is_basic_override)
 {
-    if (nVersion == 0 || nVersion > GetMaxVersion(is_basic_scheme_active)) {
+    return ProTxVersion::GetMax(
+           is_basic_override ? *is_basic_override
+                             : DeploymentActiveAfter(pindexPrev, Params().GetConsensus(), Consensus::DEPLOYMENT_V19));
+}
+} // namespace ProTxVersion
+
+bool CProRegTx::IsTriviallyValid(gsl::not_null<const CBlockIndex*> pindexPrev, TxValidationState& state) const
+{
+    if (nVersion == 0 || nVersion > ProTxVersion::GetMaxFromDeployment(pindexPrev)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-version");
     }
     if (nVersion < ProTxVersion::BasicBLS && nType == MnType::Evo) {
@@ -102,9 +112,9 @@ std::string CProRegTx::ToString() const
                      platformHTTPPort, netInfo->ToString());
 }
 
-bool CProUpServTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const
+bool CProUpServTx::IsTriviallyValid(gsl::not_null<const CBlockIndex*> pindexPrev, TxValidationState& state) const
 {
-    if (nVersion == 0 || nVersion > GetMaxVersion(is_basic_scheme_active)) {
+    if (nVersion == 0 || nVersion > ProTxVersion::GetMaxFromDeployment(pindexPrev)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-version");
     }
     if (nVersion < ProTxVersion::BasicBLS && nType == MnType::Evo) {
@@ -137,9 +147,9 @@ std::string CProUpServTx::ToString() const
                      platformP2PPort, platformHTTPPort, netInfo->ToString());
 }
 
-bool CProUpRegTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const
+bool CProUpRegTx::IsTriviallyValid(gsl::not_null<const CBlockIndex*> pindexPrev, TxValidationState& state) const
 {
-    if (nVersion == 0 || nVersion > GetMaxVersion(is_basic_scheme_active)) {
+    if (nVersion == 0 || nVersion > ProTxVersion::GetMaxFromDeployment(pindexPrev)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-version");
     }
     if (nMode != 0) {
@@ -170,9 +180,9 @@ std::string CProUpRegTx::ToString() const
         nVersion, proTxHash.ToString(), pubKeyOperator.ToString(), EncodeDestination(PKHash(keyIDVoting)), payee);
 }
 
-bool CProUpRevTx::IsTriviallyValid(bool is_basic_scheme_active, TxValidationState& state) const
+bool CProUpRevTx::IsTriviallyValid(gsl::not_null<const CBlockIndex*> pindexPrev, TxValidationState& state) const
 {
-    if (nVersion == 0 || nVersion > GetMaxVersion(is_basic_scheme_active)) {
+    if (nVersion == 0 || nVersion > ProTxVersion::GetMaxFromDeployment(pindexPrev)) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "bad-protx-version");
     }
 
