@@ -18,7 +18,7 @@ Dash Core is a cryptocurrency project extending Bitcoin Core with advanced featu
 - `guix-build*` - Build system files
 - `releases` - Release artifacts
 - Vendored dependencies:
-  - `src/{dashbls,gsl,immer,leveldb,minisketch,secp256k1,univalue}`
+  - `src/{crc32c,dashbls,gsl,immer,leveldb,minisketch,secp256k1,univalue}`
   - `src/crypto/{ctaes,x11}`
 
 **Unless specifically prompted**, avoid:
@@ -36,22 +36,22 @@ Dash Core is a cryptocurrency project extending Bitcoin Core with advanced featu
 ./autogen.sh
 
 # Build dependencies first (recommended)
-cd depends
-make -j"$(( $(nproc) - 1 ))"
-cd ..
+# This will build for the current platform and show the output path
+make -C depends -j"$(( $(nproc) - 1 ))"
 
-# Configure with depends
-./configure --prefix=$(pwd)/depends/x86_64-pc-linux-gnu  # Adjust architecture as needed
+# Configure with depends (use the path shown in depends build output)
+# Example paths: depends/x86_64-pc-linux-gnu, depends/aarch64-apple-darwin24.3.0
+./configure --prefix=$(pwd)/depends/[platform-triplet]
 
 # Developer configuration (recommended)
-./configure --prefix=$(pwd)/depends/x86_64-pc-linux-gnu \
-            --enable-reduce-exports \
-            --enable-suppress-external-warnings \
-            --enable-werror \
-            --enable-debug \
+./configure --prefix=$(pwd)/depends/[platform-triplet] \
+            --disable-hardening \
             --enable-crash-hooks \
+            --enable-debug \
+            --enable-reduce-exports \
             --enable-stacktraces \
-            --disable-hardening
+            --enable-suppress-external-warnings \
+            --enable-werror
 
 # Other configurations
 ./configure --disable-wallet         # Build without wallet
@@ -162,6 +162,9 @@ Dash Core Components
   - `GovernanceStore`: Governance object storage
   - `SporkStore`: Spork state persistence
   - `NetFulfilledRequestStore`: Network request tracking
+- **CDBWrapper**: Bitcoin Core database wrapper extended for Dash-specific data
+  - `CDKGSessionManager`: LLMQ DKG session persistence (`llmq/dkgdb`)
+  - `CQuorumManager`: Quorum state storage (`llmq/quorumdb`)
 - **CEvoDb**: Specialized database for Evolution/deterministic masternode data
 - **CRecoveredSigsDb**: LLMQ recovered signature storage
 - **CInstantSendDb**: InstantSend lock persistence
@@ -192,7 +195,7 @@ Dash Core Components
 - **ValidationInterface**: Event distribution for block/transaction processing
 - **ChainstateManager**: Enhanced with Dash-specific validation
 - **Chainstate Initialization**: Separated into `src/node/chainstate.*`
-- **MessagesSerializer**: Special transaction serialization
+- **Special Transaction Serialization**: Payload serialization routines (`src/evo/specialtx.h`)
 - **BLS Integration**: Cryptographic foundation for advanced features
 
 ## Development Workflow
