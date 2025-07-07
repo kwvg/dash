@@ -4,7 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Dash Core is a cryptocurrency project extending Bitcoin Core with advanced features including masternodes, instant payments, privacy mixing, and decentralized governance. The codebase is primarily C++ using C++20 standard.
+Dash Core is a cryptocurrency project extending Bitcoin Core with advanced features including masternodes, instant payments, privacy mixing, and decentralized governance. The codebase is primarily C++ using C++20 standard (minimum compiler requirements: Clang 16 or GCC 11.1).
+
+## Directory Structure
+
+- **Core Code**: `src/` - C++20 implementation
+- **Unit Tests**: `src/test/`, `src/wallet/test/`, `src/qt/test/` - C++ tests
+- **Functional Tests**: `test/functional/` - Python tests (minimum version in `.python-version`)
+
+### Directories to Exclude
+
+**Under any circumstances**, do not make changes to:
+- `guix-build*` - Build system files
+- `releases` - Release artifacts
+- Vendored dependencies:
+  - `src/{dashbls,gsl,immer,leveldb,minisketch,secp256k1,univalue}`
+  - `src/crypto/{ctaes,x11}`
+
+**Unless specifically prompted**, avoid:
+- `.github` - GitHub workflows and configs
+- `depends` - Dependency build system
+- `ci` - Continuous integration
+- `contrib` - Contributed scripts
+- `doc` - Documentation
 
 ## Build Commands
 
@@ -13,27 +35,35 @@ Dash Core is a cryptocurrency project extending Bitcoin Core with advanced featu
 # Generate build system
 ./autogen.sh
 
-# Configure (common options)
-./configure                           # Basic configuration
-./configure --disable-wallet         # Build without wallet
-./configure --without-gui            # Build dashd only
-./configure --with-incompatible-bdb  # Use system Berkeley DB
+# Build dependencies first (recommended)
+cd depends
+make -j"$(( $(nproc) - 1 ))"
+cd ..
 
-# Build with parallel jobs
-make -j$(nproc)
+# Configure with depends
+./configure --prefix=$(pwd)/depends/x86_64-pc-linux-gnu  # Adjust architecture as needed
+
+# Developer configuration (recommended)
+./configure --prefix=$(pwd)/depends/x86_64-pc-linux-gnu \
+            --enable-reduce-exports \
+            --enable-suppress-external-warnings \
+            --enable-werror \
+            --enable-debug \
+            --enable-crash-hooks \
+            --enable-stacktraces \
+            --disable-hardening
+
+# Other configurations
+./configure --disable-wallet         # Build without wallet
+./configure --disable-bench --disable-fuzz-binary --disable-util-cli --disable-util-tx --disable-util-wallet --without-gui  # Build dashd and test_dash only
+
+# Build with parallel jobs (leaving one core free)
+make -j"$(( $(nproc) - 1 ))"
 
 # Memory-constrained systems
 ./configure CXXFLAGS="--param ggc-min-expand=1 --param ggc-min-heapsize=32768"
 ```
 
-### Development Environment Setup
-```bash
-# Fast setup (Ubuntu 24.04)
-./setup-dev-env-fast.sh
-
-# Full setup with all tools
-./setup-dev-env.sh
-```
 
 ## Testing Commands
 
@@ -84,11 +114,20 @@ test/lint/lint-circular-dependencies.py
 ### Core Extension Pattern
 Dash extends Bitcoin Core through composition rather than core modification, using a layered architecture:
 
-1. **Bitcoin Core Foundation**: Blockchain, consensus, networking
-2. **Special Transaction Framework**: Generic extension system for new transaction types
-3. **Masternode System**: Deterministic masternode lists and management
-4. **LLMQ System**: Distributed consensus for advanced features
-5. **Dash Services**: CoinJoin, governance, InstantSend, ChainLocks
+```
+Dash Core Components
+├── Bitcoin Core Foundation (Blockchain, consensus, networking)
+├── Masternodes (Infrastructure)
+│   ├── LLMQ (Quorum infrastructure)
+│   │   ├── InstantSend (Transaction locking)
+│   │   ├── ChainLocks (Block finality)
+│   │   ├── EHF Signals (Hard fork coordination)
+│   │   └── Platform/Evolution (Credit Pool, Asset Locks)
+│   ├── CoinJoin (Coin mixing)
+│   └── Governance Voting (Masternodes vote on proposals)
+├── Governance System (Proposal submission/management)
+└── Spork System (Feature control)
+```
 
 ### Key Architectural Components
 
@@ -117,6 +156,16 @@ Dash extends Bitcoin Core through composition rather than core modification, usi
 - **Efficient Updates**: Differential updates for masternode lists
 - **Credit Pool Management**: Platform integration support
 
+#### Dash-Specific Databases
+- **CFlatDB**: A Dash-specific flat file database format used for persistent storage
+  - `MasternodeMetaStore`: Masternode metadata persistence
+  - `GovernanceStore`: Governance object storage
+  - `SporkStore`: Spork state persistence
+  - `NetFulfilledRequestStore`: Network request tracking
+- **CEvoDb**: Specialized database for Evolution/deterministic masternode data
+- **CRecoveredSigsDb**: LLMQ recovered signature storage
+- **CInstantSendDb**: InstantSend lock persistence
+
 ### Integration Patterns
 
 #### Initialization Flow
@@ -139,8 +188,10 @@ Dash extends Bitcoin Core through composition rather than core modification, usi
 
 ### Critical Interfaces
 - **NodeContext**: Central dependency injection container
+- **LLMQContext**: LLMQ-specific context and state management
 - **ValidationInterface**: Event distribution for block/transaction processing
 - **ChainstateManager**: Enhanced with Dash-specific validation
+- **Chainstate Initialization**: Separated into `src/node/chainstate.*`
 - **MessagesSerializer**: Special transaction serialization
 - **BLS Integration**: Cryptographic foundation for advanced features
 
@@ -149,7 +200,7 @@ Dash extends Bitcoin Core through composition rather than core modification, usi
 ### Common Tasks
 ```bash
 # Clean build
-make clean && make distclean
+make clean
 
 # Run dashd with debug logging
 ./src/dashd -debug=all -printtoconsole
@@ -158,7 +209,7 @@ make clean && make distclean
 test/functional/test_runner.py --dashd=/path/to/dashd
 
 # Generate compile_commands.json for IDEs
-bear -- make -j$(nproc)
+bear -- make -j"$(( $(nproc) - 1 ))"
 ```
 
 ### Debugging
@@ -181,9 +232,11 @@ valgrind --leak-check=full ./src/dashd
 
 ## Important Notes
 
-- Use `make -j$(nproc)` for parallel builds to speed up compilation
+- Use `make -j"$(( $(nproc) - 1 ))"` for parallel builds (leaves one core free)
 - Always run linting before commits: `test/lint/all-lint.py`
 - For memory-constrained systems, use special CXXFLAGS during configure
 - Special transactions use payload extensions - see `src/evo/specialtx.h`
-- Masternode lists use immutable data structures for thread safety
+- Masternode lists use immutable data structures (Immer library) for thread safety
 - LLMQ quorums have different configurations for different purposes
+- Dash uses `unordered_lru_cache` for efficient caching with LRU eviction
+- The codebase extensively uses Dash-specific data structures for performance
