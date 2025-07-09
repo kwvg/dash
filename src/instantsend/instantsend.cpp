@@ -355,11 +355,27 @@ void CInstantSendManager::ProcessInstantSendLock(NodeId from, PeerManager& peerm
 {
     LogPrint(BCLog::INSTANTSEND, "CInstantSendManager::%s -- txid=%s, islock=%s: processing islock, peer=%d\n", __func__,
              islock->txid.ToString(), hash.ToString(), from);
+
     if (m_activeman) {
         m_activeman->ClearLockFromQueue(islock);
     }
+
     if (db.KnownInstantSendLock(hash)) {
         return;
+    }
+
+    const auto sameTxIsLock = db.GetInstantSendLockByTxid(islock->txid);
+    if (sameTxIsLock != nullptr) {
+        // can happen, nothing to do
+        return;
+    }
+
+    for (const auto& in : islock->inputs) {
+        const auto sameOutpointIsLock = db.GetInstantSendLockByInput(in);
+        if (sameOutpointIsLock != nullptr) {
+            LogPrintf("CInstantSendManager::%s -- txid=%s, islock=%s: conflicting outpoint in islock. input=%s, other islock=%s, peer=%d\n", __func__,
+                      islock->txid.ToString(), hash.ToString(), in.ToStringShort(), ::SerializeHash(*sameOutpointIsLock).ToString(), from);
+        }
     }
 
     uint256 hashBlock{};
@@ -375,19 +391,6 @@ void CInstantSendManager::ProcessInstantSendLock(NodeId from, PeerManager& peerm
             LogPrint(BCLog::INSTANTSEND, "CInstantSendManager::%s -- txlock=%s, islock=%s: dropping islock as it already got a ChainLock in block %s, peer=%d\n", __func__,
                      islock->txid.ToString(), hash.ToString(), hashBlock.ToString(), from);
             return;
-        }
-    }
-
-    const auto sameTxIsLock = db.GetInstantSendLockByTxid(islock->txid);
-    if (sameTxIsLock != nullptr) {
-        // can happen, nothing to do
-        return;
-    }
-    for (const auto& in : islock->inputs) {
-        const auto sameOutpointIsLock = db.GetInstantSendLockByInput(in);
-        if (sameOutpointIsLock != nullptr) {
-            LogPrintf("CInstantSendManager::%s -- txid=%s, islock=%s: conflicting outpoint in islock. input=%s, other islock=%s, peer=%d\n", __func__,
-                      islock->txid.ToString(), hash.ToString(), in.ToStringShort(), ::SerializeHash(*sameOutpointIsLock).ToString(), from);
         }
     }
 
