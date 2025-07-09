@@ -8,9 +8,20 @@ Dash Core is a cryptocurrency project extending Bitcoin Core with advanced featu
 
 ## Directory Structure
 
-- **Core Code**: `src/` - C++20 implementation
-- **Unit Tests**: `src/test/`, `src/wallet/test/`, `src/qt/test/` - C++ tests
-- **Functional Tests**: `test/functional/` - Python tests (minimum version in `.python-version`)
+- **Implementation** `src/` - C++20 codebase
+  - `src/bench/` - Performance benchmarks (uses `nanobench`)
+  - `src/fuzz/` - Fuzzing harnesses
+  - `src/index/` - Optional indexes
+  - `src/interfaces/` - Interfaces for codebase isolation and inter-process communication
+  - `src/qt/` - Implementation of Dash Qt, the GUI (uses Qt 5)
+  - `src/rpc/` - JSON-RPC server and endpoints
+  - `src/util/` - Utility functions
+  - `src/wallet/` - Wallet implementation (uses Berkeley DB and SQLite)
+  - `src/zmq/` - ZeroMQ notification support for real-time event publishing
+- **Unit Tests**
+  - `src/test/`, `src/wallet/test/` - C++20 unit tests (uses `Boost::Test`)
+  - `src/qt/test/` - C++20 unit tests for GUI implementation (uses Qt 5)
+- **Functional Tests**: `test/functional/` - Python tests (minimum version in `.python-version`) dependent on `dashd` and `dash-node`
 
 ### Directories to Exclude
 
