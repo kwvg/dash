@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Dash Core is a cryptocurrency project extending Bitcoin Core with advanced features including masternodes, instant payments, privacy mixing, and decentralized governance. The codebase is primarily C++ using C++20 standard (minimum compiler requirements: Clang 16 or GCC 11.1).
+Dash Core is a cryptocurrency project extending Bitcoin Core with advanced features including masternodes, instant payments, privacy mixing, and decentralized governance. The codebase is primarily C++20 (requiring at least Clang 16 or GCC 11.1).
 
 ## Directory Structure
 
@@ -38,13 +38,14 @@ Dash Core is a cryptocurrency project extending Bitcoin Core with advanced featu
 # Build dependencies first (recommended)
 # This will build for the current platform and show the output path
 make -C depends -j"$(( $(nproc) - 1 ))"
+# Use the path shown in depends build output to set target HOST
+export HOST=x86_64-pc-linux-gnu # Example: depends/x86_64-pc-linux-gnu
 
-# Configure with depends (use the path shown in depends build output)
-# Example paths: depends/x86_64-pc-linux-gnu, depends/aarch64-apple-darwin24.3.0
-./configure --prefix=$(pwd)/depends/[platform-triplet]
+# Configure with depends
+./configure --prefix=$(pwd)/depends/${HOST}
 
 # Developer configuration (recommended)
-./configure --prefix=$(pwd)/depends/[platform-triplet] \
+./configure --prefix=$(pwd)/depends/${HOST} \
             --disable-hardening \
             --enable-crash-hooks \
             --enable-debug \
@@ -72,11 +73,11 @@ make -j"$(( $(nproc) - 1 ))"
 # Run all unit tests
 make check
 
-# Run specific test
-src/test/test_dash --run_test=getarg_tests
+# Run specific test (e.g. getarg_tests)
+./src/test/test_dash --run_test=getarg_tests
 
 # Debug unit tests
-gdb src/test/test_dash
+gdb ./src/test/test_dash
 ```
 
 ### Functional Tests
@@ -151,23 +152,23 @@ Dash Core Components
 - **Treasury System**: Automated payouts based on governance votes
 - **Voting Validation**: On-chain proposal voting and tallying
 
-#### Evolution Database (`src/evo/evodb.h`)
+#### Evolution Database (`src/evo/evodb`)
 - **Specialized Storage**: Masternode snapshots, quorum state, governance objects
 - **Efficient Updates**: Differential updates for masternode lists
 - **Credit Pool Management**: Platform integration support
 
 #### Dash-Specific Databases
 - **CFlatDB**: A Dash-specific flat file database format used for persistent storage
-  - `MasternodeMetaStore`: Masternode metadata persistence
-  - `GovernanceStore`: Governance object storage
-  - `SporkStore`: Spork state persistence
-  - `NetFulfilledRequestStore`: Network request tracking
+  - `MasternodeMetaStore`: Masternode metadata persistence (`mncache.dat`)
+  - `GovernanceStore`: Governance object storage (`governance.dat`)
+  - `SporkStore`: Spork state persistence (`sporks.dat`)
+  - `NetFulfilledRequestStore`: Network request tracking (`netfulfilled.dat`)
 - **CDBWrapper**: Bitcoin Core database wrapper extended for Dash-specific data
   - `CDKGSessionManager`: LLMQ DKG session persistence (`llmq/dkgdb`)
+  - `CEvoDb`: Specialized database for Evolution/deterministic masternode data (`evodb`)
+  - `CInstantSendDb`: InstantSend lock persistence (`llmq/isdb`)
   - `CQuorumManager`: Quorum state storage (`llmq/quorumdb`)
-- **CEvoDb**: Specialized database for Evolution/deterministic masternode data
-- **CRecoveredSigsDb**: LLMQ recovered signature storage
-- **CInstantSendDb**: InstantSend lock persistence
+  - `CRecoveredSigsDb`: LLMQ recovered signature storage (`llmq/recsigdb`)
 
 ### Integration Patterns
 
