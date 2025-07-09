@@ -19,6 +19,7 @@
 #include <atomic>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 
 class CBlockIndex;
 class CChainState;
@@ -99,6 +100,10 @@ public:
 private:
     PeerMsgRet ProcessMessageInstantSendLock(const CNode& pfrom, PeerManager& peerman, const CInstantSendLockPtr& islock);
     bool ProcessPendingInstantSendLocks(PeerManager& peerman)
+        EXCLUSIVE_LOCKS_REQUIRED(!cs_nonLocked, !cs_pendingLocks, !cs_pendingRetry);
+
+    std::variant<std::monostate, const CTransactionRef, const CInstantSendLockPtr> ProcessInstantSendLock(
+        const uint256& hash, const CInstantSendLockPtr& islock)
         EXCLUSIVE_LOCKS_REQUIRED(!cs_nonLocked, !cs_pendingLocks, !cs_pendingRetry);
 
     std::unordered_set<uint256, StaticSaltedHasher> ProcessPendingInstantSendLocks(

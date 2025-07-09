@@ -350,31 +350,28 @@ std::unordered_set<uint256, StaticSaltedHasher> CInstantSendManager::ProcessPend
     return badISLocks;
 }
 
-void CInstantSendManager::ProcessInstantSendLock(NodeId from, PeerManager& peerman, const uint256& hash,
-                                                 const CInstantSendLockPtr& islock)
+std::variant<std::monostate, const CTransactionRef, const CInstantSendLockPtr>
+    CInstantSendManager::ProcessInstantSendLock(const uint256& hash, const CInstantSendLockPtr& islock)
 {
-    LogPrint(BCLog::INSTANTSEND, "CInstantSendManager::%s -- txid=%s, islock=%s: processing islock, peer=%d\n", __func__,
-             islock->txid.ToString(), hash.ToString(), from);
-
     if (m_activeman) {
         m_activeman->ClearLockFromQueue(islock);
     }
 
     if (db.KnownInstantSendLock(hash)) {
-        return;
+        return std::monostate{};
     }
 
     const auto sameTxIsLock = db.GetInstantSendLockByTxid(islock->txid);
     if (sameTxIsLock != nullptr) {
         // can happen, nothing to do
-        return;
+        return std::monostate{};
     }
 
     for (const auto& in : islock->inputs) {
         const auto sameOutpointIsLock = db.GetInstantSendLockByInput(in);
         if (sameOutpointIsLock != nullptr) {
-            LogPrintf("CInstantSendManager::%s -- txid=%s, islock=%s: conflicting outpoint in islock. input=%s, other islock=%s, peer=%d\n", __func__,
-                      islock->txid.ToString(), hash.ToString(), in.ToStringShort(), ::SerializeHash(*sameOutpointIsLock).ToString(), from);
+            LogPrintf("CInstantSendManager::%s -- txid=%s, islock=%s: conflicting outpoint in islock. input=%s, other islock=%s\n", __func__,
+                      islock->txid.ToString(), hash.ToString(), in.ToStringShort(), ::SerializeHash(*sameOutpointIsLock).ToString());
         }
     }
 
@@ -389,9 +386,9 @@ void CInstantSendManager::ProcessInstantSendLock(NodeId from, PeerManager& peerm
         // Let's see if the TX that was locked by this islock is already mined in a ChainLocked block. If yes,
         // we can simply ignore the islock, as the ChainLock implies locking of all TXs in that chain
         if (pindexMined != nullptr && clhandler.HasChainLock(pindexMined->nHeight, pindexMined->GetBlockHash())) {
-            LogPrint(BCLog::INSTANTSEND, "CInstantSendManager::%s -- txlock=%s, islock=%s: dropping islock as it already got a ChainLock in block %s, peer=%d\n", __func__,
-                     islock->txid.ToString(), hash.ToString(), hashBlock.ToString(), from);
-            return;
+            LogPrint(BCLog::INSTANTSEND, "CInstantSendManager::%s -- txlock=%s, islock=%s: dropping islock as it already got a ChainLock in block %s\n", __func__,
+                     islock->txid.ToString(), hash.ToString(), hashBlock.ToString());
+            return std::monostate{};
         }
     }
 
@@ -403,7 +400,8 @@ void CInstantSendManager::ProcessInstantSendLock(NodeId from, PeerManager& peerm
     } else {
         // put it in a separate pending map and try again later
         LOCK(cs_pendingLocks);
-        pendingNoTxInstantSendLocks.try_emplace(hash, std::make_pair(from, islock));
+        // TODO: THIS IS BAD! WE NEED FROM TO KNOW WHICH NODE TO BAN IF THEY MISBEHAVED!
+        pendingNoTxInstantSendLocks.try_emplace(hash, std::make_pair(/*from=*/-1, islock));
     }
 
     // This will also add children TXs to pendingRetryTxs
@@ -411,16 +409,6 @@ void CInstantSendManager::ProcessInstantSendLock(NodeId from, PeerManager& peerm
     // We don't need the recovered sigs for the inputs anymore. This prevents unnecessary propagation of these sigs.
     // We only need the ISLOCK from now on to detect conflicts
     TruncateRecoveredSigsForInputs(*islock);
-
-    CInv inv(MSG_ISDLOCK, hash);
-    if (tx_found) {
-        peerman.RelayInvFiltered(inv, *tx, ISDLOCK_PROTO_VERSION);
-    } else {
-        // we don't have the TX yet, so we only filter based on txid. Later when that TX arrives, we will re-announce
-        // with the TX taken into account.
-        peerman.RelayInvFiltered(inv, islock->txid, ISDLOCK_PROTO_VERSION);
-        peerman.AskPeersForTransaction(islock->txid, /*is_masternode=*/m_activeman != nullptr);
-    }
 
     ResolveBlockConflicts(hash, *islock);
 
@@ -432,6 +420,34 @@ void CInstantSendManager::ProcessInstantSendLock(NodeId from, PeerManager& peerm
         // bump mempool counter to make sure newly locked txes are picked up by getblocktemplate
         mempool.AddTransactionsUpdated(1);
     }
+
+    // Handle transaction if we have it, request it using the islock if we don't
+    if (tx_found) {
+        return tx;
+    }
+    return islock;
+}
+
+void CInstantSendManager::ProcessInstantSendLock(NodeId from, PeerManager& peerman, const uint256& hash,
+                                                 const CInstantSendLockPtr& islock)
+{
+    LogPrint(BCLog::INSTANTSEND, "CInstantSendManager::%s -- txid=%s, islock=%s: processing islock, peer=%d\n", __func__,
+             islock->txid.ToString(), hash.ToString(), from);
+
+    std::visit(
+        [&](auto&& val) -> void {
+            CInv inv(MSG_ISDLOCK, hash);
+            if constexpr (std::is_same_v<std::decay_t<decltype(val)>, CTransactionRef>) {
+                peerman.RelayInvFiltered(inv, *val, ISDLOCK_PROTO_VERSION);
+            } else if constexpr (std::is_same_v<std::decay_t<decltype(val)>, CInstantSendLockPtr>) {
+                // We don't have the TX yet, so we only filter based on txid. Later when that TX arrives,
+                // we will re-announce with the TX taken into account.
+                peerman.RelayInvFiltered(inv, val->txid, ISDLOCK_PROTO_VERSION);
+                peerman.AskPeersForTransaction(val->txid, /*is_masternode=*/m_activeman != nullptr);
+            }
+            return;
+        },
+        ProcessInstantSendLock(hash, islock));
 }
 
 void CInstantSendManager::TransactionAddedToMempool(const CTransactionRef& tx)
