@@ -381,6 +381,7 @@ void CInstantSendManager::ProcessInstantSendLock(NodeId from, PeerManager& peerm
     uint256 hashBlock{};
     const auto tx = GetTransaction(nullptr, &mempool, islock->txid, Params().GetConsensus(), hashBlock);
     const CBlockIndex* pindexMined{nullptr};
+    const bool tx_found{tx != nullptr};
     // we ignore failure here as we must be able to propagate the lock even if we don't have the TX locally
     if (tx && !hashBlock.IsNull()) {
         pindexMined = WITH_LOCK(::cs_main, return m_chainstate.m_blockman.LookupBlockIndex(hashBlock));
@@ -394,15 +395,15 @@ void CInstantSendManager::ProcessInstantSendLock(NodeId from, PeerManager& peerm
         }
     }
 
-    if (tx == nullptr) {
-        // put it in a separate pending map and try again later
-        LOCK(cs_pendingLocks);
-        pendingNoTxInstantSendLocks.try_emplace(hash, std::make_pair(from, islock));
-    } else {
+    if (tx_found) {
         db.WriteNewInstantSendLock(hash, *islock);
         if (pindexMined) {
             db.WriteInstantSendLockMined(hash, pindexMined->nHeight);
         }
+    } else {
+        // put it in a separate pending map and try again later
+        LOCK(cs_pendingLocks);
+        pendingNoTxInstantSendLocks.try_emplace(hash, std::make_pair(from, islock));
     }
 
     // This will also add children TXs to pendingRetryTxs
@@ -412,25 +413,24 @@ void CInstantSendManager::ProcessInstantSendLock(NodeId from, PeerManager& peerm
     TruncateRecoveredSigsForInputs(*islock);
 
     CInv inv(MSG_ISDLOCK, hash);
-    if (tx != nullptr) {
+    if (tx_found) {
         peerman.RelayInvFiltered(inv, *tx, ISDLOCK_PROTO_VERSION);
     } else {
         // we don't have the TX yet, so we only filter based on txid. Later when that TX arrives, we will re-announce
         // with the TX taken into account.
         peerman.RelayInvFiltered(inv, islock->txid, ISDLOCK_PROTO_VERSION);
+        peerman.AskPeersForTransaction(islock->txid, /*is_masternode=*/m_activeman != nullptr);
     }
 
     ResolveBlockConflicts(hash, *islock);
 
-    if (tx != nullptr) {
+    if (tx_found) {
         RemoveMempoolConflictsForLock(hash, *islock);
         LogPrint(BCLog::INSTANTSEND, "CInstantSendManager::%s -- notify about lock %s for tx %s\n", __func__,
                 hash.ToString(), tx->GetHash().ToString());
         GetMainSignals().NotifyTransactionLock(tx, islock);
         // bump mempool counter to make sure newly locked txes are picked up by getblocktemplate
         mempool.AddTransactionsUpdated(1);
-    } else {
-        peerman.AskPeersForTransaction(islock->txid, /*is_masternode=*/m_activeman != nullptr);
     }
 }
 
