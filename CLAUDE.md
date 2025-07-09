@@ -1,10 +1,9 @@
-# CLAUDE.md
+# Dash Core Development Guide
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Overview
 
-## Project Overview
-
-Dash Core is a cryptocurrency project extending Bitcoin Core with advanced features including masternodes, instant payments, privacy mixing, and decentralized governance. The codebase is primarily C++20 (requiring at least Clang 16 or GCC 11.1).
+Dash Core is the reference implementation for Dash, a cryptocurrency. It builds on top of Bitcoin Core, a codebase that
+is primarily written in C++20 (requiring at least Clang 16 or GCC 11.1). Dash Core uses the GNU Autotools build system.
 
 ## Directory Structure
 
@@ -46,8 +45,7 @@ Dash Core is a cryptocurrency project extending Bitcoin Core with advanced featu
 # Generate build system
 ./autogen.sh
 
-# Build dependencies first (recommended)
-# This will build for the current platform and show the output path
+# Build dependencies for the current platform
 make -C depends -j"$(( $(nproc) - 1 ))"
 # Use the path shown in depends build output to set target HOST
 export HOST=x86_64-pc-linux-gnu # Example: depends/x86_64-pc-linux-gnu
@@ -67,7 +65,12 @@ export HOST=x86_64-pc-linux-gnu # Example: depends/x86_64-pc-linux-gnu
 
 # Other configurations
 ./configure --disable-wallet         # Build without wallet
-./configure --disable-bench --disable-fuzz-binary --disable-util-cli --disable-util-tx --disable-util-wallet --without-gui  # Build dashd and test_dash only
+./configure --disable-bench \
+            --disable-fuzz-binary \
+            --disable-util-cli \
+            --disable-util-tx \
+            --disable-util-wallet \
+            --without-gui            # Build dashd and test_dash only
 
 # Build with parallel jobs (leaving one core free)
 make -j"$(( $(nproc) - 1 ))"
@@ -75,7 +78,6 @@ make -j"$(( $(nproc) - 1 ))"
 # Memory-constrained systems
 ./configure CXXFLAGS="--param ggc-min-expand=1 --param ggc-min-heapsize=32768"
 ```
-
 
 ## Testing Commands
 
@@ -123,8 +125,7 @@ test/lint/lint-circular-dependencies.py
 
 ## High-Level Architecture
 
-### Core Extension Pattern
-Dash extends Bitcoin Core through composition rather than core modification, using a layered architecture:
+Dash Core extends Bitcoin Core through composition, using a layered architecture:
 
 ```
 Dash Core Components
@@ -143,7 +144,7 @@ Dash Core Components
 
 ### Key Architectural Components
 
-#### Masternode System (`src/masternode/`, `src/evo/`)
+#### Masternodes (`src/masternode/`, `src/evo/`)
 - **Deterministic Masternode Lists**: Consensus-critical registry using immutable data structures
 - **Active Masternode Manager**: Local masternode operations and BLS key handling
 - **Special Transactions**: ProRegTx, ProUpServTx, ProUpRegTx, ProUpRevTx for masternode lifecycle
@@ -155,13 +156,13 @@ Dash Core Components
 
 #### CoinJoin Privacy (`src/coinjoin/`)
 - **Mixing Architecture**: Masternode-coordinated mixing sessions
-- **Denomination System**: Uniform outputs for privacy
+- **Denomination**: Uniform outputs for privacy
 - **Session Management**: Multi-party transaction construction
 
-#### Decentralized Governance (`src/governance/`)
+#### Governance (`src/governance/`)
 - **Governance Objects**: Proposals, triggers, superblock management
-- **Treasury System**: Automated payouts based on governance votes
-- **Voting Validation**: On-chain proposal voting and tallying
+- **Treasury**: Automated payouts based on governance votes
+- **Voting**: On-chain proposal voting and tallying
 
 #### Evolution Database (`src/evo/evodb`)
 - **Specialized Storage**: Masternode snapshots, quorum state, governance objects
@@ -169,6 +170,7 @@ Dash Core Components
 - **Credit Pool Management**: Platform integration support
 
 #### Dash-Specific Databases
+
 - **CFlatDB**: A Dash-specific flat file database format used for persistent storage
   - `MasternodeMetaStore`: Masternode metadata persistence (`mncache.dat`)
   - `GovernanceStore`: Governance object storage (`governance.dat`)
