@@ -216,6 +216,11 @@ class NetInfoTest(BitcoinTestFramework):
         self.test_uniqueness()
 
     def test_validation_common(self):
+        # Using mainnet P2P port gets refused
+        self.node_evo.register_mn(self, False, f"127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}",
+                                  DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
+                                  -8, f"Error setting coreP2PAddrs[0] to '127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}' (invalid port)")
+
         # Arrays of addresses with invalid inputs get refused
         self.node_evo.register_mn(self, False, [[f"127.0.0.1:{self.node_evo.mn.nodePort}"]],
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
@@ -251,11 +256,6 @@ class NetInfoTest(BitcoinTestFramework):
                                     DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP)])[0]['allowed']
 
     def test_validation_legacy(self):
-        # Using mainnet P2P port gets refused
-        self.node_evo.register_mn(self, False, f"127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}",
-                                  DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
-                                  -8, f"Error setting coreP2PAddrs[0] to '127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}' (invalid port)")
-
         # Arrays of addresses are recognized by coreP2PAddrs (but get refused for too many entries)
         self.node_evo.register_mn(self, False, [f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.2:{self.node_evo.mn.nodePort}"],
                                   DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP,
@@ -304,11 +304,6 @@ class NetInfoTest(BitcoinTestFramework):
             self.node_evo.register_mn(self, False, "127.0.0.1", DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP)])[0]['allowed']
 
     def test_validation_extended(self):
-        # Using mainnet P2P port gets accepted
-        assert self.node_evo.node.testmempoolaccept([
-            self.node_evo.register_mn(self, False, f"127.0.0.1:{DEFAULT_PORT_MAINNET_CORE_P2P}",
-                                      DEFAULT_PORT_PLATFORM_P2P, DEFAULT_PORT_PLATFORM_HTTP)])[0]['allowed']
-
         # Arrays of addresses are recognized by address fields and are accepted
         assert self.node_evo.node.testmempoolaccept([
             self.node_evo.register_mn(self, False, [f"127.0.0.1:{self.node_evo.mn.nodePort}", f"127.0.0.2:{self.node_evo.mn.nodePort}"],

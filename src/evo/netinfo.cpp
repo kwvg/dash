@@ -61,13 +61,18 @@ bool MatchSuffix(const std::string& str, const T1& list)
     return false;
 }
 
-bool IsAllowedPlatformHTTPPort(uint16_t port)
+uint16_t GetMainnetPurposePort(const uint8_t purpose)
 {
-    switch (port) {
-    case 443:
-        return true;
-    }
-    return false;
+    assert(IsValidPurpose(purpose));
+    switch (purpose) {
+    case Purpose::CORE_P2P:
+        return MainParams().GetDefaultPort();
+    case Purpose::PLATFORM_P2P:
+        return MainParams().GetDefaultPlatformP2PPort();
+    case Purpose::PLATFORM_HTTPS:
+        return MainParams().GetDefaultPlatformHTTPPort();
+    } // no default case, so the compiler can warn about missing cases
+    assert(false);
 }
 } // anonymous namespace
 
@@ -291,10 +296,8 @@ NetInfoStatus MnNetInfo::ValidateService(const CService& service)
     if (Params().RequireRoutableExternalIP() && !service.IsRoutable()) {
         return NetInfoStatus::NotRoutable;
     }
-
-    if (IsNodeOnMainnet() != (service.GetPort() == MainParams().GetDefaultPort())) {
-        // Must use mainnet port on mainnet.
-        // Must NOT use mainnet port on other networks.
+    if (IsNodeOnMainnet() != (service.GetPort() == GetMainnetPurposePort(Purpose::CORE_P2P))) {
+        // Must use mainnet port on mainnet and any other port for other networks
         return NetInfoStatus::BadPort;
     }
 
@@ -437,7 +440,7 @@ NetInfoStatus ExtNetInfo::ProcessCandidate(const uint8_t purpose, const NetInfoE
     return NetInfoStatus::Success;
 }
 
-NetInfoStatus ExtNetInfo::ValidateService(const CService& service, bool is_primary)
+NetInfoStatus ExtNetInfo::ValidateService(const CService& service, const uint8_t purpose, bool is_primary)
 {
     if (!service.IsValid()) {
         return NetInfoStatus::BadAddress;
@@ -455,7 +458,8 @@ NetInfoStatus ExtNetInfo::ValidateService(const CService& service, bool is_prima
             return NetInfoStatus::BadPort;
         }
     } else {
-        if (service_port == 0 || IsBadPort(service_port)) {
+        // Mainnet ports defined for a purpose are excluded from the bad ports list
+        if (service_port == 0 || (IsBadPort(service_port) && service_port != GetMainnetPurposePort(purpose))) {
             return NetInfoStatus::BadPort;
         }
     }
@@ -463,18 +467,29 @@ NetInfoStatus ExtNetInfo::ValidateService(const CService& service, bool is_prima
         if (!service.IsIPv4()) {
             return NetInfoStatus::BadType;
         }
+        if (IsNodeOnMainnet()) {
+            if (service_port != GetMainnetPurposePort(purpose)) {
+                // On mainnet, the primary address must use the fixed port assigned to the purpose
+                return NetInfoStatus::BadPort;
+            }
+        } else {
+            if (service_port == GetMainnetPurposePort(Purpose::CORE_P2P)) {
+                // The mainnet CORE_P2P port may not be used for any purpose outside of mainnet
+                return NetInfoStatus::BadPort;
+            }
+        }
     }
 
     return NetInfoStatus::Success;
 }
 
-NetInfoStatus ExtNetInfo::ValidateDomainPort(const DomainPort& domain)
+NetInfoStatus ExtNetInfo::ValidateDomainPort(const DomainPort& domain, const uint8_t purpose)
 {
     if (!domain.IsValid()) {
         return NetInfoStatus::BadInput;
     }
     const uint16_t domain_port{domain.GetPort()};
-    if (domain_port == 0 || (IsBadPort(domain_port) && !IsAllowedPlatformHTTPPort(domain_port))) {
+    if (domain_port == 0 || (IsBadPort(domain_port) && domain_port != GetMainnetPurposePort(purpose))) {
         return NetInfoStatus::BadPort;
     }
     const std::string& addr{domain.ToStringAddr()};
@@ -519,7 +534,7 @@ NetInfoStatus ExtNetInfo::AddEntry(const uint8_t purpose, const std::string& inp
             CNetAddr netaddr;
             if (netaddr.SetSpecial(addr)) {
                 const CService service{netaddr, port};
-                const auto ret{ValidateService(service, is_primary)};
+                const auto ret{ValidateService(service, purpose, is_primary)};
                 if (ret == NetInfoStatus::Success) {
                     return ProcessCandidate(purpose, NetInfoEntry{service});
                 }
@@ -527,7 +542,7 @@ NetInfoStatus ExtNetInfo::AddEntry(const uint8_t purpose, const std::string& inp
             }
         } else if (DomainPort domain; domain.Set(addr, port) == DomainPort::Status::Success) {
             // Regular domain
-            const auto ret{ValidateDomainPort(domain)};
+            const auto ret{ValidateDomainPort(domain, purpose)};
             if (ret == NetInfoStatus::Success) {
                 return ProcessCandidate(purpose, NetInfoEntry{domain});
             }
@@ -539,7 +554,7 @@ NetInfoStatus ExtNetInfo::AddEntry(const uint8_t purpose, const std::string& inp
     // IP:port safe, try to parse it as IP:port
     if (auto service_opt{Lookup(addr, /*portDefault=*/port, /*fAllowLookup=*/false)}) {
         const auto service{MaybeFlipIPv6toCJDNS(*service_opt)};
-        const auto ret{ValidateService(service, is_primary)};
+        const auto ret{ValidateService(service, purpose, is_primary)};
         if (ret == NetInfoStatus::Success) {
             return ProcessCandidate(purpose, NetInfoEntry{service});
         }
@@ -610,7 +625,7 @@ NetInfoStatus ExtNetInfo::Validate() const
                 return NetInfoStatus::Malformed;
             }
             if (const auto& service_opt{entry.GetAddrPort()}) {
-                if (auto ret{ValidateService(*service_opt, is_primary)}; ret != NetInfoStatus::Success) {
+                if (auto ret{ValidateService(*service_opt, purpose, is_primary)}; ret != NetInfoStatus::Success) {
                     // Stores CService underneath but doesn't pass validation rules
                     return ret;
                 }
@@ -619,7 +634,7 @@ NetInfoStatus ExtNetInfo::Validate() const
                     // Domains only allowed for Platform HTTPS API
                     return NetInfoStatus::BadInput;
                 }
-                if (auto ret{ValidateDomainPort(*domain_opt)}; ret != NetInfoStatus::Success) {
+                if (auto ret{ValidateDomainPort(*domain_opt, purpose)}; ret != NetInfoStatus::Success) {
                     // Stores DomainPort underneath but doesn't pass validation rules
                     return ret;
                 }

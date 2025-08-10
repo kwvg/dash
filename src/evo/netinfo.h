@@ -377,8 +377,8 @@ private:
     bool IsAddrDuplicate(const NetInfoEntry& candidate, const NetInfoList& entries) const;
 
     NetInfoStatus ProcessCandidate(const uint8_t purpose, const NetInfoEntry& candidate);
-    static NetInfoStatus ValidateService(const CService& service, bool is_primary);
-    static NetInfoStatus ValidateDomainPort(const DomainPort& domain);
+    static NetInfoStatus ValidateService(const CService& service, const uint8_t purpose, bool is_primary);
+    static NetInfoStatus ValidateDomainPort(const DomainPort& domain, const uint8_t purpose);
 
 private:
     uint8_t m_version{CURRENT_VERSION};
