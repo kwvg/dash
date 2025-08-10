@@ -437,7 +437,7 @@ NetInfoStatus ExtNetInfo::ProcessCandidate(const uint8_t purpose, const NetInfoE
     return NetInfoStatus::Success;
 }
 
-NetInfoStatus ExtNetInfo::ValidateService(const CService& service)
+NetInfoStatus ExtNetInfo::ValidateService(const CService& service, bool is_primary)
 {
     if (!service.IsValid()) {
         return NetInfoStatus::BadAddress;
@@ -457,6 +457,11 @@ NetInfoStatus ExtNetInfo::ValidateService(const CService& service)
     } else {
         if (service_port == 0 || IsBadPort(service_port)) {
             return NetInfoStatus::BadPort;
+        }
+    }
+    if (is_primary) {
+        if (!service.IsIPv4()) {
+            return NetInfoStatus::BadType;
         }
     }
 
@@ -489,6 +494,9 @@ NetInfoStatus ExtNetInfo::AddEntry(const uint8_t purpose, const std::string& inp
         return NetInfoStatus::MaxLimit;
     }
 
+    // Primary addresses are subject to stricter validation rules
+    const bool is_primary{m_data.find(purpose) == m_data.end()};
+
     // We don't allow assuming ports, so we set the default value to 0 so that if no port is specified
     // it uses a fallback value of 0, which will return a NetInfoStatus::BadPort
     std::string addr;
@@ -502,12 +510,16 @@ NetInfoStatus ExtNetInfo::AddEntry(const uint8_t purpose, const std::string& inp
         }
 
         // Not IP:port safe but domain safe
+        if (is_primary) {
+            // Domains are not allowed as primary addresses
+            return NetInfoStatus::BadType;
+        }
         if (MatchSuffix(addr, TLDS_PRIVACY)) {
             // Special domain, try storing it as CService
             CNetAddr netaddr;
             if (netaddr.SetSpecial(addr)) {
                 const CService service{netaddr, port};
-                const auto ret{ValidateService(service)};
+                const auto ret{ValidateService(service, is_primary)};
                 if (ret == NetInfoStatus::Success) {
                     return ProcessCandidate(purpose, NetInfoEntry{service});
                 }
@@ -527,7 +539,7 @@ NetInfoStatus ExtNetInfo::AddEntry(const uint8_t purpose, const std::string& inp
     // IP:port safe, try to parse it as IP:port
     if (auto service_opt{Lookup(addr, /*portDefault=*/port, /*fAllowLookup=*/false)}) {
         const auto service{MaybeFlipIPv6toCJDNS(*service_opt)};
-        const auto ret{ValidateService(service)};
+        const auto ret{ValidateService(service, is_primary)};
         if (ret == NetInfoStatus::Success) {
             return ProcessCandidate(purpose, NetInfoEntry{service});
         }
@@ -590,13 +602,15 @@ NetInfoStatus ExtNetInfo::Validate() const
         if (HasAddrDuplicates(entries)) {
             return NetInfoStatus::Duplicate;
         }
-        for (const auto& entry : entries) {
+        for (size_t idx{0}; idx < entries.size(); idx++) {
+            const auto& entry{entries[idx]};
+            const bool is_primary{idx == 0};
             if (!entry.IsTriviallyValid()) {
                 // Trivially invalid NetInfoEntry, no point checking against consensus rules
                 return NetInfoStatus::Malformed;
             }
             if (const auto& service_opt{entry.GetAddrPort()}) {
-                if (auto ret{ValidateService(*service_opt)}; ret != NetInfoStatus::Success) {
+                if (auto ret{ValidateService(*service_opt, is_primary)}; ret != NetInfoStatus::Success) {
                     // Stores CService underneath but doesn't pass validation rules
                     return ret;
                 }

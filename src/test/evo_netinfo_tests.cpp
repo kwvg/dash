@@ -35,18 +35,11 @@ static const TestVectors addr_vals_main{
     // Port greater than uint16_t max
     {{Purpose::CORE_P2P, "1.1.1.1:99999"}, NetInfoStatus::BadInput, NetInfoStatus::BadInput},
     // - Non-IPv4 addresses are prohibited in MnNetInfo
-    // - Any valid BIP155 address is allowed in ExtNetInfo
-    {{Purpose::CORE_P2P, "[2606:4700:4700::1111]:9999"}, NetInfoStatus::BadInput, NetInfoStatus::Success},
-    // - MnNetInfo doesn't allow storing anything except a Core P2P address
-    // - Privacy network domains are allowed in ExtNetInfo but internet domains are not
-    {{Purpose::CORE_P2P, "example.com:9999"}, NetInfoStatus::BadInput, NetInfoStatus::BadInput},
-    {{Purpose::CORE_P2P, "pg6mmjiyjmcrsslvykfwnntlaru7p5svn6y2ymmju6nubxndf4pscryd.onion:9999"}, NetInfoStatus::BadInput, NetInfoStatus::Success},
-    {{Purpose::PLATFORM_P2P, "example.com:9999"}, NetInfoStatus::MaxLimit, NetInfoStatus::BadInput},
-    {{Purpose::PLATFORM_P2P, "pg6mmjiyjmcrsslvykfwnntlaru7p5svn6y2ymmju6nubxndf4pscryd.onion:9999"}, NetInfoStatus::MaxLimit, NetInfoStatus::Success},
-    // - MnNetInfo doesn't allow storing anything except a Core P2P address
-    // - ExtNetInfo can store Platform HTTPS addresses *as domains* alongside privacy network domains
-    {{Purpose::PLATFORM_HTTPS, "example.com:9999"}, NetInfoStatus::MaxLimit, NetInfoStatus::Success},
-    {{Purpose::PLATFORM_HTTPS, "pg6mmjiyjmcrsslvykfwnntlaru7p5svn6y2ymmju6nubxndf4pscryd.onion:9999"}, NetInfoStatus::MaxLimit, NetInfoStatus::Success},
+    // - The first address must be IPv4 and therefore is not allowed in ExtNetInfo
+    {{Purpose::CORE_P2P, "[2606:4700:4700::1111]:9999"}, NetInfoStatus::BadInput, NetInfoStatus::BadType},
+    // - Non-IPv4 addresses are prohibited in MnNetInfo
+    // - The first address must be IPv4 and therefore is not allowed in ExtNetInfo
+    {{Purpose::PLATFORM_HTTPS, "example.com:9999"}, NetInfoStatus::MaxLimit, NetInfoStatus::BadType},
     // Incorrect IPv4 address
     {{Purpose::CORE_P2P, "1.1.1.256:9999"}, NetInfoStatus::BadInput, NetInfoStatus::BadInput},
     // Missing address
@@ -85,21 +78,28 @@ void TestMnNetInfo(const TestVectors& vals)
     }
 }
 
-void TestExtNetInfo(const TestVectors& vals)
+void TestExtNetInfo(const TestVectors& vals, bool insert_dummy = false)
 {
     for (const auto& [input, _, expected_ret] : vals) {
         const auto& [purpose, addr] = input;
+        const bool expected_success{expected_ret == NetInfoStatus::Success};
         ExtNetInfo netInfo;
+        if (insert_dummy) {
+            // Needed if validating entries of non-primary types
+            BOOST_CHECK_EQUAL(netInfo.AddEntry(purpose, "4.3.2.1:9998"), NetInfoStatus::Success);
+        }
         BOOST_CHECK_EQUAL(netInfo.AddEntry(purpose, addr), expected_ret);
-        if (expected_ret != NetInfoStatus::Success) {
+        if (!insert_dummy && !expected_success) {
             // An empty ExtNetInfo is considered malformed
             BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Malformed);
             BOOST_CHECK(!netInfo.HasEntries(purpose));
             BOOST_CHECK(netInfo.GetEntries().empty());
         } else {
+            // These will succeed regardless because of the dummy entry
             BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Success);
             BOOST_CHECK(netInfo.HasEntries(purpose));
-            ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/1);
+            // This will differentiate
+            ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/(insert_dummy && expected_success) ? 2 : 1);
         }
     }
 }
@@ -206,6 +206,20 @@ BOOST_FIXTURE_TEST_CASE(extnetinfo_rules_reg, RegTestingSetup)
     }
 
     {
+        // ExtNetInfo allows storing non-IPv4 addresses if they aren't the first entry
+        ExtNetInfo netInfo;
+        uint8_t digit{1};
+        for (const auto purpose : {Purpose::CORE_P2P, Purpose::PLATFORM_HTTPS, Purpose::PLATFORM_P2P}) {
+            BOOST_CHECK_EQUAL(netInfo.AddEntry(purpose, strprintf("[2620:0:ccc::%d]:9998", digit)), NetInfoStatus::BadType);
+            BOOST_CHECK_EQUAL(netInfo.AddEntry(purpose, strprintf("1.1.1.%d:9998", digit)), NetInfoStatus::Success);
+            BOOST_CHECK_EQUAL(netInfo.AddEntry(purpose, strprintf("[2620:0:ccc::%d]:9998", digit)), NetInfoStatus::Success);
+            BOOST_CHECK(netInfo.HasEntries(purpose));
+            digit++;
+        }
+        ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/2 + 2 + 2);
+    }
+
+    {
         // ExtNetInfo has additional rules for domains
         const TestVectors domain_vals{
             // Port 80 (HTTP) is below the privileged ports threshold (1023), not allowed
@@ -219,7 +233,7 @@ BOOST_FIXTURE_TEST_CASE(extnetinfo_rules_reg, RegTestingSetup)
             // DomainPort isn't used for storing privacy network TLDs like .onion
             {{Purpose::PLATFORM_HTTPS, "pg6mmjiyjmcrsslvykfwnntlaru7p5svn6y2ymmju6nubxndf4pscryd:9998"}, NetInfoStatus::MaxLimit, NetInfoStatus::BadInput},
         };
-        TestExtNetInfo(domain_vals);
+        TestExtNetInfo(domain_vals, /*insert_dummy=*/true);
     }
 
     // Privacy network entry checks
@@ -227,12 +241,17 @@ BOOST_FIXTURE_TEST_CASE(extnetinfo_rules_reg, RegTestingSetup)
         const bool expected_success{expected_ret == NetInfoStatus::Success};
 
         ExtNetInfo netInfo{};
+        // Non-primary type should fail as first entry
+        BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::CORE_P2P, input), NetInfoStatus::BadType);
+        // Dummy entry to fulfil primary address requirement
+        BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::CORE_P2P, "1.1.1.1:9998"), NetInfoStatus::Success);
+        // Insert non-primary entry
         BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::CORE_P2P, input), expected_ret);
-        ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/expected_success ? 1 : 0);
+        ValidateGetEntries(netInfo.GetEntries(), /*expected_size=*/expected_success ? 2 : 1);
         if (!expected_success) continue;
 
         // Type registration check
-        const CService service{netInfo.GetEntries().at(0).GetAddrPort().value()};
+        const CService service{netInfo.GetEntries().at(1).GetAddrPort().value()};
         BOOST_CHECK(service.IsValid());
         switch (type) {
         case ExpectedType::CJDNS:
@@ -462,8 +481,11 @@ BOOST_AUTO_TEST_CASE(domainport_rules)
     };
 
     for (const auto& [addr, retval] : domain_vals) {
-        DomainPort domain;
+        // Dummy entry to fulfil primary address requirement
         ExtNetInfo netInfo;
+        BOOST_CHECK_EQUAL(netInfo.AddEntry(Purpose::PLATFORM_HTTPS, "1.1.1.1:443"), NetInfoStatus::Success);
+        // Attempt to set domain entry
+        DomainPort domain;
         BOOST_CHECK_EQUAL(domain.Set(addr, 443), retval);
         if (retval != DomainPort::Status::Success) {
             BOOST_CHECK_EQUAL(domain.Validate(), DomainPort::Status::Malformed); // Empty values report as Malformed
