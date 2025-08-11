@@ -415,6 +415,10 @@ NetInfoStatus ExtNetInfo::ProcessCandidate(const uint8_t purpose, const NetInfoE
     if (IsAddrPortDuplicate(candidate)) {
         return NetInfoStatus::Duplicate;
     }
+    if (purpose != Purpose::CORE_P2P && m_data.find(Purpose::CORE_P2P) == m_data.end()) {
+        // May not register with any other purpose code if CORE_P2P is not defined first
+        return NetInfoStatus::MissingData;
+    }
     if (candidate.GetDomainPort().has_value() && purpose != Purpose::PLATFORM_HTTPS) {
         // Domains only allowed for Platform HTTPS API
         return NetInfoStatus::BadInput;
@@ -606,9 +610,14 @@ NetInfoStatus ExtNetInfo::Validate() const
     if (HasAddrPortDuplicates()) {
         return NetInfoStatus::Duplicate;
     }
+    const bool has_core_p2p{m_data.find(Purpose::CORE_P2P) != m_data.end()};
     for (const auto& [purpose, entries] : m_data) {
         if (!IsValidPurpose(purpose)) {
             return NetInfoStatus::Malformed;
+        }
+        if (purpose != Purpose::CORE_P2P && !has_core_p2p) {
+            // Other purpose codes may only be defined *after* CORE_P2P
+            return NetInfoStatus::MissingData;
         }
         if (entries.empty()) {
             // Purpose if present in map must have at least one entry

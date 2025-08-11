@@ -31,6 +31,7 @@ enum class NetInfoStatus : uint8_t {
     BadType,
     NotRoutable,
     Malformed,
+    MissingData,
 
     Success
 };
@@ -54,6 +55,8 @@ constexpr std::string_view NISToString(const NetInfoStatus code)
         return "malformed";
     case NetInfoStatus::MaxLimit:
         return "too many entries";
+    case NetInfoStatus::MissingData:
+        return "missing data";
     case NetInfoStatus::Success:
         return "success";
     } // no default case, so the compiler can warn about missing cases
