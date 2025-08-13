@@ -654,8 +654,10 @@ public:
     void DoMaintenance() EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
     // Migration support for nVersion-first CDeterministicMNStateDiff format
-    [[nodiscard]] bool IsMigrationRequired() const EXCLUSIVE_LOCKS_REQUIRED(!cs);
-    [[nodiscard]] bool MigrateLegacyDiffs() EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    [[nodiscard]] bool IsMigrationRequired() const
+        EXCLUSIVE_LOCKS_REQUIRED(!cs, ::cs_main);
+    [[nodiscard]] bool MigrateLegacyDiffs()
+        EXCLUSIVE_LOCKS_REQUIRED(!cs, ::cs_main);
 
 private:
     void CleanupCache(int nHeight) EXCLUSIVE_LOCKS_REQUIRED(cs);
