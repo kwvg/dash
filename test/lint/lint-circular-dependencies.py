@@ -22,6 +22,8 @@ EXPECTED_CIRCULAR_DEPENDENCIES = (
     "wallet/wallet -> wallet/walletdb -> wallet/wallet",
     "node/coinstats -> validation -> node/coinstats",
     # Dash
+    "active/context -> coinjoin/server -> net_processing -> active/context",
+    "coinjoin/coinjoin -> instantsend/instantsend -> net_processing -> coinjoin/context -> coinjoin/coinjoin",
     "banman -> common/bloom -> evo/assetlocktx -> llmq/quorums -> net -> banman",
     "chainlock/chainlock -> instantsend/instantsend -> chainlock/chainlock",
     "chainlock/chainlock -> instantsend/instantsend -> instantsend/signing -> chainlock/chainlock",
@@ -30,7 +32,6 @@ EXPECTED_CIRCULAR_DEPENDENCIES = (
     "chainlock/chainlock -> validation -> evo/chainhelper -> chainlock/chainlock",
     "coinjoin/client -> net_processing -> coinjoin/client",
     "coinjoin/client -> net_processing -> coinjoin/context -> coinjoin/client",
-    "coinjoin/context -> coinjoin/server -> net_processing -> coinjoin/context",
     "coinjoin/server -> net_processing -> coinjoin/server",
     "common/bloom -> evo/assetlocktx -> llmq/quorums -> net -> common/bloom",
     "common/bloom -> evo/assetlocktx -> llmq/commitment -> evo/deterministicmns -> evo/simplifiedmns -> merkleblock -> common/bloom",
