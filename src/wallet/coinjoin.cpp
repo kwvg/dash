@@ -430,7 +430,7 @@ CAmount GetBalanceAnonymized(const CWallet& wallet, const CCoinControl& coinCont
     return anonymized_amount;
 }
 
-CAmount CWallet::GetAnonymizableBalance(bool fSkipDenominated, bool fSkipMnCollateral, bool fSkipUnconfirmed) const
+CAmount CWallet::GetAnonymizableBalance(bool fSkipDenominated, bool fSkipUnconfirmed) const
 {
     if (!CCoinJoinClientOptions::IsEnabled()) return 0;
 
@@ -448,13 +448,6 @@ CAmount CWallet::GetAnonymizableBalance(bool fSkipDenominated, bool fSkipMnColla
         // assume that the fee to create denoms should be mixing collateral at max
         if (item.nAmount < nSmallestDenom + (fIsDenominated ? 0 : nMixingCollateral)) continue;
         nTotal += item.nAmount;
-        if (!fSkipMnCollateral) continue;
-        // Exclude collateral outpoints value from total
-        for (const auto& [amount, _] : item.coins) {
-            if (dmn_types::IsCollateralAmount(amount)) {
-                nTotal -= amount;
-            }
-        }
     }
 
     return nTotal;
