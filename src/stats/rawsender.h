@@ -9,6 +9,7 @@
 #include <compat/compat.h>
 #include <sync.h>
 #include <util/threadinterrupt.h>
+#include <util/time.h>
 #include <util/translation.h>
 
 #include <deque>
@@ -65,38 +66,62 @@ public:
     RawSender(RawSender&&) = delete;
 
     //! Request a message to be sent based on configuration (queueing, batching)
-    std::optional<bilingual_str> Send(const RawMessage& msg) EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    std::optional<bilingual_str> Send(const RawMessage& msg) EXCLUSIVE_LOCKS_REQUIRED(!cs, !cs_net);
 
 private:
     //! Send a message directly using ::send{,to}()
-    std::optional<bilingual_str> SendDirectly(const RawMessage& msg) EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    std::optional<bilingual_str> SendDirectly(const RawMessage& msg) EXCLUSIVE_LOCKS_REQUIRED(!cs, !cs_net);
 
     //! Get target server address as string
     std::string ToStringHostPort() const;
+
+    //! Attempt connection
+    std::optional<bilingual_str> Connect() EXCLUSIVE_LOCKS_REQUIRED(cs_net);
+
+    //! Attempt reconnection to server (TCP only)
+    void Reconnect() EXCLUSIVE_LOCKS_REQUIRED(cs_net);
+
+    //! Worker thread function to attempt reconnection (TCP only)
+    void ReconnectThread() EXCLUSIVE_LOCKS_REQUIRED(!cs, !cs_net);
 
     //! Add message to queue
     void QueueAdd(std::deque<RawMessage>& queue, const RawMessage& msg) EXCLUSIVE_LOCKS_REQUIRED(cs);
 
     //! Send all messages in given queue and flush it
-    void QueueFlush(std::deque<RawMessage>& queue) EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    void QueueFlush(std::deque<RawMessage>& queue) EXCLUSIVE_LOCKS_REQUIRED(!cs, !cs_net);
 
     //! Worker thread function if queueing is requested
-    void QueueThreadMain() EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    void QueueThreadMain() EXCLUSIVE_LOCKS_REQUIRED(!cs, !cs_net);
 
 private:
+    /* Mutex to protect network parameters */
+    mutable Mutex cs_net;
     /* Socket used to communicate with host */
-    std::unique_ptr<Sock> m_sock{nullptr};
+    std::unique_ptr<Sock> m_sock GUARDED_BY(cs_net){nullptr};
     /* Socket address containing host information */
-    std::pair<struct sockaddr_storage, socklen_t> m_server{{}, sizeof(struct sockaddr_storage)};
+    std::pair<struct sockaddr_storage, socklen_t> m_server GUARDED_BY(cs_net){{}, sizeof(struct sockaddr_storage)};
+    /* Reconnection stats (TCP only) */
+    struct ReconnectionStats {
+        /* Reconnection attempt counter */
+        uint8_t m_attempts{0};
+        /* Time between reconnection attempts */
+        std::chrono::seconds m_timeout{1s};
+    } m_reconn_stats GUARDED_BY(cs_net);
 
     /* Mutex to protect (batches of) messages queue */
     mutable Mutex cs;
     /* Interrupt for queue processing thread */
     CThreadInterrupt m_interrupt;
+    /* Interrupt for reconnection thread (TCP only) */
+    CThreadInterrupt m_reconn_interrupt;
     /* Queue of (batches of) messages to be sent */
     std::deque<RawMessage> m_queue GUARDED_BY(cs);
     /* Thread that processes queue every m_interval_ms */
     std::thread m_thread;
+    /* Reconnection attempt thread (TCP only) */
+    std::thread m_reconn;
+    /* Queue of messages to be sent when reconnection succeeds (TCP only) */
+    std::deque<RawMessage> m_reconn_queue GUARDED_BY(cs);
 
     /* Hostname of server receiving messages */
     const std::string m_host;

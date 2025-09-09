@@ -50,6 +50,15 @@ typedef u_short sa_family_t;
 typedef unsigned int SOCKET;
 #include <cerrno>
 #define WSAGetLastError()   errno
+#define WSAECONNABORTED     ECONNABORTED
+#define WSAECONNREFUSED     ECONNREFUSED
+#define WSAECONNRESET       ECONNRESET
+#define WSAEHOSTUNREACH     EHOSTUNREACH
+#define WSAENETDOWN         ENETDOWN
+#define WSAENETRESET        ENETRESET
+#define WSAENETUNREACH      ENETUNREACH
+#define WSAENOTCONN         ENOTCONN
+#define WSAETIMEDOUT        ETIMEDOUT
 #define WSAEINVAL           EINVAL
 #define WSAEWOULDBLOCK      EWOULDBLOCK
 #define WSAEAGAIN           EAGAIN
