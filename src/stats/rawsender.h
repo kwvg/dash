@@ -106,6 +106,8 @@ private:
         uint8_t m_attempts{0};
         /* Time between reconnection attempts */
         std::chrono::seconds m_timeout{1s};
+        /* Timestamp of pending message buffer */
+        int64_t m_timestamp{0};
     } m_reconn_stats GUARDED_BY(cs_net);
 
     /* Mutex to protect (batches of) messages queue */

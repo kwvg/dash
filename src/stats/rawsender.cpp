@@ -132,6 +132,16 @@ void RawSender::ReconnectThread()
         {
             LOCK(cs_net);
             if (!m_sock) {
+                if ((GetTime() - m_reconn_stats.m_timestamp) > count_seconds(RECONNECT_TIMEOUT_MAX)) {
+                    LOCK(cs);
+                    // Buffer holds stale stats, discard it
+                    if (!m_reconn_queue.empty()) {
+                        LogPrint(BCLog::NET, "%s: Discarding %d stale messages as %d seconds have elapsed\n", __func__,
+                                 m_reconn_queue.size(), count_seconds(RECONNECT_TIMEOUT_MAX));
+                        m_reconn_queue.clear();
+                    }
+                    m_reconn_stats.m_timestamp = GetTime();
+                }
                 Reconnect();
                 if (!m_sock) {
                     LogPrint(BCLog::NET, "%s: Unable to establish connection with %s, will try again in %s seconds\n",
