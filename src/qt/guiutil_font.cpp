@@ -52,13 +52,8 @@ static const int defaultFontScale = 0;
 static FontFamily fontFamily = defaultFontFamily;
 // Application font scale value. May be overwritten by -font-scale.
 static int fontScale = defaultFontScale;
-// Contains the weight settings separated for all available fonts
-static std::map<FontFamily, std::pair<QFont::Weight, QFont::Weight>> mapDefaultWeights;
-static std::map<FontFamily, std::pair<QFont::Weight, QFont::Weight>> mapWeights;
 // Contains all widgets and its font attributes (weight, italic, size) with font changes due to GUIUtil::setFont
 static std::map<QPointer<QWidget>, std::tuple<FontWeight, bool, int>> mapFontUpdates;
-// Contains a list of supported font weights for all members of GUIUtil::FontFamily
-static std::map<FontFamily, std::vector<QFont::Weight>> mapSupportedWeights;
 
 //! Map between font weights, Montserrat's convention and italic availability
 static const std::map<QFont::Weight, std::pair<std::string, /*can_italic=*/bool>> mapMontserrat{{
@@ -72,6 +67,98 @@ static const std::map<QFont::Weight, std::pair<std::string, /*can_italic=*/bool>
     {QFont::Normal, {"Regular", false}},
     {QFont::Thin, {"Thin", true}},
 }};
+
+FontSettings::FontSettings() = default;
+
+FontSettings::~FontSettings() = default;
+
+void FontSettings::AddFont(const QString& font_name)
+{
+
+}
+    std::vector<QFont::Weight> vecWeights{QFont::Thin,   QFont::ExtraLight, QFont::Light,
+                                            QFont::Normal, QFont::Medium,     QFont::DemiBold,
+                                            QFont::Bold,   QFont::ExtraBold,  QFont::Black};
+
+std::vector<QFont::Weight> FontSettings::CalcWeights(const QString& font_name)
+{
+    std::vector<QFont::Weight> vecSupported;
+
+    // Generate a vector with supported font weights by comparing the width of a certain test text for all font weights
+    auto getTestWidth = [&](QFont::Weight weight) -> int {
+        QFont font = getFont(family, weight, false, defaultFontSize);
+        return TextWidth(QFontMetrics(font),
+                            ("Check the width of this text to see if the weight change has an impact!"));
+    };
+    QFont::Weight prevWeight = vecWeights.front();
+    for (auto weight = vecWeights.begin() + 1; weight != vecWeights.end(); ++weight) {
+        if (getTestWidth(prevWeight) != getTestWidth(*weight)) {
+            if (vecSupported.empty()) {
+                vecSupported.push_back(prevWeight);
+            }
+            vecSupported.push_back(*weight);
+        }
+        prevWeight = *weight;
+    }
+    if (vecSupported.empty()) {
+        vecSupported.push_back(QFont::Normal);
+    }
+    return vecSupported;
+}
+
+QFont GetFont(const QString& font_name, QFont::Weight weight, bool italic, int point_sz)
+{
+    QFont font;
+    if (!fontsLoaded()) {
+        return font;
+    }
+
+    if (font_name == "Montserrat") {
+        assert(mapMontserrat.count(weight));
+#ifdef Q_OS_MAC
+        font.setFamily(font_name);
+        font.setStyleName([&]() {
+            std::string ret{mapMontserrat.at(weight).first};
+            if (fItalic) {
+                if (ret == "Regular") {
+                    ret = "Italic";
+                } else {
+                    ret += " Italic";
+                }
+            }
+            return QString::fromStdString(ret);
+        }());
+#else
+        if (weight == QFont::Normal || weight == QFont::Bold) {
+            font.setFamily(font_name);
+        } else {
+            font.setFamily(font_name + QString{" "} + QString::fromStdString(mapMontserrat.at(weight).first));
+        }
+#endif // Q_OS_MAC
+    } else {
+        font.setFamily(font_name);
+    }
+
+#ifdef Q_OS_MAC
+    if (font_name != "Montserrat")
+#endif // Q_OS_MAC
+    {
+        font.setWeight(weight);
+        font.setStyle(italic ? QFont::StyleItalic : QFont::StyleNormal);
+    }
+
+    if (point_sz != -1) {
+        font.setPointSizeF(getScaledFontSize(point_sz));
+    }
+
+    if (gArgs.GetBoolArg("-debug-ui", false)) {
+        qDebug() << qstrprintf("%s: font size: %d, family: %s, style: %s, weight: %d match %s", __func__,
+                               font.pointSizeF(), font.family().toStdString(), font.styleName().toStdString(),
+                               font.weight(), font.exactMatch() ? "true" : "false");
+    }
+
+    return font;
+}
 
 FontFamily fontFamilyFromString(const QString& strFamily)
 {
