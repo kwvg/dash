@@ -35,6 +35,14 @@ const std::vector<QFont::Weight> CONSIDERED_WEIGHTS{
     QFont::Black
 };
 
+/** Fonts always initialized with FontSettings */
+const std::vector<QString> DEFAULT_FONTS{
+    //! Special name assigned to default OS font
+    "SystemDefault",
+    //! Embedded variable-width font
+    "Montserrat",
+};
+
 /** Wrapper for tinyformat (strprintf) that converts to QString */
 template <typename... Args>
 QString qstrprintf(const std::string& fmt, const Args&... args)
@@ -44,6 +52,7 @@ QString qstrprintf(const std::string& fmt, const Args&... args)
 } // anonymous namespace
 
 namespace GUIUtil {
+FontSettings g_font_settings{};
 /** loadFonts stores the SystemDefault font in osDefaultFont to be able to reference it later again */
 static std::unique_ptr<QFont> osDefaultFont;
 /** Font related default values. */
@@ -65,13 +74,8 @@ static const int defaultFontScale = 0;
 static FontFamily fontFamily = defaultFontFamily;
 // Application font scale value. May be overwritten by -font-scale.
 static int fontScale = defaultFontScale;
-// Contains the weight settings separated for all available fonts
-static std::map<FontFamily, std::pair<QFont::Weight, QFont::Weight>> mapDefaultWeights;
-static std::map<FontFamily, std::pair<QFont::Weight, QFont::Weight>> mapWeights;
 // Contains all widgets and its font attributes (weight, italic, size) with font changes due to GUIUtil::setFont
 static std::map<QPointer<QWidget>, std::tuple<FontWeight, bool, int>> mapFontUpdates;
-// Contains a list of supported font weights for all members of GUIUtil::FontFamily
-static std::map<FontFamily, std::vector<QFont::Weight>> mapSupportedWeights;
 
 //! Map between font weights, Montserrat's convention and italic availability
 static const std::map<QFont::Weight, std::pair<std::string, /*can_italic=*/bool>> mapMontserrat{{
@@ -85,6 +89,15 @@ static const std::map<QFont::Weight, std::pair<std::string, /*can_italic=*/bool>
     {QFont::Normal, {"Regular", false}},
     {QFont::Thin, {"Thin", true}},
 }};
+
+QFont::Weight FontSettings::GetDefaultWeight(const QString& font_name, bool is_bold)
+{
+    if (m_map_weights.count(font_name)) {
+        auto& options_default = m_map_weights[font_name].m_options_default;
+        return is_bold ? options_default.m_bold : options_default.m_normal;
+    }
+    return is_bold ? defaultFontWeightBold : defaultFontWeightNormal;
+}
 
 FontFamily fontFamilyFromString(const QString& strFamily)
 {
@@ -236,13 +249,20 @@ double getScaledFontSize(int nSize)
     return std::round(nSize * (1 + (fontScale * fontScaleSteps)) * 4) / 4.0;
 }
 
-std::vector<QFont::Weight> CalcSupportedWeights(const QString& font_name)
+void FontSettings::AddFont(const QString& font_name)
+{
+    auto supported = CalcSupportedWeights(font_name);
+    auto weights = CalcDefaultWeights(font_name, supported);
+    m_map_weights.emplace(font_name, Weights{weights, supported});
+}
+
+std::vector<QFont::Weight> FontSettings::CalcSupportedWeights(const QString& font_name)
 {
     auto getTestWidth = [](const QString& font_name, QFont::Weight weight) -> int {
-        QFont font = getFont(font_name, weight, false, defaultFontSize);
+        QFont font = GetFont(font_name, weight, false, defaultFontSize);
         return TextWidth(QFontMetrics(font), ("Check the width of this text to see if the weight change has an impact!"));
     };
-    std::vector<QFont::Weight> vecSupported;
+    std::vector<QFont::Weight> ret{};
     QFont::Weight prevWeight = CONSIDERED_WEIGHTS.front();
     bool isFirst = true;
     for (const auto& weight : CONSIDERED_WEIGHTS) {
@@ -251,27 +271,24 @@ std::vector<QFont::Weight> CalcSupportedWeights(const QString& font_name)
             continue;
         }
         if (getTestWidth(font_name, prevWeight) != getTestWidth(font_name, weight)) {
-            if (vecSupported.empty()) {
-                vecSupported.push_back(prevWeight);
+            if (ret.empty()) {
+                ret.push_back(prevWeight);
             }
-            vecSupported.push_back(weight);
+            ret.push_back(weight);
         }
         prevWeight = weight;
     }
-    if (vecSupported.empty()) {
-        vecSupported.push_back(QFont::Normal);
+    if (ret.empty()) {
+        ret.push_back(QFont::Normal);
     }
-    return vecSupported;
+    return ret;
 }
 
-QFont::Weight GetBestMatch(const QString& font_name, QFont::Weight target)
+QFont::Weight FontSettings::GetBestMatch(const QString& font_name, const QFont::Weight target, const std::vector<QFont::Weight>& supported)
 {
-    // TODO: We will phase out FontFamily soon
-    const auto& vecSupported = mapSupportedWeights[fontFamilyFromString(font_name)];
-    QFont::Weight bestWeight = vecSupported.front();
+    QFont::Weight bestWeight = supported.front();
     int nBestDiff = abs(bestWeight - target);
-
-    for (const auto& weight : vecSupported) {
+    for (const auto& weight : supported) {
         int nDiff = abs(weight - target);
         if (nDiff < nBestDiff) {
             bestWeight = weight;
@@ -281,17 +298,14 @@ QFont::Weight GetBestMatch(const QString& font_name, QFont::Weight target)
     return bestWeight;
 }
 
-// TODO: Use struct
-std::pair<QFont::Weight, QFont::Weight> CalcDefaultWeights(const QString& font_name)
+FontSettings::WeightOptions FontSettings::CalcDefaultWeights(const QString& font_name, const std::vector<QFont::Weight>& supported)
 {
-    QFont::Weight normalWeight = GetBestMatch(font_name, defaultFontWeightNormal);
-    QFont::Weight boldWeight = GetBestMatch(font_name, defaultFontWeightBold);
+    QFont::Weight normalWeight = GetBestMatch(font_name, defaultFontWeightNormal, supported);
+    QFont::Weight boldWeight = GetBestMatch(font_name, defaultFontWeightBold, supported);
     if (normalWeight == boldWeight) {
         // If the results are the same use the next possible weight for bold font
-        // TODO: We will phase out FontFamily soon
-        auto& vecSupported = mapSupportedWeights[fontFamilyFromString(font_name)];
-        auto it = std::find(vecSupported.begin(), vecSupported.end(), normalWeight);
-        if (++it != vecSupported.end()) {
+        auto it = std::find(supported.begin(), supported.end(), normalWeight);
+        if (++it != supported.end()) {
             boldWeight = *it;
         }
     }
@@ -354,16 +368,9 @@ bool loadFonts()
 
     setApplicationFont();
 
-    // Initialize supported font weights for all available fonts
-    // Generate a vector with supported font weights by comparing the width of a certain test text for all font weights
-    mapSupportedWeights.emplace(FontFamily::SystemDefault, CalcSupportedWeights(fontFamilyToString(FontFamily::SystemDefault)));
-    mapSupportedWeights.emplace(FontFamily::Montserrat, CalcSupportedWeights(fontFamilyToString(FontFamily::Montserrat)));
-
-    mapDefaultWeights.emplace(FontFamily::SystemDefault, CalcDefaultWeights(fontFamilyToString(FontFamily::SystemDefault)));
-    mapDefaultWeights.emplace(FontFamily::Montserrat, CalcDefaultWeights(fontFamilyToString(FontFamily::Montserrat)));
-
-    // Load supported defaults. May become overwritten later.
-    mapWeights = mapDefaultWeights;
+    for (const auto& font_name : DEFAULT_FONTS) {
+        g_font_settings.AddFont(font_name);
+    }
 
     return true;
 }
@@ -525,7 +532,7 @@ void updateFonts()
     }
 }
 
-QFont getFont(const QString& font_name, QFont::Weight weight, bool italic, int point_sz)
+QFont FontSettings::GetFont(const QString& font_name, QFont::Weight weight, bool italic, int point_sz)
 {
     QFont font;
     if (!fontsLoaded()) {
@@ -572,7 +579,7 @@ QFont getFont(const QString& font_name, QFont::Weight weight, bool italic, int p
         font.setPointSizeF(getScaledFontSize(point_sz));
     }
 
-    if (gArgs.GetBoolArg("-debug-ui", false)) {
+    if (::gArgs.GetBoolArg("-debug-ui", false)) {
         qDebug() << qstrprintf("%s: font size: %d, family: %s, style: %s, weight: %d match %s", __func__,
                                font.pointSizeF(), font.family().toStdString(), font.styleName().toStdString(),
                                font.weight(), font.exactMatch() ? "true" : "false");

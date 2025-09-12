@@ -18,6 +18,49 @@ enum class FontFamily {
     Montserrat,
 };
 
+class FontSettings {
+public:
+    struct WeightOptions {
+        QFont::Weight m_normal;
+        QFont::Weight m_bold;
+    };
+
+    struct Weights {
+        Weights() = delete;
+        explicit Weights(WeightOptions options, const std::vector<QFont::Weight> supported) :
+            m_options{options},
+            m_options_default{options},
+            m_supported{supported}
+        {
+        }
+
+        ~Weights() = default;
+
+        WeightOptions m_options;
+        const WeightOptions m_options_default;
+        const std::vector<QFont::Weight> m_supported;
+    };
+
+    // TODO: Make private
+    static QFont GetFont(const QString& font_name, QFont::Weight weight, bool italic, int point_sz);
+
+public:
+    FontSettings();
+    ~FontSettings();
+
+    void AddFont(const QString& font_name);
+    QFont::Weight GetDefaultWeight(const QString& font_name, bool is_bold);
+
+private:
+    QFont::Weight GetBestMatch(const QString& font_name, const QFont::Weight target, const std::vector<QFont::Weight>& supported);
+    std::vector<QFont::Weight> CalcSupportedWeights(const QString& font_name);
+    FontSettings::WeightOptions CalcDefaultWeights(const QString& font_name, const std::vector<QFont::Weight>& supported);
+
+    std::map<QString, FontSettings::Weights> m_map_weights;
+};
+
+extern FontSettings g_font_settings;
+
 FontFamily fontFamilyFromString(const QString& strFamily);
 QString fontFamilyToString(FontFamily family);
 
@@ -74,7 +117,6 @@ void setFont(const std::vector<QWidget*>& vecWidgets, FontWeight weight, int nPo
 void updateFonts();
 
 /** Get a properly weighted QFont object with the selected font. */
-QFont getFont(const QString& font_name, QFont::Weight weight, bool italic = false, int point_sz = -1);
 QFont getFont(QFont::Weight qWeight, bool fItalic = false, int nPointSize = -1);
 QFont getFont(FontWeight weight, bool fItalic = false, int nPointSize = -1);
 
