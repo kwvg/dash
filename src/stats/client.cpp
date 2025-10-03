@@ -28,6 +28,8 @@ static constexpr std::string_view URL_SCHEME_DELIMITER{"://"};
 
 /** Default port used to connect to a Statsd server */
 static constexpr uint16_t DEFAULT_STATSD_PORT{8125};
+/** Default protocol used to connect to Statsd server */
+static constexpr bool DEFAULT_STATSD_USE_TCP{false}; // i.e. use UDP
 
 /** Delimiter segmenting two fully formed Statsd messages */
 static constexpr char STATSD_MSG_DELIMITER{'\n'};
@@ -43,8 +45,9 @@ static constexpr char STATSD_METRIC_TIMING[]{"ms"};
 class StatsdClientImpl final : public StatsdClient
 {
 public:
-    explicit StatsdClientImpl(const std::string& host, uint16_t port, uint64_t batch_size, uint64_t interval_ms,
-                              const std::string& prefix, const std::string& suffix, std::optional<bilingual_str>& error);
+    explicit StatsdClientImpl(const std::string& host, uint16_t port, bool use_tcp, uint64_t batch_size,
+                              uint64_t interval_ms, const std::string& prefix, const std::string& suffix,
+                              std::optional<bilingual_str>& error);
     ~StatsdClientImpl() = default;
 
 public:
@@ -142,6 +145,8 @@ util::Result<std::unique_ptr<StatsdClient>> StatsdClient::make(const ArgsManager
         return util::Error{_("-statsduration cannot be configured with a negative value.")};
     }
 
+    auto use_tcp = DEFAULT_STATSD_USE_TCP;
+
     auto port_arg = args.GetIntArg("-statsport", DEFAULT_STATSD_PORT);
     if (args.IsArgSet("-statsport")) {
         // Port range validation if -statsport is specified.
@@ -160,9 +165,10 @@ util::Result<std::unique_ptr<StatsdClient>> StatsdClient::make(const ArgsManager
             return util::Error{_("No text before the scheme delimiter, malformed URL")};
         }
         std::string scheme{ToLower(host.substr(/*pos=*/0, scheme_idx))};
-        if (scheme != "udp") {
-            return util::Error{_("Unsupported URL scheme, must begin with udp://")};
+        if (scheme != "tcp" && scheme != "udp") {
+            return util::Error{_("Unsupported URL scheme, must begin with tcp:// or udp://")};
         }
+        use_tcp = scheme == "tcp";
         host = host.substr(scheme_idx + URL_SCHEME_DELIMITER.length());
 
         // Strip trailing slashes and parse the port
@@ -204,7 +210,7 @@ util::Result<std::unique_ptr<StatsdClient>> StatsdClient::make(const ArgsManager
 
     std::optional<bilingual_str> error_opt;
     auto statsd_ptr = std::make_unique<StatsdClientImpl>(
-        host, port, batch_size, interval_ms,
+        host, port, use_tcp, batch_size, interval_ms,
         sanitize_string(args.GetArg("-statsprefix", DEFAULT_STATSD_PREFIX)),
         sanitize_string(args.GetArg("-statssuffix", DEFAULT_STATSD_SUFFIX)), error_opt);
     if (error_opt.has_value()) {
@@ -214,13 +220,13 @@ util::Result<std::unique_ptr<StatsdClient>> StatsdClient::make(const ArgsManager
     return {std::move(statsd_ptr)};
 }
 
-StatsdClientImpl::StatsdClientImpl(const std::string& host, uint16_t port, uint64_t batch_size, uint64_t interval_ms,
-                                   const std::string& prefix, const std::string& suffix,
+StatsdClientImpl::StatsdClientImpl(const std::string& host, uint16_t port, bool use_tcp, uint64_t batch_size,
+                                   uint64_t interval_ms, const std::string& prefix, const std::string& suffix,
                                    std::optional<bilingual_str>& error) :
     m_prefix{[prefix]() { return !prefix.empty() ? prefix + STATSD_NS_DELIMITER : prefix; }()},
     m_suffix{[suffix]() { return !suffix.empty() ? STATSD_NS_DELIMITER + suffix : suffix; }()}
 {
-    m_sender = std::make_unique<RawSender>(host, port,
+    m_sender = std::make_unique<RawSender>(host, port, use_tcp,
                                            std::make_pair(batch_size, static_cast<uint8_t>(STATSD_MSG_DELIMITER)),
                                            interval_ms, error);
     if (error.has_value()) {

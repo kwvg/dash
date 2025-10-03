@@ -100,7 +100,7 @@ class StatsTest(BitcoinTestFramework):
             extra_args=['-statshost=://127.0.0.1'],
         )
         self.nodes[0].assert_start_raises_init_error(
-            expected_msg='Error: Cannot init Statsd client (Unsupported URL scheme, must begin with udp://)',
+            expected_msg='Error: Cannot init Statsd client (Unsupported URL scheme, must begin with tcp:// or udp://)',
             extra_args=['-statshost=http://127.0.0.1'],
         )
         self.nodes[0].assert_start_raises_init_error(

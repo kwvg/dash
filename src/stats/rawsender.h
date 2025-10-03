@@ -56,8 +56,8 @@ struct RawMessage : public std::vector<uint8_t>
 class RawSender
 {
 public:
-    RawSender(const std::string& host, uint16_t port, std::pair<uint64_t, uint8_t> batching_opts, uint64_t interval_ms,
-              std::optional<bilingual_str>& error);
+    RawSender(const std::string& host, uint16_t port, bool use_tcp, std::pair<uint64_t, uint8_t> batching_opts,
+              uint64_t interval_ms, std::optional<bilingual_str>& error);
     ~RawSender();
 
     RawSender(const RawSender&) = delete;
@@ -69,19 +69,16 @@ public:
 
 private:
     //! Send a message directly using ::send{,to}()
-    std::optional<bilingual_str> SendDirectly(const RawMessage& msg);
+    std::optional<bilingual_str> SendDirectly(const RawMessage& msg) EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
     //! Get target server address as string
     std::string ToStringHostPort() const;
 
     //! Add message to queue
-    void QueueAdd(const RawMessage& msg) EXCLUSIVE_LOCKS_REQUIRED(!cs);
-
-    //! Send all messages in queue of RawSender entity and flush it
-    void QueueFlush() EXCLUSIVE_LOCKS_REQUIRED(!cs);
+    void QueueAdd(std::deque<RawMessage>& queue, const RawMessage& msg) EXCLUSIVE_LOCKS_REQUIRED(cs);
 
     //! Send all messages in given queue and flush it
-    void QueueFlush(std::deque<RawMessage>& queue);
+    void QueueFlush(std::deque<RawMessage>& queue) EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
     //! Worker thread function if queueing is requested
     void QueueThreadMain() EXCLUSIVE_LOCKS_REQUIRED(!cs);
@@ -109,6 +106,8 @@ private:
     const std::pair</*size=*/uint64_t, /*delimiter=*/uint8_t> m_batching_opts{0, 0};
     /* Time between queue thread runs (expressed in milliseconds) */
     const uint64_t m_interval_ms;
+    /* Communicating over TCP if true (or UDP is false) */
+    const bool m_use_tcp;
 
     /* Number of messages sent */
     uint64_t m_successes{0};

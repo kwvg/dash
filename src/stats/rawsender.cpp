@@ -11,25 +11,28 @@
 #include <util/sock.h>
 #include <util/thread.h>
 
-RawSender::RawSender(const std::string& host, uint16_t port, std::pair<uint64_t, uint8_t> batching_opts,
+RawSender::RawSender(const std::string& host, uint16_t port, bool use_tcp, std::pair<uint64_t, uint8_t> batching_opts,
                      uint64_t interval_ms, std::optional<bilingual_str>& error) :
     m_host{host},
     m_port{port},
     m_batching_opts{batching_opts},
-    m_interval_ms{interval_ms}
+    m_interval_ms{interval_ms},
+    m_use_tcp{use_tcp}
 {
     if (host.empty()) {
         error = _("No host specified");
         return;
     }
 
+    CService service{};
     if (auto netaddr = LookupHost(m_host, /*fAllowLookup=*/true); netaddr.has_value()) {
         if (!netaddr->IsIPv4() && !netaddr->IsIPv6()) {
             error = strprintf(_("Host %s on unsupported network"), m_host);
             return;
         }
-        if (!CService(*netaddr, port).GetSockAddr(reinterpret_cast<struct sockaddr*>(&m_server.first), &m_server.second)) {
-            error = strprintf(_("Cannot get socket address for %s"), m_host);
+        service = CService(*netaddr, port);
+        if (!service.GetSockAddr(reinterpret_cast<struct sockaddr*>(&m_server.first), &m_server.second)) {
+            error = strprintf(_("Cannot get socket address for %s"), this->ToStringHostPort());
             return;
         }
     } else {
@@ -37,12 +40,22 @@ RawSender::RawSender(const std::string& host, uint16_t port, std::pair<uint64_t,
         return;
     }
 
-    SOCKET hSocket = ::socket(reinterpret_cast<struct sockaddr*>(&m_server.first)->sa_family, SOCK_DGRAM, IPPROTO_UDP);
-    if (hSocket == INVALID_SOCKET) {
-        error = strprintf(_("Cannot create socket (socket() returned error %s)"), NetworkErrorString(WSAGetLastError()));
-        return;
+    if (!m_use_tcp) {
+        SOCKET hSocket = ::socket(reinterpret_cast<struct sockaddr*>(&m_server.first)->sa_family, SOCK_DGRAM, IPPROTO_UDP);
+        if (hSocket == INVALID_SOCKET) {
+            error = strprintf(_("Cannot create socket (socket() returned error %s)"),
+                              NetworkErrorString(WSAGetLastError()));
+            return;
+        }
+        m_sock = std::make_unique<Sock>(hSocket);
+    } else {
+        if (auto sock = ConnectDirectly(service, /*manual_connection=*/true); sock != nullptr) {
+            m_sock = std::move(sock);
+        } else {
+            error = strprintf(_("Cannot create socket for %s"), this->ToStringHostPort());
+            return;
+        }
     }
-    m_sock = std::make_unique<Sock>(hSocket);
 
     if (m_interval_ms == 0) {
         LogPrintf("Send interval is zero, not starting RawSender queueing thread.\n");
@@ -51,7 +64,8 @@ RawSender::RawSender(const std::string& host, uint16_t port, std::pair<uint64_t,
         m_thread = std::thread(&util::TraceThread, "rawsender", [this] { QueueThreadMain(); });
     }
 
-    LogPrintf("Started %sRawSender sending messages to %s:%d\n", m_thread.joinable() ? "threaded " : "", m_host, m_port);
+    LogPrintf("Started %sRawSender sending messages to %s over %s\n", m_thread.joinable() ? "threaded " : "",
+              this->ToStringHostPort(), m_use_tcp ? "TCP" : "UDP");
 }
 
 RawSender::~RawSender()
@@ -62,7 +76,7 @@ RawSender::~RawSender()
         m_thread.join();
     }
     // Flush queue of uncommitted messages
-    QueueFlush();
+    QueueFlush(m_queue);
 
     LogPrintf("Stopped RawSender instance sending messages to %s:%d. %d successes, %d failures.\n",
               m_host, m_port, m_successes, m_failures);
@@ -70,9 +84,11 @@ RawSender::~RawSender()
 
 std::optional<bilingual_str> RawSender::Send(const RawMessage& msg)
 {
+    AssertLockNotHeld(cs);
+
     // If there is a thread, append to queue
     if (m_thread.joinable()) {
-        QueueAdd(msg);
+        WITH_LOCK(cs, QueueAdd(m_queue, msg));
         return std::nullopt;
     }
     // There isn't a queue, send directly
@@ -81,21 +97,32 @@ std::optional<bilingual_str> RawSender::Send(const RawMessage& msg)
 
 std::optional<bilingual_str> RawSender::SendDirectly(const RawMessage& msg)
 {
+    AssertLockNotHeld(cs);
+
     if (!m_sock) {
         m_failures++;
         return _("Socket not initialized, cannot send message");
     }
 
-    if (::sendto(m_sock->Get(), reinterpret_cast<const char*>(msg.data()),
+    constexpr int send_flags{MSG_NOSIGNAL | MSG_DONTWAIT};
+    if (m_use_tcp) {
+        if (m_sock->Send(reinterpret_cast<const char*>(msg.data()), msg.size(), send_flags) == SOCKET_ERROR) {
+            m_failures++;
+            return strprintf(_("Unable to send message to %s (::send() returned error %s)"), this->ToStringHostPort(),
+                             NetworkErrorString(WSAGetLastError()));
+        }
+    } else {
+        if (::sendto(m_sock->Get(), reinterpret_cast<const char*>(msg.data()),
 #ifdef WIN32
-                 static_cast<int>(msg.size()),
+                     static_cast<int>(msg.size()),
 #else
-                 msg.size(),
+                     msg.size(),
 #endif // WIN32
-                 /*flags=*/0, reinterpret_cast<struct sockaddr*>(&m_server.first), m_server.second) == SOCKET_ERROR) {
-        m_failures++;
-        return strprintf(_("Unable to send message to %s (::sendto() returned error %s)"), this->ToStringHostPort(),
-                         NetworkErrorString(WSAGetLastError()));
+                     send_flags, reinterpret_cast<struct sockaddr*>(&m_server.first), m_server.second) == SOCKET_ERROR) {
+            m_failures++;
+            return strprintf(_("Unable to send message to %s (::sendto() returned error %s)"), this->ToStringHostPort(),
+                             NetworkErrorString(WSAGetLastError()));
+        }
     }
 
     m_successes++;
@@ -104,43 +131,40 @@ std::optional<bilingual_str> RawSender::SendDirectly(const RawMessage& msg)
 
 std::string RawSender::ToStringHostPort() const { return strprintf("%s:%d", m_host, m_port); }
 
-void RawSender::QueueAdd(const RawMessage& msg)
+void RawSender::QueueAdd(std::deque<RawMessage>& queue, const RawMessage& msg)
 {
-    AssertLockNotHeld(cs);
-    LOCK(cs);
+    AssertLockHeld(cs);
 
     const auto& [batch_size, batch_delim] = m_batching_opts;
     // If no batch size has been specified, simply add to queue
     if (batch_size == 0) {
-        m_queue.push_back(msg);
+        queue.push_back(msg);
         return;
     }
 
     // We can batch, either create a new batch in queue or append to existing batch in queue
-    if (m_queue.empty() || m_queue.back().size() + msg.size() >= batch_size) {
+    if (queue.empty() || queue.back().size() + msg.size() >= batch_size) {
         // Either we don't have a place to batch our message or we exceeded the batch size, make a new batch
-        m_queue.emplace_back();
-        m_queue.back().reserve(batch_size);
-    } else if (!m_queue.back().empty()) {
+        queue.emplace_back();
+        queue.back().reserve(batch_size);
+    } else if (!queue.back().empty()) {
         // When there is already a batch open we need a delimiter when its not empty
-        m_queue.back() += batch_delim;
+        queue.back() += batch_delim;
     }
 
     // Add the new message to the batch
-    m_queue.back() += msg;
-}
-
-void RawSender::QueueFlush()
-{
-    AssertLockNotHeld(cs);
-    WITH_LOCK(cs, QueueFlush(m_queue));
+    queue.back() += msg;
 }
 
 void RawSender::QueueFlush(std::deque<RawMessage>& queue)
 {
-    while (!queue.empty()) {
-        SendDirectly(queue.front());
-        queue.pop_front();
+    AssertLockNotHeld(cs);
+    for (auto& msg : queue) {
+        // Add delimiter to prevent unexpected concat if sends are consolidated
+        if (m_use_tcp && !msg.empty() && msg.back() != m_batching_opts.second) {
+            msg += m_batching_opts.second;
+        }
+        SendDirectly(msg);
     }
 }
 
@@ -152,10 +176,7 @@ void RawSender::QueueThreadMain()
         // Swap the queues to commit the existing queue of messages
         std::deque<RawMessage> queue;
         WITH_LOCK(cs, m_queue.swap(queue));
-
-        // Flush the committed queue
         QueueFlush(queue);
-        assert(queue.empty());
 
         if (!m_interrupt.sleep_for(std::chrono::milliseconds(m_interval_ms))) {
             return;
