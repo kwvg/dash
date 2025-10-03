@@ -37,7 +37,7 @@ RawSender::RawSender(const std::string& host, uint16_t port, bool use_tcp, std::
     }
 
     if (m_interval_ms == 0) {
-        LogPrintf("Send interval is zero, not starting RawSender queueing thread.\n");
+        LogPrint(BCLog::NET, "%s: Send interval is zero, not starting RawSender queueing thread.\n", __func__);
     } else {
         m_interrupt.reset();
         m_thread = std::thread(&util::TraceThread, "rawsender", [this] { QueueThreadMain(); });
@@ -47,8 +47,8 @@ RawSender::RawSender(const std::string& host, uint16_t port, bool use_tcp, std::
         m_reconn = std::thread(&util::TraceThread, "rawreconnect", [this] { ReconnectThread(); });
     }
 
-    LogPrintf("Started %sRawSender sending messages to %s over %s\n", m_thread.joinable() ? "threaded " : "",
-              this->ToStringHostPort(), m_use_tcp ? "TCP" : "UDP");
+    LogPrint(BCLog::NET, "%s: Started %sinstance sending messages to %s over %s\n", __func__,
+             m_thread.joinable() ? "threaded " : "", this->ToStringHostPort(), m_use_tcp ? "TCP" : "UDP");
 }
 
 RawSender::~RawSender()
@@ -65,9 +65,6 @@ RawSender::~RawSender()
     // Flush queue of uncommitted messages
     QueueFlush(m_reconn_queue);
     QueueFlush(m_queue);
-
-    LogPrintf("Stopped RawSender instance sending messages to %s:%d. %d successes, %d failures.\n",
-              m_host, m_port, m_successes, m_failures);
 }
 
 std::optional<bilingual_str> RawSender::Connect()
@@ -111,7 +108,8 @@ void RawSender::Reconnect()
     assert(m_use_tcp && !m_sock);
 
     m_reconn_stats.m_attempts++;
-    LogPrintf("%s: Attempt %d at reconnecting with %s\n", __func__, m_reconn_stats.m_attempts, ToStringHostPort());
+    LogPrint(BCLog::NET, "%s: Attempt %d at reconnecting with %s\n", __func__, m_reconn_stats.m_attempts,
+             ToStringHostPort());
 
     // Connect() will not emit an error if connection failed, need to check for m_sock instead
     Connect();
@@ -147,10 +145,7 @@ void RawSender::ReconnectThread()
                 }
             }
         }
-        if (!queue.empty()) {
-            QueueFlush(queue);
-            LogPrintf("%s: Attempted to send %zu pending messages to %s\n", __func__, queue.size(), ToStringHostPort());
-        }
+        QueueFlush(queue);
         if (!m_reconn_interrupt.sleep_for(WITH_LOCK(cs_net, return m_reconn_stats.m_timeout))) {
             return;
         }
@@ -188,7 +183,6 @@ std::optional<bilingual_str> RawSender::SendDirectly(const RawMessage& msg)
 
         if (m_sock->Send(reinterpret_cast<const char*>(msg.data()), msg.size(), send_flags) == SOCKET_ERROR) {
             const auto err_code = WSAGetLastError();
-            m_failures++;
             if (err_code == WSAECONNABORTED ||
                 err_code == WSAECONNREFUSED ||
                 err_code == WSAECONNRESET ||
@@ -213,7 +207,6 @@ std::optional<bilingual_str> RawSender::SendDirectly(const RawMessage& msg)
     } else {
         if (!m_sock) {
             // UDP is connectionless, just bail out.
-            m_failures++;
             return _("Socket not initialized, cannot send message");
         }
 
@@ -224,13 +217,11 @@ std::optional<bilingual_str> RawSender::SendDirectly(const RawMessage& msg)
                      msg.size(),
 #endif // WIN32
                      send_flags, reinterpret_cast<struct sockaddr*>(&m_server.first), m_server.second) == SOCKET_ERROR) {
-            m_failures++;
             return strprintf(_("Unable to send message to %s (::sendto() returned error %s)"), this->ToStringHostPort(),
                              NetworkErrorString(WSAGetLastError()));
         }
     }
 
-    m_successes++;
     return std::nullopt;
 }
 
@@ -271,7 +262,9 @@ void RawSender::QueueFlush(std::deque<RawMessage>& queue)
         if (m_use_tcp && !msg.empty() && msg.back() != m_batching_opts.second) {
             msg += m_batching_opts.second;
         }
-        SendDirectly(msg);
+        if (auto error = SendDirectly(msg)) {
+            LogPrintLevel(BCLog::NET, BCLog::Level::Debug, "ERROR: %s: %s\n", __func__, error->original);
+        }
     }
 }
 

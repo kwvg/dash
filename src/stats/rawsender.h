@@ -133,11 +133,6 @@ private:
     const uint64_t m_interval_ms;
     /* Communicating over TCP if true (or UDP is false) */
     const bool m_use_tcp;
-
-    /* Number of messages sent */
-    uint64_t m_successes{0};
-    /* Number of messages not sent */
-    uint64_t m_failures{0};
 };
 
 #endif // BITCOIN_STATS_RAWSENDER_H

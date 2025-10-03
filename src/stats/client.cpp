@@ -131,7 +131,7 @@ util::Result<std::unique_ptr<StatsdClient>> StatsdClient::make(const ArgsManager
 {
     auto host = args.GetArg("-statshost", DEFAULT_STATSD_HOST);
     if (host.empty()) {
-        LogPrintf("Transmitting stats are disabled, will not init Statsd client\n");
+        LogPrintf("%s: Transmitting stats are disabled, will not init Statsd client\n", __func__);
         return std::make_unique<StatsdClient>();
     }
 
@@ -234,7 +234,7 @@ StatsdClientImpl::StatsdClientImpl(const std::string& host, uint16_t port, bool 
         return;
     }
 
-    LogPrintf("StatsdClient initialized to transmit stats to %s:%d\n", host, port);
+    LogPrintf("%s: Initialized to transmit stats to %s:%d\n", __func__, host, port);
 }
 
 template <typename T1>
@@ -259,7 +259,7 @@ inline bool StatsdClientImpl::_send(std::string_view key, T1 value, std::string_
 
     // Send it and report an error if we encounter one
     if (auto error_opt = Assert(m_sender)->Send(msg); error_opt.has_value()) {
-        LogPrintf("ERROR: %s.\n", error_opt->original);
+        LogPrint(BCLog::NET, "ERROR: %s: %s.\n", __func__, error_opt->original);
         return false;
     }
 
