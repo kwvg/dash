@@ -15,6 +15,7 @@
 #include <string_view>
 
 class ArgsManager;
+class CScheduler;
 
 /** Default host assumed to be running a Statsd server */
 static const std::string DEFAULT_STATSD_HOST{""};
@@ -39,6 +40,9 @@ class StatsdClient
 public:
     static util::Result<std::unique_ptr<StatsdClient>> make(const ArgsManager& args);
     virtual ~StatsdClient() = default;
+
+    /* Schedule tasks */
+    virtual void Schedule(CScheduler& scheduler) {}
 
     /* Statsd-defined APIs */
     virtual bool dec(std::string_view key, float sample_rate = 1.f) { return false; }

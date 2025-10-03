@@ -8,6 +8,7 @@
 #include <logging.h>
 #include <netaddress.h>
 #include <netbase.h>
+#include <scheduler.h>
 #include <util/sock.h>
 #include <util/thread.h>
 
@@ -38,26 +39,19 @@ RawSender::RawSender(const std::string& host, uint16_t port, bool use_tcp, std::
 
     if (m_interval_ms == 0) {
         LogPrint(BCLog::NET, "%s: Send interval is zero, not starting RawSender queueing thread.\n", __func__);
-    } else {
-        m_interrupt.reset();
-        m_thread = std::thread(&util::TraceThread, "rawsender", [this] { QueueThreadMain(); });
     }
 
     if (m_use_tcp) {
         m_reconn = std::thread(&util::TraceThread, "rawreconnect", [this] { ReconnectThread(); });
     }
 
-    LogPrint(BCLog::NET, "%s: Started %sinstance sending messages to %s over %s\n", __func__,
-             m_thread.joinable() ? "threaded " : "", this->ToStringHostPort(), m_use_tcp ? "TCP" : "UDP");
+    LogPrint(BCLog::NET, "%s: Started instance sending messages to %s over %s\n", __func__, this->ToStringHostPort(),
+             m_use_tcp ? "TCP" : "UDP");
 }
 
 RawSender::~RawSender()
 {
     // If there are threads, interrupt and stop it
-    if (m_thread.joinable()) {
-        m_interrupt();
-        m_thread.join();
-    }
     if (m_reconn.joinable()) {
         m_reconn_interrupt();
         m_reconn.join();
@@ -65,6 +59,12 @@ RawSender::~RawSender()
     // Flush queue of uncommitted messages
     QueueFlush(m_reconn_queue);
     QueueFlush(m_queue);
+}
+
+void RawSender::Schedule(CScheduler& scheduler)
+{
+    if (m_interval_ms == 0) return;
+    scheduler.scheduleEvery([this] { this->QueueThreadMain(); }, std::chrono::milliseconds{m_interval_ms});
 }
 
 std::optional<bilingual_str> RawSender::Connect()
@@ -167,8 +167,8 @@ std::optional<bilingual_str> RawSender::Send(const RawMessage& msg)
     AssertLockNotHeld(cs);
     AssertLockNotHeld(cs_net);
 
-    // If there is a thread, append to queue
-    if (m_thread.joinable()) {
+    // If queueing is enabled, append
+    if (m_interval_ms > 0) {
         WITH_LOCK(cs, QueueAdd(m_queue, msg));
         return std::nullopt;
     }
@@ -283,14 +283,8 @@ void RawSender::QueueThreadMain()
     AssertLockNotHeld(cs);
     AssertLockNotHeld(cs_net);
 
-    while (!m_interrupt) {
-        // Swap the queues to commit the existing queue of messages
-        std::deque<RawMessage> queue;
-        WITH_LOCK(cs, m_queue.swap(queue));
-        QueueFlush(queue);
-
-        if (!m_interrupt.sleep_for(std::chrono::milliseconds(m_interval_ms))) {
-            return;
-        }
-    }
+    // Swap the queues to commit the existing queue of messages
+    std::deque<RawMessage> queue;
+    WITH_LOCK(cs, m_queue.swap(queue));
+    QueueFlush(queue);
 }

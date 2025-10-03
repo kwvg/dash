@@ -2326,6 +2326,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         int nStatsPeriod = std::min(std::max((int)args.GetIntArg("-statsperiod", DEFAULT_STATSD_PERIOD), MIN_STATSD_PERIOD), MAX_STATSD_PERIOD);
         node.scheduler->scheduleEvery(std::bind(&PeriodicStats, std::ref(node)), std::chrono::seconds{nStatsPeriod});
     }
+    ::g_stats_client->Schedule(*node.scheduler);
 
     // ********************************************************* Step 11: import blocks
 

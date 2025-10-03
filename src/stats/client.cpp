@@ -51,6 +51,8 @@ public:
     ~StatsdClientImpl() = default;
 
 public:
+    void Schedule(CScheduler& scheduler) override;
+
     bool dec(std::string_view key, float sample_rate) override EXCLUSIVE_LOCKS_REQUIRED(!cs)
     {
         return count(key, -1, sample_rate);
@@ -235,6 +237,11 @@ StatsdClientImpl::StatsdClientImpl(const std::string& host, uint16_t port, bool 
     }
 
     LogPrintf("%s: Initialized to transmit stats to %s:%d\n", __func__, host, port);
+}
+
+void StatsdClientImpl::Schedule(CScheduler& scheduler)
+{
+    Assert(m_sender)->Schedule(scheduler);
 }
 
 template <typename T1>

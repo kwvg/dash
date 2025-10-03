@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+class CScheduler;
 class Sock;
 
 struct RawMessage : public std::vector<uint8_t>
@@ -64,6 +65,8 @@ public:
     RawSender(const RawSender&) = delete;
     RawSender& operator=(const RawSender&) = delete;
     RawSender(RawSender&&) = delete;
+
+    void Schedule(CScheduler& schedule);
 
     //! Request a message to be sent based on configuration (queueing, batching)
     std::optional<bilingual_str> Send(const RawMessage& msg) EXCLUSIVE_LOCKS_REQUIRED(!cs, !cs_net);
@@ -112,14 +115,10 @@ private:
 
     /* Mutex to protect (batches of) messages queue */
     mutable Mutex cs;
-    /* Interrupt for queue processing thread */
-    CThreadInterrupt m_interrupt;
     /* Interrupt for reconnection thread (TCP only) */
     CThreadInterrupt m_reconn_interrupt;
     /* Queue of (batches of) messages to be sent */
     std::deque<RawMessage> m_queue GUARDED_BY(cs);
-    /* Thread that processes queue every m_interval_ms */
-    std::thread m_thread;
     /* Reconnection attempt thread (TCP only) */
     std::thread m_reconn;
     /* Queue of messages to be sent when reconnection succeeds (TCP only) */

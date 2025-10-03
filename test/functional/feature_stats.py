@@ -119,7 +119,7 @@ class StatsTest(BitcoinTestFramework):
         with self.nodes[0].assert_debug_log(expected_msgs=[
             'Supplied URL with port, ignoring -statsport',
             'Initialized to transmit stats to 127.0.0.1:8126',
-            'Started threaded instance sending messages to 127.0.0.1:8126 over UDP'
+            'Started instance sending messages to 127.0.0.1:8126 over UDP'
         ]):
             self.restart_node(0, extra_args=['-debug=net', '-statshost=udp://127.0.0.1:8126', '-statsport=8125'])
         # Not specifying the port in the URL or -statsport will select the default port. Also, validate -statsduration behavior.
