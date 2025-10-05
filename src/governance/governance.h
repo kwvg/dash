@@ -7,6 +7,7 @@
 
 #include <governance/classes.h>
 #include <governance/object.h>
+#include <msg_result.h>
 
 #include <cachemap.h>
 #include <cachemultimap.h>
