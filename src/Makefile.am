@@ -258,6 +258,7 @@ BITCOIN_CORE_H = \
   instantsend/instantsend.h \
   instantsend/lock.h \
   instantsend/signing.h \
+  kernel/mempool_options.h \
   key.h \
   key_io.h \
   limitedmap.h \
@@ -288,6 +289,7 @@ BITCOIN_CORE_H = \
   masternode/payments.h \
   masternode/sync.h \
   masternode/utils.h \
+  mempool_args.h \
   memusage.h \
   merkleblock.h \
   messagesigner.h \
@@ -549,6 +551,7 @@ libbitcoin_node_a_SOURCES = \
   masternode/payments.cpp \
   masternode/sync.cpp \
   masternode/utils.cpp \
+  mempool_args.cpp \
   net.cpp \
   netfulfilledman.cpp \
   netgroup.cpp \
