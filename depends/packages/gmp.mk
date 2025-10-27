@@ -7,9 +7,10 @@ $(package)_patches=include_ldflags_in_configure.patch
 
 define $(package)_set_vars
 $(package)_config_opts += --disable-shared --enable-cxx --enable-fat
-$(package)_cflags_aarch64 += -march=armv8-a
-$(package)_cflags_armv7l += -march=armv7-a
-$(package)_cflags_x86_64 += -march=x86-64
+$(package)_cflags_aarch64_darwin += -mtune=apple-m1
+$(package)_cflags_aarch64_linux += -march=armv8-a+crypto -mtune=cortex-a72
+$(package)_cflags_armv7l += -march=armv7-a -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+$(package)_cflags_x86_64 += -march=sandybridge -mavx -mtune=generic
 endef
 
 define $(package)_preprocess_cmds
