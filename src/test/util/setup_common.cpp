@@ -184,7 +184,6 @@ BasicTestingSetup::BasicTestingSetup(const std::string& chainName, const std::ve
     SapphireAutoDetect();
     SHA256AutoDetect();
     ECC_Start();
-    BLSInit();
     SetupEnvironment();
     SetupNetworking();
     InitSignatureCache();

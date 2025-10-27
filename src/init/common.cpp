@@ -46,10 +46,6 @@ bool SanityChecks()
         return InitError(Untranslated("Elliptic curve cryptography sanity check failure. Aborting."));
     }
 
-    if (!BLSInit()) {
-        return false;
-    }
-
     if (!Random_SanityCheck()) {
         return InitError(Untranslated("OS cryptographic RNG sanity check failure. Aborting."));
     }

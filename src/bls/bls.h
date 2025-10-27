@@ -594,6 +594,4 @@ public:
 
 using BLSVerificationVectorPtr = std::shared_ptr<std::vector<CBLSPublicKey>>;
 
-bool BLSInit();
-
 #endif // DASH_CRYPTO_BLS_H
