@@ -19,7 +19,7 @@ RUN set -ex; \
     ccache \
     cmake \
     g++-11 \
-    g++-13 \
+    g++ \
     g++-15 \
     g++-arm-linux-gnueabihf \
     g++-mingw-w64-x86-64 \
@@ -29,7 +29,7 @@ RUN set -ex; \
     m4 \
     parallel \
     pkg-config \
-    wine-stable \
+    wine \
     wine64 \
     zip \
     && rm -rf /var/lib/apt/lists/*
@@ -38,22 +38,22 @@ RUN set -ex; \
 # Note: The slim container already added the GPG key and installed llvm-${LLVM_VERSION} but ${LLVM_VERSION_SECONDARY} is installed only in the full container
 ARG LLVM_VERSION_SECONDARY=21
 RUN set -ex; \
+    . /etc/os-release; \
     echo "deb [signed-by=/etc/apt/trusted.gpg.d/apt.llvm.org.asc] http://apt.llvm.org/${UBUNTU_CODENAME}/  llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_VERSION_SECONDARY} main" >> /etc/apt/sources.list.d/llvm.list; \
     apt-get update; \
-    apt-get install ${APT_ARGS} "llvm-${LLVM_VERSION_SECONDARY}"; \
     for llvmVersion in ${LLVM_VERSION} ${LLVM_VERSION_SECONDARY}; do \
       apt-get install ${APT_ARGS} \
         "clang-${llvmVersion}" \
-        "clangd-${llvmVersion}" \
-        "clang-format-${llvmVersion}" \
-        "clang-tidy-${llvmVersion}" \
-        "libc++-${llvmVersion}-dev" \
-        "libc++abi-${llvmVersion}-dev" \
         "libclang-${llvmVersion}-dev" \
         "libclang-rt-${llvmVersion}-dev" \
         "lld-${llvmVersion}" \
-        "lldb-${llvmVersion}"; \
+        "llvm-${llvmVersion}"; \
     done; \
+    apt-get install ${APT_ARGS} \
+    "clangd-${LLVM_VERSION}" \
+    "clang-format-${LLVM_VERSION}" \
+    "clang-tidy-${LLVM_VERSION}" \
+    "lldb-${LLVM_VERSION}"; \
     rm -rf /var/lib/apt/lists/*; \
     echo "Setting defaults for Clang/LLVM ${LLVM_VERSION}..."; \
     llvmUpdAltArgs="update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_VERSION} 100"; \
