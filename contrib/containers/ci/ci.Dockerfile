@@ -19,7 +19,8 @@ RUN set -ex; \
     ccache \
     cmake \
     g++-11 \
-    g++-14 \
+    g++-13 \
+    g++-15 \
     g++-arm-linux-gnueabihf \
     g++-mingw-w64-x86-64 \
     gawk \

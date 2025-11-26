@@ -18,7 +18,7 @@ RUN set -ex; \
     strip bin/cppcheck
 
 # Main image
-FROM ubuntu:noble
+FROM ubuntu:plucky
 
 # Include built assets
 COPY --from=cppcheck-builder /src/cppcheck/build/bin/cppcheck /usr/local/bin/cppcheck
