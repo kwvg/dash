@@ -99,6 +99,15 @@ jobs:
       build-target: linux64_nowallet
       container-path: ${{ needs.container.outputs.path }}
 
+  depends-linux64_ubsan:
+    name: x86_64-pc-linux-gnu_ubsan
+    uses: ./.github/workflows/build-depends.yml
+    needs: [container]
+    if: ${{ vars.SKIP_LINUX64_UBSAN == '' }}
+    with:
+      build-target: linux64_ubsan
+      container-path: ${{ needs.container.outputs.path }}
+
   depends-mac:
     name: x86_64-apple-darwin
     uses: ./.github/workflows/build-depends.yml
@@ -195,12 +204,12 @@ jobs:
   src-linux64_ubsan:
     name: linux64_ubsan-build
     uses: ./.github/workflows/build-src.yml
-    needs: [container, depends-linux64]
+    needs: [container, depends-linux64_ubsan]
     if: ${{ vars.SKIP_LINUX64_UBSAN == '' }}
     with:
       build-target: linux64_ubsan
       container-path: ${{ needs.container.outputs.path }}
-      depends-key: ${{ needs.depends-linux64.outputs.key }}
+      depends-key: ${{ needs.depends-linux64_ubsan.outputs.key }}
 
   src-mac:
     name: mac-build

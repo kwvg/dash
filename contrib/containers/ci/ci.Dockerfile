@@ -34,21 +34,28 @@ RUN set -ex; \
     zip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Clang + LLVM and set it as default
+# Install Clang/LLVM and set defaults
+# Note: The slim container already added the GPG key and installed llvm-${LLVM_VERSION} but ${LLVM_VERSION_SECONDARY} is installed only in the full container
+ARG LLVM_VERSION_SECONDARY=21
 RUN set -ex; \
-    apt-get update && apt-get install ${APT_ARGS} \
-    "clang-${LLVM_VERSION}" \
-    "clangd-${LLVM_VERSION}" \
-    "clang-format-${LLVM_VERSION}" \
-    "clang-tidy-${LLVM_VERSION}" \
-    "libc++-${LLVM_VERSION}-dev" \
-    "libc++abi-${LLVM_VERSION}-dev" \
-    "libclang-${LLVM_VERSION}-dev" \
-    "libclang-rt-${LLVM_VERSION}-dev" \
-    "lld-${LLVM_VERSION}" \
-    "lldb-${LLVM_VERSION}"; \
+    echo "deb [signed-by=/etc/apt/trusted.gpg.d/apt.llvm.org.asc] http://apt.llvm.org/${UBUNTU_CODENAME}/  llvm-toolchain-${UBUNTU_CODENAME}-${LLVM_VERSION_SECONDARY} main" >> /etc/apt/sources.list.d/llvm.list; \
+    apt-get update; \
+    apt-get install ${APT_ARGS} "llvm-${LLVM_VERSION_SECONDARY}"; \
+    for llvmVersion in ${LLVM_VERSION} ${LLVM_VERSION_SECONDARY}; do \
+      apt-get install ${APT_ARGS} \
+        "clang-${llvmVersion}" \
+        "clangd-${llvmVersion}" \
+        "clang-format-${llvmVersion}" \
+        "clang-tidy-${llvmVersion}" \
+        "libc++-${llvmVersion}-dev" \
+        "libc++abi-${llvmVersion}-dev" \
+        "libclang-${llvmVersion}-dev" \
+        "libclang-rt-${llvmVersion}-dev" \
+        "lld-${llvmVersion}" \
+        "lldb-${llvmVersion}"; \
+    done; \
     rm -rf /var/lib/apt/lists/*; \
-    echo "Setting defaults..."; \
+    echo "Setting defaults for Clang/LLVM ${LLVM_VERSION}..."; \
     llvmUpdAltArgs="update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-${LLVM_VERSION} 100"; \
     for binName in clang clang++ clang-apply-replacements clang-format clang-tidy clangd dsymutil lld lldb lldb-server llvm-ar llvm-cov llvm-nm llvm-objdump llvm-ranlib llvm-strip run-clang-tidy; do \
         llvmUpdAltArgs="${llvmUpdAltArgs} --slave /usr/bin/${binName} ${binName} /usr/bin/${binName}-${LLVM_VERSION}"; \
