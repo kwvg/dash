@@ -700,6 +700,68 @@ size_t CQuorumManager::GetQuorumRecoveryStartOffset(const CQuorum& quorum, const
     return nIndex % quorum.qc->validMembers.size();
 }
 
+MessageProcessingResult CQuorumManager::ProcessEncryptedContribs(CNode& pfrom, CConnman& connman, bool request_limit_exceeded,
+                                                                 CDataStream& vStream, CQuorum& quorum, CQuorumDataRequest& request,
+                                                                 const CBlockIndex* const block_index, std::string_view msg_type)
+{
+    if (msg_type == NetMsgType::QGETDATA) {
+        if (request.GetDataMask() & CQuorumDataRequest::ENCRYPTED_CONTRIBUTIONS) {
+            assert(block_index);
+
+            int memberIdx = quorum.GetMemberIndex(request.GetProTxHash());
+            if (memberIdx == -1) {
+                request.SetError(CQuorumDataRequest::Errors::MASTERNODE_IS_NO_MEMBER);
+                connman.PushMessage(&pfrom, CNetMsgMaker(pfrom.GetCommonVersion()).Make(NetMsgType::QDATA, request));
+                return request_limit_exceeded ? MisbehavingError{25, "request limit exceeded"} : MessageProcessingResult{};
+            }
+
+            std::vector<CBLSIESEncryptedObject<CBLSSecretKey>> vecEncrypted;
+            if (!dkgManager.GetEncryptedContributions(request.GetLLMQType(), block_index, quorum.qc->validMembers, request.GetProTxHash(), vecEncrypted)) {
+                request.SetError(CQuorumDataRequest::Errors::ENCRYPTED_CONTRIBUTIONS_MISSING);
+                connman.PushMessage(&pfrom, CNetMsgMaker(pfrom.GetCommonVersion()).Make(NetMsgType::QDATA, request));
+                return request_limit_exceeded ? MisbehavingError{25, "request limit exceeded"} : MessageProcessingResult{};
+            }
+
+            vStream << vecEncrypted;
+        }
+    } else if (msg_type == NetMsgType::QDATA) {
+        if (request.GetDataMask() & CQuorumDataRequest::ENCRYPTED_CONTRIBUTIONS) {
+            assert(m_mn_activeman);
+
+            if (WITH_LOCK(quorum.cs_vvec_shShare, return quorum.quorumVvec->size() != size_t(quorum.params.threshold))) {
+                // Don't bump score because we asked for it
+                LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- %s: No valid quorum verification vector available, from peer=%d\n", __func__, msg_type, pfrom.GetId());
+                return {};
+            }
+
+            int memberIdx = quorum.GetMemberIndex(request.GetProTxHash());
+            if (memberIdx == -1) {
+                // Don't bump score because we asked for it
+                LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- %s: Not a member of the quorum, from peer=%d\n", __func__, msg_type, pfrom.GetId());
+                return {};
+            }
+
+            std::vector<CBLSIESEncryptedObject<CBLSSecretKey>> vecEncrypted;
+            vStream >> vecEncrypted;
+
+            std::vector<CBLSSecretKey> vecSecretKeys;
+            vecSecretKeys.resize(vecEncrypted.size());
+            for (const auto i : irange::range(vecEncrypted.size())) {
+                if (!m_mn_activeman->Decrypt(vecEncrypted[i], memberIdx, vecSecretKeys[i], PROTOCOL_VERSION)) {
+                    return MisbehavingError{10, "failed to decrypt"};
+                }
+            }
+
+            CBLSSecretKey secretKeyShare = blsWorker.AggregateSecretKeys(vecSecretKeys);
+            if (!quorum.SetSecretKeyShare(secretKeyShare, *m_mn_activeman)) {
+                return MisbehavingError{10, "invalid secret key share received"};
+            }
+        }
+    }
+
+    return {};
+}
+
 MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& connman, std::string_view msg_type, CDataStream& vRecv)
 {
     if (msg_type == NetMsgType::QGETDATA) {
@@ -775,19 +837,9 @@ MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& c
         }
 
         // Check if request wants ENCRYPTED_CONTRIBUTIONS data
-        if (request.GetDataMask() & CQuorumDataRequest::ENCRYPTED_CONTRIBUTIONS) {
-
-            int memberIdx = pQuorum->GetMemberIndex(request.GetProTxHash());
-            if (memberIdx == -1) {
-                return sendQDATA(CQuorumDataRequest::Errors::MASTERNODE_IS_NO_MEMBER, request_limit_exceeded);
-            }
-
-            std::vector<CBLSIESEncryptedObject<CBLSSecretKey>> vecEncrypted;
-            if (!dkgManager.GetEncryptedContributions(request.GetLLMQType(), pQuorumBaseBlockIndex, pQuorum->qc->validMembers, request.GetProTxHash(), vecEncrypted)) {
-                return sendQDATA(CQuorumDataRequest::Errors::ENCRYPTED_CONTRIBUTIONS_MISSING, request_limit_exceeded);
-            }
-
-            ssResponseData << vecEncrypted;
+        // TODO: Get rid of the const_cast, we aren't actually writing anything but it's bad regardless
+        if (auto ret = ProcessEncryptedContribs(pfrom, connman, request_limit_exceeded, ssResponseData, const_cast<CQuorum&>(*pQuorum), request, pQuorumBaseBlockIndex, msg_type); !ret.empty()) {
+            return ret;
         }
 
         return sendQDATA(CQuorumDataRequest::Errors::NONE, request_limit_exceeded, ssResponseData);
@@ -845,38 +897,10 @@ MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& c
         }
 
         // Check if request has ENCRYPTED_CONTRIBUTIONS data
-        if (request.GetDataMask() & CQuorumDataRequest::ENCRYPTED_CONTRIBUTIONS) {
-            assert(m_mn_activeman);
-
-            if (WITH_LOCK(pQuorum->cs_vvec_shShare, return pQuorum->quorumVvec->size() != size_t(pQuorum->params.threshold))) {
-                // Don't bump score because we asked for it
-                LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- %s: No valid quorum verification vector available, from peer=%d\n", __func__, msg_type, pfrom.GetId());
-                return {};
-            }
-
-            int memberIdx = pQuorum->GetMemberIndex(request.GetProTxHash());
-            if (memberIdx == -1) {
-                // Don't bump score because we asked for it
-                LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- %s: Not a member of the quorum, from peer=%d\n", __func__, msg_type, pfrom.GetId());
-                return {};
-            }
-
-            std::vector<CBLSIESEncryptedObject<CBLSSecretKey>> vecEncrypted;
-            vRecv >> vecEncrypted;
-
-            std::vector<CBLSSecretKey> vecSecretKeys;
-            vecSecretKeys.resize(vecEncrypted.size());
-            for (const auto i : irange::range(vecEncrypted.size())) {
-                if (!m_mn_activeman->Decrypt(vecEncrypted[i], memberIdx, vecSecretKeys[i], PROTOCOL_VERSION)) {
-                    return MisbehavingError{10, "failed to decrypt"};
-                }
-            }
-
-            CBLSSecretKey secretKeyShare = blsWorker.AggregateSecretKeys(vecSecretKeys);
-            if (!pQuorum->SetSecretKeyShare(secretKeyShare, *m_mn_activeman)) {
-                return MisbehavingError{10, "invalid secret key share received"};
-            }
+        if (auto ret = ProcessEncryptedContribs(pfrom, connman, /*request_limit_exceeded=*/false, vRecv, *pQuorum, request, /*block_index=*/nullptr, msg_type); !ret.empty()) {
+            return ret;
         }
+
         WITH_LOCK(cs_db, pQuorum->WriteContributions(*db));
         return {};
     }
