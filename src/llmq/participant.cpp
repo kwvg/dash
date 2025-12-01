@@ -43,9 +43,9 @@ QuorumParticipant::~QuorumParticipant()
 {
 }
 
-void QuorumParticipant::TriggerQuorumDataRecoveryThreads(CConnman& connman, const CBlockIndex* pIndex) const
+void QuorumParticipant::TriggerQuorumDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> pIndex) const
 {
-    if ((m_mn_activeman == nullptr && !m_quorums_watch) || !m_quorums_recovery || pIndex == nullptr) {
+    if ((m_mn_activeman == nullptr && !m_quorums_watch) || !m_quorums_recovery) {
         return;
     }
 
@@ -97,6 +97,7 @@ void QuorumParticipant::TriggerQuorumDataRecoveryThreads(CConnman& connman, cons
 
 void QuorumParticipant::UpdatedBlockTip(const CBlockIndex* pindexNew, CConnman& connman, bool fInitialDownload) const
 {
+    if (pindexNew == nullptr) return;
     if (!m_mn_sync.IsBlockchainSynced()) return;
 
     for (const auto& params : Params().GetConsensus().llmqs) {
@@ -121,7 +122,7 @@ void QuorumParticipant::UpdatedBlockTip(const CBlockIndex* pindexNew, CConnman& 
 }
 
 void QuorumParticipant::CheckQuorumConnections(CConnman& connman, const Consensus::LLMQParams& llmqParams,
-                                               const CBlockIndex* pindexNew) const
+                                               gsl::not_null<const CBlockIndex*> pindexNew) const
 {
     if (m_mn_activeman == nullptr && !m_quorums_watch) return;
 
@@ -195,7 +196,7 @@ bool QuorumParticipant::SetQuorumSecretKeyShare(CQuorum& quorum, Span<CBLSSecret
     return m_mn_activeman && quorum.SetSecretKeyShare(m_bls_worker.AggregateSecretKeys(skContributions), m_mn_activeman->GetProTxHash());
 }
 
-size_t QuorumParticipant::GetQuorumRecoveryStartOffset(const CQuorum& quorum, const CBlockIndex* pIndex) const
+size_t QuorumParticipant::GetQuorumRecoveryStartOffset(const CQuorum& quorum, gsl::not_null<const CBlockIndex*> pIndex) const
 {
     assert(m_mn_activeman);
 
@@ -281,8 +282,7 @@ MessageProcessingResult QuorumParticipant::ProcessEncryptedContribs(CNode& pfrom
     return {};
 }
 
-void QuorumParticipant::StartQuorumDataRecoveryThread(CConnman& connman, CQuorumCPtr pQuorum,
-                                                   const CBlockIndex* pIndex, uint16_t nDataMaskIn) const
+void QuorumParticipant::StartQuorumDataRecoveryThread(CConnman& connman, CQuorumCPtr pQuorum, gsl::not_null<const CBlockIndex*> pIndex, uint16_t nDataMaskIn) const
 {
     assert(m_mn_activeman);
 
@@ -404,7 +404,7 @@ void QuorumParticipant::StartQuorumDataRecoveryThread(CConnman& connman, CQuorum
     });
 }
 
-void QuorumParticipant::StartCleanupOldQuorumDataThread(const CBlockIndex* pIndex) const
+void QuorumParticipant::StartCleanupOldQuorumDataThread(gsl::not_null<const CBlockIndex*> pIndex) const
 {
     // Note: this function is CPU heavy and we don't want it to be running during DKGs.
     // The largest dkgMiningWindowStart for a related quorum type is 42 (LLMQ_60_75).
@@ -413,7 +413,7 @@ void QuorumParticipant::StartCleanupOldQuorumDataThread(const CBlockIndex* pInde
     // window and it's better to have more room so we pick next cycle.
     // dkgMiningWindowStart for small quorums is 10 i.e. a safe block to start
     // these calculations is at height 576 + 24 * 2 + 10 = 576 + 58.
-    if ((m_mn_activeman == nullptr && !m_quorums_watch) || pIndex == nullptr || (pIndex->nHeight % 576 != 58)) {
+    if ((m_mn_activeman == nullptr && !m_quorums_watch) || (pIndex->nHeight % 576 != 58)) {
         return;
     }
 

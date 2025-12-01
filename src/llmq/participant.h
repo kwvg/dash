@@ -70,19 +70,19 @@ public:
     bool SetQuorumSecretKeyShare(CQuorum& quorum, Span<CBLSSecretKey> skContributions) const;
 
 private:
-    void TriggerQuorumDataRecoveryThreads(CConnman& connman, const CBlockIndex* pIndex) const;
+    void TriggerQuorumDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> pIndex) const;
 
-    void CheckQuorumConnections(CConnman& connman, const Consensus::LLMQParams& llmqParams, const CBlockIndex* pindexNew) const;
+    void CheckQuorumConnections(CConnman& connman, const Consensus::LLMQParams& llmqParams, gsl::not_null<const CBlockIndex*> pindexNew) const;
 
     /// Returns the start offset for the masternode with the given proTxHash. This offset is applied when picking data recovery members of a quorum's
     /// memberlist and is calculated based on a list of all member of all active quorums for the given llmqType in a way that each member
     /// should receive the same number of request if all active llmqType members requests data from one llmqType quorum.
-    size_t GetQuorumRecoveryStartOffset(const CQuorum& quorum, const CBlockIndex* pIndex) const;
+    size_t GetQuorumRecoveryStartOffset(const CQuorum& quorum, gsl::not_null<const CBlockIndex*> pIndex) const;
 
-    void StartQuorumDataRecoveryThread(CConnman& connman, CQuorumCPtr pQuorum, const CBlockIndex* pIndex,
+    void StartQuorumDataRecoveryThread(CConnman& connman, CQuorumCPtr pQuorum, gsl::not_null<const CBlockIndex*> pIndex,
                                        uint16_t nDataMask) const;
 
-    void StartCleanupOldQuorumDataThread(const CBlockIndex* pIndex) const;
+    void StartCleanupOldQuorumDataThread(gsl::not_null<const CBlockIndex*> pIndex) const;
 };
 } // namespace llmq
 
