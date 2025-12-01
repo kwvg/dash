@@ -248,11 +248,17 @@ private:
     const bool m_quorums_recovery{false};
     const bool m_quorums_watch{false};
 
+    mutable Mutex cs_data_requests;
+    mutable std::unordered_map<CQuorumDataRequestKey, CQuorumDataRequest, StaticSaltedHasher> mapQuorumDataRequests
+        GUARDED_BY(cs_data_requests);
+
     mutable Mutex cs_map_quorums;
     mutable std::map<Consensus::LLMQType, Uint256LruHashMap<CQuorumPtr>> mapQuorumsCache GUARDED_BY(cs_map_quorums);
+
     mutable Mutex cs_scan_quorums; // TODO: merge cs_map_quorums, cs_scan_quorums mutexes
     mutable std::map<Consensus::LLMQType, Uint256LruHashMap<std::vector<CQuorumCPtr>>> scanQuorumsCache
         GUARDED_BY(cs_scan_quorums);
+
     mutable Mutex cs_cleanup;
     mutable std::map<Consensus::LLMQType, Uint256LruHashMap<uint256>> cleanupQuorumsCache GUARDED_BY(cs_cleanup);
 
@@ -280,19 +286,20 @@ public:
     void Stop();
 
     void TriggerQuorumDataRecoveryThreads(CConnman& connman, const CBlockIndex* pIndex) const
-        EXCLUSIVE_LOCKS_REQUIRED(!cs_db, !cs_scan_quorums, !cs_map_quorums);
+        EXCLUSIVE_LOCKS_REQUIRED(!cs_db, !cs_data_requests, !cs_scan_quorums, !cs_map_quorums);
 
     void UpdatedBlockTip(const CBlockIndex* pindexNew, CConnman& connman, bool fInitialDownload) const
-        EXCLUSIVE_LOCKS_REQUIRED(!cs_db, !cs_scan_quorums, !cs_map_quorums);
+        EXCLUSIVE_LOCKS_REQUIRED(!cs_db, !cs_data_requests, !cs_scan_quorums, !cs_map_quorums);
 
     [[nodiscard]] MessageProcessingResult ProcessMessage(CNode& pfrom, CConnman& connman, std::string_view msg_type,
                                                          CDataStream& vRecv)
-        EXCLUSIVE_LOCKS_REQUIRED(!cs_map_quorums, !cs_db);
+        EXCLUSIVE_LOCKS_REQUIRED(!cs_db, !cs_data_requests, !cs_map_quorums);
 
     static bool HasQuorum(Consensus::LLMQType llmqType, const CQuorumBlockProcessor& quorum_block_processor, const uint256& quorumHash);
 
     bool RequestQuorumData(CNode* pfrom, CConnman& connman, const CQuorum& quorum, uint16_t nDataMask,
-                           const uint256& proTxHash = uint256()) const;
+                           const uint256& proTxHash = uint256()) const
+        EXCLUSIVE_LOCKS_REQUIRED(!cs_data_requests);
 
     // all these methods will lock cs_main for a short period of time
     CQuorumCPtr GetQuorum(Consensus::LLMQType llmqType, const uint256& quorumHash) const
@@ -326,7 +333,8 @@ private:
 
     void StartCachePopulatorThread(CQuorumCPtr pQuorum) const;
     void StartQuorumDataRecoveryThread(CConnman& connman, CQuorumCPtr pQuorum, const CBlockIndex* pIndex,
-                                       uint16_t nDataMask) const;
+                                       uint16_t nDataMask) const
+        EXCLUSIVE_LOCKS_REQUIRED(!cs_data_requests);
 
     void StartCleanupOldQuorumDataThread(const CBlockIndex* pIndex) const;
     void MigrateOldQuorumDB(CEvoDB& evoDb) const EXCLUSIVE_LOCKS_REQUIRED(!cs_db);
