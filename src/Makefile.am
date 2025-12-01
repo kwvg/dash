@@ -269,6 +269,7 @@ BITCOIN_CORE_H = \
   llmq/dkgsessionmgr.h \
   llmq/ehf_signals.h \
   llmq/options.h \
+  llmq/participant.h \
   llmq/params.h \
   llmq/quorums.h \
   llmq/signhash.h \
