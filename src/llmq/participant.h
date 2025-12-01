@@ -33,6 +33,7 @@ class CQuorum;
 class CQuorumDataRequest;
 class CQuorumManager;
 class CQuorumSnapshotManager;
+enum class QvvecSyncMode : int8_t;
 
 class QuorumParticipant
 {
@@ -79,8 +80,13 @@ private:
     /// should receive the same number of request if all active llmqType members requests data from one llmqType quorum.
     size_t GetQuorumRecoveryStartOffset(const CQuorum& quorum, gsl::not_null<const CBlockIndex*> pIndex) const;
 
-    void StartQuorumDataRecoveryThread(CConnman& connman, CQuorumCPtr pQuorum, gsl::not_null<const CBlockIndex*> pIndex,
-                                       uint16_t nDataMask) const;
+    void StartDataRecoveryThread(CConnman& connman, gsl::not_null<const CBlockIndex*> pIndex, CQuorumCPtr pQuorum, uint16_t nDataMask) const;
+    void TriggerDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index) const;
+
+    void StartVvecSyncThread(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index, CQuorumCPtr pQuorum) const;
+    void TriggerVvecSyncThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index) const;
+    void TryStartVvecSyncThread(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index, CQuorumCPtr pQuorum,
+                                const std::map<Consensus::LLMQType, QvvecSyncMode>& mapQuorumVvecSync, bool fWeAreQuorumTypeMember) const;
 
     void StartCleanupOldQuorumDataThread(gsl::not_null<const CBlockIndex*> pIndex) const;
 
