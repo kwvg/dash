@@ -83,6 +83,8 @@ private:
                                        uint16_t nDataMask) const;
 
     void StartCleanupOldQuorumDataThread(gsl::not_null<const CBlockIndex*> pIndex) const;
+
+    void DataRecoveryThread(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index, CQuorumCPtr quorum, uint16_t data_mask, const uint256& protx_hash, size_t start_offset) const;
 };
 } // namespace llmq
 
