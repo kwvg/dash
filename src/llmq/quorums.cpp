@@ -204,7 +204,7 @@ bool CQuorum::ReadContributions(const CDBWrapper& db)
 }
 
 CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
-                               CDKGSessionManager& _dkgManager, CEvoDB& _evoDb,
+                               CDKGSessionManager& _dkgManager,
                                CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
                                const CActiveMasternodeManager* const mn_activeman, const CMasternodeSync& mn_sync,
                                const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_recovery,
@@ -225,7 +225,6 @@ CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, 
 {
     utils::InitQuorumsCache(mapQuorumsCache, false);
     quorumThreadInterrupt.reset();
-    MigrateOldQuorumDB(_evoDb);
 }
 
 CQuorumManager::~CQuorumManager()
@@ -1160,69 +1159,6 @@ void CQuorumManager::StartCleanupOldQuorumDataThread(const CBlockIndex* pIndex) 
 
         LogPrint(BCLog::LLMQ, "CQuorumManager::StartCleanupOldQuorumDataThread -- done. time=%d\n", t.count());
     });
-}
-
-// TODO: remove in v23
-void CQuorumManager::MigrateOldQuorumDB(CEvoDB& evoDb) const
-{
-    LOCK(cs_db);
-    if (!db->IsEmpty()) return;
-
-    const auto prefixes = {DB_QUORUM_QUORUM_VVEC, DB_QUORUM_SK_SHARE};
-
-    LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- start\n", __func__);
-
-    CDBBatch batch(*db);
-    std::unique_ptr<CDBIterator> pcursor(evoDb.GetRawDB().NewIterator());
-
-    for (const auto& prefix : prefixes) {
-        auto start = std::make_tuple(prefix, uint256());
-        pcursor->Seek(start);
-
-        int count{0};
-        while (pcursor->Valid()) {
-            decltype(start) k;
-            CDataStream s(SER_DISK, CLIENT_VERSION);
-            CBLSSecretKey sk;
-
-            if (!pcursor->GetKey(k) || std::get<0>(k) != prefix) {
-                break;
-            }
-
-            if (prefix == DB_QUORUM_QUORUM_VVEC) {
-                if (!evoDb.GetRawDB().ReadDataStream(k, s)) {
-                    break;
-                }
-                batch.Write(k, s);
-            }
-            if (prefix == DB_QUORUM_SK_SHARE) {
-                if (!pcursor->GetValue(sk)) {
-                    break;
-                }
-                batch.Write(k, sk);
-            }
-
-            if (batch.SizeEstimate() >= (1 << 24)) {
-                db->WriteBatch(batch);
-                batch.Clear();
-            }
-
-            ++count;
-            pcursor->Next();
-        }
-
-        db->WriteBatch(batch);
-
-        LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- %s moved %d\n", __func__, prefix, count);
-    }
-
-    pcursor.reset();
-    db->CompactFull();
-
-    DataCleanupHelper(evoDb.GetRawDB(), {});
-    evoDb.CommitRootTransaction();
-
-    LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- done\n", __func__);
 }
 
 CQuorumCPtr SelectQuorumForSigning(const Consensus::LLMQParams& llmq_params, const CChain& active_chain, const CQuorumManager& qman,
