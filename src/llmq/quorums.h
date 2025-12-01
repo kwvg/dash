@@ -33,7 +33,6 @@ class CDataStream;
 class CDeterministicMN;
 class CDeterministicMNManager;
 class CDBWrapper;
-class CEvoDB;
 class CMasternodeSync;
 class CNode;
 class CSporkManager;
@@ -271,7 +270,6 @@ public:
     CQuorumManager(const CQuorumManager&) = delete;
     CQuorumManager& operator=(const CQuorumManager&) = delete;
     explicit CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
-                            CEvoDB& _evoDb,
                             CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
                             const CActiveMasternodeManager* const mn_activeman, const CMasternodeSync& mn_sync,
                             const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_recovery,
@@ -339,7 +337,6 @@ private:
                                        uint16_t nDataMask) const;
 
     void StartCleanupOldQuorumDataThread(const CBlockIndex* pIndex) const;
-    void MigrateOldQuorumDB(CEvoDB& evoDb) const EXCLUSIVE_LOCKS_REQUIRED(!cs_db);
 };
 
 // when selecting a quorum for signing and verification, we use CQuorumManager::SelectQuorum with this offset as

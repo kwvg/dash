@@ -24,7 +24,7 @@ LLMQContext::LLMQContext(ChainstateManager& chainman, CDeterministicMNManager& d
     qsnapman{std::make_unique<llmq::CQuorumSnapshotManager>(evo_db)},
     quorum_block_processor{
         std::make_unique<llmq::CQuorumBlockProcessor>(chainman.ActiveChainstate(), dmnman, evo_db, *qsnapman)},
-    qman{std::make_unique<llmq::CQuorumManager>(*bls_worker, chainman.ActiveChainstate(), dmnman, evo_db,
+    qman{std::make_unique<llmq::CQuorumManager>(*bls_worker, chainman.ActiveChainstate(), dmnman,
                                                 *quorum_block_processor, *qsnapman, mn_activeman, mn_sync, sporkman,
                                                 db_params, quorums_recovery, quorums_watch)},
     sigman{std::make_unique<llmq::CSigningManager>(*qman, db_params)},
