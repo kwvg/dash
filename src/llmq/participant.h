@@ -80,6 +80,8 @@ private:
     /// should receive the same number of request if all active llmqType members requests data from one llmqType quorum.
     size_t GetQuorumRecoveryStartOffset(const CQuorum& quorum, gsl::not_null<const CBlockIndex*> pIndex) const;
 
+    Uint256HashSet GetQuorumsToDelete(CConnman& connman, const Consensus::LLMQParams& llmqParams, gsl::not_null<const CBlockIndex*> pindexNew) const;
+    
     void StartDataRecoveryThread(CConnman& connman, gsl::not_null<const CBlockIndex*> pIndex, CQuorumCPtr pQuorum, uint16_t nDataMask) const;
     void TriggerDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index) const;
 
