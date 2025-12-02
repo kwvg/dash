@@ -540,6 +540,7 @@ libbitcoin_node_a_SOURCES = \
   llmq/dkgsessionhandler.cpp \
   llmq/dkgsessionmgr.cpp \
   llmq/ehf_signals.cpp \
+  llmq/observer.cpp \
   llmq/options.cpp \
   llmq/participant.cpp \
   llmq/quorums.cpp \
