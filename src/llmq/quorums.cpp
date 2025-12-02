@@ -219,7 +219,7 @@ CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, 
     quorumBlockProcessor{_quorumBlockProcessor},
     m_qsnapman{qsnapman},
     m_mn_activeman{mn_activeman},
-    m_participant{std::make_unique<llmq::QuorumParticipant>(_blsWorker, dmnman, _dkgManager, *this, qsnapman, mn_activeman, mn_sync, sporkman, quorums_recovery, quorums_watch)},
+    m_participant{std::make_unique<llmq::QuorumObserver>(dmnman, *this, qsnapman, mn_activeman, mn_sync, sporkman, quorums_recovery, quorums_watch)},
     m_quorums_watch{quorums_watch}
 {
     utils::InitQuorumsCache(mapQuorumsCache, false);

@@ -26,13 +26,13 @@ namespace llmq {
 QuorumParticipant::QuorumParticipant(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CDKGSessionManager& dkgsman, CQuorumManager& qman,
                                      CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager* const mn_activeman,
                                      const CMasternodeSync& mn_sync, const CSporkManager& sporkman, bool quorums_recovery, bool quorums_watch) :
+    QuorumObserver(dmnman, qman, qsnapman, mn_activeman, mn_sync, sporkman, quorums_recovery, quorums_watch),
     m_bls_worker{bls_worker},
     m_dmnman{dmnman},
     m_dkgsman{dkgsman},
     m_qman{qman},
     m_qsnapman{qsnapman},
     m_mn_activeman{mn_activeman},
-    m_mn_sync{mn_sync},
     m_sporkman{sporkman},
     m_quorums_recovery{quorums_recovery},
     m_quorums_watch{quorums_watch}
@@ -43,31 +43,13 @@ QuorumParticipant::~QuorumParticipant()
 {
 }
 
-void QuorumParticipant::TriggerQuorumDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> pIndex) const
+void QuorumParticipant::CheckQuorumConnections(CConnman& connman, const Consensus::LLMQParams& llmqParams, gsl::not_null<const CBlockIndex*> pindexNew) const
 {
+    assert(m_mn_activeman);
+
     if (!m_quorums_recovery) {
         return;
     }
-
-    if (m_mn_activeman) {
-        TriggerDataRecoveryThreads(connman, pIndex);
-    } else if (m_quorums_watch) {
-        TriggerVvecSyncThreads(connman, pIndex);
-    }
-}
-
-void QuorumParticipant::CheckQuorumConnections(CConnman& connman, const Consensus::LLMQParams& llmqParams, gsl::not_null<const CBlockIndex*> pindexNew) const
-{
-    if (m_mn_activeman) {
-        CheckQuorumConnectionsMn(connman, llmqParams, pindexNew);
-    } else if (m_quorums_watch) {
-        CheckQuorumConnectionsWatchOnly(connman, llmqParams, pindexNew);
-    }
-}
-
-void QuorumParticipant::CheckQuorumConnectionsMn(CConnman& connman, const Consensus::LLMQParams& llmqParams, gsl::not_null<const CBlockIndex*> pindexNew) const
-{
-    assert(m_mn_activeman);
 
     auto lastQuorums = m_qman.ScanQuorums(llmqParams.type, pindexNew, (size_t)llmqParams.keepOldConnections);
     auto deletableQuorums = GetQuorumsToDelete(connman, llmqParams, pindexNew);
@@ -110,7 +92,9 @@ void QuorumParticipant::CheckQuorumConnectionsMn(CConnman& connman, const Consen
 
 bool QuorumParticipant::SetQuorumSecretKeyShare(CQuorum& quorum, Span<CBLSSecretKey> skContributions) const
 {
-    return m_mn_activeman && quorum.SetSecretKeyShare(m_bls_worker.AggregateSecretKeys(skContributions), m_mn_activeman->GetProTxHash());
+    assert(m_mn_activeman);
+
+    return quorum.SetSecretKeyShare(m_bls_worker.AggregateSecretKeys(skContributions), m_mn_activeman->GetProTxHash());
 }
 
 size_t QuorumParticipant::GetQuorumRecoveryStartOffset(const CQuorum& quorum, gsl::not_null<const CBlockIndex*> pIndex) const
@@ -214,9 +198,13 @@ void QuorumParticipant::StartDataRecoveryThread(CConnman& connman, gsl::not_null
     });
 }
 
-void QuorumParticipant::TriggerDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index) const
+void QuorumParticipant::TriggerQuorumDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index) const
 {
     assert(m_mn_activeman);
+
+    if (!m_quorums_recovery) {
+        return;
+    }
 
     LogPrint(BCLog::LLMQ, "QuorumParticipant::%s -- Process block %s\n", __func__, block_index->GetBlockHash().ToString());
 
