@@ -81,6 +81,8 @@ private:
     //! Connection
     Uint256HashSet GetQuorumsToDelete(CConnman& connman, const Consensus::LLMQParams& llmqParams, gsl::not_null<const CBlockIndex*> pindexNew) const;
     void CheckQuorumConnections(CConnman& connman, const Consensus::LLMQParams& llmqParams, gsl::not_null<const CBlockIndex*> pindexNew) const;
+    void CheckQuorumConnectionsMn(CConnman& connman, const Consensus::LLMQParams& llmqParams, gsl::not_null<const CBlockIndex*> pindexNew) const;
+    void CheckQuorumConnectionsWatchOnly(CConnman& connman, const Consensus::LLMQParams& llmqParams, gsl::not_null<const CBlockIndex*> pindexNew) const;
 
     //! Data recovery
     void DataRecoveryThread(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index, CQuorumCPtr quorum, uint16_t data_mask,
