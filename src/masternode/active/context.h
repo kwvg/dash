@@ -31,6 +31,7 @@ class InstantSendSigner;
 namespace llmq {
 class CEHFSignalsHandler;
 class CSigSharesManager;
+class QuorumParticipant;
 } // namespace llmq
 
 struct ActiveContext {
@@ -46,7 +47,7 @@ public:
                            CDSTXManager& dstxman, CGovernanceManager& govman, CMasternodeMetaMan& mn_metaman,
                            CMNHFManager& mnhfman, CSporkManager& sporkman, CTxMemPool& mempool, LLMQContext& llmq_ctx,
                            PeerManager& peerman, const CActiveMasternodeManager& mn_activeman,
-                           const CMasternodeSync& mn_sync);
+                           const CMasternodeSync& mn_sync, bool quorums_recovery, bool quorums_watch);
     ~ActiveContext();
 
     void Interrupt();
@@ -70,6 +71,7 @@ private:
      */
     const std::unique_ptr<chainlock::ChainLockSigner> cl_signer;
     const std::unique_ptr<instantsend::InstantSendSigner> is_signer;
+    const std::unique_ptr<llmq::QuorumParticipant> quorum_signer;
 };
 
 #endif // BITCOIN_MASTERNODE_ACTIVE_CONTEXT_H

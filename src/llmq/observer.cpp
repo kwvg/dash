@@ -24,16 +24,14 @@
 #include <cxxtimer.hpp>
 
 namespace llmq {
-QuorumObserver::QuorumObserver(CDeterministicMNManager& dmnman, CQuorumManager& qman, CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager* const mn_activeman,
-                               const CMasternodeSync& mn_sync, const CSporkManager& sporkman, bool quorums_recovery, bool quorums_watch) :
+QuorumObserver::QuorumObserver(CDeterministicMNManager& dmnman, CQuorumManager& qman, CQuorumSnapshotManager& qsnapman,
+                               const CMasternodeSync& mn_sync, const CSporkManager& sporkman, bool quorums_recovery) :
     m_dmnman{dmnman},
     m_qman{qman},
     m_qsnapman{qsnapman},
-    m_mn_activeman{mn_activeman},
     m_mn_sync{mn_sync},
     m_sporkman{sporkman},
-    m_quorums_recovery{quorums_recovery},
-    m_quorums_watch{quorums_watch}
+    m_quorums_recovery{quorums_recovery}
 {
 }
 
@@ -43,7 +41,7 @@ QuorumObserver::~QuorumObserver()
 
 void QuorumObserver::CheckQuorumConnections(CConnman& connman, const Consensus::LLMQParams& llmqParams, gsl::not_null<const CBlockIndex*> pindexNew) const
 {
-    if (!m_quorums_recovery || !m_quorums_watch) {
+    if (!m_quorums_recovery) {
         return;
     }
 
@@ -53,7 +51,7 @@ void QuorumObserver::CheckQuorumConnections(CConnman& connman, const Consensus::
     for (const auto& quorum : lastQuorums) {
         if (utils::EnsureQuorumConnections(llmqParams, connman, m_dmnman, m_sporkman, m_qsnapman,
                                            m_dmnman.GetListAtChainTip(), quorum->m_quorum_base_block_index, /*myProTxHash=*/uint256(),
-                                           /*is_masternode=*/false, m_quorums_watch)) {
+                                           /*is_masternode=*/false, /*quorums_watch=*/true)) {
             if (deletableQuorums.erase(quorum->qc->quorumHash) > 0) {
                 LogPrint(BCLog::LLMQ, "QuorumObserver::%s -- llmqType[%d] h[%d] keeping mn quorum connections for quorum: [%d:%s]\n", __func__, ToUnderlying(llmqParams.type), pindexNew->nHeight, quorum->m_quorum_base_block_index->nHeight, quorum->m_quorum_base_block_index->GetBlockHash().ToString());
             }
@@ -89,7 +87,7 @@ void QuorumObserver::UpdatedBlockTip(const CBlockIndex* pindexNew, CConnman& con
         CheckQuorumConnections(connman, params, pindexNew);
     }
 
-    if (m_mn_activeman != nullptr || m_quorums_watch) {
+    {
         // Cleanup expired data requests
         LOCK(m_qman.cs_data_requests);
         auto it = m_qman.mapQuorumDataRequests.begin();
@@ -259,7 +257,7 @@ void QuorumObserver::StartVvecSyncThread(CConnman& connman, gsl::not_null<const 
 
 void QuorumObserver::TriggerQuorumDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index) const
 {
-    if (!m_quorums_recovery || !m_quorums_watch) {
+    if (!m_quorums_recovery) {
         return;
     }
 
@@ -299,7 +297,7 @@ void QuorumObserver::StartCleanupOldQuorumDataThread(gsl::not_null<const CBlockI
     // window and it's better to have more room so we pick next cycle.
     // dkgMiningWindowStart for small quorums is 10 i.e. a safe block to start
     // these calculations is at height 576 + 24 * 2 + 10 = 576 + 58.
-    if ((m_mn_activeman == nullptr && !m_quorums_watch) || (pIndex->nHeight % 576 != 58)) {
+    if (pIndex->nHeight % 576 != 58) {
         return;
     }
 

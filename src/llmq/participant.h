@@ -44,7 +44,7 @@ private:
     CDKGSessionManager& m_dkgsman;
     CQuorumManager& m_qman;
     CQuorumSnapshotManager& m_qsnapman;
-    const CActiveMasternodeManager* const m_mn_activeman;
+    const CActiveMasternodeManager& m_mn_activeman;
     const CSporkManager& m_sporkman;
 
     const bool m_quorums_recovery{false};
@@ -55,12 +55,14 @@ public:
     QuorumParticipant(const QuorumParticipant&) = delete;
     QuorumParticipant& operator=(const QuorumParticipant&) = delete;
     explicit QuorumParticipant(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CDKGSessionManager& dkgsman, CQuorumManager& qman,
-                               CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager* const mn_activeman,
+                               CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman,
                                const CMasternodeSync& mn_sync, const CSporkManager& sporkman, bool quorums_recovery, bool quorums_watch);
     ~QuorumParticipant();
 
 public:
     // QuorumObserver
+    bool IsMasternode() const override { return true; }
+    bool IsWatching() const override { return m_quorums_watch; }
     bool SetQuorumSecretKeyShare(CQuorum& quorum, Span<CBLSSecretKey> skContributions) const override;
     [[nodiscard]] MessageProcessingResult ProcessEncryptedContribs(CNode& pfrom, CConnman& connman, bool request_limit_exceeded,
                                                                    CDataStream& vStream, CQuorum& quorum, CQuorumDataRequest& request,

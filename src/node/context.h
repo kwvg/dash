@@ -35,6 +35,9 @@ class NetGroupManager;
 class PeerManager;
 struct ActiveContext;
 struct LLMQContext;
+namespace llmq {
+class QuorumObserver;
+} // namespace llmq
 
 namespace interfaces {
 class Chain;
@@ -92,6 +95,8 @@ struct NodeContext {
     std::unique_ptr<CMNHFManager> mnhf_manager;
     std::unique_ptr<CNetFulfilledRequestManager> netfulfilledman;
     std::unique_ptr<CSporkManager> sporkman;
+    //! Dash signers
+    std::unique_ptr<llmq::QuorumObserver> wo_quorum_signer;
     //! Dash contexts
     std::unique_ptr<ActiveContext> active_ctx;
     std::unique_ptr<LLMQContext> llmq_ctx;

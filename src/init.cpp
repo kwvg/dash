@@ -92,7 +92,9 @@
 #include <instantsend/net_instantsend.h>
 #include <llmq/context.h>
 #include <llmq/dkgsessionmgr.h>
+#include <llmq/observer.h>
 #include <llmq/options.h>
+#include <llmq/quorums.h>
 #include <llmq/signing.h>
 #include <masternode/active/context.h>
 #include <masternode/active/notificationinterface.h>
@@ -364,6 +366,10 @@ void PrepareShutdown(NodeContext& node)
 
     // After all scheduled tasks have been flushed, destroy pointers
     // and reset all to nullptr.
+    if (node.llmq_ctx) {
+        node.llmq_ctx->qman->DisconnectSigner();
+    }
+    node.wo_quorum_signer.reset();
     node.active_ctx.reset();
     node.mn_sync.reset();
     node.sporkman.reset();
@@ -2023,7 +2029,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                               /*block_tree_db_in_memory=*/false,
                                               /*coins_db_in_memory=*/false,
                                               /*dash_dbs_in_memory=*/false,
-                                              args.GetBoolArg("-llmq-data-recovery", llmq::DEFAULT_ENABLE_QUORUM_DATA_RECOVERY),
                                               args.GetBoolArg("-watchquorums", llmq::DEFAULT_WATCH_QUORUMS),
                                               /*shutdown_requested=*/ShutdownRequested,
                                               /*coins_error_cb=*/[]() {
@@ -2193,16 +2198,25 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     );
     RegisterValidationInterface(g_ds_notification_interface.get());
 
-    // ********************************************************* Step 7c: Setup masternode mode
+    // ********************************************************* Step 7c: Setup masternode or watch-only mode
+
+    const bool quorums_recovery = args.GetBoolArg("-llmq-data-recovery", llmq::DEFAULT_ENABLE_QUORUM_DATA_RECOVERY);
+    const bool quorums_watch = args.GetBoolArg("-watchquorums", llmq::DEFAULT_WATCH_QUORUMS);
+
     assert(!node.active_ctx);
     assert(!g_active_notification_interface);
+    assert(!node.wo_quorum_signer);
     if (node.mn_activeman) {
         node.active_ctx = std::make_unique<ActiveContext>(chainman, *node.connman, *node.dmnman, *node.dstxman, *node.govman, *node.mn_metaman,
                                                           *node.mnhf_manager, *node.sporkman, *node.mempool, *node.llmq_ctx, *node.peerman,
-                                                          *node.mn_activeman, *node.mn_sync);
+                                                          *node.mn_activeman, *node.mn_sync, quorums_recovery, quorums_watch);
         g_active_notification_interface = std::make_unique<ActiveNotificationInterface>(*node.active_ctx, *node.mn_activeman);
         RegisterValidationInterface(g_active_notification_interface.get());
+    } else if (quorums_watch) {
+        node.wo_quorum_signer = std::make_unique<llmq::QuorumObserver>(*node.dmnman, *node.llmq_ctx->qman, *node.llmq_ctx->qsnapman, *node.mn_sync, *node.sporkman, quorums_recovery);
+        node.llmq_ctx->qman->ConnectSigner(node.wo_quorum_signer.get());
     }
+
     node.peerman->AddExtraHandler(std::make_unique<NetInstantSend>(node.peerman.get(), *node.llmq_ctx->isman, *node.llmq_ctx->qman, chainman.ActiveChainstate()));
 
     // ********************************************************* Step 7d: Setup other Dash services

@@ -248,11 +248,8 @@ private:
     CDKGSessionManager& dkgManager;
     CQuorumBlockProcessor& quorumBlockProcessor;
     CQuorumSnapshotManager& m_qsnapman;
-    const CActiveMasternodeManager* const m_mn_activeman;
 
-    std::unique_ptr<llmq::QuorumObserver> m_participant{nullptr};
-
-    const bool m_quorums_watch{false};
+    std::atomic<llmq::QuorumObserver*> m_handler{nullptr};
 
     mutable Mutex cs_data_requests;
     mutable std::unordered_map<CQuorumDataRequestKey, CQuorumDataRequest, StaticSaltedHasher> mapQuorumDataRequests
@@ -278,12 +275,17 @@ public:
     CQuorumManager(const CQuorumManager&) = delete;
     CQuorumManager& operator=(const CQuorumManager&) = delete;
     explicit CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
-                            CDKGSessionManager& _dkgManager,
-                            CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
-                            const CActiveMasternodeManager* const mn_activeman, const CMasternodeSync& mn_sync,
-                            const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_recovery,
-                            bool quorums_watch);
+                            CDKGSessionManager& _dkgManager, CQuorumBlockProcessor& _quorumBlockProcessor,
+                            CQuorumSnapshotManager& qsnapman, const util::DbWrapperParams& db_params);
     ~CQuorumManager();
+
+    void ConnectSigner(gsl::not_null<llmq::QuorumObserver*> signer)
+    {
+        // Prohibit double initialization
+        assert(m_handler.load(std::memory_order_acquire) == nullptr);
+        m_handler.store(signer, std::memory_order_release);
+    }
+    void DisconnectSigner() { m_handler.store(nullptr, std::memory_order_release); }
 
     void Start();
     void Stop();
@@ -311,7 +313,7 @@ public:
                                          size_t nCountRequested) const
         EXCLUSIVE_LOCKS_REQUIRED(!cs_db, !cs_map_quorums, !cs_scan_quorums);
 
-    bool IsWatching() const { return m_quorums_watch; }
+    bool IsWatching() const;
 
 private:
     // all private methods here are cs_main-free

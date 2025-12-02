@@ -29,12 +29,10 @@ private:
     CDeterministicMNManager& m_dmnman;
     CQuorumManager& m_qman;
     CQuorumSnapshotManager& m_qsnapman;
-    const CActiveMasternodeManager* const m_mn_activeman;
     const CMasternodeSync& m_mn_sync;
     const CSporkManager& m_sporkman;
 
     const bool m_quorums_recovery{false};
-    const bool m_quorums_watch{false};
 
     mutable Mutex cs_cleanup;
     mutable std::map<Consensus::LLMQType, Uint256LruHashMap<uint256>> cleanupQuorumsCache GUARDED_BY(cs_cleanup);
@@ -43,13 +41,15 @@ public:
     QuorumObserver() = delete;
     QuorumObserver(const QuorumObserver&) = delete;
     QuorumObserver& operator=(const QuorumObserver&) = delete;
-    explicit QuorumObserver(CDeterministicMNManager& dmnman, CQuorumManager& qman, CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager* const mn_activeman,
-                            const CMasternodeSync& mn_sync, const CSporkManager& sporkman, bool quorums_recovery, bool quorums_watch);
+    explicit QuorumObserver(CDeterministicMNManager& dmnman, CQuorumManager& qman, CQuorumSnapshotManager& qsnapman,
+                            const CMasternodeSync& mn_sync, const CSporkManager& sporkman, bool quorums_recovery);
     virtual ~QuorumObserver();
 
     void UpdatedBlockTip(const CBlockIndex* pindexNew, CConnman& connman, bool fInitialDownload) const;
 
 public:
+    virtual bool IsMasternode() const { return false; }
+    virtual bool IsWatching() const { return true; }
     virtual bool SetQuorumSecretKeyShare(CQuorum& quorum, Span<CBLSSecretKey> skContributions) const;
     [[nodiscard]] virtual MessageProcessingResult ProcessEncryptedContribs(CNode& pfrom, CConnman& connman, bool request_limit_exceeded,
                                                                            CDataStream& vStream, CQuorum& quorum, CQuorumDataRequest& request,
