@@ -92,8 +92,9 @@
 #include <instantsend/net_instantsend.h>
 #include <llmq/context.h>
 #include <llmq/dkgsessionmgr.h>
-#include <llmq/options.h>
 #include <llmq/net_signing.h>
+#include <llmq/options.h>
+#include <llmq/observer/context.h>
 #include <masternode/active/context.h>
 #include <masternode/active/notificationinterface.h>
 #include <masternode/meta.h>
@@ -361,6 +362,7 @@ void PrepareShutdown(NodeContext& node)
 
     // After all scheduled tasks have been flushed, destroy pointers
     // and reset all to nullptr.
+    node.observer_ctx.reset();
     node.active_ctx.reset();
     node.mn_sync.reset();
     node.sporkman.reset();
@@ -2184,24 +2186,28 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     assert(!node.peerman);
     node.peerman = PeerManager::make(chainparams, *node.connman, *node.addrman, node.banman.get(), *node.dstxman,
                                      chainman, *node.mempool, *node.mn_metaman, *node.mn_sync,
-                                     *node.govman, *node.sporkman, node.mn_activeman.get(), node.dmnman,
-                                     node.active_ctx, node.cj_walletman.get(), node.llmq_ctx, ignores_incoming_txs);
+                                     *node.govman, *node.sporkman, node.cj_walletman.get(), node.mn_activeman.get(), node.dmnman,
+                                     node.active_ctx, node.llmq_ctx, node.observer_ctx, ignores_incoming_txs);
     RegisterValidationInterface(node.peerman.get());
 
     g_ds_notification_interface = std::make_unique<CDSNotificationInterface>(
-        *node.connman, *node.dstxman, *node.mn_sync, *node.govman, chainman, node.dmnman, node.llmq_ctx
+        *node.connman, *node.dstxman, *node.mn_sync, *node.govman, chainman, node.dmnman, node.llmq_ctx, node.observer_ctx
     );
     RegisterValidationInterface(g_ds_notification_interface.get());
 
-    // ********************************************************* Step 7c: Setup masternode mode
+    // ********************************************************* Step 7c: Setup masternode mode or watch-only mode
     assert(!node.active_ctx);
     assert(!g_active_notification_interface);
+    assert(!node.observer_ctx);
+
     if (node.mn_activeman) {
         node.active_ctx = std::make_unique<ActiveContext>(chainman, *node.connman, *node.dmnman, *node.dstxman, *node.govman, *node.mn_metaman,
                                                           *node.mnhf_manager, *node.sporkman, *node.mempool, *node.llmq_ctx, *node.peerman,
                                                           *node.mn_activeman, *node.mn_sync);
         g_active_notification_interface = std::make_unique<ActiveNotificationInterface>(*node.active_ctx, *node.mn_activeman);
         RegisterValidationInterface(g_active_notification_interface.get());
+    } else if (quorums_watch) {
+        node.observer_ctx = std::make_unique<llmq::ObserverContext>();
     }
     node.peerman->AddExtraHandler(std::make_unique<NetInstantSend>(node.peerman.get(), *node.llmq_ctx->isman, *node.llmq_ctx->qman, chainman.ActiveChainstate()));
     node.peerman->AddExtraHandler(std::make_unique<NetSigning>(node.peerman.get(), *node.llmq_ctx->sigman));

@@ -17,6 +17,7 @@
 #include <llmq/context.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/ehf_signals.h>
+#include <llmq/observer/context.h>
 #include <llmq/quorums.h>
 #include <masternode/sync.h>
 
@@ -26,14 +27,16 @@ CDSNotificationInterface::CDSNotificationInterface(CConnman& connman,
                                                    CGovernanceManager& govman,
                                                    const ChainstateManager& chainman,
                                                    const std::unique_ptr<CDeterministicMNManager>& dmnman,
-                                                   const std::unique_ptr<LLMQContext>& llmq_ctx) :
+                                                   const std::unique_ptr<LLMQContext>& llmq_ctx,
+                                                   const std::unique_ptr<llmq::ObserverContext>& observer_ctx) :
     m_connman{connman},
     m_dstxman{dstxman},
     m_mn_sync{mn_sync},
     m_govman{govman},
     m_chainman{chainman},
     m_dmnman{dmnman},
-    m_llmq_ctx{llmq_ctx}
+    m_llmq_ctx{llmq_ctx},
+    m_observer_ctx{observer_ctx}
 {
 }
 
