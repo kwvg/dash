@@ -405,7 +405,6 @@ TestingSetup::~TestingSetup()
 
     // Interrupt() and PrepareShutdown() routines
     if (m_node.llmq_ctx) {
-        m_node.llmq_ctx->Interrupt();
         m_node.llmq_ctx->Stop();
     }
     if (m_node.connman) {

@@ -45,8 +45,7 @@ public:
                          bool quorums_recovery, bool quorums_watch);
     ~LLMQContext();
 
-    void Interrupt();
-    void Start(PeerManager& peerman);
+    void Start();
     void Stop();
 
     /** Guaranteed if LLMQContext is initialized then all members are valid too
