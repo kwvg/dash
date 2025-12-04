@@ -235,12 +235,12 @@ private:
     CBLSWorker& blsWorker;
     CChainState& m_chainstate;
     CDeterministicMNManager& m_dmnman;
-    CDKGSessionManager& dkgManager;
     CQuorumBlockProcessor& quorumBlockProcessor;
     CQuorumSnapshotManager& m_qsnapman;
     const CActiveMasternodeManager* const m_mn_activeman;
     const CMasternodeSync& m_mn_sync;
     const CSporkManager& m_sporkman;
+    std::atomic<llmq::CDKGSessionManager*> m_qdkgsman{nullptr};
     const bool m_quorums_recovery{false};
     const bool m_quorums_watch{false};
 
@@ -271,12 +271,20 @@ public:
     CQuorumManager(const CQuorumManager&) = delete;
     CQuorumManager& operator=(const CQuorumManager&) = delete;
     explicit CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
-                            CDKGSessionManager& _dkgManager, CEvoDB& _evoDb,
+                            CEvoDB& _evoDb,
                             CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
                             const CActiveMasternodeManager* const mn_activeman, const CMasternodeSync& mn_sync,
                             const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_recovery,
                             bool quorums_watch);
     ~CQuorumManager();
+
+    void ConnectManager(gsl::not_null<llmq::CDKGSessionManager*> qdkgsman)
+    {
+        // Prohibit double initialization
+        assert(m_qdkgsman.load(std::memory_order_acquire) == nullptr);
+        m_qdkgsman.store(qdkgsman, std::memory_order_release);
+    }
+    void DisconnectManager() { m_qdkgsman.store(nullptr, std::memory_order_release); }
 
     void Start();
     void Stop();

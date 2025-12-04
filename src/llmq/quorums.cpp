@@ -208,7 +208,7 @@ bool CQuorum::ReadContributions(const CDBWrapper& db)
 }
 
 CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
-                               CDKGSessionManager& _dkgManager, CEvoDB& _evoDb,
+                               CEvoDB& _evoDb,
                                CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
                                const CActiveMasternodeManager* const mn_activeman, const CMasternodeSync& mn_sync,
                                const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_recovery,
@@ -216,7 +216,6 @@ CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, 
     blsWorker{_blsWorker},
     m_chainstate{chainstate},
     m_dmnman{dmnman},
-    dkgManager{_dkgManager},
     quorumBlockProcessor{_quorumBlockProcessor},
     m_qsnapman{qsnapman},
     m_mn_activeman{mn_activeman},
@@ -452,7 +451,7 @@ bool CQuorumManager::BuildQuorumContributions(const CFinalCommitmentPtr& fqc, co
     std::vector<uint16_t> memberIndexes;
     std::vector<BLSVerificationVectorPtr> vvecs;
     std::vector<CBLSSecretKey> skContributions;
-    if (!dkgManager.GetVerifiedContributions((Consensus::LLMQType)fqc->llmqType, quorum->m_quorum_base_block_index, fqc->validMembers, memberIndexes, vvecs, skContributions)) {
+    if (auto qdkgsman = m_qdkgsman.load(std::memory_order_acquire); !qdkgsman || !qdkgsman->GetVerifiedContributions((Consensus::LLMQType)fqc->llmqType, quorum->m_quorum_base_block_index, fqc->validMembers, memberIndexes, vvecs, skContributions)) {
         return false;
     }
 
@@ -796,7 +795,7 @@ MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& c
             }
 
             std::vector<CBLSIESEncryptedObject<CBLSSecretKey>> vecEncrypted;
-            if (!dkgManager.GetEncryptedContributions(request.GetLLMQType(), pQuorumBaseBlockIndex, pQuorum->qc->validMembers, request.GetProTxHash(), vecEncrypted)) {
+            if (auto qdkgsman = m_qdkgsman.load(std::memory_order_acquire); !qdkgsman || !qdkgsman->GetEncryptedContributions(request.GetLLMQType(), pQuorumBaseBlockIndex, pQuorum->qc->validMembers, request.GetProTxHash(), vecEncrypted)) {
                 return sendQDATA(CQuorumDataRequest::Errors::ENCRYPTED_CONTRIBUTIONS_MISSING, request_limit_exceeded);
             }
 
