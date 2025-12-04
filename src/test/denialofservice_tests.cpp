@@ -150,8 +150,8 @@ BOOST_AUTO_TEST_CASE(stale_tip_peer_management)
     auto connman = std::make_unique<ConnmanTestMsg>(0x1337, 0x1337, *m_node.addrman, *m_node.netgroupman);
     auto peerLogic = PeerManager::make(chainparams, *connman, *m_node.addrman, /*banman=*/nullptr, *m_node.dstxman,
                                        *m_node.chainman, *m_node.mempool, *m_node.mn_metaman, *m_node.mn_sync,
-                                       *m_node.govman, *m_node.sporkman, /*mn_activeman=*/nullptr, m_node.dmnman,
-                                       /*active_ctx=*/nullptr, /*cj_walletman=*/nullptr, m_node.llmq_ctx,
+                                       *m_node.govman, *m_node.sporkman, /*cj_walletman=*/nullptr, /*mn_activeman=*/nullptr,
+                                       m_node.dmnman, m_node.active_ctx, m_node.llmq_ctx, m_node.observer_ctx,
                                        /*ignore_incoming_txs=*/false);
 
     constexpr int max_outbound_full_relay = MAX_OUTBOUND_FULL_RELAY_CONNECTIONS;
@@ -255,8 +255,8 @@ BOOST_AUTO_TEST_CASE(block_relay_only_eviction)
     auto connman = std::make_unique<ConnmanTestMsg>(0x1337, 0x1337, *m_node.addrman, *m_node.netgroupman);
     auto peerLogic = PeerManager::make(chainparams, *connman, *m_node.addrman, /*banman=*/nullptr, *m_node.dstxman,
                                        *m_node.chainman, *m_node.mempool, *m_node.mn_metaman, *m_node.mn_sync,
-                                       *m_node.govman, *m_node.sporkman, /*mn_activeman=*/nullptr, m_node.dmnman,
-                                       /*active_ctx=*/nullptr, /*cj_walletman=*/nullptr, m_node.llmq_ctx,
+                                       *m_node.govman, *m_node.sporkman, /*cj_walletman=*/nullptr, /*mn_activeman=*/nullptr,
+                                       m_node.dmnman, m_node.active_ctx, m_node.llmq_ctx, m_node.observer_ctx,
                                        /*ignore_incoming_txs=*/false);
 
     constexpr int max_outbound_block_relay{MAX_BLOCK_RELAY_ONLY_CONNECTIONS};
@@ -323,8 +323,8 @@ BOOST_AUTO_TEST_CASE(peer_discouragement)
     auto connman = std::make_unique<ConnmanTestMsg>(0x1337, 0x1337, *m_node.addrman, *m_node.netgroupman);
     auto peerLogic = PeerManager::make(chainparams, *connman, *m_node.addrman, banman.get(), *m_node.dstxman,
                                        *m_node.chainman, *m_node.mempool, *m_node.mn_metaman, *m_node.mn_sync,
-                                       *m_node.govman, *m_node.sporkman, /*mn_activeman=*/nullptr, m_node.dmnman,
-                                       /*active_ctx=*/nullptr, /*cj_walletman=*/nullptr, m_node.llmq_ctx,
+                                       *m_node.govman, *m_node.sporkman, /*cj_walletman=*/nullptr, /*mn_activeman=*/nullptr,
+                                       m_node.dmnman, m_node.active_ctx, m_node.llmq_ctx, m_node.observer_ctx,
                                        /*ignore_incoming_txs=*/false);
 
     CNetAddr tor_netaddr;
@@ -429,8 +429,8 @@ BOOST_AUTO_TEST_CASE(DoS_bantime)
     auto connman = std::make_unique<CConnman>(0x1337, 0x1337, *m_node.addrman, *m_node.netgroupman);
     auto peerLogic = PeerManager::make(chainparams, *connman, *m_node.addrman, banman.get(), *m_node.dstxman,
                                        *m_node.chainman, *m_node.mempool, *m_node.mn_metaman, *m_node.mn_sync,
-                                       *m_node.govman, *m_node.sporkman, /*mn_activeman=*/nullptr, m_node.dmnman,
-                                       /*active_ctx=*/nullptr, /*cj_walletman=*/nullptr, m_node.llmq_ctx,
+                                       *m_node.govman, *m_node.sporkman, /*cj_walletman=*/nullptr, /*mn_activeman=*/nullptr,
+                                       m_node.dmnman, m_node.active_ctx, m_node.llmq_ctx, m_node.observer_ctx,
                                        /*ignore_incoming_txs=*/false);
 
     banman->ClearBanned();
