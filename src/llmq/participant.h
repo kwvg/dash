@@ -75,9 +75,11 @@ private:
     size_t GetQuorumRecoveryStartOffset(const CQuorum& quorum, gsl::not_null<const CBlockIndex*> pIndex) const;
 
     void CheckQuorumConnections(CConnman& connman, const Consensus::LLMQParams& llmqParams, gsl::not_null<const CBlockIndex*> pindexNew) const;
+    void DataRecoveryThread(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index, CQuorumCPtr quorum, uint16_t data_mask,
+                            const uint256& protx_hash, size_t start_offset) const;
     void StartCleanupOldQuorumDataThread(gsl::not_null<const CBlockIndex*> pIndex) const;
-    void StartQuorumDataRecoveryThread(CConnman& connman, CQuorumCPtr pQuorum, gsl::not_null<const CBlockIndex*> pIndex,
-                                       uint16_t nDataMask) const;
+    void StartDataRecoveryThread(CConnman& connman, CQuorumCPtr pQuorum, gsl::not_null<const CBlockIndex*> pIndex,
+                                 uint16_t nDataMask) const;
     void TriggerQuorumDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> pIndex) const;
 };
 } // namespace llmq
