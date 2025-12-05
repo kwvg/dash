@@ -42,53 +42,14 @@ QuorumParticipant::~QuorumParticipant() = default;
 
 void QuorumParticipant::TriggerQuorumDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> pIndex) const
 {
-    if ((m_mn_activeman == nullptr && !m_quorums_watch) || !m_quorums_recovery) {
+    if (!m_quorums_recovery) {
         return;
     }
 
-    const std::map<Consensus::LLMQType, QvvecSyncMode> mapQuorumVvecSync = GetEnabledQuorumVvecSyncEntries();
-
-    LogPrint(BCLog::LLMQ, "QuorumParticipant::%s -- Process block %s\n", __func__, pIndex->GetBlockHash().ToString());
-
-    for (const auto& params : Params().GetConsensus().llmqs) {
-        auto vecQuorums = m_qman.ScanQuorums(params.type, pIndex, params.keepOldConnections);
-
-        // First check if we are member of any quorum of this type
-        const uint256 proTxHash = m_mn_activeman != nullptr ? m_mn_activeman->GetProTxHash() : uint256();
-
-        bool fWeAreQuorumTypeMember = ranges::any_of(vecQuorums, [&proTxHash](const auto& pQuorum) {
-            return pQuorum->IsValidMember(proTxHash);
-        });
-
-        for (auto& pQuorum : vecQuorums) {
-            // If there is already a thread running for this specific quorum skip it
-            if (pQuorum->fQuorumDataRecoveryThreadRunning) {
-                continue;
-            }
-
-            uint16_t nDataMask{0};
-            const bool fWeAreQuorumMember = pQuorum->IsValidMember(proTxHash);
-            const bool fSyncForTypeEnabled = mapQuorumVvecSync.count(pQuorum->qc->llmqType) > 0;
-            const QvvecSyncMode syncMode = fSyncForTypeEnabled ? mapQuorumVvecSync.at(pQuorum->qc->llmqType) : QvvecSyncMode::Invalid;
-            const bool fSyncCurrent = syncMode == QvvecSyncMode::Always || (syncMode == QvvecSyncMode::OnlyIfTypeMember && fWeAreQuorumTypeMember);
-
-            if ((fWeAreQuorumMember || (fSyncForTypeEnabled && fSyncCurrent)) && !pQuorum->HasVerificationVector()) {
-                nDataMask |= llmq::CQuorumDataRequest::QUORUM_VERIFICATION_VECTOR;
-            }
-
-            if (fWeAreQuorumMember && !pQuorum->GetSkShare().IsValid()) {
-                nDataMask |= llmq::CQuorumDataRequest::ENCRYPTED_CONTRIBUTIONS;
-            }
-
-            if (nDataMask == 0) {
-                LogPrint(BCLog::LLMQ, "QuorumParticipant::%s -- No data needed from (%d, %s) at height %d\n",
-                    __func__, ToUnderlying(pQuorum->qc->llmqType), pQuorum->qc->quorumHash.ToString(), pIndex->nHeight);
-                continue;
-            }
-
-            // Finally start the thread which triggers the requests for this quorum
-            StartDataRecoveryThread(connman, std::move(pQuorum), pIndex, nDataMask);
-        }
+    if (m_mn_activeman) {
+        TriggerDataRecoveryThreads(connman, pIndex);
+    } else if (m_quorums_watch) {
+        TriggerVvecSyncThreads(connman, pIndex);
     }
 }
 
@@ -388,8 +349,8 @@ void QuorumParticipant::DataRecoveryThread(CConnman& connman, gsl::not_null<cons
         printLog("Done");
 }
 
-void QuorumParticipant::StartDataRecoveryThread(CConnman& connman, CQuorumCPtr pQuorum,
-                                                gsl::not_null<const CBlockIndex*> pIndex, uint16_t nDataMaskIn) const
+void QuorumParticipant::StartDataRecoveryThread(CConnman& connman, gsl::not_null<const CBlockIndex*> pIndex,
+                                                CQuorumCPtr pQuorum, uint16_t nDataMaskIn) const
 {
     assert(m_mn_activeman);
 
@@ -402,6 +363,83 @@ void QuorumParticipant::StartDataRecoveryThread(CConnman& connman, CQuorumCPtr p
     m_qman.workerPool.push([&connman, pQuorum = std::move(pQuorum), pIndex, nDataMaskIn, this](int threadId) {
         DataRecoveryThread(connman, pIndex, std::move(pQuorum), nDataMaskIn, m_mn_activeman->GetProTxHash(), GetQuorumRecoveryStartOffset(*pQuorum, pIndex));
     });
+}
+
+void QuorumParticipant::TriggerDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index) const
+{
+    assert(m_mn_activeman);
+
+    LogPrint(BCLog::LLMQ, "QuorumParticipant::%s -- Process block %s\n", __func__, block_index->GetBlockHash().ToString());
+
+    const std::map<Consensus::LLMQType, QvvecSyncMode> mapQuorumVvecSync = GetEnabledQuorumVvecSyncEntries();
+    const uint256 proTxHash = m_mn_activeman->GetProTxHash();
+
+    for (const auto& params : Params().GetConsensus().llmqs) {
+        auto vecQuorums = m_qman.ScanQuorums(params.type, block_index, params.keepOldConnections);
+        const bool fWeAreQuorumTypeMember = ranges::any_of(vecQuorums, [&proTxHash](const auto& pQuorum) { return pQuorum->IsValidMember(proTxHash); });
+
+        for (auto& pQuorum : vecQuorums) {
+            if (pQuorum->IsValidMember(proTxHash)) {
+                uint16_t nDataMask{0};
+                if (!pQuorum->HasVerificationVector()) {
+                    nDataMask |= CQuorumDataRequest::QUORUM_VERIFICATION_VECTOR;
+                }
+                if (!pQuorum->GetSkShare().IsValid()) {
+                    nDataMask |= CQuorumDataRequest::ENCRYPTED_CONTRIBUTIONS;
+                }
+                if (nDataMask != 0) {
+                    StartDataRecoveryThread(connman, block_index, std::move(pQuorum), nDataMask);
+                } else {
+                    LogPrint(BCLog::LLMQ, "QuorumParticipant::%s -- No data needed from (%d, %s) at height %d\n", __func__,
+                             ToUnderlying(pQuorum->qc->llmqType), pQuorum->qc->quorumHash.ToString(), block_index->nHeight);
+                }
+            } else {
+                TryStartVvecSyncThread(connman, block_index, std::move(pQuorum), mapQuorumVvecSync, fWeAreQuorumTypeMember);
+            }
+        }
+    }
+}
+
+void QuorumParticipant::StartVvecSyncThread(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index, CQuorumCPtr pQuorum) const
+{
+    bool expected = false;
+    if (!pQuorum->fQuorumDataRecoveryThreadRunning.compare_exchange_strong(expected, true)) {
+        LogPrint(BCLog::LLMQ, "QuorumParticipant::%s -- Already running\n", __func__);
+        return;
+    }
+
+    m_qman.workerPool.push([&connman, pQuorum = std::move(pQuorum), block_index, this](int threadId) {
+        DataRecoveryThread(connman, block_index, std::move(pQuorum), CQuorumDataRequest::QUORUM_VERIFICATION_VECTOR, /*protx_hash=*/uint256(), /*start_offset=*/0);
+    });
+}
+
+void QuorumParticipant::TriggerVvecSyncThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index) const
+{
+    LogPrint(BCLog::LLMQ, "QuorumParticipant::%s -- Process block %s\n", __func__, block_index->GetBlockHash().ToString());
+    const std::map<Consensus::LLMQType, QvvecSyncMode> mapQuorumVvecSync = GetEnabledQuorumVvecSyncEntries();
+    for (const auto& params : Params().GetConsensus().llmqs) {
+        auto vecQuorums = m_qman.ScanQuorums(params.type, block_index, params.keepOldConnections);
+        for (auto& pQuorum : vecQuorums) {
+            TryStartVvecSyncThread(connman, block_index, std::move(pQuorum), mapQuorumVvecSync, /*fWeAreQuorumTypeMember=*/false);
+        }
+    }
+}
+
+void QuorumParticipant::TryStartVvecSyncThread(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index, CQuorumCPtr pQuorum,
+                                               const std::map<Consensus::LLMQType, QvvecSyncMode>& mapQuorumVvecSync, bool fWeAreQuorumTypeMember) const
+{
+    if (pQuorum->fQuorumDataRecoveryThreadRunning) return;
+
+    const bool fSyncForTypeEnabled = mapQuorumVvecSync.count(pQuorum->qc->llmqType) > 0;
+    const QvvecSyncMode syncMode = fSyncForTypeEnabled ? mapQuorumVvecSync.at(pQuorum->qc->llmqType) : QvvecSyncMode::Invalid;
+    const bool fSyncCurrent = syncMode == QvvecSyncMode::Always || (syncMode == QvvecSyncMode::OnlyIfTypeMember && fWeAreQuorumTypeMember);
+
+    if ((fSyncForTypeEnabled && fSyncCurrent) && !pQuorum->HasVerificationVector()) {
+        StartVvecSyncThread(connman, block_index, std::move(pQuorum));
+    } else {
+        LogPrint(BCLog::LLMQ, "QuorumParticipant::%s -- No data needed from (%d, %s) at height %d\n", __func__,
+                 ToUnderlying(pQuorum->qc->llmqType), pQuorum->qc->quorumHash.ToString(), block_index->nHeight);
+    }
 }
 
 void QuorumParticipant::StartCleanupOldQuorumDataThread(gsl::not_null<const CBlockIndex*> pIndex) const
