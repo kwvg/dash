@@ -4,7 +4,24 @@
 
 #include <llmq/observer/context.h>
 
+#include <llmq/dkgsessionmgr.h>
+#include <llmq/quorums.h>
+
 namespace llmq {
-ObserverContext::ObserverContext() = default;
-ObserverContext::~ObserverContext() = default;
+ObserverContext::ObserverContext(CBLSWorker& bls_worker, CChainState& chainstate, CDeterministicMNManager& dmnman,
+                                 CMasternodeMetaMan& mn_metaman, llmq::CDKGDebugManager& dkg_debugman,
+                                 llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumManager& qman, llmq::CQuorumSnapshotManager& qsnapman,
+                                 const CSporkManager& sporkman, const util::DbWrapperParams& db_params) :
+    qdkgsman{std::make_unique<llmq::CDKGSessionManager>(bls_worker, chainstate, dmnman, dkg_debugman,
+                                                        mn_metaman, qblockman, qsnapman, /*mn_activeman=*/nullptr,
+                                                        sporkman, db_params, /*quorums_watch=*/true)},
+    m_qman{qman}
+{
+    m_qman.ConnectManager(qdkgsman.get());
+}
+
+ObserverContext::~ObserverContext()
+{
+    m_qman.DisconnectManager();
+}
 } // namespace llmq

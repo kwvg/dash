@@ -22,7 +22,6 @@ class PeerManager;
 namespace llmq {
 class CChainLocksHandler;
 class CDKGDebugManager;
-class CDKGSessionManager;
 class CInstantSendManager;
 class CQuorumBlockProcessor;
 class CQuorumManager;
@@ -62,7 +61,6 @@ public:
     const std::unique_ptr<llmq::CDKGDebugManager> dkg_debugman;
     const std::unique_ptr<llmq::CQuorumSnapshotManager> qsnapman;
     const std::unique_ptr<llmq::CQuorumBlockProcessor> quorum_block_processor;
-    const std::unique_ptr<llmq::CDKGSessionManager> qdkgsman;
     const std::unique_ptr<llmq::CQuorumManager> qman;
     const std::unique_ptr<llmq::CSigningManager> sigman;
     const std::unique_ptr<llmq::CChainLocksHandler> clhandler;

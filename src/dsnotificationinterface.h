@@ -59,7 +59,7 @@ private:
     const ChainstateManager& m_chainman;
     const std::unique_ptr<CDeterministicMNManager>& m_dmnman;
     const std::unique_ptr<LLMQContext>& m_llmq_ctx;
-    [[maybe_unused]] const std::unique_ptr<llmq::ObserverContext>& m_observer_ctx;
+    const std::unique_ptr<llmq::ObserverContext>& m_observer_ctx;
 };
 
 extern std::unique_ptr<CDSNotificationInterface> g_ds_notification_interface;
