@@ -41,7 +41,7 @@ public:
                          CMasternodeMetaMan& mn_metaman, CMNHFManager& mnhfman, CSporkManager& sporkman,
                          CTxMemPool& mempool, const CActiveMasternodeManager* const mn_activeman,
                          const CMasternodeSync& mn_sync, const util::DbWrapperParams& db_params,
-                         bool quorums_recovery, bool quorums_watch);
+                         bool quorums_watch);
     ~LLMQContext();
 
     void Start();

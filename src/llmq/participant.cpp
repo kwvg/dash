@@ -24,10 +24,12 @@
 
 namespace llmq {
 QuorumParticipant::QuorumParticipant(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CQuorumManager& qman,
-                                     CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager* const mn_activeman,
+                                     CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman,
                                      const CMasternodeSync& mn_sync, const CSporkManager& sporkman, bool quorums_recovery, bool quorums_watch) :
-    QuorumObserver(dmnman, qman, qsnapman, mn_activeman, mn_sync, sporkman, quorums_recovery, quorums_watch),
-    m_bls_worker{bls_worker}
+    QuorumObserver(dmnman, qman, qsnapman, mn_sync, sporkman, quorums_recovery),
+    m_bls_worker{bls_worker},
+    m_mn_activeman{mn_activeman},
+    m_quorums_watch{quorums_watch}
 {
 }
 
@@ -36,12 +38,10 @@ QuorumParticipant::~QuorumParticipant() = default;
 void QuorumParticipant::CheckQuorumConnections(CConnman& connman, const Consensus::LLMQParams& llmqParams,
                                                gsl::not_null<const CBlockIndex*> pindexNew) const
 {
-    assert(m_mn_activeman);
-
     auto lastQuorums = m_qman.ScanQuorums(llmqParams.type, pindexNew, (size_t)llmqParams.keepOldConnections);
     auto deletableQuorums = GetQuorumsToDelete(connman, llmqParams, pindexNew);
 
-    const uint256 proTxHash = m_mn_activeman->GetProTxHash();
+    const uint256 proTxHash = m_mn_activeman.GetProTxHash();
     const bool watchOtherISQuorums = llmqParams.type == Params().GetConsensus().llmqTypeDIP0024InstantSend &&
                                      ranges::any_of(lastQuorums, [&proTxHash](const auto& old_quorum){ return old_quorum->IsMember(proTxHash); });
 
@@ -79,15 +79,11 @@ void QuorumParticipant::CheckQuorumConnections(CConnman& connman, const Consensu
 
 bool QuorumParticipant::SetQuorumSecretKeyShare(CQuorum& quorum, Span<CBLSSecretKey> skContributions) const
 {
-    assert(m_mn_activeman);
-
-    return quorum.SetSecretKeyShare(m_bls_worker.AggregateSecretKeys(skContributions), m_mn_activeman->GetProTxHash());
+    return quorum.SetSecretKeyShare(m_bls_worker.AggregateSecretKeys(skContributions), m_mn_activeman.GetProTxHash());
 }
 
 size_t QuorumParticipant::GetQuorumRecoveryStartOffset(const CQuorum& quorum, gsl::not_null<const CBlockIndex*> pIndex) const
 {
-    assert(m_mn_activeman);
-
     auto mns = m_dmnman.GetListForBlock(pIndex);
     std::vector<uint256> vecProTxHashes;
     vecProTxHashes.reserve(mns.GetValidMNsCount());
@@ -97,7 +93,7 @@ size_t QuorumParticipant::GetQuorumRecoveryStartOffset(const CQuorum& quorum, gs
     std::sort(vecProTxHashes.begin(), vecProTxHashes.end());
     size_t nIndex{0};
     {
-        auto my_protx_hash = m_mn_activeman->GetProTxHash();
+        auto my_protx_hash = m_mn_activeman.GetProTxHash();
         for (const auto i : irange::range(vecProTxHashes.size())) {
             // cppcheck-suppress useStlAlgorithm
             if (my_protx_hash == vecProTxHashes[i]) {
@@ -133,8 +129,6 @@ MessageProcessingResult QuorumParticipant::ProcessEncryptedContribs(CNode& pfrom
         }
     } else if (msg_type == NetMsgType::QDATA) {
         if (request.GetDataMask() & CQuorumDataRequest::ENCRYPTED_CONTRIBUTIONS) {
-            assert(m_mn_activeman);
-
             if (WITH_LOCK(quorum.cs_vvec_shShare, return quorum.quorumVvec->size() != size_t(quorum.params.threshold))) {
                 // Don't bump score because we asked for it
                 LogPrint(BCLog::LLMQ, "QuorumParticipant::%s -- %s: No valid quorum verification vector available, from peer=%d\n", __func__, msg_type, pfrom.GetId());
@@ -154,12 +148,12 @@ MessageProcessingResult QuorumParticipant::ProcessEncryptedContribs(CNode& pfrom
             std::vector<CBLSSecretKey> vecSecretKeys;
             vecSecretKeys.resize(vecEncrypted.size());
             for (const auto i : irange::range(vecEncrypted.size())) {
-                if (!m_mn_activeman->Decrypt(vecEncrypted[i], memberIdx, vecSecretKeys[i], PROTOCOL_VERSION)) {
+                if (!m_mn_activeman.Decrypt(vecEncrypted[i], memberIdx, vecSecretKeys[i], PROTOCOL_VERSION)) {
                     return MisbehavingError{10, "failed to decrypt"};
                 }
             }
 
-            if (!quorum.SetSecretKeyShare(m_bls_worker.AggregateSecretKeys(vecSecretKeys), m_mn_activeman->GetProTxHash())) {
+            if (!quorum.SetSecretKeyShare(m_bls_worker.AggregateSecretKeys(vecSecretKeys), m_mn_activeman.GetProTxHash())) {
                 return MisbehavingError{10, "invalid secret key share received"};
             }
         }
@@ -168,11 +162,21 @@ MessageProcessingResult QuorumParticipant::ProcessEncryptedContribs(CNode& pfrom
     return {};
 }
 
+bool QuorumParticipant::IsMasternode() const
+{
+    // We are only initialized if masternode-mode is enabled
+    return true;
+}
+
+bool QuorumParticipant::IsWatching() const
+{
+    // Watch-only mode can co-exist with masternode-mode
+    return m_quorums_watch;
+}
+
 void QuorumParticipant::StartDataRecoveryThread(CConnman& connman, gsl::not_null<const CBlockIndex*> pIndex,
                                                 CQuorumCPtr pQuorum, uint16_t nDataMaskIn) const
 {
-    assert(m_mn_activeman);
-
     bool expected = false;
     if (!pQuorum->fQuorumDataRecoveryThreadRunning.compare_exchange_strong(expected, true)) {
         LogPrint(BCLog::LLMQ, "QuorumParticipant::%s -- Already running\n", __func__);
@@ -180,14 +184,12 @@ void QuorumParticipant::StartDataRecoveryThread(CConnman& connman, gsl::not_null
     }
 
     m_qman.workerPool.push([&connman, pQuorum = std::move(pQuorum), pIndex, nDataMaskIn, this](int threadId) {
-        DataRecoveryThread(connman, pIndex, std::move(pQuorum), nDataMaskIn, m_mn_activeman->GetProTxHash(), GetQuorumRecoveryStartOffset(*pQuorum, pIndex));
+        DataRecoveryThread(connman, pIndex, std::move(pQuorum), nDataMaskIn, m_mn_activeman.GetProTxHash(), GetQuorumRecoveryStartOffset(*pQuorum, pIndex));
     });
 }
 
 void QuorumParticipant::TriggerQuorumDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index) const
 {
-    assert(m_mn_activeman);
-
     if (!m_quorums_recovery) {
         return;
     }
@@ -195,7 +197,7 @@ void QuorumParticipant::TriggerQuorumDataRecoveryThreads(CConnman& connman, gsl:
     LogPrint(BCLog::LLMQ, "QuorumParticipant::%s -- Process block %s\n", __func__, block_index->GetBlockHash().ToString());
 
     const std::map<Consensus::LLMQType, QvvecSyncMode> mapQuorumVvecSync = GetEnabledQuorumVvecSyncEntries();
-    const uint256 proTxHash = m_mn_activeman->GetProTxHash();
+    const uint256 proTxHash = m_mn_activeman.GetProTxHash();
 
     for (const auto& params : Params().GetConsensus().llmqs) {
         auto vecQuorums = m_qman.ScanQuorums(params.type, block_index, params.keepOldConnections);

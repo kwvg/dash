@@ -247,10 +247,8 @@ private:
     CDeterministicMNManager& m_dmnman;
     CQuorumBlockProcessor& quorumBlockProcessor;
     CQuorumSnapshotManager& m_qsnapman;
-    const CActiveMasternodeManager* const m_mn_activeman;
+    std::atomic<llmq::QuorumObserver*> m_handler{nullptr};
     std::atomic<llmq::CDKGSessionManager*> m_qdkgsman{nullptr};
-    std::unique_ptr<llmq::QuorumObserver> m_handler{nullptr};
-    const bool m_quorums_watch{false};
 
 private:
     mutable Mutex cs_db;
@@ -281,18 +279,22 @@ public:
     CQuorumManager& operator=(const CQuorumManager&) = delete;
     explicit CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
                             CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
-                            const CActiveMasternodeManager* const mn_activeman, const CMasternodeSync& mn_sync,
-                            const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_recovery,
-                            bool quorums_watch);
+                            const util::DbWrapperParams& db_params);
     ~CQuorumManager();
 
-    void ConnectManager(gsl::not_null<llmq::CDKGSessionManager*> qdkgsman)
+    void ConnectManagers(gsl::not_null<llmq::QuorumObserver*> handler, gsl::not_null<llmq::CDKGSessionManager*> qdkgsman)
     {
         // Prohibit double initialization
+        assert(m_handler.load(std::memory_order_acquire) == nullptr);
+        m_handler.store(handler, std::memory_order_release);
         assert(m_qdkgsman.load(std::memory_order_acquire) == nullptr);
         m_qdkgsman.store(qdkgsman, std::memory_order_release);
     }
-    void DisconnectManager() { m_qdkgsman.store(nullptr, std::memory_order_release); }
+    void DisconnectManagers()
+    {
+        m_handler.store(nullptr, std::memory_order_release);
+        m_qdkgsman.store(nullptr, std::memory_order_release);
+    }
 
     void Start();
     void Stop();
@@ -320,7 +322,8 @@ public:
                                          size_t nCountRequested) const
         EXCLUSIVE_LOCKS_REQUIRED(!cs_db, !cs_map_quorums, !cs_scan_quorums);
 
-    bool IsWatching() const { return m_quorums_watch; }
+    bool IsMasternode() const;
+    bool IsWatching() const;
 
 private:
     // all private methods here are cs_main-free

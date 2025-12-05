@@ -206,20 +206,12 @@ bool CQuorum::ReadContributions(const CDBWrapper& db)
 
 CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
                                CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
-                               const CActiveMasternodeManager* const mn_activeman, const CMasternodeSync& mn_sync,
-                               const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_recovery,
-                               bool quorums_watch) :
+                               const util::DbWrapperParams& db_params) :
     blsWorker{_blsWorker},
     m_chainstate{chainstate},
     m_dmnman{dmnman},
     quorumBlockProcessor{_quorumBlockProcessor},
     m_qsnapman{qsnapman},
-    m_mn_activeman{mn_activeman},
-    m_handler{[&]() -> std::unique_ptr<llmq::QuorumObserver> {
-        if (mn_activeman) { return std::make_unique<llmq::QuorumParticipant>(_blsWorker, dmnman, *this, qsnapman, mn_activeman, mn_sync, sporkman, quorums_recovery, quorums_watch); }
-        else if (quorums_watch) { return std::make_unique<llmq::QuorumObserver>(dmnman, *this, qsnapman, mn_activeman, mn_sync, sporkman, quorums_recovery, quorums_watch); }
-        else { return nullptr; }}()},
-    m_quorums_watch{quorums_watch},
     db{util::MakeDbWrapper(
         {db_params.path / "llmq" / "quorumdb", db_params.memory, db_params.wipe, /*cache_size=*/1 << 20})}
 {
@@ -249,8 +241,8 @@ void CQuorumManager::Stop()
 
 void CQuorumManager::UpdatedBlockTip(const CBlockIndex* pindexNew, CConnman& connman, bool fInitialDownload) const
 {
-    if (m_handler) {
-        m_handler->UpdatedBlockTip(pindexNew, connman, fInitialDownload);
+    if (auto handler = m_handler.load(std::memory_order_acquire); handler) {
+        handler->UpdatedBlockTip(pindexNew, connman, fInitialDownload);
     }
 }
 
@@ -319,7 +311,7 @@ bool CQuorumManager::BuildQuorumContributions(const CFinalCommitmentPtr& fqc, co
         // allows to use the quorum as a non-member (verification through the quorum pub key)
         return false;
     }
-    if (m_handler || !m_handler->SetQuorumSecretKeyShare(*quorum, skContributions)) {
+    if (auto handler = m_handler.load(std::memory_order_acquire); !handler || !handler->SetQuorumSecretKeyShare(*quorum, skContributions)) {
         LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- failed to build skShare\n", __func__);
         // We don't bail out here as this is not a fatal error and still allows us to recover public key shares (as we
         // have a valid quorum vvec at this point)
@@ -493,6 +485,22 @@ std::vector<CQuorumCPtr> CQuorumManager::ScanQuorums(Consensus::LLMQType llmqTyp
     return {vecResultQuorums.begin(), vecResultQuorums.begin() + nResultEndIndex};
 }
 
+bool CQuorumManager::IsMasternode() const
+{
+    if (auto handler = m_handler.load(std::memory_order_acquire); handler) {
+        return handler->IsMasternode();
+    }
+    return false;
+}
+
+bool CQuorumManager::IsWatching() const
+{
+    if (auto handler = m_handler.load(std::memory_order_acquire); handler) {
+        return handler->IsWatching();
+    }
+    return false;
+}
+
 CQuorumCPtr CQuorumManager::GetQuorum(Consensus::LLMQType llmqType, const uint256& quorumHash) const
 {
     const CBlockIndex* pQuorumBaseBlockIndex = [&]() {
@@ -537,7 +545,7 @@ CQuorumCPtr CQuorumManager::GetQuorum(Consensus::LLMQType llmqType, gsl::not_nul
 MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& connman, std::string_view msg_type, CDataStream& vRecv)
 {
     if (msg_type == NetMsgType::QGETDATA) {
-        if (m_mn_activeman == nullptr || (pfrom.GetVerifiedProRegTxHash().IsNull() && !pfrom.qwatch)) {
+        if (!IsMasternode() || (pfrom.GetVerifiedProRegTxHash().IsNull() && !pfrom.qwatch)) {
             return MisbehavingError{10, "not a verified masternode or a qwatch connection"};
         }
 
@@ -610,9 +618,9 @@ MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& c
 
         // Check if request wants ENCRYPTED_CONTRIBUTIONS data
         MessageProcessingResult ret{};
-        if (m_handler) {
+        if (auto handler = m_handler.load(std::memory_order_acquire); handler) {
             // TODO: Get rid of the const_cast, we aren't actually writing anything but it's bad regardless
-            ret = m_handler->ProcessEncryptedContribs(pfrom, connman, request_limit_exceeded, ssResponseData, const_cast<CQuorum&>(*pQuorum), request, pQuorumBaseBlockIndex, msg_type);
+            ret = handler->ProcessEncryptedContribs(pfrom, connman, request_limit_exceeded, ssResponseData, const_cast<CQuorum&>(*pQuorum), request, pQuorumBaseBlockIndex, msg_type);
             if (auto request_err = request.GetError(); request_err != CQuorumDataRequest::Errors::NONE && request_err != CQuorumDataRequest::Errors::UNDEFINED) {
                 auto qdata_ret = sendQDATA(request_err, request_limit_exceeded);
                 return ret.empty() ? qdata_ret : ret;
@@ -622,7 +630,7 @@ MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& c
     }
 
     if (msg_type == NetMsgType::QDATA) {
-        if ((m_mn_activeman == nullptr && !m_quorums_watch) || pfrom.GetVerifiedProRegTxHash().IsNull()) {
+        if ((!IsMasternode() && !IsWatching()) || pfrom.GetVerifiedProRegTxHash().IsNull()) {
             return MisbehavingError{10, "not a verified masternode and -watchquorums is not enabled"};
         }
 
@@ -673,8 +681,8 @@ MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& c
         }
 
         // Check if request has ENCRYPTED_CONTRIBUTIONS data
-        if (m_handler) {
-            if (auto ret = m_handler->ProcessEncryptedContribs(pfrom, connman, /*request_limit_exceeded=*/false, vRecv, *pQuorum, request, /*block_index=*/nullptr, msg_type); !ret.empty()) {
+        if (auto handler = m_handler.load(std::memory_order_acquire); handler) {
+            if (auto ret = handler->ProcessEncryptedContribs(pfrom, connman, /*request_limit_exceeded=*/false, vRecv, *pQuorum, request, /*block_index=*/nullptr, msg_type); !ret.empty()) {
                 return ret;
             }
         }
@@ -682,8 +690,10 @@ MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& c
         WITH_LOCK(cs_db, pQuorum->WriteContributions(*db));
         return {};
     }
+
     return {};
 }
+
 void CQuorumManager::StartCachePopulatorThread(CQuorumCPtr pQuorum) const
 {
     if (!pQuorum->HasVerificationVector()) {
