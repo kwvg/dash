@@ -18,7 +18,7 @@ class CSporkManager;
 namespace llmq
 {
 
-enum class QvvecSyncMode {
+enum class QvvecSyncMode : int8_t {
     Invalid = -1,
     Always = 0,
     OnlyIfTypeMember = 1,
