@@ -529,6 +529,7 @@ libbitcoin_node_a_SOURCES = \
   instantsend/net_instantsend.cpp \
   instantsend/signing.cpp \
   kernel/coinstats.cpp \
+  llmq/active/quorums.cpp \
   llmq/blockprocessor.cpp \
   llmq/commitment.cpp \
   llmq/context.cpp \
