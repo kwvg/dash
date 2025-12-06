@@ -32,6 +32,7 @@ namespace llmq {
 class CDKGSessionManager;
 class CEHFSignalsHandler;
 class CSigSharesManager;
+class QuorumParticipant;
 } // namespace llmq
 namespace util {
 struct DbWrapperParams;
@@ -50,7 +51,8 @@ public:
                            CDSTXManager& dstxman, CGovernanceManager& govman, CMasternodeMetaMan& mn_metaman,
                            CMNHFManager& mnhfman, CSporkManager& sporkman, CTxMemPool& mempool, LLMQContext& llmq_ctx,
                            PeerManager& peerman, const CActiveMasternodeManager& mn_activeman,
-                           const CMasternodeSync& mn_sync, const util::DbWrapperParams& db_params, bool quorums_watch);
+                           const CMasternodeSync& mn_sync, const util::DbWrapperParams& db_params, bool quorums_recovery,
+                           bool quorums_watch);
     ~ActiveContext();
 
     void Interrupt();
@@ -75,6 +77,7 @@ private:
      */
     const std::unique_ptr<chainlock::ChainLockSigner> cl_signer;
     const std::unique_ptr<instantsend::InstantSendSigner> is_signer;
+    const std::unique_ptr<llmq::QuorumParticipant> qman_handler;
 };
 
 #endif // BITCOIN_MASTERNODE_ACTIVE_CONTEXT_H

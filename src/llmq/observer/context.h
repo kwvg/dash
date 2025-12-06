@@ -11,6 +11,7 @@ class CBLSWorker;
 class CChainState;
 class CDeterministicMNManager;
 class CMasternodeMetaMan;
+class CMasternodeSync;
 class CSporkManager;
 namespace llmq {
 class CDKGDebugManager;
@@ -18,6 +19,7 @@ class CDKGSessionManager;
 class CQuorumBlockProcessor;
 class CQuorumManager;
 class CQuorumSnapshotManager;
+class QuorumObserver;
 } // namespace llmq
 namespace util {
 struct DbWrapperParams;
@@ -29,12 +31,15 @@ struct ObserverContext {
     ObserverContext(const ObserverContext&) = delete;
     ObserverContext& operator=(const ObserverContext&) = delete;
     ObserverContext(CBLSWorker& bls_worker, CChainState& chainstate, CDeterministicMNManager& dmnman,
-                    CMasternodeMetaMan& mn_metaman, llmq::CDKGDebugManager& dkg_debugman,
+                    CMasternodeMetaMan& mn_metaman, CMasternodeSync& mn_sync, llmq::CDKGDebugManager& dkg_debugman,
                     llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumManager& qman, llmq::CQuorumSnapshotManager& qsnapman,
-                    const CSporkManager& sporkman, const util::DbWrapperParams& db_params);
+                    const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_recovery);
     ~ObserverContext();
 
     const std::unique_ptr<llmq::CDKGSessionManager> qdkgsman;
+
+private:
+    const std::unique_ptr<llmq::QuorumObserver> qman_handler;
 
 private:
     llmq::CQuorumManager& m_qman;
