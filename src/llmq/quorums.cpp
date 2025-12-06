@@ -2,6 +2,7 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <llmq/active/quorums.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/commitment.h>
 #include <llmq/dkgsessionmgr.h>
@@ -214,9 +215,7 @@ CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, 
     quorumBlockProcessor{_quorumBlockProcessor},
     m_qsnapman{qsnapman},
     m_mn_activeman{mn_activeman},
-    m_mn_sync{mn_sync},
-    m_sporkman{sporkman},
-    m_quorums_recovery{quorums_recovery},
+    m_participant{std::make_unique<llmq::QuorumParticipant>(_blsWorker, dmnman, *this, qsnapman, mn_activeman, mn_sync, sporkman, quorums_recovery, quorums_watch)},
     m_quorums_watch{quorums_watch},
     db{util::MakeDbWrapper(
         {db_params.path / "llmq" / "quorumdb", db_params.memory, db_params.wipe, /*cache_size=*/1 << 20})}
@@ -243,6 +242,13 @@ void CQuorumManager::Stop()
     quorumThreadInterrupt();
     workerPool.clear_queue();
     workerPool.stop(true);
+}
+
+void CQuorumManager::UpdatedBlockTip(const CBlockIndex* pindexNew, CConnman& connman, bool fInitialDownload) const
+{
+    if (m_participant) {
+        m_participant->UpdatedBlockTip(pindexNew, connman, fInitialDownload);
+    }
 }
 
 CQuorumPtr CQuorumManager::BuildQuorumFromCommitment(const Consensus::LLMQType llmqType, gsl::not_null<const CBlockIndex*> pQuorumBaseBlockIndex, bool populate_cache) const
@@ -310,7 +316,7 @@ bool CQuorumManager::BuildQuorumContributions(const CFinalCommitmentPtr& fqc, co
         // allows to use the quorum as a non-member (verification through the quorum pub key)
         return false;
     }
-    if (m_mn_activeman && !SetQuorumSecretKeyShare(*quorum, skContributions)) {
+    if (!m_participant || !m_participant->SetQuorumSecretKeyShare(*quorum, skContributions)) {
         LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- failed to build skShare\n", __func__);
         // We don't bail out here as this is not a fatal error and still allows us to recover public key shares (as we
         // have a valid quorum vvec at this point)
@@ -600,11 +606,14 @@ MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& c
         }
 
         // Check if request wants ENCRYPTED_CONTRIBUTIONS data
-        // TODO: Get rid of the const_cast, we aren't actually writing anything but it's bad regardless
-        auto ret = ProcessEncryptedContribs(pfrom, connman, request_limit_exceeded, ssResponseData, const_cast<CQuorum&>(*pQuorum), request, pQuorumBaseBlockIndex, msg_type);
-        if (auto request_err = request.GetError(); request_err != CQuorumDataRequest::Errors::NONE && request_err != CQuorumDataRequest::Errors::UNDEFINED) {
-            auto qdata_ret = sendQDATA(request_err, request_limit_exceeded);
-            return ret.empty() ? qdata_ret : ret;
+        MessageProcessingResult ret{};
+        if (m_participant) {
+            // TODO: Get rid of the const_cast, we aren't actually writing anything but it's bad regardless
+            ret = m_participant->ProcessEncryptedContribs(pfrom, connman, request_limit_exceeded, ssResponseData, const_cast<CQuorum&>(*pQuorum), request, pQuorumBaseBlockIndex, msg_type);
+            if (auto request_err = request.GetError(); request_err != CQuorumDataRequest::Errors::NONE && request_err != CQuorumDataRequest::Errors::UNDEFINED) {
+                auto qdata_ret = sendQDATA(request_err, request_limit_exceeded);
+                return ret.empty() ? qdata_ret : ret;
+            }
         }
         return ret.empty() ? sendQDATA(CQuorumDataRequest::Errors::NONE, request_limit_exceeded, ssResponseData) : ret;
     }
@@ -661,8 +670,10 @@ MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& c
         }
 
         // Check if request has ENCRYPTED_CONTRIBUTIONS data
-        if (auto ret = ProcessEncryptedContribs(pfrom, connman, /*request_limit_exceeded=*/false, vRecv, *pQuorum, request, /*block_index=*/nullptr, msg_type); !ret.empty()) {
-            return ret;
+        if (m_participant) {
+            if (auto ret = m_participant->ProcessEncryptedContribs(pfrom, connman, /*request_limit_exceeded=*/false, vRecv, *pQuorum, request, /*block_index=*/nullptr, msg_type); !ret.empty()) {
+                return ret;
+            }
         }
 
         WITH_LOCK(cs_db, pQuorum->WriteContributions(*db));
