@@ -357,7 +357,7 @@ static RPCHelpMan quorum_dkgstatus()
 
     CBlockIndex* pindexTip = WITH_LOCK(cs_main, return chainman.ActiveChain().Tip());
     int tipHeight = pindexTip->nHeight;
-    const uint256 proTxHash = node.mn_activeman ? node.mn_activeman->GetProTxHash() : uint256();
+    const uint256 proTxHash = node.active_ctx ? node.active_ctx->nodeman->GetProTxHash() : uint256();
 
     UniValue minableCommitments(UniValue::VARR);
     UniValue quorumArrConnections(UniValue::VARR);
@@ -373,7 +373,7 @@ static RPCHelpMan quorum_dkgstatus()
             obj.pushKV("llmqType", std::string(llmq_params.name));
             obj.pushKV("quorumIndex", quorumIndex);
 
-            if (node.mn_activeman) {
+            if (node.active_ctx) {
                 int quorumHeight = tipHeight - (tipHeight % llmq_params.dkgInterval) + quorumIndex;
                 if (quorumHeight <= tipHeight) {
                     const CBlockIndex* pQuorumBaseBlockIndex = WITH_LOCK(cs_main, return chainman.ActiveChain()[quorumHeight]);
@@ -501,7 +501,7 @@ static RPCHelpMan quorum_memberof()
 static UniValue quorum_sign_helper(const JSONRPCRequest& request, Consensus::LLMQType llmqType)
 {
     const NodeContext& node = EnsureAnyNodeContext(request.context);
-    if (!node.mn_activeman) {
+    if (!node.active_ctx) {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Only available in masternode mode.");
     }
 

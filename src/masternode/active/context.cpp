@@ -19,18 +19,19 @@
 #include <llmq/quorums.h>
 #include <llmq/observer/quorums.h>
 #include <llmq/signing_shares.h>
+#include <masternode/node.h>
 #include <validation.h>
 
 ActiveContext::ActiveContext(ChainstateManager& chainman, CConnman& connman, CDeterministicMNManager& dmnman,
                              CDSTXManager& dstxman, CGovernanceManager& govman, CMasternodeMetaMan& mn_metaman,
                              CMNHFManager& mnhfman, CSporkManager& sporkman, CTxMemPool& mempool, LLMQContext& llmq_ctx,
-                             PeerManager& peerman, const CActiveMasternodeManager& mn_activeman,
-                             const CMasternodeSync& mn_sync, const util::DbWrapperParams& db_params, bool quorums_recovery,
-                             bool quorums_watch) :
+                             PeerManager& peerman, const CMasternodeSync& mn_sync, const CBLSSecretKey& operator_sk,
+                             const util::DbWrapperParams& db_params, bool quorums_recovery, bool quorums_watch) :
     m_llmq_ctx{llmq_ctx},
+    nodeman{std::make_unique<CActiveMasternodeManager>(connman, dmnman, operator_sk)},
     cj_server{std::make_unique<CCoinJoinServer>(chainman, connman, dmnman, dstxman, mn_metaman, mempool, peerman,
-                                                mn_activeman, mn_sync, *llmq_ctx.isman)},
-    gov_signer{std::make_unique<GovernanceSigner>(connman, dmnman, govman, mn_activeman, chainman, mn_sync)},
+                                                *nodeman, mn_sync, *llmq_ctx.isman)},
+    gov_signer{std::make_unique<GovernanceSigner>(connman, dmnman, govman, *nodeman, chainman, mn_sync)},
     qdkgsman{std::make_unique<llmq::CDKGSessionManager>(chainman.ActiveChainstate(), dmnman, *llmq_ctx.qsnapman, sporkman,
                                                         [&](llmq::CDKGSessionManager::SessionHandlerMap& map,
                                                             const Consensus::LLMQParams& llmq_params, int quorum_idx) -> void {
@@ -38,10 +39,10 @@ ActiveContext::ActiveContext(ChainstateManager& chainman, CConnman& connman, CDe
                                                                 std::make_unique<llmq::dkg::ActiveSessionHandler>(
                                                                     *llmq_ctx.bls_worker, chainman.ActiveChainstate(), dmnman, mn_metaman,
                                                                     *llmq_ctx.dkg_debugman, *llmq_ctx.quorum_block_processor, *llmq_ctx.qsnapman,
-                                                                    mn_activeman, sporkman, qdkgsman, llmq_params, quorums_watch, quorum_idx));
+                                                                    *nodeman, sporkman, qdkgsman, llmq_params, quorums_watch, quorum_idx));
                                                         }, db_params, quorums_watch)},
     shareman{std::make_unique<llmq::CSigSharesManager>(connman, chainman.ActiveChainstate(), *llmq_ctx.sigman, peerman,
-                                                       mn_activeman, *llmq_ctx.qman, sporkman)},
+                                                       *nodeman, *llmq_ctx.qman, sporkman)},
     ehf_sighandler{
         std::make_unique<llmq::CEHFSignalsHandler>(chainman, mnhfman, *llmq_ctx.sigman, *shareman, *llmq_ctx.qman)},
     cl_signer{std::make_unique<chainlock::ChainLockSigner>(chainman.ActiveChainstate(), *llmq_ctx.clhandler,
@@ -50,7 +51,7 @@ ActiveContext::ActiveContext(ChainstateManager& chainman, CConnman& connman, CDe
                                                                *llmq_ctx.isman, *llmq_ctx.sigman, *shareman,
                                                                *llmq_ctx.qman, sporkman, mempool, mn_sync)},
     qman_handler{std::make_unique<llmq::QuorumParticipant>(*llmq_ctx.bls_worker, dmnman, *llmq_ctx.qman,
-                                                           *llmq_ctx.qsnapman, mn_activeman, mn_sync, sporkman, quorums_recovery,
+                                                           *llmq_ctx.qsnapman, *nodeman, mn_sync, sporkman, quorums_recovery,
                                                            quorums_watch)}
 {
     m_llmq_ctx.clhandler->ConnectSigner(cl_signer.get());

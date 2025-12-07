@@ -412,8 +412,6 @@ void PrepareShutdown(NodeContext& node)
     }
 #endif
 
-    node.mn_activeman.reset();
-
     node.chain_clients.clear();
 
     // After all wallets are removed, destroy all CoinJoin objects
@@ -1716,16 +1714,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         }
     }
 
-    std::string strMasterNodeBLSPrivKey = args.GetArg("-masternodeblsprivkey", "");
-    if (!strMasterNodeBLSPrivKey.empty()) {
-        CBLSSecretKey keyOperator(ParseHex(strMasterNodeBLSPrivKey));
-        if (!keyOperator.IsValid()) {
-            return InitError(_("Invalid masternodeblsprivkey. Please see documentation."));
-        }
-        // Create and register mn_activeman, will init later in ThreadImport
-        node.mn_activeman = std::make_unique<CActiveMasternodeManager>(keyOperator, *node.connman, node.dmnman);
-    }
-
     // Check port numbers
     for (const std::string port_option : {
         "-port",
@@ -2171,7 +2159,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     assert(!node.peerman);
     node.peerman = PeerManager::make(chainparams, *node.connman, *node.addrman, node.banman.get(), *node.dstxman,
                                      chainman, *node.mempool, *node.mn_metaman, *node.mn_sync,
-                                     *node.govman, *node.sporkman, node.mn_activeman.get(), node.active_ctx, node.dmnman,
+                                     *node.govman, *node.sporkman, node.active_ctx, node.dmnman,
                                      node.cj_walletman, node.llmq_ctx, node.observer_ctx, ignores_incoming_txs);
     RegisterValidationInterface(node.peerman.get());
 
@@ -2189,11 +2177,16 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     const bool quorums_watch = args.GetBoolArg("-watchquorums", llmq::DEFAULT_WATCH_QUORUMS);
     const util::DbWrapperParams dash_db_params{.path = args.GetDataDirNet(), .memory = false, .wipe = (fReindex || fReindexChainState)};
 
-    if (node.mn_activeman) {
+    if (const auto operator_sk_str = args.GetArg("-masternodeblsprivkey", ""); !operator_sk_str.empty()) {
+        const CBLSSecretKey operator_sk{ParseHex(operator_sk_str)};
+        if (!operator_sk.IsValid()) {
+            return InitError(_("Invalid masternodeblsprivkey. Please see documentation."));
+        }
+        // Will init later in ThreadImport
         node.active_ctx = std::make_unique<ActiveContext>(chainman, *node.connman, *node.dmnman, *node.dstxman, *node.govman, *node.mn_metaman,
                                                           *node.mnhf_manager, *node.sporkman, *node.mempool, *node.llmq_ctx, *node.peerman,
-                                                          *node.mn_activeman, *node.mn_sync, dash_db_params, quorums_recovery, quorums_watch);
-        g_active_notification_interface = std::make_unique<ActiveNotificationInterface>(*node.active_ctx, *node.mn_activeman);
+                                                          *node.mn_sync, operator_sk, dash_db_params, quorums_recovery, quorums_watch);
+        g_active_notification_interface = std::make_unique<ActiveNotificationInterface>(*node.active_ctx);
         RegisterValidationInterface(g_active_notification_interface.get());
     } else if (quorums_watch) {
         node.observer_ctx = std::make_unique<llmq::ObserverContext>(*node.llmq_ctx->bls_worker, chainman.ActiveChainstate(), *node.dmnman, *node.mn_metaman,
@@ -2206,11 +2199,9 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     // ********************************************************* Step 7d: Setup other Dash services
 
     assert(!node.cj_walletman);
-    if (!node.mn_activeman) {
+    if (!node.active_ctx) {
         node.cj_walletman = CJWalletManager::make(chainman, *node.dmnman, *node.mn_metaman, *node.mempool, *node.mn_sync,
                                                   *node.llmq_ctx->isman, !ignores_incoming_txs);
-    }
-    if (node.cj_walletman) {
         RegisterValidationInterface(node.cj_walletman.get());
     }
 
@@ -2307,8 +2298,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
 
     node.llmq_ctx->Start();
     node.peerman->StartHandlers();
-    if (node.active_ctx) node.active_ctx->Start(*node.connman, *node.peerman);
-
     node.scheduler->scheduleEvery(std::bind(&CNetFulfilledRequestManager::DoMaintenance, std::ref(*node.netfulfilledman)), std::chrono::minutes{1});
     node.scheduler->scheduleEvery(std::bind(&CMasternodeSync::DoMaintenance, std::ref(*node.mn_sync), std::cref(*node.peerman), std::cref(*node.govman)), std::chrono::seconds{1});
     node.scheduler->scheduleEvery(std::bind(&CMasternodeUtils::DoMaintenance, std::ref(*node.connman), std::ref(*node.dmnman), std::ref(*node.mn_sync), node.cj_walletman.get()), std::chrono::minutes{1});
@@ -2318,7 +2307,8 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         node.govman->Schedule(*node.scheduler, *node.connman, *node.peerman);
     }
 
-    if (node.mn_activeman) {
+    if (node.active_ctx) {
+        node.active_ctx->Start(*node.connman, *node.peerman);
         node.scheduler->scheduleEvery(std::bind(&CCoinJoinServer::DoMaintenance, std::ref(*node.active_ctx->cj_server)), std::chrono::seconds{1});
         node.scheduler->scheduleEvery(std::bind(&llmq::CDKGSessionManager::CleanupOldContributions, std::ref(*node.active_ctx->qdkgsman)), std::chrono::hours{1});
     }
@@ -2466,10 +2456,9 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
             }
         }
 
-        if (node.mn_activeman != nullptr) {
-            node.mn_activeman->Init(chainman.ActiveTip());
+        if (node.active_ctx) {
+            node.active_ctx->nodeman->Init(chainman.ActiveTip());
         }
-
     });
 #ifdef ENABLE_WALLET
     if (!args.GetBoolArg("-disablewallet", DEFAULT_DISABLE_WALLET)) {
@@ -2537,7 +2526,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     connOptions.nMaxOutboundLimit = *opt_max_upload;
     connOptions.m_peer_connect_timeout = peer_connect_timeout;
     connOptions.socketEventsMode = ::g_socket_events_mode;
-    connOptions.m_active_masternode = node.mn_activeman != nullptr;
+    connOptions.m_active_masternode = node.active_ctx != nullptr;
 
     // Port to bind to if `-bind=addr` is provided without a `:port` suffix.
     const uint16_t default_bind_port =

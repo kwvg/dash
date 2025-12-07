@@ -8,6 +8,7 @@
 #include <memory>
 
 class CActiveMasternodeManager;
+class CBLSSecretKey;
 class ChainstateManager;
 class CCoinJoinServer;
 class CConnman;
@@ -50,9 +51,8 @@ public:
     explicit ActiveContext(ChainstateManager& chainman, CConnman& connman, CDeterministicMNManager& dmnman,
                            CDSTXManager& dstxman, CGovernanceManager& govman, CMasternodeMetaMan& mn_metaman,
                            CMNHFManager& mnhfman, CSporkManager& sporkman, CTxMemPool& mempool, LLMQContext& llmq_ctx,
-                           PeerManager& peerman, const CActiveMasternodeManager& mn_activeman,
-                           const CMasternodeSync& mn_sync, const util::DbWrapperParams& db_params, bool quorums_recovery,
-                           bool quorums_watch);
+                           PeerManager& peerman, const CMasternodeSync& mn_sync, const CBLSSecretKey& operator_sk,
+                           const util::DbWrapperParams& db_params, bool quorums_recovery, bool quorums_watch);
     ~ActiveContext();
 
     void Interrupt();
@@ -62,8 +62,8 @@ public:
     /*
      * Entities that are only utilized when masternode mode is enabled
      * and are accessible in their own right
-     * TODO: Move CActiveMasternodeManager here when dependents have been migrated
      */
+    const std::unique_ptr<CActiveMasternodeManager> nodeman;
     const std::unique_ptr<CCoinJoinServer> cj_server;
     const std::unique_ptr<GovernanceSigner> gov_signer;
     const std::unique_ptr<llmq::CDKGSessionManager> qdkgsman;
