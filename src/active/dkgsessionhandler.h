@@ -20,11 +20,11 @@ private:
     CDeterministicMNManager& m_dmnman;
     CMasternodeMetaMan& m_mn_metaman;
     llmq::CDKGDebugManager& m_dkgdbgman;
+    llmq::CDKGSessionManager& m_qdkgsman;
     llmq::CQuorumBlockProcessor& m_qblockman;
     llmq::CQuorumSnapshotManager& m_qsnapman;
     const CActiveMasternodeManager& m_mn_activeman;
     const CSporkManager& m_sporkman;
-    const std::unique_ptr<llmq::CDKGSessionManager>& m_qdkgsman;
     const bool m_quorums_watch{false};
 
 private:
@@ -42,10 +42,9 @@ public:
     ActiveSessionHandler(const ActiveSessionHandler&) = delete;
     ActiveSessionHandler& operator=(const ActiveSessionHandler&) = delete;
     ActiveSessionHandler(CBLSWorker& bls_worker, CChainState& chainstate, CDeterministicMNManager& dmnman, CMasternodeMetaMan& mn_metaman,
-                         llmq::CDKGDebugManager& dkgdbgman, llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
-                         const CActiveMasternodeManager& mn_activeman, const CSporkManager& sporkman, 
-                         const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman, const Consensus::LLMQParams& llmq_params, bool quorums_watch,
-                         int quorums_idx);
+                         llmq::CDKGDebugManager& dkgdbgman, llmq::CDKGSessionManager& qdkgsman, llmq::CQuorumBlockProcessor& qblockman,
+                         llmq::CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman, const CSporkManager& sporkman, 
+                         const Consensus::LLMQParams& llmq_params, bool quorums_watch, int quorums_idx);
     ~ActiveSessionHandler();
 
 public:

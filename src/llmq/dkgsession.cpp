@@ -64,15 +64,15 @@ CDKGMember::CDKGMember(const CDeterministicMNCPtr& _dmn, size_t _idx) :
 }
 
 CDKGSession::CDKGSession(CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CDKGDebugManager& _dkgDebugManager,
-                         CQuorumSnapshotManager& qsnapman, const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
+                         CDKGSessionManager& qdkgsman, CQuorumSnapshotManager& qsnapman,
                          const CBlockIndex* pQuorumBaseBlockIndex, const Consensus::LLMQParams& _params) :
     blsWorker(_blsWorker),
     cache(_blsWorker),
     m_dmnman(dmnman),
     dkgDebugManager(_dkgDebugManager),
+    m_qdkgsman(qdkgsman),
     m_qsnapman(qsnapman),
     params(_params),
-    m_qdkgsman(qdkgsman),
     m_quorum_base_block_index{pQuorumBaseBlockIndex}
 {
 }
@@ -243,7 +243,7 @@ std::optional<CInv> CDKGSession::ReceiveMessage(const CDKGContribution& qc)
         return inv;
     }
 
-    Assert(m_qdkgsman)->WriteVerifiedVvecContribution(params.type, m_quorum_base_block_index, qc.proTxHash, qc.vvec);
+    m_qdkgsman.WriteVerifiedVvecContribution(params.type, m_quorum_base_block_index, qc.proTxHash, qc.vvec);
 
     bool complain = false;
     CBLSSecretKey skContribution;
@@ -514,7 +514,7 @@ std::optional<CInv> CDKGSession::ReceiveMessage(const CDKGJustification& qj)
                 receivedSkContributions[member->idx] = skContribution;
                 member->weComplain = false;
 
-                Assert(m_qdkgsman)->WriteVerifiedSkContribution(params.type, m_quorum_base_block_index, member->dmn->proTxHash, skContribution);
+                m_qdkgsman.WriteVerifiedSkContribution(params.type, m_quorum_base_block_index, member->dmn->proTxHash, skContribution);
             }
             member->complaintsFromOthers.erase(member2->dmn->proTxHash);
         }
@@ -617,7 +617,7 @@ std::optional<CInv> CDKGSession::ReceiveMessage(const CDKGPrematureCommitment& q
     std::vector<BLSVerificationVectorPtr> vvecs;
     std::vector<CBLSSecretKey> skContributions;
     BLSVerificationVectorPtr quorumVvec;
-    if (Assert(m_qdkgsman)->GetVerifiedContributions(params.type, m_quorum_base_block_index, qc.validMembers, memberIndexes, vvecs, skContributions)) {
+    if (m_qdkgsman.GetVerifiedContributions(params.type, m_quorum_base_block_index, qc.validMembers, memberIndexes, vvecs, skContributions)) {
         quorumVvec = cache.BuildQuorumVerificationVector(::SerializeHash(memberIndexes), vvecs);
     }
 

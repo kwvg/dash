@@ -21,27 +21,26 @@
 namespace llmq {
 namespace dkg {
 ActiveSessionHandler::ActiveSessionHandler(CBLSWorker& bls_worker, CChainState& chainstate, CDeterministicMNManager& dmnman, CMasternodeMetaMan& mn_metaman,
-                                           llmq::CDKGDebugManager& dkgdbgman, llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumSnapshotManager& qsnapman,
-                                           const CActiveMasternodeManager& mn_activeman, const CSporkManager& sporkman, 
-                                           const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman, const Consensus::LLMQParams& llmq_params, bool quorums_watch,
-                                           int quorums_idx) :
-    llmq::CDKGSessionHandler(bls_worker, dmnman, dkgdbgman, qsnapman, qdkgsman, llmq_params, quorums_watch, quorums_idx),
+                                           llmq::CDKGDebugManager& dkgdbgman, llmq::CDKGSessionManager& qdkgsman, llmq::CQuorumBlockProcessor& qblockman,
+                                           llmq::CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman, const CSporkManager& sporkman, 
+                                           const Consensus::LLMQParams& llmq_params, bool quorums_watch, int quorums_idx) :
+    llmq::CDKGSessionHandler(bls_worker, dmnman, dkgdbgman, qdkgsman, qsnapman, llmq_params, quorums_watch, quorums_idx),
     m_bls_worker{bls_worker},
     m_chainstate{chainstate},
     m_dmnman{dmnman},
     m_mn_metaman{mn_metaman},
     m_dkgdbgman{dkgdbgman},
+    m_qdkgsman{qdkgsman},
     m_qblockman{qblockman},
     m_qsnapman{qsnapman},
     m_mn_activeman{mn_activeman},
     m_sporkman{sporkman},
-    m_qdkgsman{qdkgsman},
     m_quorums_watch{quorums_watch}
 {
     // Overwrite session initialized in parent
     curSession.reset();
-    curSession = std::make_unique<ActiveSession>(m_bls_worker, m_dmnman, m_dkgdbgman, m_mn_metaman, m_qsnapman, m_mn_activeman,
-                                                 m_sporkman, m_qdkgsman, /*pQuorumBaseBlockIndex=*/nullptr, llmq_params);
+    curSession = std::make_unique<ActiveSession>(m_bls_worker, m_dmnman, m_dkgdbgman, m_qdkgsman, m_mn_metaman, m_qsnapman, m_mn_activeman,
+                                                 m_sporkman, /*pQuorumBaseBlockIndex=*/nullptr, llmq_params);
 }
 
 ActiveSessionHandler::~ActiveSessionHandler() = default;
@@ -104,8 +103,8 @@ bool ActiveSessionHandler::InitNewQuorum(const CBlockIndex* pQuorumBaseBlockInde
         return false;
     }
 
-    curSession = std::make_unique<ActiveSession>(m_bls_worker, m_dmnman, m_dkgdbgman, m_mn_metaman, m_qsnapman,
-                                                 m_mn_activeman, m_sporkman, m_qdkgsman, pQuorumBaseBlockIndex, params);
+    curSession = std::make_unique<ActiveSession>(m_bls_worker, m_dmnman, m_dkgdbgman, m_qdkgsman, m_mn_metaman, m_qsnapman,
+                                                 m_mn_activeman, m_sporkman, pQuorumBaseBlockIndex, params);
 
     if (!curSession->Init(m_mn_activeman.GetProTxHash(), quorumIndex)) {
         LogPrintf("ActiveSessionHandler::%s -- height[%d] quorum initialization failed for %s qi[%d]\n", __func__,

@@ -143,8 +143,8 @@ protected:
 
 public:
     CDKGSessionHandler(CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CDKGDebugManager& _dkgDebugManager,
-                       CQuorumSnapshotManager& qsnapman, const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
-                       const Consensus::LLMQParams& _params, bool quorums_watch, int _quorumIndex);
+                       CDKGSessionManager& qdkgsman, CQuorumSnapshotManager& qsnapman, const Consensus::LLMQParams& _params,
+                       bool quorums_watch, int _quorumIndex);
     virtual ~CDKGSessionHandler();
 
     [[nodiscard]] MessageProcessingResult ProcessMessage(NodeId from, std::string_view msg_type, CDataStream& vRecv);

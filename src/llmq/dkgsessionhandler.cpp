@@ -21,9 +21,9 @@
 
 namespace llmq {
 CDKGSessionHandler::CDKGSessionHandler(CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CDKGDebugManager& _dkgDebugManager,
-                                       CQuorumSnapshotManager& qsnapman, const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
-                                       const Consensus::LLMQParams& _params, bool quorums_watch, int _quorumIndex) :
-    curSession(std::make_unique<CDKGSession>(_blsWorker, dmnman, _dkgDebugManager, qsnapman, qdkgsman,
+                                       CDKGSessionManager& qdkgsman, CQuorumSnapshotManager& qsnapman, const Consensus::LLMQParams& _params,
+                                       bool quorums_watch, int _quorumIndex) :
+    curSession(std::make_unique<CDKGSession>(_blsWorker, dmnman, _dkgDebugManager, qdkgsman, qsnapman,
                                              /*pQuorumBaseBlockIndex=*/nullptr, _params)),
     params(_params),
     quorumIndex(_quorumIndex),

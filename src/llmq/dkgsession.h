@@ -288,9 +288,9 @@ private:
     CBLSWorkerCache cache;
     CDeterministicMNManager& m_dmnman;
     CDKGDebugManager& dkgDebugManager;
+    CDKGSessionManager& m_qdkgsman;
     CQuorumSnapshotManager& m_qsnapman;
     const Consensus::LLMQParams& params;
-    const std::unique_ptr<llmq::CDKGSessionManager>& m_qdkgsman;
     const CBlockIndex* const m_quorum_base_block_index;
 
 private:
@@ -330,7 +330,7 @@ private:
 
 public:
     CDKGSession(CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CDKGDebugManager& _dkgDebugManager,
-                CQuorumSnapshotManager& qsnapman, const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
+                CDKGSessionManager& qdkgsman, CQuorumSnapshotManager& qsnapman,
                 const CBlockIndex* pQuorumBaseBlockIndex, const Consensus::LLMQParams& _params);
     virtual ~CDKGSession();
 

@@ -31,7 +31,6 @@ static const std::string DB_ENC_CONTRIB = "qdkg_E";
 
 CDKGSessionManager::CDKGSessionManager(CChainState& chainstate, CDeterministicMNManager& dmnman,
                                        CQuorumSnapshotManager& qsnapman, const CSporkManager& sporkman,
-                                       std::function<void(SessionHandlerMap&, const Consensus::LLMQParams&, int)> emplace_fn,
                                        const util::DbWrapperParams& db_params, bool quorums_watch) :
     db{util::MakeDbWrapper({db_params.path / "llmq" / "dkgdb", db_params.memory, db_params.wipe, /*cache_size=*/1 << 20})},
     m_chainstate{chainstate},
@@ -40,13 +39,6 @@ CDKGSessionManager::CDKGSessionManager(CChainState& chainstate, CDeterministicMN
     m_sporkman{sporkman},
     m_quorums_watch{quorums_watch}
 {
-    const Consensus::Params& consensus_params = Params().GetConsensus();
-    for (const auto& params : consensus_params.llmqs) {
-        auto session_count = (params.useRotation) ? params.signingActiveQuorumCount : 1;
-        for (const auto i : irange::range(session_count)) {
-            emplace_fn(dkgSessionHandlers, params, i);
-        }
-    }
 }
 
 CDKGSessionManager::~CDKGSessionManager() = default;

@@ -20,11 +20,10 @@
 namespace llmq {
 namespace dkg {
 ActiveSession::ActiveSession(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CDKGDebugManager& dkgdbgman,
-                             CMasternodeMetaMan& mn_metaman, CQuorumSnapshotManager& qsnapman,
+                             CDKGSessionManager& qdkgsman, CMasternodeMetaMan& mn_metaman, CQuorumSnapshotManager& qsnapman,
                              const CActiveMasternodeManager& mn_activeman, const CSporkManager& sporkman,
-                             const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
                              const CBlockIndex* base_block_index, const Consensus::LLMQParams& params) :
-    CDKGSession(bls_worker, dmnman, dkgdbgman, qsnapman, qdkgsman, base_block_index, params),
+    CDKGSession(bls_worker, dmnman, dkgdbgman, qdkgsman, qsnapman, base_block_index, params),
     m_mn_metaman{mn_metaman},
     m_mn_activeman{mn_activeman},
     m_sporkman{sporkman},
@@ -140,7 +139,7 @@ void ActiveSession::VerifyPendingContributions()
         skContributions.emplace_back(receivedSkContributions[idx]);
         // Write here to definitely store one contribution for each member no matter if
         // our share is valid or not, could be that others are still correct
-        Assert(m_qdkgsman)->WriteEncryptedContributions(params.type, m_quorum_base_block_index, m->dmn->proTxHash, *vecEncryptedContributions[idx]);
+        m_qdkgsman.WriteEncryptedContributions(params.type, m_quorum_base_block_index, m->dmn->proTxHash, *vecEncryptedContributions[idx]);
     }
 
     auto result = blsWorker.VerifyContributionShares(myId, vvecs, skContributions);
@@ -160,7 +159,7 @@ void ActiveSession::VerifyPendingContributions()
             });
         } else {
             size_t memberIdx = memberIndexes[i];
-            m_qdkgsman->WriteVerifiedSkContribution(params.type, m_quorum_base_block_index, members[memberIdx]->dmn->proTxHash, skContributions[i]);
+            m_qdkgsman.WriteVerifiedSkContribution(params.type, m_quorum_base_block_index, members[memberIdx]->dmn->proTxHash, skContributions[i]);
         }
     }
 
@@ -466,7 +465,7 @@ void ActiveSession::SendCommitment(CDKGPendingMessages& pendingMessages, PeerMan
     std::vector<uint16_t> memberIndexes;
     std::vector<BLSVerificationVectorPtr> vvecs;
     std::vector<CBLSSecretKey> skContributions;
-    if (!Assert(m_qdkgsman)->GetVerifiedContributions(params.type, m_quorum_base_block_index, qc.validMembers, memberIndexes, vvecs, skContributions)) {
+    if (!m_qdkgsman.GetVerifiedContributions(params.type, m_quorum_base_block_index, qc.validMembers, memberIndexes, vvecs, skContributions)) {
         logger.Batch("failed to get valid contributions");
         return;
     }

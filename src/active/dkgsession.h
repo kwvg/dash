@@ -22,9 +22,8 @@ public:
     ActiveSession(const ActiveSession&) = delete;
     ActiveSession& operator=(const ActiveSession&) = delete;
     ActiveSession(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CDKGDebugManager& dkgdbgman,
-                  CMasternodeMetaMan& mn_metaman, CQuorumSnapshotManager& qsnapman,
+                  CDKGSessionManager& qdkgsman, CMasternodeMetaMan& mn_metaman, CQuorumSnapshotManager& qsnapman,
                   const CActiveMasternodeManager& mn_activeman, const CSporkManager& sporkman,
-                  const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
                   const CBlockIndex* base_block_index, const Consensus::LLMQParams& params);
     ~ActiveSession();
 

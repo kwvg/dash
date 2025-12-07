@@ -9,6 +9,8 @@
 #include <bls/bls_worker.h>
 #include <llmq/dkgsessionhandler.h>
 #include <msg_result.h>
+#include <util/irange.h>
+
 #include <net_types.h>
 
 #include <functional>
@@ -95,9 +97,20 @@ public:
     CDKGSessionManager& operator=(const CDKGSessionManager&) = delete;
     explicit CDKGSessionManager(CChainState& chainstate, CDeterministicMNManager& dmnman,
                                 CQuorumSnapshotManager& qsnapman, const CSporkManager& sporkman,
-                                std::function<void(SessionHandlerMap&, const Consensus::LLMQParams&, int)> emplace_fn,
                                 const util::DbWrapperParams& db_params, bool quorums_watch);
     ~CDKGSessionManager();
+
+    template <typename HandlerFn>
+    void InitializeHandlers(HandlerFn&& handler_fn)
+    {
+        const Consensus::Params& consensus_params = Params().GetConsensus();
+        for (const auto& params : consensus_params.llmqs) {
+            auto session_count = (params.useRotation) ? params.signingActiveQuorumCount : 1;
+            for (const auto i : irange::range(session_count)) {
+                dkgSessionHandlers.emplace(SessionHandlerKey{params.type, i}, handler_fn(params, i));
+            }
+        }
+    }
 
     void StartThreads(CConnman& connman, PeerManager& peerman);
     void StopThreads();
