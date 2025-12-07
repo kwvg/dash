@@ -27,17 +27,19 @@ class CDeterministicMN;
 class CMasternodeMetaMan;
 class CSporkManager;
 class PeerManager;
-
-namespace llmq
-{
-
-class CFinalCommitment;
+namespace llmq {
 class CDKGDebugManager;
+class CDKGPendingMessages;
 class CDKGSession;
 class CDKGSessionManager;
-class CDKGPendingMessages;
+class CFinalCommitment;
 class CQuorumSnapshotManager;
+namespace dkg {
+class ActiveSessionHandler;
+} // namespace dkg
+} // namespace llmq
 
+namespace llmq {
 class CDKGContribution
 {
 public:
@@ -277,6 +279,7 @@ class CDKGSession
     friend class CDKGSessionHandler;
     friend class CDKGSessionManager;
     friend class CDKGLogger;
+    friend class dkg::ActiveSessionHandler;
 
 private:
     const Consensus::LLMQParams params;
@@ -284,12 +287,12 @@ private:
     CBLSWorker& blsWorker;
     CBLSWorkerCache cache;
     CDeterministicMNManager& m_dmnman;
-    CDKGSessionManager& dkgManager;
     CDKGDebugManager& dkgDebugManager;
     CMasternodeMetaMan& m_mn_metaman;
     CQuorumSnapshotManager& m_qsnapman;
     const CActiveMasternodeManager* const m_mn_activeman;
     const CSporkManager& m_sporkman;
+    const std::unique_ptr<llmq::CDKGSessionManager>& m_qdkgsman;
 
     const CBlockIndex* const m_quorum_base_block_index;
     bool m_use_legacy_bls;
@@ -330,10 +333,11 @@ private:
     std::set<uint256> validCommitments GUARDED_BY(invCs);
 
 public:
-    CDKGSession(const CBlockIndex* pQuorumBaseBlockIndex, const Consensus::LLMQParams& _params, CBLSWorker& _blsWorker,
-                CDeterministicMNManager& dmnman, CDKGSessionManager& _dkgManager, CDKGDebugManager& _dkgDebugManager,
+    CDKGSession(CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CDKGDebugManager& _dkgDebugManager,
                 CMasternodeMetaMan& mn_metaman, CQuorumSnapshotManager& qsnapman,
-                const CActiveMasternodeManager* const mn_activeman, const CSporkManager& sporkman);
+                const CActiveMasternodeManager* const mn_activeman, const CSporkManager& sporkman,
+                const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
+                const CBlockIndex* pQuorumBaseBlockIndex, const Consensus::LLMQParams& _params);
 
     // TODO: remove Init completely
     bool Init(const uint256& _myProTxHash, int _quorumIndex);

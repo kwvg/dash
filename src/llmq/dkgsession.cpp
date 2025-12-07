@@ -67,21 +67,21 @@ CDKGMember::CDKGMember(const CDeterministicMNCPtr& _dmn, size_t _idx) :
 
 }
 
-CDKGSession::CDKGSession(const CBlockIndex* pQuorumBaseBlockIndex, const Consensus::LLMQParams& _params,
-                         CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CDKGSessionManager& _dkgManager,
-                         CDKGDebugManager& _dkgDebugManager, CMasternodeMetaMan& mn_metaman,
-                         CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager* const mn_activeman,
-                         const CSporkManager& sporkman) :
+CDKGSession::CDKGSession(CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CDKGDebugManager& _dkgDebugManager,
+                         CMasternodeMetaMan& mn_metaman, CQuorumSnapshotManager& qsnapman,
+                         const CActiveMasternodeManager* const mn_activeman, const CSporkManager& sporkman,
+                         const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
+                         const CBlockIndex* pQuorumBaseBlockIndex, const Consensus::LLMQParams& _params) :
     params(_params),
     blsWorker(_blsWorker),
     cache(_blsWorker),
     m_dmnman(dmnman),
-    dkgManager(_dkgManager),
     dkgDebugManager(_dkgDebugManager),
     m_mn_metaman(mn_metaman),
     m_qsnapman(qsnapman),
     m_mn_activeman(mn_activeman),
     m_sporkman(sporkman),
+    m_qdkgsman(qdkgsman),
     m_quorum_base_block_index{pQuorumBaseBlockIndex},
     m_use_legacy_bls{!DeploymentActiveAfter(m_quorum_base_block_index, Params().GetConsensus(), Consensus::DEPLOYMENT_V19)}
 {
@@ -326,7 +326,7 @@ std::optional<CInv> CDKGSession::ReceiveMessage(const CDKGContribution& qc)
         return inv;
     }
 
-    dkgManager.WriteVerifiedVvecContribution(params.type, m_quorum_base_block_index, qc.proTxHash, qc.vvec);
+    Assert(m_qdkgsman)->WriteVerifiedVvecContribution(params.type, m_quorum_base_block_index, qc.proTxHash, qc.vvec);
 
     bool complain = false;
     CBLSSecretKey skContribution;
@@ -390,7 +390,7 @@ void CDKGSession::VerifyPendingContributions()
         skContributions.emplace_back(receivedSkContributions[idx]);
         // Write here to definitely store one contribution for each member no matter if
         // our share is valid or not, could be that others are still correct
-        dkgManager.WriteEncryptedContributions(params.type, m_quorum_base_block_index, m->dmn->proTxHash, *vecEncryptedContributions[idx]);
+        Assert(m_qdkgsman)->WriteEncryptedContributions(params.type, m_quorum_base_block_index, m->dmn->proTxHash, *vecEncryptedContributions[idx]);
     }
 
     auto result = blsWorker.VerifyContributionShares(myId, vvecs, skContributions);
@@ -410,7 +410,7 @@ void CDKGSession::VerifyPendingContributions()
             });
         } else {
             size_t memberIdx = memberIndexes[i];
-            dkgManager.WriteVerifiedSkContribution(params.type, m_quorum_base_block_index, members[memberIdx]->dmn->proTxHash, skContributions[i]);
+            m_qdkgsman->WriteVerifiedSkContribution(params.type, m_quorum_base_block_index, members[memberIdx]->dmn->proTxHash, skContributions[i]);
         }
     }
 
@@ -873,7 +873,7 @@ std::optional<CInv> CDKGSession::ReceiveMessage(const CDKGJustification& qj)
                 receivedSkContributions[member->idx] = skContribution;
                 member->weComplain = false;
 
-                dkgManager.WriteVerifiedSkContribution(params.type, m_quorum_base_block_index, member->dmn->proTxHash, skContribution);
+                Assert(m_qdkgsman)->WriteVerifiedSkContribution(params.type, m_quorum_base_block_index, member->dmn->proTxHash, skContribution);
             }
             member->complaintsFromOthers.erase(member2->dmn->proTxHash);
         }
@@ -971,7 +971,7 @@ void CDKGSession::SendCommitment(CDKGPendingMessages& pendingMessages, PeerManag
     std::vector<uint16_t> memberIndexes;
     std::vector<BLSVerificationVectorPtr> vvecs;
     std::vector<CBLSSecretKey> skContributions;
-    if (!dkgManager.GetVerifiedContributions(params.type, m_quorum_base_block_index, qc.validMembers, memberIndexes, vvecs, skContributions)) {
+    if (!Assert(m_qdkgsman)->GetVerifiedContributions(params.type, m_quorum_base_block_index, qc.validMembers, memberIndexes, vvecs, skContributions)) {
         logger.Batch("failed to get valid contributions");
         return;
     }
@@ -1133,7 +1133,7 @@ std::optional<CInv> CDKGSession::ReceiveMessage(const CDKGPrematureCommitment& q
     std::vector<BLSVerificationVectorPtr> vvecs;
     std::vector<CBLSSecretKey> skContributions;
     BLSVerificationVectorPtr quorumVvec;
-    if (dkgManager.GetVerifiedContributions(params.type, m_quorum_base_block_index, qc.validMembers, memberIndexes, vvecs, skContributions)) {
+    if (Assert(m_qdkgsman)->GetVerifiedContributions(params.type, m_quorum_base_block_index, qc.validMembers, memberIndexes, vvecs, skContributions)) {
         quorumVvec = cache.BuildQuorumVerificationVector(::SerializeHash(memberIndexes), vvecs);
     }
 

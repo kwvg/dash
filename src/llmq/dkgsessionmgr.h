@@ -11,6 +11,7 @@
 #include <msg_result.h>
 #include <net_types.h>
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <string_view>
@@ -45,22 +46,29 @@ class CQuorumSnapshotManager;
 
 class CDKGSessionManager
 {
+public:
+    struct SessionHandlerKey {
+        Consensus::LLMQType llmq_type;
+        int quorum_idx;
+        auto operator<=>(const SessionHandlerKey&) const = default;
+    };
+
+    using SessionHandlerMap = std::map<SessionHandlerKey, std::unique_ptr<CDKGSessionHandler>>;
+
+private:
     static constexpr int64_t MAX_CONTRIBUTION_CACHE_TIME = 60 * 1000;
 
 private:
     std::unique_ptr<CDBWrapper> db{nullptr};
 
-    CBLSWorker& blsWorker;
     CChainState& m_chainstate;
     CDeterministicMNManager& m_dmnman;
-    CDKGDebugManager& dkgDebugManager;
-    CQuorumBlockProcessor& quorumBlockProcessor;
     CQuorumSnapshotManager& m_qsnapman;
-    const CSporkManager& spork_manager;
+    const CSporkManager& m_sporkman;
     const bool m_quorums_watch{false};
 
-    //TODO name struct instead of std::pair
-    std::map<std::pair<Consensus::LLMQType, int>, CDKGSessionHandler> dkgSessionHandlers;
+private:
+    SessionHandlerMap dkgSessionHandlers;
 
     mutable Mutex contributionsCacheCs;
     struct ContributionsCacheKey {
@@ -85,10 +93,9 @@ public:
     CDKGSessionManager() = delete;
     CDKGSessionManager(const CDKGSessionManager&) = delete;
     CDKGSessionManager& operator=(const CDKGSessionManager&) = delete;
-    explicit CDKGSessionManager(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
-                                CDKGDebugManager& _dkgDebugManager, CMasternodeMetaMan& mn_metaman,
-                                CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
-                                const CActiveMasternodeManager* const mn_activeman, const CSporkManager& sporkman,
+    explicit CDKGSessionManager(CChainState& chainstate, CDeterministicMNManager& dmnman,
+                                CQuorumSnapshotManager& qsnapman, const CSporkManager& sporkman,
+                                std::function<void(SessionHandlerMap&, const Consensus::LLMQParams&, int)> emplace_fn,
                                 const util::DbWrapperParams& db_params, bool quorums_watch);
     ~CDKGSessionManager();
 

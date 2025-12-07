@@ -11,6 +11,7 @@
 #include <governance/signing.h>
 #include <instantsend/instantsend.h>
 #include <instantsend/signing.h>
+#include <llmq/active/dkgsessionhandler.h>
 #include <llmq/active/quorums.h>
 #include <llmq/context.h>
 #include <llmq/dkgsessionmgr.h>
@@ -30,9 +31,15 @@ ActiveContext::ActiveContext(ChainstateManager& chainman, CConnman& connman, CDe
     cj_server{std::make_unique<CCoinJoinServer>(chainman, connman, dmnman, dstxman, mn_metaman, mempool, peerman,
                                                 mn_activeman, mn_sync, *llmq_ctx.isman)},
     gov_signer{std::make_unique<GovernanceSigner>(connman, dmnman, govman, mn_activeman, chainman, mn_sync)},
-    qdkgsman{std::make_unique<llmq::CDKGSessionManager>(*llmq_ctx.bls_worker, chainman.ActiveChainstate(), dmnman, *llmq_ctx.dkg_debugman,
-                                                        mn_metaman, *llmq_ctx.quorum_block_processor, *llmq_ctx.qsnapman, &mn_activeman,
-                                                        sporkman, db_params, quorums_watch)},
+    qdkgsman{std::make_unique<llmq::CDKGSessionManager>(chainman.ActiveChainstate(), dmnman, *llmq_ctx.qsnapman, sporkman,
+                                                        [&](llmq::CDKGSessionManager::SessionHandlerMap& map,
+                                                            const Consensus::LLMQParams& llmq_params, int quorum_idx) -> void {
+                                                            map.emplace(llmq::CDKGSessionManager::SessionHandlerKey{llmq_params.type, quorum_idx},
+                                                                std::make_unique<llmq::dkg::ActiveSessionHandler>(
+                                                                    *llmq_ctx.bls_worker, chainman.ActiveChainstate(), dmnman, mn_metaman,
+                                                                    *llmq_ctx.dkg_debugman, *llmq_ctx.quorum_block_processor, *llmq_ctx.qsnapman,
+                                                                    mn_activeman, sporkman, qdkgsman, llmq_params, quorums_watch, quorum_idx));
+                                                        }, db_params, quorums_watch)},
     shareman{std::make_unique<llmq::CSigSharesManager>(connman, chainman.ActiveChainstate(), *llmq_ctx.sigman, peerman,
                                                        mn_activeman, *llmq_ctx.qman, sporkman)},
     ehf_sighandler{

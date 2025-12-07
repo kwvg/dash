@@ -25,29 +25,16 @@ namespace llmq
 {
 
 CDKGSessionHandler::CDKGSessionHandler(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
-                                       CDKGDebugManager& _dkgDebugManager, CDKGSessionManager& _dkgManager,
-                                       CMasternodeMetaMan& mn_metaman, CQuorumBlockProcessor& _quorumBlockProcessor,
-                                       CQuorumSnapshotManager& qsnapman,
-                                       const CActiveMasternodeManager* const mn_activeman, const CSporkManager& sporkman,
+                                       CDKGDebugManager& _dkgDebugManager, CMasternodeMetaMan& mn_metaman, CQuorumBlockProcessor& _quorumBlockProcessor,
+                                       CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager* const mn_activeman,
+                                       const CSporkManager& sporkman, const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
                                        const Consensus::LLMQParams& _params, bool quorums_watch, int _quorumIndex) :
-    blsWorker(_blsWorker),
-    m_chainstate(chainstate),
-    m_dmnman(dmnman),
-    dkgDebugManager(_dkgDebugManager),
-    dkgManager(_dkgManager),
-    m_mn_metaman(mn_metaman),
-    quorumBlockProcessor(_quorumBlockProcessor),
-    m_qsnapman(qsnapman),
-    m_mn_activeman(mn_activeman),
-    m_sporkman(sporkman),
     params(_params),
-    m_quorums_watch(quorums_watch),
     quorumIndex(_quorumIndex),
-    curSession(std::make_unique<CDKGSession>(nullptr, _params, _blsWorker, dmnman, _dkgManager, _dkgDebugManager,
-                                             m_mn_metaman, m_qsnapman, m_mn_activeman, sporkman)),
-    pendingContributions(
-        (size_t)_params.size * 2,
-        MSG_QUORUM_CONTRIB), // we allow size*2 messages as we need to make sure we see bad behavior (double messages)
+    curSession(std::make_unique<CDKGSession>(_blsWorker, dmnman, _dkgDebugManager, mn_metaman, qsnapman,
+                                             mn_activeman, sporkman, qdkgsman, nullptr, _params)),
+    // we allow size*2 messages as we need to make sure we see bad behavior (double messages)
+    pendingContributions((size_t)_params.size * 2, MSG_QUORUM_CONTRIB),
     pendingComplaints((size_t)_params.size * 2, MSG_QUORUM_COMPLAINT),
     pendingJustifications((size_t)_params.size * 2, MSG_QUORUM_JUSTIFICATION),
     pendingPrematureCommitments((size_t)_params.size * 2, MSG_QUORUM_PREMATURE_COMMITMENT)
