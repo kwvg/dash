@@ -7,17 +7,13 @@
 
 #include <memory>
 
-class CActiveMasternodeManager;
 class CBLSWorker;
-class ChainstateManager;
+class CChainState;
 class CDeterministicMNManager;
 class CEvoDB;
-class CMasternodeMetaMan;
 class CMasternodeSync;
-class CMNHFManager;
 class CSporkManager;
 class CTxMemPool;
-class PeerManager;
 
 namespace llmq {
 class CChainLocksHandler;
@@ -37,11 +33,9 @@ public:
     LLMQContext() = delete;
     LLMQContext(const LLMQContext&) = delete;
     LLMQContext& operator=(const LLMQContext&) = delete;
-    explicit LLMQContext(ChainstateManager& chainman, CDeterministicMNManager& dmnman, CEvoDB& evo_db,
-                         CMasternodeMetaMan& mn_metaman, CMNHFManager& mnhfman, CSporkManager& sporkman,
-                         CTxMemPool& mempool, const CActiveMasternodeManager* const mn_activeman,
-                         const CMasternodeSync& mn_sync, const util::DbWrapperParams& db_params,
-                         bool quorums_watch);
+    explicit LLMQContext(CChainState& active_chainstate, CDeterministicMNManager& dmnman, CEvoDB& evo_db,
+                         CSporkManager& sporkman, CTxMemPool& mempool, const CMasternodeSync& mn_sync,
+                         const util::DbWrapperParams& db_params);
     ~LLMQContext();
 
     void Start();

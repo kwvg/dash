@@ -14,21 +14,19 @@
 #include <llmq/snapshot.h>
 #include <validation.h>
 
-LLMQContext::LLMQContext(ChainstateManager& chainman, CDeterministicMNManager& dmnman, CEvoDB& evo_db,
-                         CMasternodeMetaMan& mn_metaman, CMNHFManager& mnhfman, CSporkManager& sporkman,
-                         CTxMemPool& mempool, const CActiveMasternodeManager* const mn_activeman,
-                         const CMasternodeSync& mn_sync, const util::DbWrapperParams& db_params,
-                         bool quorums_watch) :
+LLMQContext::LLMQContext(CChainState& active_chainstate, CDeterministicMNManager& dmnman, CEvoDB& evo_db,
+                         CSporkManager& sporkman, CTxMemPool& mempool, const CMasternodeSync& mn_sync,
+                         const util::DbWrapperParams& db_params) :
     bls_worker{std::make_shared<CBLSWorker>()},
     dkg_debugman{std::make_unique<llmq::CDKGDebugManager>()},
     qsnapman{std::make_unique<llmq::CQuorumSnapshotManager>(evo_db)},
     quorum_block_processor{
-        std::make_unique<llmq::CQuorumBlockProcessor>(chainman.ActiveChainstate(), dmnman, evo_db, *qsnapman)},
-    qman{std::make_unique<llmq::CQuorumManager>(*bls_worker, chainman.ActiveChainstate(), dmnman,
+        std::make_unique<llmq::CQuorumBlockProcessor>(active_chainstate, dmnman, evo_db, *qsnapman)},
+    qman{std::make_unique<llmq::CQuorumManager>(*bls_worker, active_chainstate, dmnman,
                                                 *quorum_block_processor, *qsnapman, db_params)},
     sigman{std::make_unique<llmq::CSigningManager>(*qman, db_params)},
-    clhandler{std::make_unique<llmq::CChainLocksHandler>(chainman.ActiveChainstate(), *qman, sporkman, mempool, mn_sync)},
-    isman{std::make_unique<llmq::CInstantSendManager>(*clhandler, chainman.ActiveChainstate(), *sigman, sporkman,
+    clhandler{std::make_unique<llmq::CChainLocksHandler>(active_chainstate, *qman, sporkman, mempool, mn_sync)},
+    isman{std::make_unique<llmq::CInstantSendManager>(*clhandler, active_chainstate, *sigman, sporkman,
                                                       mempool, mn_sync, db_params)}
 {
     // Have to start it early to let VerifyDB check ChainLock signatures in coinbase

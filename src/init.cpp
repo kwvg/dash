@@ -1945,9 +1945,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     fReindex = args.GetBoolArg("-reindex", false);
     bool fReindexChainState = args.GetBoolArg("-reindex-chainstate", false);
 
-    const bool quorums_recovery = args.GetBoolArg("-llmq-data-recovery", llmq::DEFAULT_ENABLE_QUORUM_DATA_RECOVERY);
-    const bool quorums_watch = args.GetBoolArg("-watchquorums", llmq::DEFAULT_WATCH_QUORUMS);
-
     // cache size calculations
     CacheSizes cache_sizes = CalculateCacheSizes(args, g_enabled_filter_types.size());
 
@@ -2001,7 +1998,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                               *node.mn_metaman,
                                               *node.mn_sync,
                                               *node.sporkman,
-                                              node.mn_activeman,
                                               node.chain_helper,
                                               node.cpoolman,
                                               node.dmnman,
@@ -2025,7 +2021,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
                                               /*block_tree_db_in_memory=*/false,
                                               /*coins_db_in_memory=*/false,
                                               /*dash_dbs_in_memory=*/false,
-                                              quorums_watch,
                                               /*shutdown_requested=*/ShutdownRequested,
                                               /*coins_error_cb=*/[]() {
                                                   uiInterface.ThreadSafeMessageBox(
@@ -2173,20 +2168,11 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     assert(!node.dstxman);
     node.dstxman = std::make_unique<CDSTXManager>();
 
-    assert(!node.cj_walletman);
-    if (!node.mn_activeman) {
-        node.cj_walletman = CJWalletManager::make(chainman, *node.dmnman, *node.mn_metaman, *node.mempool, *node.mn_sync,
-                                                  *node.llmq_ctx->isman, !ignores_incoming_txs);
-    }
-    if (node.cj_walletman) {
-        RegisterValidationInterface(node.cj_walletman.get());
-    }
-
     assert(!node.peerman);
     node.peerman = PeerManager::make(chainparams, *node.connman, *node.addrman, node.banman.get(), *node.dstxman,
                                      chainman, *node.mempool, *node.mn_metaman, *node.mn_sync,
-                                     *node.govman, *node.sporkman, node.cj_walletman.get(), node.mn_activeman.get(), node.dmnman,
-                                     node.active_ctx, node.llmq_ctx, node.observer_ctx, ignores_incoming_txs);
+                                     *node.govman, *node.sporkman, node.mn_activeman.get(), node.active_ctx, node.dmnman,
+                                     node.cj_walletman, node.llmq_ctx, node.observer_ctx, ignores_incoming_txs);
     RegisterValidationInterface(node.peerman.get());
 
     g_ds_notification_interface = std::make_unique<CDSNotificationInterface>(
@@ -2199,7 +2185,10 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     assert(!g_active_notification_interface);
     assert(!node.observer_ctx);
 
+    const bool quorums_recovery = args.GetBoolArg("-llmq-data-recovery", llmq::DEFAULT_ENABLE_QUORUM_DATA_RECOVERY);
+    const bool quorums_watch = args.GetBoolArg("-watchquorums", llmq::DEFAULT_WATCH_QUORUMS);
     const util::DbWrapperParams dash_db_params{.path = args.GetDataDirNet(), .memory = false, .wipe = (fReindex || fReindexChainState)};
+
     if (node.mn_activeman) {
         node.active_ctx = std::make_unique<ActiveContext>(chainman, *node.connman, *node.dmnman, *node.dstxman, *node.govman, *node.mn_metaman,
                                                           *node.mnhf_manager, *node.sporkman, *node.mempool, *node.llmq_ctx, *node.peerman,
@@ -2215,6 +2204,15 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     node.peerman->AddExtraHandler(std::make_unique<NetSigning>(node.peerman.get(), *node.llmq_ctx->sigman));
 
     // ********************************************************* Step 7d: Setup other Dash services
+
+    assert(!node.cj_walletman);
+    if (!node.mn_activeman) {
+        node.cj_walletman = CJWalletManager::make(chainman, *node.dmnman, *node.mn_metaman, *node.mempool, *node.mn_sync,
+                                                  *node.llmq_ctx->isman, !ignores_incoming_txs);
+    }
+    if (node.cj_walletman) {
+        RegisterValidationInterface(node.cj_walletman.get());
+    }
 
     bool fLoadCacheFiles = !(fReindex || fReindexChainState) && (chainman.ActiveChain().Tip() != nullptr);
 
