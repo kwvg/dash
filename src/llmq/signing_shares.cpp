@@ -180,14 +180,15 @@ void CSigSharesNodeState::RemoveSession(const uint256& signHash)
 
 //////////////////////
 
-CSigSharesManager::CSigSharesManager(CConnman& connman, CChainState& chainstate, CSigningManager& _sigman,
-                                     PeerManager& peerman, const CActiveMasternodeManager& mn_activeman,
+CSigSharesManager::CSigSharesManager(CConnman& connman, CChainState& chainstate, CSigningManager& _sigman, PeerManager& peerman,
+                                     const CActiveMasternodeManager& mn_activeman, const CChainParams& chainparams,
                                      const CQuorumManager& _qman, const CSporkManager& sporkman) :
     m_connman{connman},
     m_chainstate{chainstate},
     sigman{_sigman},
     m_peerman{peerman},
     m_mn_activeman{mn_activeman},
+    m_chainparams{chainparams},
     qman{_qman},
     m_sporkman{sporkman}
 {
@@ -315,7 +316,7 @@ void CSigSharesManager::ProcessMessage(const CNode& pfrom, const std::string& ms
 bool CSigSharesManager::ProcessMessageSigSesAnn(const CNode& pfrom, const CSigSesAnn& ann)
 {
     auto llmqType = ann.getLlmqType();
-    if (!Params().GetLLMQ(llmqType).has_value()) {
+    if (!m_chainparams.GetLLMQ(llmqType).has_value()) {
         return false;
     }
     if (ann.getSessionId() == UNINITIALIZED_SESSION_ID || ann.getQuorumHash().IsNull() || ann.getId().IsNull() || ann.getMsgHash().IsNull()) {
@@ -921,7 +922,7 @@ bool CSigSharesManager::AsyncSignIfMember(Consensus::LLMQType llmqType, CSigning
             // But at least it shouldn't be possible to get conflicting recovered signatures
             // TODO fix this by re-signing when the next block arrives, but only when that block results in a change of
             // the quorum list and no recovered signature has been created in the mean time
-            const auto& llmq_params_opt = Params().GetLLMQ(llmqType);
+            const auto& llmq_params_opt = m_chainparams.GetLLMQ(llmqType);
             assert(llmq_params_opt.has_value());
             return SelectQuorumForSigning(llmq_params_opt.value(), m_chainstate.m_chain, qman, id);
         } else {
@@ -1074,7 +1075,7 @@ void CSigSharesManager::CollectSigSharesToRequest(std::unordered_map<NodeId, Uin
                 }
                 auto& inv = (*invMap)[signHash];
                 if (inv.inv.empty()) {
-                    const auto& llmq_params_opt = Params().GetLLMQ(session.llmqType);
+                    const auto& llmq_params_opt = m_chainparams.GetLLMQ(session.llmqType);
                     assert(llmq_params_opt.has_value());
                     inv.Init(llmq_params_opt->size);
                 }
@@ -1226,7 +1227,7 @@ void CSigSharesManager::CollectSigSharesToAnnounce(std::unordered_map<NodeId, Ui
 
             auto& inv = sigSharesToAnnounce[nodeId][signHash];
             if (inv.inv.empty()) {
-                const auto& llmq_params_opt = Params().GetLLMQ(sigShare->getLlmqType());
+                const auto& llmq_params_opt = m_chainparams.GetLLMQ(sigShare->getLlmqType());
                 assert(llmq_params_opt.has_value());
                 inv.Init(llmq_params_opt->size);
             }

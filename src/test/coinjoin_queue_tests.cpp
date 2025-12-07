@@ -8,6 +8,7 @@
 #include <bls/bls.h>
 #include <coinjoin/coinjoin.h>
 
+#include <chainparams.h>
 #include <uint256.h>
 
 #include <boost/test/unit_test.hpp>
@@ -25,7 +26,7 @@ static CBLSSecretKey MakeSecretKey()
 BOOST_AUTO_TEST_CASE(queue_sign_and_verify)
 {
     // Build active MN manager with operator key using node context wiring
-    CActiveMasternodeManager mn_activeman(*Assert(m_node.connman), *Assert(m_node.dmnman), MakeSecretKey());
+    CActiveMasternodeManager mn_activeman(*Assert(m_node.connman), *Assert(m_node.dmnman), Params(), MakeSecretKey());
 
     CCoinJoinQueue q;
     q.nDenom = CoinJoin::AmountToDenomination(CoinJoin::GetSmallestDenomination());

@@ -12,6 +12,7 @@
 #include <threadsafety.h>
 #include <validationinterface.h>
 
+class CChainParams;
 class CConnman;
 class CDeterministicMNManager;
 
@@ -20,6 +21,7 @@ class CActiveMasternodeManager
 private:
     CConnman& m_connman;
     CDeterministicMNManager& m_dmnman;
+    const CChainParams& m_chainparams;
     const CBLSPublicKey m_operator_pk;
     const CBLSSecretKey m_operator_sk;
 
@@ -45,7 +47,8 @@ public:
     CActiveMasternodeManager() = delete;
     CActiveMasternodeManager(const CActiveMasternodeManager&) = delete;
     CActiveMasternodeManager& operator=(const CActiveMasternodeManager&) = delete;
-    explicit CActiveMasternodeManager(CConnman& connman, CDeterministicMNManager& dmnman, const CBLSSecretKey& sk);
+    explicit CActiveMasternodeManager(CConnman& connman, CDeterministicMNManager& dmnman, const CChainParams& chainparams,
+                                      const CBLSSecretKey& sk);
     ~CActiveMasternodeManager();
 
     void UpdatedBlockTip(const CBlockIndex* pindexNew, const CBlockIndex* pindexFork, bool fInitialDownload)

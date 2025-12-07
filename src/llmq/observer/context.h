@@ -8,6 +8,7 @@
 #include <memory>
 
 class CBLSWorker;
+class CChainParams;
 class CChainState;
 class CDeterministicMNManager;
 class CMasternodeMetaMan;
@@ -36,8 +37,8 @@ public:
     ObserverContext& operator=(const ObserverContext&) = delete;
     ObserverContext(CBLSWorker& bls_worker, CChainState& chainstate, CDeterministicMNManager& dmnman,
                     CMasternodeMetaMan& mn_metaman, CMasternodeSync& mn_sync, llmq::CQuorumBlockProcessor& qblockman,
-                    llmq::CQuorumManager& qman, llmq::CQuorumSnapshotManager& qsnapman, const CSporkManager& sporkman,
-                    const util::DbWrapperParams& db_params, bool quorums_recovery);
+                    llmq::CQuorumManager& qman, llmq::CQuorumSnapshotManager& qsnapman, const CChainParams& chainparams,
+                    const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_recovery);
     ~ObserverContext();
 
     const std::unique_ptr<llmq::CDKGDebugManager> dkgdbgman;

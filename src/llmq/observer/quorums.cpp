@@ -20,10 +20,12 @@
 
 namespace llmq {
 QuorumObserver::QuorumObserver(CDeterministicMNManager& dmnman, CQuorumManager& qman, CQuorumSnapshotManager& qsnapman,
-                               const CMasternodeSync& mn_sync, const CSporkManager& sporkman, bool quorums_recovery) :
+                               const CChainParams& chainparams, const CMasternodeSync& mn_sync, const CSporkManager& sporkman,
+                               bool quorums_recovery) :
     m_dmnman{dmnman},
     m_qman{qman},
     m_qsnapman{qsnapman},
+    m_chainparams{chainparams},
     m_mn_sync{mn_sync},
     m_sporkman{sporkman},
     m_quorums_recovery{quorums_recovery}
@@ -37,7 +39,7 @@ void QuorumObserver::UpdatedBlockTip(const CBlockIndex* pindexNew, CConnman& con
     if (!pindexNew) return;
     if (!m_mn_sync.IsBlockchainSynced()) return;
 
-    for (const auto& params : Params().GetConsensus().llmqs) {
+    for (const auto& params : m_chainparams.GetConsensus().llmqs) {
         CheckQuorumConnections(connman, params, pindexNew);
     }
 
@@ -275,7 +277,7 @@ void QuorumObserver::TriggerQuorumDataRecoveryThreads(CConnman& connman, gsl::no
 
     LogPrint(BCLog::LLMQ, "QuorumObserver::%s -- Process block %s\n", __func__, block_index->GetBlockHash().ToString());
     const std::map<Consensus::LLMQType, QvvecSyncMode> mapQuorumVvecSync = GetEnabledQuorumVvecSyncEntries();
-    for (const auto& params : Params().GetConsensus().llmqs) {
+    for (const auto& params : m_chainparams.GetConsensus().llmqs) {
         auto vecQuorums = m_qman.ScanQuorums(params.type, block_index, params.keepOldConnections);
         for (auto& pQuorum : vecQuorums) {
             TryStartVvecSyncThread(connman, block_index, std::move(pQuorum), mapQuorumVvecSync, /*fWeAreQuorumTypeMember=*/false);
@@ -323,7 +325,7 @@ void QuorumObserver::StartCleanupOldQuorumDataThread(gsl::not_null<const CBlockI
         if (LOCK(cs_cleanup); cleanupQuorumsCache.empty()) {
             utils::InitQuorumsCache(cleanupQuorumsCache, false);
         }
-        for (const auto& params : Params().GetConsensus().llmqs) {
+        for (const auto& params : m_chainparams.GetConsensus().llmqs) {
             if (m_qman.quorumThreadInterrupt) {
                 break;
             }

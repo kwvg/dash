@@ -19,6 +19,8 @@
 
 #include <map>
 
+class CChainParams;
+
 namespace llmq {
 class CQuorumManager;
 enum class QvvecSyncMode : int8_t;
@@ -29,6 +31,7 @@ protected:
     CDeterministicMNManager& m_dmnman;
     CQuorumManager& m_qman;
     CQuorumSnapshotManager& m_qsnapman;
+    const CChainParams& m_chainparams;
     const CMasternodeSync& m_mn_sync;
     const CSporkManager& m_sporkman;
     const bool m_quorums_recovery{false};
@@ -42,7 +45,8 @@ public:
     QuorumObserver(const QuorumObserver&) = delete;
     QuorumObserver& operator=(const QuorumObserver&) = delete;
     explicit QuorumObserver(CDeterministicMNManager& dmnman, CQuorumManager& qman, CQuorumSnapshotManager& qsnapman,
-                            const CMasternodeSync& mn_sync, const CSporkManager& sporkman, bool quorums_watch);
+                            const CChainParams& chainparams, const CMasternodeSync& mn_sync, const CSporkManager& sporkman,
+                            bool quorums_recovery);
     virtual ~QuorumObserver();
 
     void UpdatedBlockTip(const CBlockIndex* pindexNew, CConnman& connman, bool fInitialDownload) const;

@@ -21,13 +21,14 @@ namespace llmq {
 namespace dkg {
 ActiveSession::ActiveSession(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CDKGDebugManager& dkgdbgman,
                              CDKGSessionManager& qdkgsman, CMasternodeMetaMan& mn_metaman, CQuorumSnapshotManager& qsnapman,
-                             const CActiveMasternodeManager& mn_activeman, const CSporkManager& sporkman,
-                             const CBlockIndex* base_block_index, const Consensus::LLMQParams& params) :
+                             const CActiveMasternodeManager& mn_activeman, const CChainParams& chainparams,
+                             const CSporkManager& sporkman, const CBlockIndex* base_block_index, const Consensus::LLMQParams& params) :
     CDKGSession(bls_worker, dmnman, dkgdbgman, qdkgsman, qsnapman, base_block_index, params),
     m_mn_metaman{mn_metaman},
     m_mn_activeman{mn_activeman},
+    m_chainparams{chainparams},
     m_sporkman{sporkman},
-    m_use_legacy_bls{!DeploymentActiveAfter(m_quorum_base_block_index, Params().GetConsensus(), Consensus::DEPLOYMENT_V19)}
+    m_use_legacy_bls{!DeploymentActiveAfter(m_quorum_base_block_index, m_chainparams.GetConsensus(), Consensus::DEPLOYMENT_V19)}
 {
 }
 
@@ -593,7 +594,7 @@ std::vector<CFinalCommitment> ActiveSession::FinalizeCommitments()
 
         const bool isQuorumRotationEnabled{IsQuorumRotationEnabled(params, m_quorum_base_block_index)};
         // TODO: always put `true` here: so far as v19 is activated, we always write BASIC now
-        fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled, DeploymentActiveAfter(m_quorum_base_block_index, Params().GetConsensus(), Consensus::DEPLOYMENT_V19));
+        fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled, DeploymentActiveAfter(m_quorum_base_block_index, m_chainparams.GetConsensus(), Consensus::DEPLOYMENT_V19));
         fqc.quorumIndex = isQuorumRotationEnabled ? quorumIndex : 0;
 
         uint256 commitmentHash = BuildCommitmentHash(fqc.llmqType, fqc.quorumHash, fqc.validMembers, fqc.quorumPublicKey, fqc.quorumVvecHash);
@@ -681,7 +682,7 @@ CFinalCommitment ActiveSession::FinalizeSingleCommitment()
     }
     const bool isQuorumRotationEnabled{false};
     fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled,
-                                                DeploymentActiveAfter(m_quorum_base_block_index, Params().GetConsensus(),
+                                                DeploymentActiveAfter(m_quorum_base_block_index, m_chainparams.GetConsensus(),
                                                                       Consensus::DEPLOYMENT_V19));
     fqc.quorumIndex = 0;
 

@@ -25,8 +25,9 @@
 namespace llmq {
 QuorumParticipant::QuorumParticipant(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CQuorumManager& qman,
                                      CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman,
-                                     const CMasternodeSync& mn_sync, const CSporkManager& sporkman, bool quorums_recovery, bool quorums_watch) :
-    QuorumObserver(dmnman, qman, qsnapman, mn_sync, sporkman, quorums_recovery),
+                                     const CChainParams& chainparams, const CMasternodeSync& mn_sync, const CSporkManager& sporkman,
+                                     bool quorums_recovery, bool quorums_watch) :
+    QuorumObserver(dmnman, qman, qsnapman, chainparams, mn_sync, sporkman, quorums_recovery),
     m_bls_worker{bls_worker},
     m_mn_activeman{mn_activeman},
     m_quorums_watch{quorums_watch}
@@ -42,7 +43,7 @@ void QuorumParticipant::CheckQuorumConnections(CConnman& connman, const Consensu
     auto deletableQuorums = GetQuorumsToDelete(connman, llmqParams, pindexNew);
 
     const uint256 proTxHash = m_mn_activeman.GetProTxHash();
-    const bool watchOtherISQuorums = llmqParams.type == Params().GetConsensus().llmqTypeDIP0024InstantSend &&
+    const bool watchOtherISQuorums = llmqParams.type == m_chainparams.GetConsensus().llmqTypeDIP0024InstantSend &&
                                      ranges::any_of(lastQuorums, [&proTxHash](const auto& old_quorum){ return old_quorum->IsMember(proTxHash); });
 
     for (const auto& quorum : lastQuorums) {
@@ -199,7 +200,7 @@ void QuorumParticipant::TriggerQuorumDataRecoveryThreads(CConnman& connman, gsl:
     const std::map<Consensus::LLMQType, QvvecSyncMode> mapQuorumVvecSync = GetEnabledQuorumVvecSyncEntries();
     const uint256 proTxHash = m_mn_activeman.GetProTxHash();
 
-    for (const auto& params : Params().GetConsensus().llmqs) {
+    for (const auto& params : m_chainparams.GetConsensus().llmqs) {
         auto vecQuorums = m_qman.ScanQuorums(params.type, block_index, params.keepOldConnections);
         const bool fWeAreQuorumTypeMember = ranges::any_of(vecQuorums, [&proTxHash](const auto& pQuorum) { return pQuorum->IsValidMember(proTxHash); });
 

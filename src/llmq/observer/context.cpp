@@ -12,12 +12,12 @@
 namespace llmq {
 ObserverContext::ObserverContext(CBLSWorker& bls_worker, CChainState& chainstate, CDeterministicMNManager& dmnman,
                                  CMasternodeMetaMan& mn_metaman, CMasternodeSync& mn_sync, llmq::CQuorumBlockProcessor& qblockman,
-                                 llmq::CQuorumManager& qman, llmq::CQuorumSnapshotManager& qsnapman, const CSporkManager& sporkman,
-                                 const util::DbWrapperParams& db_params, bool quorums_recovery) :
+                                 llmq::CQuorumManager& qman, llmq::CQuorumSnapshotManager& qsnapman, const CChainParams& chainparams,
+                                 const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_recovery) :
     m_qman{qman},
     dkgdbgman{std::make_unique<llmq::CDKGDebugManager>()},
-    qdkgsman{std::make_unique<llmq::CDKGSessionManager>(chainstate, dmnman, qsnapman, sporkman, db_params, /*quorums_watch=*/true)},
-    qman_handler{std::make_unique<llmq::QuorumObserver>(dmnman, qman, qsnapman, mn_sync, sporkman, quorums_recovery)}
+    qdkgsman{std::make_unique<llmq::CDKGSessionManager>(chainstate, dmnman, qsnapman, chainparams, sporkman, db_params, /*quorums_watch=*/true)},
+    qman_handler{std::make_unique<llmq::QuorumObserver>(dmnman, qman, qsnapman, chainparams, mn_sync, sporkman, quorums_recovery)}
 {
     qdkgsman->InitializeHandlers(
         [&](const Consensus::LLMQParams& llmq_params, int quorum_idx) -> std::unique_ptr<llmq::CDKGSessionHandler> {

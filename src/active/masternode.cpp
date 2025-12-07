@@ -49,10 +49,11 @@ bool GetLocal(CService& addr, const CNetAddr* paddrPeer)
 }
 } // anonymous namespace
 
-CActiveMasternodeManager::CActiveMasternodeManager(CConnman& connman, CDeterministicMNManager& dmnman,
+CActiveMasternodeManager::CActiveMasternodeManager(CConnman& connman, CDeterministicMNManager& dmnman, const CChainParams& chainparams,
                                                    const CBLSSecretKey& sk) :
     m_connman{connman},
     m_dmnman{dmnman},
+    m_chainparams{chainparams},
     m_operator_pk{sk.GetPublicKey()},
     m_operator_sk{sk}
 {
@@ -113,10 +114,10 @@ void CActiveMasternodeManager::InitInternal(const CBlockIndex* pindex)
 {
     AssertLockHeld(cs);
 
-    if (!DeploymentDIP0003Enforced(pindex->nHeight, Params().GetConsensus())) return;
+    if (!DeploymentDIP0003Enforced(pindex->nHeight, m_chainparams.GetConsensus())) return;
 
     // Check that our local network configuration is correct
-    if (!fListen && Params().RequireRoutableExternalIP()) {
+    if (!fListen && m_chainparams.RequireRoutableExternalIP()) {
         // listen option is probably overwritten by something else, no good
         m_state = MasternodeState::SOME_ERROR;
         m_error = "Masternode must accept connections from outside. Make sure listen configuration option is not overwritten by some another parameter.";
@@ -160,7 +161,7 @@ void CActiveMasternodeManager::InitInternal(const CBlockIndex* pindex)
     std::unique_ptr<Sock> sock{ConnectDirectly(m_service, /*manual_connection=*/true)};
     bool fConnected{sock && sock->IsSelectable(/*is_select=*/::g_socket_events_mode == SocketEventsMode::Select)};
     sock = std::make_unique<Sock>(INVALID_SOCKET);
-    if (!fConnected && Params().RequireRoutableExternalIP()) {
+    if (!fConnected && m_chainparams.RequireRoutableExternalIP()) {
         m_state = MasternodeState::SOME_ERROR;
         m_error = "Could not connect to " + m_service.ToStringAddrPort();
         LogPrintf("CActiveMasternodeManager::Init -- ERROR: %s\n", m_error);
@@ -174,7 +175,7 @@ void CActiveMasternodeManager::InitInternal(const CBlockIndex* pindex)
 
 void CActiveMasternodeManager::UpdatedBlockTip(const CBlockIndex* pindexNew, const CBlockIndex* pindexFork, bool fInitialDownload)
 {
-    if (!DeploymentDIP0003Enforced(pindexNew->nHeight, Params().GetConsensus())) return;
+    if (!DeploymentDIP0003Enforced(pindexNew->nHeight, m_chainparams.GetConsensus())) return;
 
     const auto [cur_state, cur_protx_hash] = WITH_READ_LOCK(cs, return std::make_pair(m_state, m_protx_hash));
     if (cur_state == MasternodeState::READY) {
@@ -225,7 +226,7 @@ bool CActiveMasternodeManager::GetLocalAddress(CService& addrRet)
     if (auto peerAddr = LookupHost("8.8.8.8", false); peerAddr.has_value()) {
         fFoundLocal = GetLocal(addrRet, &peerAddr.value()) && IsValidNetAddr(addrRet);
     }
-    if (!fFoundLocal && !Params().RequireRoutableExternalIP()) {
+    if (!fFoundLocal && !m_chainparams.RequireRoutableExternalIP()) {
         if (auto addr = Lookup("127.0.0.1", GetListenPort(), false); addr.has_value()) {
             addrRet = addr.value();
             fFoundLocal = true;

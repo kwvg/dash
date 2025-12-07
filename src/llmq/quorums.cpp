@@ -205,12 +205,13 @@ bool CQuorum::ReadContributions(const CDBWrapper& db)
 
 CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
                                CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
-                               const util::DbWrapperParams& db_params) :
+                               const CChainParams& chainparams, const util::DbWrapperParams& db_params) :
     blsWorker{_blsWorker},
     m_chainstate{chainstate},
     m_dmnman{dmnman},
     quorumBlockProcessor{_quorumBlockProcessor},
     m_qsnapman{qsnapman},
+    m_chainparams{chainparams},
     db{util::MakeDbWrapper(
         {db_params.path / "llmq" / "quorumdb", db_params.memory, db_params.wipe, /*cache_size=*/1 << 20})}
 {
@@ -256,7 +257,7 @@ CQuorumPtr CQuorumManager::BuildQuorumFromCommitment(const Consensus::LLMQType l
     }
     assert(qc.quorumHash == pQuorumBaseBlockIndex->GetBlockHash());
 
-    const auto& llmq_params_opt = Params().GetLLMQ(llmqType);
+    const auto& llmq_params_opt = m_chainparams.GetLLMQ(llmqType);
     assert(llmq_params_opt.has_value());
     auto quorum = std::make_shared<CQuorum>(llmq_params_opt.value(), blsWorker);
     auto members = utils::GetAllQuorumMembers(qc.llmqType, m_dmnman, m_qsnapman, pQuorumBaseBlockIndex);
@@ -339,7 +340,7 @@ bool CQuorumManager::RequestQuorumData(CNode* pfrom, CConnman& connman, const CQ
         return false;
     }
     const Consensus::LLMQType llmqType = quorum.qc->llmqType;
-    if (!Params().GetLLMQ(llmqType).has_value()) {
+    if (!m_chainparams.GetLLMQ(llmqType).has_value()) {
         LogPrint(BCLog::LLMQ, "CQuorumManager::%s -- Invalid llmqType: %d\n", __func__, ToUnderlying(llmqType));
         return false;
     }
@@ -383,7 +384,7 @@ std::vector<CQuorumCPtr> CQuorumManager::ScanQuorums(Consensus::LLMQType llmqTyp
     }
 
     gsl::not_null<const CBlockIndex*> pindexStore{pindexStart};
-    const auto& llmq_params_opt = Params().GetLLMQ(llmqType);
+    const auto& llmq_params_opt = m_chainparams.GetLLMQ(llmqType);
     assert(llmq_params_opt.has_value());
 
     // Quorum sets can only change during the mining phase of DKG.
@@ -410,7 +411,7 @@ std::vector<CQuorumCPtr> CQuorumManager::ScanQuorums(Consensus::LLMQType llmqTyp
     {
         LOCK(cs_scan_quorums);
         if (scanQuorumsCache.empty()) {
-            for (const auto& llmq : Params().GetConsensus().llmqs) {
+            for (const auto& llmq : m_chainparams.GetConsensus().llmqs) {
                 // NOTE: We store it for each block hash in the DKG mining phase here
                 // and not for a single quorum hash per quorum like we do for other caches.
                 // And we only do this for max_cycles() of the most recent quorums
@@ -590,7 +591,7 @@ MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& c
             }
         }
 
-        if (!Params().GetLLMQ(request.GetLLMQType()).has_value()) {
+        if (!m_chainparams.GetLLMQ(request.GetLLMQType()).has_value()) {
             return sendQDATA(CQuorumDataRequest::Errors::QUORUM_TYPE_INVALID, request_limit_exceeded);
         }
 

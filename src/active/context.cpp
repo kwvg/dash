@@ -28,30 +28,32 @@ ActiveContext::ActiveContext(CBLSWorker& bls_worker, ChainstateManager& chainman
                              CMNHFManager& mnhfman, CSporkManager& sporkman, CTxMemPool& mempool, llmq::CChainLocksHandler& clhandler,
                              llmq::CInstantSendManager& isman, llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumManager& qman,
                              llmq::CQuorumSnapshotManager& qsnapman, llmq::CSigningManager& sigman, PeerManager& peerman,
-                             const CMasternodeSync& mn_sync, const CBLSSecretKey& operator_sk, const util::DbWrapperParams& db_params,
-                             bool quorums_recovery, bool quorums_watch) :
+                             const CChainParams& chainparams, const CMasternodeSync& mn_sync, const CBLSSecretKey& operator_sk,
+                             const util::DbWrapperParams& db_params, bool quorums_recovery, bool quorums_watch) :
     m_clhandler{clhandler},
     m_isman{isman},
     m_qman{qman},
     dkgdbgman{std::make_unique<llmq::CDKGDebugManager>()},
-    nodeman{std::make_unique<CActiveMasternodeManager>(connman, dmnman, operator_sk)},
+    nodeman{std::make_unique<CActiveMasternodeManager>(connman, dmnman, chainparams, operator_sk)},
     cj_server{std::make_unique<CCoinJoinServer>(chainman, connman, dmnman, dstxman, mn_metaman, mempool, peerman, *nodeman, mn_sync, isman)},
-    qdkgsman{std::make_unique<llmq::CDKGSessionManager>(chainman.ActiveChainstate(), dmnman, qsnapman, sporkman, db_params, quorums_watch)},
-    shareman{std::make_unique<llmq::CSigSharesManager>(connman, chainman.ActiveChainstate(), sigman, peerman, *nodeman, qman, sporkman)},
+    qdkgsman{std::make_unique<llmq::CDKGSessionManager>(chainman.ActiveChainstate(), dmnman, qsnapman, chainparams, sporkman, db_params,
+                                                        quorums_watch)},
+    shareman{std::make_unique<llmq::CSigSharesManager>(connman, chainman.ActiveChainstate(), sigman, peerman, *nodeman, chainparams,
+                                                       qman, sporkman)},
     ehf_sighandler{
-        std::make_unique<llmq::CEHFSignalsHandler>(chainman, mnhfman, sigman, *shareman, qman)},
+        std::make_unique<llmq::CEHFSignalsHandler>(chainman, mnhfman, sigman, *shareman, chainparams, qman)},
     cl_signer{std::make_unique<chainlock::ChainLockSigner>(chainman.ActiveChainstate(), clhandler, sigman, *shareman, sporkman, mn_sync)},
     gov_signer{std::make_unique<GovernanceSigner>(connman, dmnman, govman, *nodeman, chainman, mn_sync)},
     is_signer{std::make_unique<instantsend::InstantSendSigner>(chainman.ActiveChainstate(), clhandler, isman, sigman, *shareman, qman,
                                                                sporkman, mempool, mn_sync)},
-    qman_handler{std::make_unique<llmq::QuorumParticipant>(bls_worker, dmnman, qman, qsnapman, *nodeman, mn_sync, sporkman, quorums_recovery,
-                                                           quorums_watch)}
+    qman_handler{std::make_unique<llmq::QuorumParticipant>(bls_worker, dmnman, qman, qsnapman, *nodeman, chainparams, mn_sync, sporkman,
+                                                           quorums_recovery, quorums_watch)}
 {
     qdkgsman->InitializeHandlers(
         [&](const Consensus::LLMQParams& llmq_params, int quorum_idx) -> std::unique_ptr<llmq::CDKGSessionHandler> {
             return std::make_unique<llmq::dkg::ActiveSessionHandler>(bls_worker, chainman.ActiveChainstate(), dmnman, mn_metaman,
-                                                                     *dkgdbgman, *qdkgsman, qblockman, qsnapman, *nodeman, sporkman,
-                                                                     llmq_params, quorums_watch, quorum_idx);
+                                                                     *dkgdbgman, *qdkgsman, qblockman, qsnapman, *nodeman, chainparams,
+                                                                     sporkman, llmq_params, quorums_watch, quorum_idx);
         });
     m_clhandler.ConnectSigner(cl_signer.get());
     m_isman.ConnectSigner(is_signer.get());

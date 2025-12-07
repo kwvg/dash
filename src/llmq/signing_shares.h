@@ -30,9 +30,10 @@
 #include <vector>
 
 class CActiveMasternodeManager;
-class CNode;
+class CChainParams;
 class CConnman;
 class CDeterministicMN;
+class CNode;
 class CSporkManager;
 class PeerManager;
 
@@ -411,6 +412,7 @@ private:
     CSigningManager& sigman;
     PeerManager& m_peerman;
     const CActiveMasternodeManager& m_mn_activeman;
+    const CChainParams& m_chainparams;
     const CQuorumManager& qman;
     const CSporkManager& m_sporkman;
 
@@ -421,8 +423,8 @@ public:
     CSigSharesManager() = delete;
     CSigSharesManager(const CSigSharesManager&) = delete;
     CSigSharesManager& operator=(const CSigSharesManager&) = delete;
-    explicit CSigSharesManager(CConnman& connman, CChainState& chainstate, CSigningManager& _sigman,
-                               PeerManager& peerman, const CActiveMasternodeManager& mn_activeman,
+    explicit CSigSharesManager(CConnman& connman, CChainState& chainstate, CSigningManager& _sigman, PeerManager& peerman,
+                               const CActiveMasternodeManager& mn_activeman, const CChainParams& chainparams,
                                const CQuorumManager& _qman, const CSporkManager& sporkman);
     ~CSigSharesManager() override;
 

@@ -5,6 +5,7 @@
 #include <node/chainstate.h>
 
 #include <chain.h>
+#include <chainparams.h>
 #include <coins.h>
 #include <chainparamsbase.h>
 #include <consensus/params.h>
@@ -244,7 +245,7 @@ void DashChainstateSetup(ChainstateManager& chainman,
         llmq_ctx->Stop();
     }
     llmq_ctx.reset();
-    llmq_ctx = std::make_unique<LLMQContext>(chainman.ActiveChainstate(), *dmnman, *evodb, sporkman, *mempool, mn_sync,
+    llmq_ctx = std::make_unique<LLMQContext>(chainman.ActiveChainstate(), *dmnman, *evodb, sporkman, *mempool, Params(), mn_sync,
                                              util::DbWrapperParams{.path = data_dir, .memory = llmq_dbs_in_memory, .wipe = llmq_dbs_wipe});
     mempool->ConnectManagers(dmnman.get(), llmq_ctx->isman.get());
     // Enable CMNHFManager::{Process, Undo}Block

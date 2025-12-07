@@ -8,6 +8,7 @@
 #include <memory>
 
 class CBLSWorker;
+class CChainParams;
 class CChainState;
 class CDeterministicMNManager;
 class CEvoDB;
@@ -33,8 +34,8 @@ public:
     LLMQContext(const LLMQContext&) = delete;
     LLMQContext& operator=(const LLMQContext&) = delete;
     explicit LLMQContext(CChainState& active_chainstate, CDeterministicMNManager& dmnman, CEvoDB& evo_db,
-                         CSporkManager& sporkman, CTxMemPool& mempool, const CMasternodeSync& mn_sync,
-                         const util::DbWrapperParams& db_params);
+                         CSporkManager& sporkman, CTxMemPool& mempool, const CChainParams& chainparams,
+                         const CMasternodeSync& mn_sync, const util::DbWrapperParams& db_params);
     ~LLMQContext();
 
     void Start();

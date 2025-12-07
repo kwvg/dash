@@ -18,12 +18,13 @@
 
 namespace llmq {
 CEHFSignalsHandler::CEHFSignalsHandler(ChainstateManager& chainman, CMNHFManager& mnhfman, CSigningManager& sigman,
-                                       CSigSharesManager& shareman, const CQuorumManager& qman) :
-    m_chainman(chainman),
-    mnhfman(mnhfman),
-    sigman(sigman),
-    shareman(shareman),
-    qman(qman)
+                                       CSigSharesManager& shareman, const CChainParams& chainparams, const CQuorumManager& qman) :
+    m_chainman{chainman},
+    mnhfman{mnhfman},
+    sigman{sigman},
+    shareman{shareman},
+    m_chainparams{chainparams},
+    qman{qman}
 {
     sigman.RegisterRecoveredSigsListener(this);
 }
@@ -35,14 +36,14 @@ CEHFSignalsHandler::~CEHFSignalsHandler()
 
 void CEHFSignalsHandler::UpdatedBlockTip(const CBlockIndex* const pindexNew)
 {
-    if (!DeploymentActiveAfter(pindexNew, Params().GetConsensus(), Consensus::DEPLOYMENT_V20)) return;
+    if (!DeploymentActiveAfter(pindexNew, m_chainparams.GetConsensus(), Consensus::DEPLOYMENT_V20)) return;
 
     const auto ehfSignals = mnhfman.GetSignalsStage(pindexNew);
-    for (const auto& deployment : Params().GetConsensus().vDeployments) {
+    for (const auto& deployment : m_chainparams.GetConsensus().vDeployments) {
         // Skip deployments that do not use dip0023
         if (!deployment.useEHF) continue;
         // Try to sign only activable deployments that haven't been mined yet
-        if (ehfSignals.find(deployment.bit) == ehfSignals.end() && Params().IsValidMNActivation(deployment.bit, pindexNew->GetMedianTimePast())) {
+        if (ehfSignals.find(deployment.bit) == ehfSignals.end() && m_chainparams.IsValidMNActivation(deployment.bit, pindexNew->GetMedianTimePast())) {
             trySignEHFSignal(deployment.bit, pindexNew);
         }
     }
@@ -54,8 +55,8 @@ void CEHFSignalsHandler::trySignEHFSignal(int bit, const CBlockIndex* const pind
     mnhfPayload.signal.versionBit = bit;
     const uint256 requestId = mnhfPayload.GetRequestId();
 
-    const Consensus::LLMQType& llmqType = Params().GetConsensus().llmqTypeMnhf;
-    const auto& llmq_params_opt = Params().GetLLMQ(llmqType);
+    const Consensus::LLMQType& llmqType = m_chainparams.GetConsensus().llmqTypeMnhf;
+    const auto& llmq_params_opt = m_chainparams.GetLLMQ(llmqType);
     if (!llmq_params_opt.has_value()) {
         return;
     }
@@ -95,7 +96,7 @@ MessageProcessingResult CEHFSignalsHandler::HandleNewRecoveredSig(const CRecover
     MessageProcessingResult ret;
     const auto ehfSignals = mnhfman.GetSignalsStage(WITH_LOCK(::cs_main, return m_chainman.ActiveTip()));
     MNHFTxPayload mnhfPayload;
-    for (const auto& deployment : Params().GetConsensus().vDeployments) {
+    for (const auto& deployment : m_chainparams.GetConsensus().vDeployments) {
         // skip deployments that do not use dip0023 or that have already been mined
         if (!deployment.useEHF || ehfSignals.find(deployment.bit) != ehfSignals.end()) continue;
 

@@ -23,6 +23,7 @@
 class CActiveMasternodeManager;
 class CBlockIndex;
 class CBLSWorker;
+class CChainParams;
 class CConnman;
 class CDeterministicMNManager;
 class CDKGSessionManager;
@@ -49,7 +50,8 @@ public:
     QuorumParticipant& operator=(const QuorumParticipant&) = delete;
     explicit QuorumParticipant(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CQuorumManager& qman,
                                CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman,
-                               const CMasternodeSync& mn_sync, const CSporkManager& sporkman, bool quorums_recovery, bool quorums_watch);
+                               const CChainParams& chainparams, const CMasternodeSync& mn_sync, const CSporkManager& sporkman,
+                               bool quorums_recovery, bool quorums_watch);
     ~QuorumParticipant();
 
 public:

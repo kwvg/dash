@@ -11,6 +11,7 @@
 #include <set>
 
 class CBlockIndex;
+class CChainParams;
 class ChainstateManager;
 class CMNHFManager;
 
@@ -26,6 +27,7 @@ private:
     CMNHFManager& mnhfman;
     CSigningManager& sigman;
     CSigSharesManager& shareman;
+    const CChainParams& m_chainparams;
     const CQuorumManager& qman;
 
     /**
@@ -35,7 +37,7 @@ private:
     std::set<uint256> ids GUARDED_BY(cs);
 public:
     explicit CEHFSignalsHandler(ChainstateManager& chainman, CMNHFManager& mnhfman, CSigningManager& sigman,
-                                CSigSharesManager& shareman, const CQuorumManager& qman);
+                                CSigSharesManager& shareman, const CChainParams& chainparams, const CQuorumManager& qman);
 
     ~CEHFSignalsHandler();
 

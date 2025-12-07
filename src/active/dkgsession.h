@@ -7,6 +7,8 @@
 
 #include <llmq/dkgsession.h>
 
+class CChainParams;
+
 namespace llmq {
 namespace dkg {
 class ActiveSession final : public llmq::CDKGSession
@@ -14,6 +16,7 @@ class ActiveSession final : public llmq::CDKGSession
 private:
     CMasternodeMetaMan& m_mn_metaman;
     const CActiveMasternodeManager& m_mn_activeman;
+    const CChainParams& m_chainparams;
     const CSporkManager& m_sporkman;
     const bool m_use_legacy_bls{false};
 
@@ -23,8 +26,8 @@ public:
     ActiveSession& operator=(const ActiveSession&) = delete;
     ActiveSession(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CDKGDebugManager& dkgdbgman,
                   CDKGSessionManager& qdkgsman, CMasternodeMetaMan& mn_metaman, CQuorumSnapshotManager& qsnapman,
-                  const CActiveMasternodeManager& mn_activeman, const CSporkManager& sporkman,
-                  const CBlockIndex* base_block_index, const Consensus::LLMQParams& params);
+                  const CActiveMasternodeManager& mn_activeman, const CChainParams& chainparams,
+                  const CSporkManager& sporkman, const CBlockIndex* base_block_index, const Consensus::LLMQParams& params);
     ~ActiveSession();
 
 public:

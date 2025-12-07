@@ -12,6 +12,7 @@
 class CActiveMasternodeManager;
 class CBLSSecretKey;
 class CBLSWorker;
+class CChainParams;
 class ChainstateManager;
 class CCoinJoinServer;
 class CConnman;
@@ -63,8 +64,8 @@ public:
                            CMNHFManager& mnhfman, CSporkManager& sporkman, CTxMemPool& mempool, llmq::CChainLocksHandler& clhandler,
                            llmq::CInstantSendManager& isman, llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumManager& qman,
                            llmq::CQuorumSnapshotManager& qsnapman, llmq::CSigningManager& sigman, PeerManager& peerman,
-                           const CMasternodeSync& mn_sync, const CBLSSecretKey& operator_sk, const util::DbWrapperParams& db_params,
-                           bool quorums_recovery, bool quorums_watch);
+                           const CChainParams& chainparams, const CMasternodeSync& mn_sync, const CBLSSecretKey& operator_sk,
+                           const util::DbWrapperParams& db_params, bool quorums_recovery, bool quorums_watch);
     ~ActiveContext();
 
     void Interrupt();

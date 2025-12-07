@@ -30,12 +30,13 @@ static const std::string DB_SKCONTRIB = "qdkg_S";
 static const std::string DB_ENC_CONTRIB = "qdkg_E";
 
 CDKGSessionManager::CDKGSessionManager(CChainState& chainstate, CDeterministicMNManager& dmnman,
-                                       CQuorumSnapshotManager& qsnapman, const CSporkManager& sporkman,
-                                       const util::DbWrapperParams& db_params, bool quorums_watch) :
+                                       CQuorumSnapshotManager& qsnapman, const CChainParams& chainparams,
+                                       const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_watch) :
     db{util::MakeDbWrapper({db_params.path / "llmq" / "dkgdb", db_params.memory, db_params.wipe, /*cache_size=*/1 << 20})},
     m_chainstate{chainstate},
     m_dmnman{dmnman},
     m_qsnapman{qsnapman},
+    m_chainparams{chainparams},
     m_sporkman{sporkman},
     m_quorums_watch{quorums_watch}
 {
@@ -63,7 +64,7 @@ void CDKGSessionManager::UpdatedBlockTip(const CBlockIndex* pindexNew, bool fIni
 
     if (fInitialDownload)
         return;
-    if (!DeploymentDIP0003Enforced(pindexNew->nHeight, Params().GetConsensus()))
+    if (!DeploymentDIP0003Enforced(pindexNew->nHeight, m_chainparams.GetConsensus()))
         return;
     if (!IsQuorumDKGEnabled(m_sporkman))
         return;
@@ -115,7 +116,7 @@ MessageProcessingResult CDKGSessionManager::ProcessMessage(CNode& pfrom, bool is
     vRecv.Rewind(sizeof(uint256));
     vRecv.Rewind(sizeof(uint8_t));
 
-    const auto& llmq_params_opt = Params().GetLLMQ(llmqType);
+    const auto& llmq_params_opt = m_chainparams.GetLLMQ(llmqType);
     if (!llmq_params_opt.has_value()) {
         LogPrintf("CDKGSessionManager -- invalid llmqType [%d]\n", ToUnderlying(llmqType));
         return MisbehavingError{100};
@@ -374,7 +375,7 @@ void CDKGSessionManager::CleanupOldContributions() const
 
     const auto prefixes = {DB_VVEC, DB_SKCONTRIB, DB_ENC_CONTRIB};
 
-    for (const auto& params : Params().GetConsensus().llmqs) {
+    for (const auto& params : m_chainparams.GetConsensus().llmqs) {
         LogPrint(BCLog::LLMQ, "CDKGSessionManager::%s -- looking for old entries for llmq type %d\n", __func__, ToUnderlying(params.type));
 
         CDBBatch batch(*db);

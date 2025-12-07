@@ -22,8 +22,8 @@ namespace llmq {
 namespace dkg {
 ActiveSessionHandler::ActiveSessionHandler(CBLSWorker& bls_worker, CChainState& chainstate, CDeterministicMNManager& dmnman, CMasternodeMetaMan& mn_metaman,
                                            llmq::CDKGDebugManager& dkgdbgman, llmq::CDKGSessionManager& qdkgsman, llmq::CQuorumBlockProcessor& qblockman,
-                                           llmq::CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman, const CSporkManager& sporkman, 
-                                           const Consensus::LLMQParams& llmq_params, bool quorums_watch, int quorums_idx) :
+                                           llmq::CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman, const CChainParams& chainparams,
+                                           const CSporkManager& sporkman, const Consensus::LLMQParams& llmq_params, bool quorums_watch, int quorums_idx) :
     llmq::CDKGSessionHandler(bls_worker, dmnman, dkgdbgman, qdkgsman, qsnapman, llmq_params, quorums_watch, quorums_idx),
     m_bls_worker{bls_worker},
     m_chainstate{chainstate},
@@ -34,13 +34,14 @@ ActiveSessionHandler::ActiveSessionHandler(CBLSWorker& bls_worker, CChainState& 
     m_qblockman{qblockman},
     m_qsnapman{qsnapman},
     m_mn_activeman{mn_activeman},
+    m_chainparams{chainparams},
     m_sporkman{sporkman},
     m_quorums_watch{quorums_watch}
 {
     // Overwrite session initialized in parent
     curSession.reset();
     curSession = std::make_unique<ActiveSession>(m_bls_worker, m_dmnman, m_dkgdbgman, m_qdkgsman, m_mn_metaman, m_qsnapman, m_mn_activeman,
-                                                 m_sporkman, /*pQuorumBaseBlockIndex=*/nullptr, llmq_params);
+                                                 m_chainparams, m_sporkman, /*pQuorumBaseBlockIndex=*/nullptr, llmq_params);
 }
 
 ActiveSessionHandler::~ActiveSessionHandler() = default;
@@ -99,12 +100,12 @@ std::pair<QuorumPhase, uint256> ActiveSessionHandler::GetPhaseAndQuorumHash() co
 
 bool ActiveSessionHandler::InitNewQuorum(const CBlockIndex* pQuorumBaseBlockIndex)
 {
-    if (!DeploymentDIP0003Enforced(pQuorumBaseBlockIndex->nHeight, Params().GetConsensus())) {
+    if (!DeploymentDIP0003Enforced(pQuorumBaseBlockIndex->nHeight, m_chainparams.GetConsensus())) {
         return false;
     }
 
     curSession = std::make_unique<ActiveSession>(m_bls_worker, m_dmnman, m_dkgdbgman, m_qdkgsman, m_mn_metaman, m_qsnapman,
-                                                 m_mn_activeman, m_sporkman, pQuorumBaseBlockIndex, params);
+                                                 m_mn_activeman, m_chainparams, m_sporkman, pQuorumBaseBlockIndex, params);
 
     if (!curSession->Init(m_mn_activeman.GetProTxHash(), quorumIndex)) {
         LogPrintf("ActiveSessionHandler::%s -- height[%d] quorum initialization failed for %s qi[%d]\n", __func__,
@@ -191,7 +192,7 @@ void ActiveSessionHandler::SleepBeforePhase(QuorumPhase curPhase,
         return;
     }
 
-    if (Params().MineBlocksOnDemand()) {
+    if (m_chainparams.MineBlocksOnDemand()) {
         // On regtest, blocks can be mined on demand without any significant time passing between these.
         // We shouldn't wait before phases in this case.
         return;
@@ -201,7 +202,7 @@ void ActiveSessionHandler::SleepBeforePhase(QuorumPhase curPhase,
     // left behind and marked as a bad member. This means that we should not count the last block of the
     // phase as a safe one to keep sleeping, that's why we calculate the phase sleep time as a time of
     // the full phase minus one block here.
-    double phaseSleepTime = (params.dkgPhaseBlocks - 1) * Params().GetConsensus().nPowTargetSpacing * 1000;
+    double phaseSleepTime = (params.dkgPhaseBlocks - 1) * m_chainparams.GetConsensus().nPowTargetSpacing * 1000;
     // Expected phase sleep time per member
     double phaseSleepTimePerMember = phaseSleepTime / params.size;
     // Don't expect perfect block times and thus reduce the phase time to be on the secure side (caller chooses factor)
@@ -222,7 +223,7 @@ void ActiveSessionHandler::SleepBeforePhase(QuorumPhase curPhase,
         auto cur_height = currentHeight.load();
         if (cur_height > heightTmp) {
             // New block(s) just came in
-            int64_t expectedBlockTime = (cur_height - heightStart) * Params().GetConsensus().nPowTargetSpacing * 1000;
+            int64_t expectedBlockTime = (cur_height - heightStart) * m_chainparams.GetConsensus().nPowTargetSpacing * 1000;
             if (expectedBlockTime > sleepTime) {
                 // Blocks came faster than we expected, jump into the phase func asap
                 break;

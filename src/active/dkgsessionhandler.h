@@ -7,6 +7,8 @@
 
 #include <llmq/dkgsessionhandler.h>
 
+class CChainParams;
+
 namespace llmq {
 namespace dkg {
 class ActiveSessionHandler final : public llmq::CDKGSessionHandler
@@ -24,6 +26,7 @@ private:
     llmq::CQuorumBlockProcessor& m_qblockman;
     llmq::CQuorumSnapshotManager& m_qsnapman;
     const CActiveMasternodeManager& m_mn_activeman;
+    const CChainParams& m_chainparams;
     const CSporkManager& m_sporkman;
     const bool m_quorums_watch{false};
 
@@ -43,8 +46,8 @@ public:
     ActiveSessionHandler& operator=(const ActiveSessionHandler&) = delete;
     ActiveSessionHandler(CBLSWorker& bls_worker, CChainState& chainstate, CDeterministicMNManager& dmnman, CMasternodeMetaMan& mn_metaman,
                          llmq::CDKGDebugManager& dkgdbgman, llmq::CDKGSessionManager& qdkgsman, llmq::CQuorumBlockProcessor& qblockman,
-                         llmq::CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman, const CSporkManager& sporkman, 
-                         const Consensus::LLMQParams& llmq_params, bool quorums_watch, int quorums_idx);
+                         llmq::CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman, const CChainParams& chainparams,
+                         const CSporkManager& sporkman, const Consensus::LLMQParams& llmq_params, bool quorums_watch, int quorums_idx);
     ~ActiveSessionHandler();
 
 public:

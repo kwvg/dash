@@ -25,6 +25,7 @@ class CBlock;
 class CBlockIndex;
 class CBLSSignature;
 class CChain;
+class CChainParams;
 class CChainState;
 class CDataStream;
 class CDeterministicMNManager;
@@ -45,6 +46,7 @@ private:
     CDeterministicMNManager& m_dmnman;
     CEvoDB& m_evoDb;
     CQuorumSnapshotManager& m_qsnapman;
+    const CChainParams& m_chainparams;
 
     CCheckQueue<utils::BlsCheck> m_bls_queue{4};
 
@@ -59,7 +61,7 @@ public:
     CQuorumBlockProcessor(const CQuorumBlockProcessor&) = delete;
     CQuorumBlockProcessor& operator=(const CQuorumBlockProcessor&) = delete;
     explicit CQuorumBlockProcessor(CChainState& chainstate, CDeterministicMNManager& dmnman, CEvoDB& evoDb,
-                                   CQuorumSnapshotManager& qsnapman);
+                                   CQuorumSnapshotManager& qsnapman, const CChainParams& chainparams);
     ~CQuorumBlockProcessor();
 
     [[nodiscard]] MessageProcessingResult ProcessMessage(const CNode& peer, std::string_view msg_type, CDataStream& vRecv)

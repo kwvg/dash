@@ -46,11 +46,12 @@ static const std::string DB_MINED_COMMITMENT_BY_INVERSED_HEIGHT_Q_INDEXED = "q_m
 static const std::string DB_BEST_BLOCK_UPGRADE = "q_bbu2";
 
 CQuorumBlockProcessor::CQuorumBlockProcessor(CChainState& chainstate, CDeterministicMNManager& dmnman, CEvoDB& evoDb,
-                                             CQuorumSnapshotManager& qsnapman) :
+                                             CQuorumSnapshotManager& qsnapman, const CChainParams& chainparams) :
     m_chainstate{chainstate},
     m_dmnman{dmnman},
     m_evoDb{evoDb},
-    m_qsnapman{qsnapman}
+    m_qsnapman{qsnapman},
+    m_chainparams{chainparams}
 {
     utils::InitQuorumsCache(mapHasMinedCommitmentCache);
 
@@ -94,7 +95,7 @@ MessageProcessingResult CQuorumBlockProcessor::ProcessMessage(const CNode& peer,
         return ret;
     }
 
-    const auto& llmq_params_opt = Params().GetLLMQ(qc.llmqType);
+    const auto& llmq_params_opt = m_chainparams.GetLLMQ(qc.llmqType);
     if (!llmq_params_opt.has_value()) {
         LogPrint(BCLog::LLMQ, "CQuorumBlockProcessor::%s -- invalid commitment type %d from peer=%d\n", __func__,
                  ToUnderlying(qc.llmqType), peer.GetId());
@@ -180,7 +181,7 @@ bool CQuorumBlockProcessor::ProcessBlock(const CBlock& block, gsl::not_null<cons
 
     const auto blockHash = pindex->GetBlockHash();
 
-    if (!DeploymentActiveAt(*pindex, Params().GetConsensus(), Consensus::DEPLOYMENT_DIP0003)) {
+    if (!DeploymentActiveAt(*pindex, m_chainparams.GetConsensus(), Consensus::DEPLOYMENT_DIP0003)) {
         m_evoDb.Write(DB_BEST_BLOCK_UPGRADE, blockHash);
         return true;
     }
@@ -281,7 +282,7 @@ bool CQuorumBlockProcessor::ProcessCommitment(int nHeight, const uint256& blockH
 {
     AssertLockHeld(::cs_main);
 
-    const auto& llmq_params_opt = Params().GetLLMQ(qc.llmqType);
+    const auto& llmq_params_opt = m_chainparams.GetLLMQ(qc.llmqType);
     if (!llmq_params_opt.has_value()) {
         LogPrint(BCLog::LLMQ, "%s -- invalid commitment type %d\n", __func__, ToUnderlying(qc.llmqType));
         return false;
@@ -411,7 +412,7 @@ bool CQuorumBlockProcessor::UndoBlock(const CBlock& block, gsl::not_null<const C
 
         m_evoDb.Erase(std::make_pair(DB_MINED_COMMITMENT, std::make_pair(qc.llmqType, qc.quorumHash)));
 
-        const auto& llmq_params_opt = Params().GetLLMQ(qc.llmqType);
+        const auto& llmq_params_opt = m_chainparams.GetLLMQ(qc.llmqType);
         assert(llmq_params_opt.has_value());
 
         if (IsQuorumRotationEnabled(llmq_params_opt.value(), pindex)) {
@@ -633,7 +634,7 @@ std::optional<const CBlockIndex*> CQuorumBlockProcessor::GetLastMinedCommitments
 std::vector<const CBlockIndex*> CQuorumBlockProcessor::GetLastMinedCommitmentsPerQuorumIndexUntilBlock(
     Consensus::LLMQType llmqType, const CBlockIndex* pindex, size_t cycle) const
 {
-    const auto& llmq_params_opt = Params().GetLLMQ(llmqType);
+    const auto& llmq_params_opt = m_chainparams.GetLLMQ(llmqType);
     assert(llmq_params_opt.has_value());
     std::vector<const CBlockIndex*> ret;
 
@@ -673,7 +674,7 @@ std::map<Consensus::LLMQType, std::vector<const CBlockIndex*>> CQuorumBlockProce
 {
     std::map<Consensus::LLMQType, std::vector<const CBlockIndex*>> ret;
 
-    for (const auto& params : Params().GetConsensus().llmqs) {
+    for (const auto& params : m_chainparams.GetConsensus().llmqs) {
         auto& commitments = ret[params.type];
         if (IsQuorumRotationEnabled(params, pindex)) {
             commitments = GetLastMinedCommitmentsPerQuorumIndexUntilBlock(params.type, pindex, 0);
@@ -749,7 +750,7 @@ std::optional<std::vector<CFinalCommitment>> CQuorumBlockProcessor::GetMineableC
     const auto *const pindex = m_chainstate.m_chain.Height() < nHeight ? m_chainstate.m_chain.Tip() : m_chainstate.m_chain.Tip()->GetAncestor(nHeight);
 
     bool rotation_enabled = IsQuorumRotationEnabled(llmqParams, pindex);
-    bool basic_bls_enabled{DeploymentActiveAfter(pindex, Params().GetConsensus(), Consensus::DEPLOYMENT_V19)};
+    bool basic_bls_enabled{DeploymentActiveAfter(pindex, m_chainparams.GetConsensus(), Consensus::DEPLOYMENT_V19)};
     size_t quorums_num = rotation_enabled ? llmqParams.signingActiveQuorumCount : 1;
 
     std::stringstream ss;

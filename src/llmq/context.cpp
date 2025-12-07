@@ -14,14 +14,14 @@
 #include <validation.h>
 
 LLMQContext::LLMQContext(CChainState& active_chainstate, CDeterministicMNManager& dmnman, CEvoDB& evo_db,
-                         CSporkManager& sporkman, CTxMemPool& mempool, const CMasternodeSync& mn_sync,
-                         const util::DbWrapperParams& db_params) :
+                         CSporkManager& sporkman, CTxMemPool& mempool, const CChainParams& chainparams,
+                         const CMasternodeSync& mn_sync, const util::DbWrapperParams& db_params) :
     bls_worker{std::make_shared<CBLSWorker>()},
     qsnapman{std::make_unique<llmq::CQuorumSnapshotManager>(evo_db)},
     quorum_block_processor{
-        std::make_unique<llmq::CQuorumBlockProcessor>(active_chainstate, dmnman, evo_db, *qsnapman)},
-    qman{std::make_unique<llmq::CQuorumManager>(*bls_worker, active_chainstate, dmnman,
-                                                *quorum_block_processor, *qsnapman, db_params)},
+        std::make_unique<llmq::CQuorumBlockProcessor>(active_chainstate, dmnman, evo_db, *qsnapman, chainparams)},
+    qman{std::make_unique<llmq::CQuorumManager>(*bls_worker, active_chainstate, dmnman, *quorum_block_processor,
+                                                *qsnapman, chainparams, db_params)},
     sigman{std::make_unique<llmq::CSigningManager>(*qman, db_params)},
     clhandler{std::make_unique<llmq::CChainLocksHandler>(active_chainstate, *qman, sporkman, mempool, mn_sync)},
     isman{std::make_unique<llmq::CInstantSendManager>(*clhandler, active_chainstate, *sigman, sporkman,

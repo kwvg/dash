@@ -27,6 +27,7 @@
 class CActiveMasternodeManager;
 class CBlockIndex;
 class CChain;
+class CChainParams;
 class CChainState;
 class CConnman;
 class CDataStream;
@@ -249,6 +250,7 @@ private:
     CQuorumSnapshotManager& m_qsnapman;
     std::atomic<llmq::QuorumObserver*> m_handler{nullptr};
     std::atomic<llmq::CDKGSessionManager*> m_qdkgsman{nullptr};
+    const CChainParams& m_chainparams;
 
 private:
     mutable Mutex cs_db;
@@ -279,7 +281,7 @@ public:
     CQuorumManager& operator=(const CQuorumManager&) = delete;
     explicit CQuorumManager(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
                             CQuorumBlockProcessor& _quorumBlockProcessor, CQuorumSnapshotManager& qsnapman,
-                            const util::DbWrapperParams& db_params);
+                            const CChainParams& chainparams, const util::DbWrapperParams& db_params);
     ~CQuorumManager();
 
     void ConnectManagers(gsl::not_null<llmq::QuorumObserver*> handler, gsl::not_null<llmq::CDKGSessionManager*> qdkgsman)
