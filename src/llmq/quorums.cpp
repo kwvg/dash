@@ -18,7 +18,6 @@
 #include <dbwrapper.h>
 #include <evo/deterministicmns.h>
 #include <evo/evodb.h>
-#include <masternode/node.h>
 #include <masternode/sync.h>
 #include <net.h>
 #include <netmessagemaker.h>

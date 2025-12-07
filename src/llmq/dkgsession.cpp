@@ -17,7 +17,6 @@
 #include <evo/deterministicmns.h>
 #include <logging.h>
 #include <masternode/meta.h>
-#include <masternode/node.h>
 #include <util/irange.h>
 #include <util/underlying.h>
 
