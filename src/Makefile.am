@@ -145,6 +145,11 @@ endif
 .PHONY: FORCE check-symbols check-security
 # dash core #
 BITCOIN_CORE_H = \
+  active/context.h \
+  active/dkgsession.h \
+  active/dkgsessionhandler.h \
+  active/masternode.h \
+  active/quorums.h \
   addrdb.h \
   addressindex.h \
   spentindex.h \
@@ -260,9 +265,6 @@ BITCOIN_CORE_H = \
   key.h \
   key_io.h \
   limitedmap.h \
-  llmq/active/dkgsession.h \
-  llmq/active/dkgsessionhandler.h \
-  llmq/active/quorums.h \
   llmq/blockprocessor.h \
   llmq/commitment.h \
   llmq/context.h \
@@ -286,8 +288,6 @@ BITCOIN_CORE_H = \
   logging.h \
   logging/timer.h \
   mapport.h \
-  masternode/active/context.h \
-  masternode/node.h \
   masternode/meta.h \
   masternode/payments.h \
   masternode/sync.h \
@@ -474,6 +474,11 @@ libbitcoin_util_a-clientversion.$(OBJEXT): obj/build.h
 libbitcoin_node_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(BOOST_CPPFLAGS) $(MINIUPNPC_CPPFLAGS) $(NATPMP_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_node_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_node_a_SOURCES = \
+  active/context.cpp \
+  active/dkgsession.cpp \
+  active/dkgsessionhandler.cpp \
+  active/masternode.cpp \
+  active/quorums.cpp \
   addrdb.cpp \
   addressindex.cpp \
   addrman.cpp \
@@ -532,9 +537,6 @@ libbitcoin_node_a_SOURCES = \
   instantsend/net_instantsend.cpp \
   instantsend/signing.cpp \
   kernel/coinstats.cpp \
-  llmq/active/dkgsession.cpp \
-  llmq/active/dkgsessionhandler.cpp \
-  llmq/active/quorums.cpp \
   llmq/blockprocessor.cpp \
   llmq/commitment.cpp \
   llmq/context.cpp \
@@ -554,8 +556,6 @@ libbitcoin_node_a_SOURCES = \
   llmq/observer/context.cpp \
   llmq/observer/quorums.cpp \
   mapport.cpp \
-  masternode/active/context.cpp \
-  masternode/node.cpp \
   masternode/meta.cpp \
   masternode/payments.cpp \
   masternode/sync.cpp \

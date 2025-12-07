@@ -2,8 +2,11 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <masternode/active/context.h>
+#include <active/context.h>
 
+#include <active/dkgsessionhandler.h>
+#include <active/quorums.h>
+#include <active/masternode.h>
 #include <chainlock/chainlock.h>
 #include <chainlock/signing.h>
 #include <coinjoin/server.h>
@@ -11,8 +14,6 @@
 #include <governance/signing.h>
 #include <instantsend/instantsend.h>
 #include <instantsend/signing.h>
-#include <llmq/active/dkgsessionhandler.h>
-#include <llmq/active/quorums.h>
 #include <llmq/context.h>
 #include <llmq/debug.h>
 #include <llmq/dkgsessionmgr.h>
@@ -20,7 +21,6 @@
 #include <llmq/quorums.h>
 #include <llmq/observer/quorums.h>
 #include <llmq/signing_shares.h>
-#include <masternode/node.h>
 #include <validation.h>
 
 ActiveContext::ActiveContext(CBLSWorker& bls_worker, ChainstateManager& chainman, CConnman& connman, CDeterministicMNManager& dmnman,

@@ -76,6 +76,8 @@
 #include <validationinterface.h>
 #include <walletinitinterface.h>
 
+#include <active/context.h>
+#include <active/masternode.h>
 #include <bls/bls.h>
 #include <coinjoin/coinjoin.h>
 #include <coinjoin/server.h>
@@ -95,9 +97,7 @@
 #include <llmq/net_signing.h>
 #include <llmq/options.h>
 #include <llmq/observer/context.h>
-#include <masternode/active/context.h>
 #include <masternode/meta.h>
-#include <masternode/node.h>
 #include <masternode/sync.h>
 #include <masternode/utils.h>
 #include <messagesigner.h>

@@ -1,3 +1,5 @@
+src/active/*.cpp
+src/active/*.h
 src/batchedlogger.*
 src/bench/bls*.cpp
 src/bls/*.cpp
@@ -20,14 +22,10 @@ src/instantsend/*.cpp
 src/instantsend/*.h
 src/llmq/*.cpp
 src/llmq/*.h
-src/llmq/active/*.cpp
-src/llmq/active/*.h
 src/llmq/observer/*.cpp
 src/llmq/observer/*.h
 src/masternode/*.cpp
 src/masternode/*.h
-src/masternode/active/*.cpp
-src/masternode/active/*.h
 src/messagesigner.*
 src/netfulfilledman.*
 src/qt/governancelist.*

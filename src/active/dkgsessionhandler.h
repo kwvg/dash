@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_LLMQ_ACTIVE_DKGSESSIONHANDLER_H
-#define BITCOIN_LLMQ_ACTIVE_DKGSESSIONHANDLER_H
+#ifndef BITCOIN_ACTIVE_DKGSESSIONHANDLER_H
+#define BITCOIN_ACTIVE_DKGSESSIONHANDLER_H
 
 #include <llmq/dkgsessionhandler.h>
 
@@ -81,4 +81,4 @@ private:
 } // namespace dkg
 } // namespace llmq
 
-#endif // BITCOIN_LLMQ_ACTIVE_DKGSESSIONHANDLER_H
+#endif // BITCOIN_ACTIVE_DKGSESSIONHANDLER_H

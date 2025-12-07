@@ -2,15 +2,15 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <llmq/active/dkgsession.h>
+#include <active/dkgsession.h>
 
+#include <active/masternode.h>
 #include <evo/deterministicmns.h>
 #include <llmq/debug.h>
 #include <llmq/dkgsessionhandler.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/options.h>
 #include <masternode/meta.h>
-#include <masternode/node.h>
 
 #include <chain.h>
 #include <deploymentstatus.h>

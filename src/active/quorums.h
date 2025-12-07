@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_LLMQ_ACTIVE_QUORUMS_H
-#define BITCOIN_LLMQ_ACTIVE_QUORUMS_H
+#ifndef BITCOIN_ACTIVE_QUORUMS_H
+#define BITCOIN_ACTIVE_QUORUMS_H
 
 #include <bls/bls.h>
 #include <llmq/quorums.h>
@@ -76,4 +76,4 @@ private:
 };
 } // namespace llmq
 
-#endif // BITCOIN_LLMQ_ACTIVE_QUORUMS_H
+#endif // BITCOIN_ACTIVE_QUORUMS_H
