@@ -260,6 +260,7 @@ BITCOIN_CORE_H = \
   key.h \
   key_io.h \
   limitedmap.h \
+  llmq/active/dkgsession.h \
   llmq/active/dkgsessionhandler.h \
   llmq/active/quorums.h \
   llmq/blockprocessor.h \

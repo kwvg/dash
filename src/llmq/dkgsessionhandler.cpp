@@ -21,18 +21,14 @@
 #include <util/thread.h>
 #include <util/underlying.h>
 
-namespace llmq
-{
-
-CDKGSessionHandler::CDKGSessionHandler(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
-                                       CDKGDebugManager& _dkgDebugManager, CMasternodeMetaMan& mn_metaman, CQuorumBlockProcessor& _quorumBlockProcessor,
-                                       CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager* const mn_activeman,
-                                       const CSporkManager& sporkman, const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
+namespace llmq {
+CDKGSessionHandler::CDKGSessionHandler(CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CDKGDebugManager& _dkgDebugManager,
+                                       CQuorumSnapshotManager& qsnapman, const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
                                        const Consensus::LLMQParams& _params, bool quorums_watch, int _quorumIndex) :
+    curSession(std::make_unique<CDKGSession>(_blsWorker, dmnman, _dkgDebugManager, qsnapman, qdkgsman,
+                                             /*pQuorumBaseBlockIndex=*/nullptr, _params)),
     params(_params),
     quorumIndex(_quorumIndex),
-    curSession(std::make_unique<CDKGSession>(_blsWorker, dmnman, _dkgDebugManager, mn_metaman, qsnapman,
-                                             mn_activeman, sporkman, qdkgsman, nullptr, _params)),
     // we allow size*2 messages as we need to make sure we see bad behavior (double messages)
     pendingContributions((size_t)_params.size * 2, MSG_QUORUM_CONTRIB),
     pendingComplaints((size_t)_params.size * 2, MSG_QUORUM_COMPLAINT),

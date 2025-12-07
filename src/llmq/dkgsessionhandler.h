@@ -131,10 +131,9 @@ private:
     friend class CDKGSessionManager;
 
 protected:
-    const Consensus::LLMQParams params;
-    const int quorumIndex;
-
     std::unique_ptr<CDKGSession> curSession;
+    const Consensus::LLMQParams& params;
+    const int quorumIndex;
 
     // Do not guard these, they protect their internals themselves
     CDKGPendingMessages pendingContributions;
@@ -143,10 +142,8 @@ protected:
     CDKGPendingMessages pendingPrematureCommitments;
 
 public:
-    CDKGSessionHandler(CBLSWorker& _blsWorker, CChainState& chainstate, CDeterministicMNManager& dmnman,
-                       CDKGDebugManager& _dkgDebugManager, CMasternodeMetaMan& mn_metaman, CQuorumBlockProcessor& _quorumBlockProcessor,
-                       CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager* const mn_activeman,
-                       const CSporkManager& sporkman, const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
+    CDKGSessionHandler(CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CDKGDebugManager& _dkgDebugManager,
+                       CQuorumSnapshotManager& qsnapman, const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
                        const Consensus::LLMQParams& _params, bool quorums_watch, int _quorumIndex);
     virtual ~CDKGSessionHandler();
 

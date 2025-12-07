@@ -5,6 +5,7 @@
 #include <llmq/active/dkgsessionhandler.h>
 
 #include <evo/deterministicmns.h>
+#include <llmq/active/dkgsession.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/debug.h>
 #include <llmq/dkgsession.h>
@@ -24,8 +25,7 @@ ActiveSessionHandler::ActiveSessionHandler(CBLSWorker& bls_worker, CChainState& 
                                            const CActiveMasternodeManager& mn_activeman, const CSporkManager& sporkman, 
                                            const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman, const Consensus::LLMQParams& llmq_params, bool quorums_watch,
                                            int quorums_idx) :
-    llmq::CDKGSessionHandler(bls_worker, chainstate, dmnman, dkgdbgman, mn_metaman, qblockman, qsnapman, &mn_activeman, sporkman, qdkgsman, llmq_params,
-                             quorums_watch, quorums_idx),
+    llmq::CDKGSessionHandler(bls_worker, dmnman, dkgdbgman, qsnapman, qdkgsman, llmq_params, quorums_watch, quorums_idx),
     m_bls_worker{bls_worker},
     m_chainstate{chainstate},
     m_dmnman{dmnman},
@@ -38,6 +38,10 @@ ActiveSessionHandler::ActiveSessionHandler(CBLSWorker& bls_worker, CChainState& 
     m_qdkgsman{qdkgsman},
     m_quorums_watch{quorums_watch}
 {
+    // Overwrite session initialized in parent
+    curSession.reset();
+    curSession = std::make_unique<ActiveSession>(m_bls_worker, m_dmnman, m_dkgdbgman, m_mn_metaman, m_qsnapman, m_mn_activeman,
+                                                 m_sporkman, m_qdkgsman, /*pQuorumBaseBlockIndex=*/nullptr, llmq_params);
 }
 
 ActiveSessionHandler::~ActiveSessionHandler() = default;
@@ -100,8 +104,8 @@ bool ActiveSessionHandler::InitNewQuorum(const CBlockIndex* pQuorumBaseBlockInde
         return false;
     }
 
-    curSession = std::make_unique<CDKGSession>(m_bls_worker, m_dmnman, m_dkgdbgman, m_mn_metaman, m_qsnapman,
-                                               &m_mn_activeman, m_sporkman, m_qdkgsman, pQuorumBaseBlockIndex, params);
+    curSession = std::make_unique<ActiveSession>(m_bls_worker, m_dmnman, m_dkgdbgman, m_mn_metaman, m_qsnapman,
+                                                 m_mn_activeman, m_sporkman, m_qdkgsman, pQuorumBaseBlockIndex, params);
 
     if (!curSession->Init(m_mn_activeman.GetProTxHash(), quorumIndex)) {
         LogPrintf("ActiveSessionHandler::%s -- height[%d] quorum initialization failed for %s qi[%d]\n", __func__,

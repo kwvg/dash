@@ -65,24 +65,20 @@ CDKGMember::CDKGMember(const CDeterministicMNCPtr& _dmn, size_t _idx) :
 }
 
 CDKGSession::CDKGSession(CBLSWorker& _blsWorker, CDeterministicMNManager& dmnman, CDKGDebugManager& _dkgDebugManager,
-                         CMasternodeMetaMan& mn_metaman, CQuorumSnapshotManager& qsnapman,
-                         const CActiveMasternodeManager* const mn_activeman, const CSporkManager& sporkman,
-                         const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
+                         CQuorumSnapshotManager& qsnapman, const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
                          const CBlockIndex* pQuorumBaseBlockIndex, const Consensus::LLMQParams& _params) :
-    params(_params),
     blsWorker(_blsWorker),
     cache(_blsWorker),
     m_dmnman(dmnman),
     dkgDebugManager(_dkgDebugManager),
-    m_mn_metaman(mn_metaman),
     m_qsnapman(qsnapman),
-    m_mn_activeman(mn_activeman),
-    m_sporkman(sporkman),
+    params(_params),
     m_qdkgsman(qdkgsman),
-    m_quorum_base_block_index{pQuorumBaseBlockIndex},
-    m_use_legacy_bls{!DeploymentActiveAfter(m_quorum_base_block_index, Params().GetConsensus(), Consensus::DEPLOYMENT_V19)}
+    m_quorum_base_block_index{pQuorumBaseBlockIndex}
 {
 }
+
+CDKGSession::~CDKGSession() = default;
 
 bool CDKGSession::Init(const uint256& _myProTxHash, int _quorumIndex)
 {
@@ -252,7 +248,7 @@ std::optional<CInv> CDKGSession::ReceiveMessage(const CDKGContribution& qc)
 
     bool complain = false;
     CBLSSecretKey skContribution;
-    if (!m_mn_activeman->Decrypt(*qc.contributions, *myIdx, skContribution, PROTOCOL_VERSION)) {
+    if (!MaybeDecrypt(*qc.contributions, *myIdx, skContribution, PROTOCOL_VERSION)) {
         logger.Batch("contribution from %s could not be decrypted", member->dmn->proTxHash.ToString());
         complain = true;
     } else if (member->idx != myIdx && ShouldSimulateError(DKGError::type::COMPLAIN_LIE)) {

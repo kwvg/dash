@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <llmq/dkgsession.h>
+#include <llmq/active/dkgsession.h>
 
 #include <evo/deterministicmns.h>
 #include <llmq/debug.h>
@@ -18,7 +18,23 @@
 #include <cxxtimer.hpp>
 
 namespace llmq {
-void CDKGSession::Contribute(CDKGPendingMessages& pendingMessages, PeerManager& peerman)
+namespace dkg {
+ActiveSession::ActiveSession(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CDKGDebugManager& dkgdbgman,
+                             CMasternodeMetaMan& mn_metaman, CQuorumSnapshotManager& qsnapman,
+                             const CActiveMasternodeManager& mn_activeman, const CSporkManager& sporkman,
+                             const std::unique_ptr<llmq::CDKGSessionManager>& qdkgsman,
+                             const CBlockIndex* base_block_index, const Consensus::LLMQParams& params) :
+    CDKGSession(bls_worker, dmnman, dkgdbgman, qsnapman, qdkgsman, base_block_index, params),
+    m_mn_metaman{mn_metaman},
+    m_mn_activeman{mn_activeman},
+    m_sporkman{sporkman},
+    m_use_legacy_bls{!DeploymentActiveAfter(m_quorum_base_block_index, Params().GetConsensus(), Consensus::DEPLOYMENT_V19)}
+{
+}
+
+ActiveSession::~ActiveSession() = default;
+
+void ActiveSession::Contribute(CDKGPendingMessages& pendingMessages, PeerManager& peerman)
 {
     CDKGLogger logger(*this, __func__, __LINE__);
 
@@ -41,7 +57,7 @@ void CDKGSession::Contribute(CDKGPendingMessages& pendingMessages, PeerManager& 
     SendContributions(pendingMessages, peerman);
 }
 
-void CDKGSession::SendContributions(CDKGPendingMessages& pendingMessages, PeerManager& peerman)
+void ActiveSession::SendContributions(CDKGPendingMessages& pendingMessages, PeerManager& peerman)
 {
     CDKGLogger logger(*this, __func__, __LINE__);
 
@@ -81,7 +97,7 @@ void CDKGSession::SendContributions(CDKGPendingMessages& pendingMessages, PeerMa
 
     logger.Batch("encrypted contributions. time=%d", t1.count());
 
-    qc.sig = m_mn_activeman->Sign(qc.GetSignHash(), m_use_legacy_bls);
+    qc.sig = m_mn_activeman.Sign(qc.GetSignHash(), m_use_legacy_bls);
 
     logger.Flush();
 
@@ -98,7 +114,7 @@ void CDKGSession::SendContributions(CDKGPendingMessages& pendingMessages, PeerMa
 // The resulting aggregated vvec is then used to recover a public key share
 // The public key share must match the public key belonging to the aggregated secret key contributions
 // See CBLSWorker::VerifyContributionShares for more details.
-void CDKGSession::VerifyPendingContributions()
+void ActiveSession::VerifyPendingContributions()
 {
     AssertLockHeld(cs_pending);
 
@@ -152,7 +168,7 @@ void CDKGSession::VerifyPendingContributions()
     pendingContributionVerifications.clear();
 }
 
-void CDKGSession::VerifyAndComplain(CConnman& connman, CDKGPendingMessages& pendingMessages, PeerManager& peerman)
+void ActiveSession::VerifyAndComplain(CConnman& connman, CDKGPendingMessages& pendingMessages, PeerManager& peerman)
 {
     if (!AreWeMember()) {
         return;
@@ -193,7 +209,7 @@ void CDKGSession::VerifyAndComplain(CConnman& connman, CDKGPendingMessages& pend
     SendComplaint(pendingMessages, peerman);
 }
 
-void CDKGSession::VerifyConnectionAndMinProtoVersions(CConnman& connman) const
+void ActiveSession::VerifyConnectionAndMinProtoVersions(CConnman& connman) const
 {
     assert(m_mn_metaman.IsValid());
 
@@ -237,7 +253,7 @@ void CDKGSession::VerifyConnectionAndMinProtoVersions(CConnman& connman) const
     }
 }
 
-void CDKGSession::SendComplaint(CDKGPendingMessages& pendingMessages, PeerManager& peerman)
+void ActiveSession::SendComplaint(CDKGPendingMessages& pendingMessages, PeerManager& peerman)
 {
     CDKGLogger logger(*this, __func__, __LINE__);
 
@@ -267,7 +283,7 @@ void CDKGSession::SendComplaint(CDKGPendingMessages& pendingMessages, PeerManage
 
     logger.Batch("sending complaint. badCount=%d, complaintCount=%d", badCount, complaintCount);
 
-    qc.sig = m_mn_activeman->Sign(qc.GetSignHash(), m_use_legacy_bls);
+    qc.sig = m_mn_activeman.Sign(qc.GetSignHash(), m_use_legacy_bls);
 
     logger.Flush();
 
@@ -279,7 +295,7 @@ void CDKGSession::SendComplaint(CDKGPendingMessages& pendingMessages, PeerManage
     pendingMessages.PushPendingMessage(-1, qc, peerman);
 }
 
-void CDKGSession::VerifyAndJustify(CDKGPendingMessages& pendingMessages, PeerManager& peerman)
+void ActiveSession::VerifyAndJustify(CDKGPendingMessages& pendingMessages, PeerManager& peerman)
 {
     if (!AreWeMember()) {
         return;
@@ -320,8 +336,8 @@ void CDKGSession::VerifyAndJustify(CDKGPendingMessages& pendingMessages, PeerMan
     }
 }
 
-void CDKGSession::SendJustification(CDKGPendingMessages& pendingMessages, PeerManager& peerman,
-                                    const std::set<uint256>& forMembers)
+void ActiveSession::SendJustification(CDKGPendingMessages& pendingMessages, PeerManager& peerman,
+                                      const std::set<uint256>& forMembers)
 {
     CDKGLogger logger(*this, __func__, __LINE__);
 
@@ -357,7 +373,7 @@ void CDKGSession::SendJustification(CDKGPendingMessages& pendingMessages, PeerMa
         return;
     }
 
-    qj.sig = m_mn_activeman->Sign(qj.GetSignHash(), m_use_legacy_bls);
+    qj.sig = m_mn_activeman.Sign(qj.GetSignHash(), m_use_legacy_bls);
 
     logger.Flush();
 
@@ -369,7 +385,7 @@ void CDKGSession::SendJustification(CDKGPendingMessages& pendingMessages, PeerMa
     pendingMessages.PushPendingMessage(-1, qj, peerman);
 }
 
-void CDKGSession::VerifyAndCommit(CDKGPendingMessages& pendingMessages, PeerManager& peerman)
+void ActiveSession::VerifyAndCommit(CDKGPendingMessages& pendingMessages, PeerManager& peerman)
 {
     if (!AreWeMember()) {
         return;
@@ -414,7 +430,7 @@ void CDKGSession::VerifyAndCommit(CDKGPendingMessages& pendingMessages, PeerMana
     SendCommitment(pendingMessages, peerman);
 }
 
-void CDKGSession::SendCommitment(CDKGPendingMessages& pendingMessages, PeerManager& peerman)
+void ActiveSession::SendCommitment(CDKGPendingMessages& pendingMessages, PeerManager& peerman)
 {
     CDKGLogger logger(*this, __func__, __LINE__);
 
@@ -496,7 +512,7 @@ void CDKGSession::SendCommitment(CDKGPendingMessages& pendingMessages, PeerManag
         (*commitmentHash.begin())++;
     }
 
-    qc.sig = m_mn_activeman->Sign(commitmentHash, m_use_legacy_bls);
+    qc.sig = m_mn_activeman.Sign(commitmentHash, m_use_legacy_bls);
     qc.quorumSig = skShare.Sign(commitmentHash, m_use_legacy_bls);
 
     if (lieType == 3) {
@@ -526,7 +542,7 @@ void CDKGSession::SendCommitment(CDKGPendingMessages& pendingMessages, PeerManag
     pendingMessages.PushPendingMessage(-1, qc, peerman);
 }
 
-std::vector<CFinalCommitment> CDKGSession::FinalizeCommitments()
+std::vector<CFinalCommitment> ActiveSession::FinalizeCommitments()
 {
     if (!AreWeMember()) {
         return {};
@@ -635,7 +651,7 @@ std::vector<CFinalCommitment> CDKGSession::FinalizeCommitments()
     return finalCommitments;
 }
 
-CFinalCommitment CDKGSession::FinalizeSingleCommitment()
+CFinalCommitment ActiveSession::FinalizeSingleCommitment()
 {
     if (!AreWeMember()) {
         return {};
@@ -662,7 +678,7 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
     // TODO: use sk1 here instead and use recovery mechanism from shares, but that's not trivial to do
     const bool workaround_qpublic_key = true;
     if (workaround_qpublic_key) {
-        fqc.quorumPublicKey = m_mn_activeman->GetPubKey();
+        fqc.quorumPublicKey = m_mn_activeman.GetPubKey();
     }
     const bool isQuorumRotationEnabled{false};
     fqc.nVersion = CFinalCommitment::GetVersion(isQuorumRotationEnabled,
@@ -674,7 +690,7 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
                                                  fqc.quorumVvecHash);
     fqc.quorumSig = sk1.Sign(commitmentHash, m_use_legacy_bls);
 
-    fqc.membersSig = m_mn_activeman->Sign(commitmentHash, m_use_legacy_bls);
+    fqc.membersSig = m_mn_activeman.Sign(commitmentHash, m_use_legacy_bls);
 
     if (workaround_qpublic_key) {
         fqc.quorumSig = fqc.membersSig;
@@ -692,4 +708,10 @@ CFinalCommitment CDKGSession::FinalizeSingleCommitment()
 
     return fqc;
 }
+
+bool ActiveSession::MaybeDecrypt(const CBLSIESMultiRecipientObjects<CBLSSecretKey>& obj, size_t idx, CBLSSecretKey& ret_obj, int version)
+{
+    return m_mn_activeman.Decrypt(obj, idx, ret_obj, version);
+}
+} // namespace dkg
 } // namespace llmq

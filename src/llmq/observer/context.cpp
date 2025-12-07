@@ -18,9 +18,8 @@ ObserverContext::ObserverContext(CBLSWorker& bls_worker, CChainState& chainstate
                                                             const Consensus::LLMQParams& llmq_params, int quorum_idx) -> void {
                                                             map.emplace(llmq::CDKGSessionManager::SessionHandlerKey{llmq_params.type, quorum_idx},
                                                                 std::make_unique<llmq::CDKGSessionHandler>(
-                                                                    bls_worker, chainstate, dmnman, dkg_debugman, mn_metaman, qblockman, qsnapman,
-                                                                    /*mn_activeman=*/nullptr, sporkman, qdkgsman, llmq_params, /*quorums_watch=*/true,
-                                                                    quorum_idx));
+                                                                    bls_worker, dmnman, dkg_debugman, qsnapman, qdkgsman, llmq_params,
+                                                                    /*quorums_watch=*/true, quorum_idx));
                                                         }, db_params, /*quorums_watch=*/true)},
     qman_handler{std::make_unique<llmq::QuorumObserver>(dmnman, qman, qsnapman, mn_sync, sporkman, quorums_recovery)},
     m_qman{qman}
