@@ -21,6 +21,7 @@
 #include <llmq/context.h>
 #include <llmq/debug.h>
 #include <llmq/dkgsession.h>
+#include <llmq/observer/context.h>
 #include <llmq/options.h>
 #include <llmq/quorums.h>
 #include <llmq/signhash.h>
@@ -337,10 +338,9 @@ static RPCHelpMan quorum_dkgstatus()
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     const NodeContext& node = EnsureAnyNodeContext(request.context);
-    const ChainstateManager& chainman = EnsureChainman(node);
-    const LLMQContext& llmq_ctx = EnsureLLMQContext(node);
-    const CConnman& connman = EnsureConnman(node);
-    CHECK_NONFATAL(node.sporkman);
+    if (!node.active_ctx && !node.observer_ctx) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Only available in masternode or watch-only mode.");
+    }
 
     int detailLevel = 0;
     if (!request.params[0].isNull()) {
@@ -350,15 +350,18 @@ static RPCHelpMan quorum_dkgstatus()
         }
     }
 
+    const LLMQContext& llmq_ctx = EnsureLLMQContext(node);
     llmq::CDKGDebugStatus status;
     llmq_ctx.dkg_debugman->GetLocalDebugStatus(status);
 
+    const ChainstateManager& chainman = EnsureChainman(node);
     auto ret = status.ToJson(*CHECK_NONFATAL(node.dmnman), *llmq_ctx.qsnapman, chainman, detailLevel);
 
     CBlockIndex* pindexTip = WITH_LOCK(cs_main, return chainman.ActiveChain().Tip());
     int tipHeight = pindexTip->nHeight;
     const uint256 proTxHash = node.active_ctx ? node.active_ctx->nodeman->GetProTxHash() : uint256();
 
+    const CConnman& connman = EnsureConnman(node);
     UniValue minableCommitments(UniValue::VARR);
     UniValue quorumArrConnections(UniValue::VARR);
     for (const auto& type : llmq::GetEnabledQuorumTypes(pindexTip)) {
@@ -382,7 +385,7 @@ static RPCHelpMan quorum_dkgstatus()
                     obj.pushKV("pindexTip", pindexTip->nHeight);
 
                     auto allConnections = llmq::utils::GetQuorumConnections(llmq_params, *node.dmnman,
-                                                                            *llmq_ctx.qsnapman, *node.sporkman,
+                                                                            *llmq_ctx.qsnapman, *CHECK_NONFATAL(node.sporkman),
                                                                             pQuorumBaseBlockIndex, proTxHash, false);
                     auto outboundConnections = llmq::utils::GetQuorumConnections(llmq_params, *node.dmnman,
                                                                                  *llmq_ctx.qsnapman, *node.sporkman,
@@ -946,7 +949,6 @@ static RPCHelpMan quorum_rotationinfo()
     const NodeContext& node = EnsureAnyNodeContext(request.context);
     const ChainstateManager& chainman = EnsureChainman(node);
     const LLMQContext& llmq_ctx = EnsureLLMQContext(node);
-    ;
 
     llmq::CGetQuorumRotationInfo cmd;
     llmq::CQuorumRotationInfo quorumRotationInfoRet;
@@ -1000,14 +1002,17 @@ static RPCHelpMan quorum_dkginfo()
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     const NodeContext& node = EnsureAnyNodeContext(request.context);
-    const ChainstateManager& chainman = EnsureChainman(node);
-    const LLMQContext& llmq_ctx = EnsureLLMQContext(node);
+    if (!node.active_ctx && !node.observer_ctx) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Only available in masternode or watch-only mode.");
+    }
 
+    const LLMQContext& llmq_ctx = EnsureLLMQContext(node);
     llmq::CDKGDebugStatus status;
     llmq_ctx.dkg_debugman->GetLocalDebugStatus(status);
     UniValue ret(UniValue::VOBJ);
     ret.pushKV("active_dkgs", status.sessions.size());
 
+    const ChainstateManager& chainman = EnsureChainman(node);
     const int nTipHeight{WITH_LOCK(cs_main, return chainman.ActiveChain().Height())};
     auto minNextDKG = [](const Consensus::Params& consensusParams, int nTipHeight) {
         int minDkgWindow{std::numeric_limits<int>::max()};
