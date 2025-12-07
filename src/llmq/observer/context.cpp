@@ -4,25 +4,27 @@
 
 #include <llmq/observer/context.h>
 
+#include <llmq/debug.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/observer/quorums.h>
 #include <llmq/quorums.h>
 
 namespace llmq {
 ObserverContext::ObserverContext(CBLSWorker& bls_worker, CChainState& chainstate, CDeterministicMNManager& dmnman,
-                                 CMasternodeMetaMan& mn_metaman, CMasternodeSync& mn_sync, llmq::CDKGDebugManager& dkg_debugman,
-                                 llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumManager& qman, llmq::CQuorumSnapshotManager& qsnapman,
-                                 const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_recovery) :
+                                 CMasternodeMetaMan& mn_metaman, CMasternodeSync& mn_sync, llmq::CQuorumBlockProcessor& qblockman,
+                                 llmq::CQuorumManager& qman, llmq::CQuorumSnapshotManager& qsnapman, const CSporkManager& sporkman,
+                                 const util::DbWrapperParams& db_params, bool quorums_recovery) :
+    m_qman{qman},
+    dkgdbgman{std::make_unique<llmq::CDKGDebugManager>()},
     qdkgsman{std::make_unique<llmq::CDKGSessionManager>(chainstate, dmnman, qsnapman, sporkman,
                                                         [&](llmq::CDKGSessionManager::SessionHandlerMap& map,
                                                             const Consensus::LLMQParams& llmq_params, int quorum_idx) -> void {
                                                             map.emplace(llmq::CDKGSessionManager::SessionHandlerKey{llmq_params.type, quorum_idx},
                                                                 std::make_unique<llmq::CDKGSessionHandler>(
-                                                                    bls_worker, dmnman, dkg_debugman, qsnapman, qdkgsman, llmq_params,
+                                                                    bls_worker, dmnman, *dkgdbgman, qsnapman, qdkgsman, llmq_params,
                                                                     /*quorums_watch=*/true, quorum_idx));
                                                         }, db_params, /*quorums_watch=*/true)},
-    qman_handler{std::make_unique<llmq::QuorumObserver>(dmnman, qman, qsnapman, mn_sync, sporkman, quorums_recovery)},
-    m_qman{qman}
+    qman_handler{std::make_unique<llmq::QuorumObserver>(dmnman, qman, qsnapman, mn_sync, sporkman, quorums_recovery)}
 {
     m_qman.ConnectManagers(qman_handler.get(), qdkgsman.get());
 }

@@ -27,22 +27,24 @@ struct DbWrapperParams;
 
 namespace llmq {
 struct ObserverContext {
+private:
+    llmq::CQuorumManager& m_qman;
+
+public:
     ObserverContext() = delete;
     ObserverContext(const ObserverContext&) = delete;
     ObserverContext& operator=(const ObserverContext&) = delete;
     ObserverContext(CBLSWorker& bls_worker, CChainState& chainstate, CDeterministicMNManager& dmnman,
-                    CMasternodeMetaMan& mn_metaman, CMasternodeSync& mn_sync, llmq::CDKGDebugManager& dkg_debugman,
-                    llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumManager& qman, llmq::CQuorumSnapshotManager& qsnapman,
-                    const CSporkManager& sporkman, const util::DbWrapperParams& db_params, bool quorums_recovery);
+                    CMasternodeMetaMan& mn_metaman, CMasternodeSync& mn_sync, llmq::CQuorumBlockProcessor& qblockman,
+                    llmq::CQuorumManager& qman, llmq::CQuorumSnapshotManager& qsnapman, const CSporkManager& sporkman,
+                    const util::DbWrapperParams& db_params, bool quorums_recovery);
     ~ObserverContext();
 
+    const std::unique_ptr<llmq::CDKGDebugManager> dkgdbgman;
     const std::unique_ptr<llmq::CDKGSessionManager> qdkgsman;
 
 private:
     const std::unique_ptr<llmq::QuorumObserver> qman_handler;
-
-private:
-    llmq::CQuorumManager& m_qman;
 };
 } // namespace llmq
 

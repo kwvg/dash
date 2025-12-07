@@ -14,6 +14,7 @@
 #include <llmq/active/dkgsessionhandler.h>
 #include <llmq/active/quorums.h>
 #include <llmq/context.h>
+#include <llmq/debug.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/ehf_signals.h>
 #include <llmq/quorums.h>
@@ -22,48 +23,48 @@
 #include <masternode/node.h>
 #include <validation.h>
 
-ActiveContext::ActiveContext(ChainstateManager& chainman, CConnman& connman, CDeterministicMNManager& dmnman,
+ActiveContext::ActiveContext(CBLSWorker& bls_worker, ChainstateManager& chainman, CConnman& connman, CDeterministicMNManager& dmnman,
                              CDSTXManager& dstxman, CGovernanceManager& govman, CMasternodeMetaMan& mn_metaman,
-                             CMNHFManager& mnhfman, CSporkManager& sporkman, CTxMemPool& mempool, LLMQContext& llmq_ctx,
-                             PeerManager& peerman, const CMasternodeSync& mn_sync, const CBLSSecretKey& operator_sk,
-                             const util::DbWrapperParams& db_params, bool quorums_recovery, bool quorums_watch) :
-    m_llmq_ctx{llmq_ctx},
+                             CMNHFManager& mnhfman, CSporkManager& sporkman, CTxMemPool& mempool, llmq::CChainLocksHandler& clhandler,
+                             llmq::CInstantSendManager& isman, llmq::CQuorumBlockProcessor& qblockman, llmq::CQuorumManager& qman,
+                             llmq::CQuorumSnapshotManager& qsnapman, llmq::CSigningManager& sigman, PeerManager& peerman,
+                             const CMasternodeSync& mn_sync, const CBLSSecretKey& operator_sk, const util::DbWrapperParams& db_params,
+                             bool quorums_recovery, bool quorums_watch) :
+    m_clhandler{clhandler},
+    m_isman{isman},
+    m_qman{qman},
+    dkgdbgman{std::make_unique<llmq::CDKGDebugManager>()},
     nodeman{std::make_unique<CActiveMasternodeManager>(connman, dmnman, operator_sk)},
-    cj_server{std::make_unique<CCoinJoinServer>(chainman, connman, dmnman, dstxman, mn_metaman, mempool, peerman,
-                                                *nodeman, mn_sync, *llmq_ctx.isman)},
-    gov_signer{std::make_unique<GovernanceSigner>(connman, dmnman, govman, *nodeman, chainman, mn_sync)},
-    qdkgsman{std::make_unique<llmq::CDKGSessionManager>(chainman.ActiveChainstate(), dmnman, *llmq_ctx.qsnapman, sporkman,
+    cj_server{std::make_unique<CCoinJoinServer>(chainman, connman, dmnman, dstxman, mn_metaman, mempool, peerman, *nodeman, mn_sync, isman)},
+    qdkgsman{std::make_unique<llmq::CDKGSessionManager>(chainman.ActiveChainstate(), dmnman, qsnapman, sporkman,
                                                         [&](llmq::CDKGSessionManager::SessionHandlerMap& map,
                                                             const Consensus::LLMQParams& llmq_params, int quorum_idx) -> void {
                                                             map.emplace(llmq::CDKGSessionManager::SessionHandlerKey{llmq_params.type, quorum_idx},
                                                                 std::make_unique<llmq::dkg::ActiveSessionHandler>(
-                                                                    *llmq_ctx.bls_worker, chainman.ActiveChainstate(), dmnman, mn_metaman,
-                                                                    *llmq_ctx.dkg_debugman, *llmq_ctx.quorum_block_processor, *llmq_ctx.qsnapman,
-                                                                    *nodeman, sporkman, qdkgsman, llmq_params, quorums_watch, quorum_idx));
+                                                                    bls_worker, chainman.ActiveChainstate(), dmnman, mn_metaman,
+                                                                    *dkgdbgman, qblockman, qsnapman, *nodeman, sporkman, qdkgsman,
+                                                                    llmq_params, quorums_watch, quorum_idx));
                                                         }, db_params, quorums_watch)},
-    shareman{std::make_unique<llmq::CSigSharesManager>(connman, chainman.ActiveChainstate(), *llmq_ctx.sigman, peerman,
-                                                       *nodeman, *llmq_ctx.qman, sporkman)},
+    shareman{std::make_unique<llmq::CSigSharesManager>(connman, chainman.ActiveChainstate(), sigman, peerman, *nodeman, qman, sporkman)},
     ehf_sighandler{
-        std::make_unique<llmq::CEHFSignalsHandler>(chainman, mnhfman, *llmq_ctx.sigman, *shareman, *llmq_ctx.qman)},
-    cl_signer{std::make_unique<chainlock::ChainLockSigner>(chainman.ActiveChainstate(), *llmq_ctx.clhandler,
-                                                           *llmq_ctx.sigman, *shareman, sporkman, mn_sync)},
-    is_signer{std::make_unique<instantsend::InstantSendSigner>(chainman.ActiveChainstate(), *llmq_ctx.clhandler,
-                                                               *llmq_ctx.isman, *llmq_ctx.sigman, *shareman,
-                                                               *llmq_ctx.qman, sporkman, mempool, mn_sync)},
-    qman_handler{std::make_unique<llmq::QuorumParticipant>(*llmq_ctx.bls_worker, dmnman, *llmq_ctx.qman,
-                                                           *llmq_ctx.qsnapman, *nodeman, mn_sync, sporkman, quorums_recovery,
+        std::make_unique<llmq::CEHFSignalsHandler>(chainman, mnhfman, sigman, *shareman, qman)},
+    cl_signer{std::make_unique<chainlock::ChainLockSigner>(chainman.ActiveChainstate(), clhandler, sigman, *shareman, sporkman, mn_sync)},
+    gov_signer{std::make_unique<GovernanceSigner>(connman, dmnman, govman, *nodeman, chainman, mn_sync)},
+    is_signer{std::make_unique<instantsend::InstantSendSigner>(chainman.ActiveChainstate(), clhandler, isman, sigman, *shareman, qman,
+                                                               sporkman, mempool, mn_sync)},
+    qman_handler{std::make_unique<llmq::QuorumParticipant>(bls_worker, dmnman, qman, qsnapman, *nodeman, mn_sync, sporkman, quorums_recovery,
                                                            quorums_watch)}
 {
-    m_llmq_ctx.clhandler->ConnectSigner(cl_signer.get());
-    m_llmq_ctx.isman->ConnectSigner(is_signer.get());
-    m_llmq_ctx.qman->ConnectManagers(qman_handler.get(), qdkgsman.get());
+    m_clhandler.ConnectSigner(cl_signer.get());
+    m_isman.ConnectSigner(is_signer.get());
+    m_qman.ConnectManagers(qman_handler.get(), qdkgsman.get());
 }
 
 ActiveContext::~ActiveContext()
 {
-    m_llmq_ctx.qman->DisconnectManagers();
-    m_llmq_ctx.isman->DisconnectSigner();
-    m_llmq_ctx.clhandler->DisconnectSigner();
+    m_qman.DisconnectManagers();
+    m_isman.DisconnectSigner();
+    m_clhandler.DisconnectSigner();
 }
 
 void ActiveContext::Interrupt()
@@ -87,4 +88,20 @@ void ActiveContext::Stop()
     cl_signer->UnregisterAsRecoveredSigsListener();
     shareman->StopWorkerThread();
     qdkgsman->StopThreads();
+}
+
+void ActiveContext::UpdatedBlockTip(const CBlockIndex* pindexNew, const CBlockIndex* pindexFork, bool fInitialDownload)
+{
+    if (fInitialDownload || pindexNew == pindexFork) // In IBD or blocks were disconnected without any new ones
+        return;
+
+    nodeman->UpdatedBlockTip(pindexNew, pindexFork, fInitialDownload);
+    ehf_sighandler->UpdatedBlockTip(pindexNew);
+    gov_signer->UpdatedBlockTip(pindexNew);
+    qdkgsman->UpdatedBlockTip(pindexNew, fInitialDownload);
+}
+
+void ActiveContext::NotifyRecoveredSig(const std::shared_ptr<const llmq::CRecoveredSig>& sig, bool proactive_relay)
+{
+    shareman->NotifyRecoveredSig(sig, proactive_relay);
 }
