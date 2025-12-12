@@ -29,12 +29,10 @@ protected:
     CDeterministicMNManager& m_dmnman;
     CQuorumManager& m_qman;
     CQuorumSnapshotManager& m_qsnapman;
-    const CActiveMasternodeManager* const m_mn_activeman;
     const ChainstateManager& m_chainman;
     const CMasternodeSync& m_mn_sync;
     const CSporkManager& m_sporkman;
     const bool m_quorums_recovery{false};
-    const bool m_quorums_watch{false};
     const llmq::QvvecSyncModeMap m_sync_map;
 
 private:
@@ -46,9 +44,8 @@ public:
     QuorumObserver(const QuorumObserver&) = delete;
     QuorumObserver& operator=(const QuorumObserver&) = delete;
     explicit QuorumObserver(CDeterministicMNManager& dmnman, CQuorumManager& qman, CQuorumSnapshotManager& qsnapman,
-                            const CActiveMasternodeManager* const mn_activeman, const ChainstateManager& chainman,
-                            const CMasternodeSync& mn_sync, const CSporkManager& sporkman,
-                            const llmq::QvvecSyncModeMap& sync_map, bool quorums_recovery, bool quorums_watch);
+                            const ChainstateManager& chainman, const CMasternodeSync& mn_sync,
+                            const CSporkManager& sporkman, const llmq::QvvecSyncModeMap& sync_map, bool quorums_recovery);
     virtual ~QuorumObserver();
 
     void UpdatedBlockTip(const CBlockIndex* pindexNew, CConnman& connman, bool fInitialDownload) const;
@@ -58,6 +55,8 @@ public:
     [[nodiscard]] virtual MessageProcessingResult ProcessEncryptedContribs(
         CNode& pfrom, CConnman& connman, bool request_limit_exceeded, CDataStream& vStream, CQuorum& quorum,
         CQuorumDataRequest& request, const CBlockIndex* const block_index, std::string_view msg_type);
+    virtual bool IsMasternode() const;
+    virtual bool IsWatching() const;
 
 protected:
     virtual void CheckQuorumConnections(CConnman& connman, const Consensus::LLMQParams& llmqParams,

@@ -40,13 +40,15 @@ class QuorumParticipant final : public QuorumObserver
 {
 private:
     CBLSWorker& m_bls_worker;
+    const CActiveMasternodeManager& m_mn_activeman;
+    const bool m_quorums_watch{false};
 
 public:
     QuorumParticipant() = delete;
     QuorumParticipant(const QuorumParticipant&) = delete;
     QuorumParticipant& operator=(const QuorumParticipant&) = delete;
     explicit QuorumParticipant(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CQuorumManager& qman,
-                               CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager* const mn_activeman,
+                               CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman,
                                const ChainstateManager& chainman, const CMasternodeSync& mn_sync,
                                const CSporkManager& sporkman, const llmq::QvvecSyncModeMap& sync_map,
                                bool quorums_recovery, bool quorums_watch);
@@ -54,6 +56,8 @@ public:
 
 public:
     // QuorumObserver
+    bool IsMasternode() const override;
+    bool IsWatching() const override;
     bool SetQuorumSecretKeyShare(CQuorum& quorum, Span<CBLSSecretKey> skContributions) const override;
     [[nodiscard]] MessageProcessingResult ProcessEncryptedContribs(CNode& pfrom, CConnman& connman,
                                                                    bool request_limit_exceeded, CDataStream& vStream,
