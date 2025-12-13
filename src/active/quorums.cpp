@@ -9,7 +9,7 @@
 #include <llmq/commitment.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/options.h>
-#include <llmq/quorumsman.h>
+#include <llmq/quorums.h>
 #include <llmq/utils.h>
 #include <masternode/node.h>
 #include <masternode/sync.h>
@@ -25,7 +25,7 @@
 
 namespace llmq {
 QuorumParticipant::QuorumParticipant(CBLSWorker& bls_worker, CConnman& connman, CDeterministicMNManager& dmnman,
-                                     CQuorumManager& qman, CQuorumSnapshotManager& qsnapman,
+                                     QuorumHandlerParent& qman, CQuorumSnapshotManager& qsnapman,
                                      const CActiveMasternodeManager& mn_activeman, const ChainstateManager& chainman,
                                      const CMasternodeSync& mn_sync, const CSporkManager& sporkman,
                                      const llmq::QvvecSyncModeMap& sync_map, bool quorums_recovery, bool quorums_watch) :
@@ -123,9 +123,8 @@ MessageProcessingResult QuorumParticipant::ProcessEncryptedContribs(CNode& pfrom
             }
 
             std::vector<CBLSIESEncryptedObject<CBLSSecretKey>> vecEncrypted;
-            if (!m_qman.m_qdkgsman ||
-                !m_qman.m_qdkgsman->GetEncryptedContributions(request.GetLLMQType(), block_index,
-                                                              quorum.qc->validMembers, request.GetProTxHash(), vecEncrypted)) {
+            if (!m_qman.GetEncryptedContributions(request.GetLLMQType(), block_index,
+                                                  quorum.qc->validMembers, request.GetProTxHash(), vecEncrypted)) {
                 request.SetError(CQuorumDataRequest::Errors::ENCRYPTED_CONTRIBUTIONS_MISSING);
                 return request_limit_exceeded ? MisbehavingError{25, "request limit exceeded"} : MessageProcessingResult{};
             }
