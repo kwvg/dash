@@ -64,13 +64,6 @@ void CQuorumManager::Stop()
     workerPool.stop(true);
 }
 
-void CQuorumManager::UpdatedBlockTip(const CBlockIndex* pindexNew, CConnman& connman, bool fInitialDownload) const
-{
-    if (m_handler) {
-        m_handler->UpdatedBlockTip(pindexNew, connman, fInitialDownload);
-    }
-}
-
 CQuorumPtr CQuorumManager::BuildQuorumFromCommitment(const Consensus::LLMQType llmqType, gsl::not_null<const CBlockIndex*> pQuorumBaseBlockIndex, bool populate_cache) const
 {
     const uint256& quorumHash{pQuorumBaseBlockIndex->GetBlockHash()};
@@ -449,7 +442,7 @@ MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& c
         MessageProcessingResult ret{};
         if (m_handler) {
             // TODO: Get rid of the const_cast, we aren't actually writing anything but it's bad regardless
-            ret = m_handler->ProcessEncryptedContribs(pfrom, connman, request_limit_exceeded, ssResponseData,
+            ret = m_handler->ProcessEncryptedContribs(pfrom, request_limit_exceeded, ssResponseData,
                                                       const_cast<CQuorum&>(*pQuorum), request, pQuorumBaseBlockIndex,
                                                       msg_type);
             if (auto request_err = request.GetError(); request_err != CQuorumDataRequest::Errors::NONE &&
@@ -514,8 +507,8 @@ MessageProcessingResult CQuorumManager::ProcessMessage(CNode& pfrom, CConnman& c
 
         // Check if request has ENCRYPTED_CONTRIBUTIONS data
         if (m_handler) {
-            if (auto ret = m_handler->ProcessEncryptedContribs(pfrom, connman, /*request_limit_exceeded=*/false, vRecv,
-                                                               *pQuorum, request, /*block_index=*/nullptr, msg_type);
+            if (auto ret = m_handler->ProcessEncryptedContribs(pfrom, /*request_limit_exceeded=*/false, vRecv, *pQuorum,
+                                                               request, /*block_index=*/nullptr, msg_type);
                 !ret.empty()) {
                 return ret;
             }

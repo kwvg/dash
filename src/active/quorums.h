@@ -47,11 +47,11 @@ public:
     QuorumParticipant() = delete;
     QuorumParticipant(const QuorumParticipant&) = delete;
     QuorumParticipant& operator=(const QuorumParticipant&) = delete;
-    explicit QuorumParticipant(CBLSWorker& bls_worker, CDeterministicMNManager& dmnman, CQuorumManager& qman,
-                               CQuorumSnapshotManager& qsnapman, const CActiveMasternodeManager& mn_activeman,
-                               const ChainstateManager& chainman, const CMasternodeSync& mn_sync,
-                               const CSporkManager& sporkman, const llmq::QvvecSyncModeMap& sync_map,
-                               bool quorums_recovery, bool quorums_watch);
+    explicit QuorumParticipant(CBLSWorker& bls_worker, CConnman& connman, CDeterministicMNManager& dmnman,
+                               CQuorumManager& qman, CQuorumSnapshotManager& qsnapman,
+                               const CActiveMasternodeManager& mn_activeman, const ChainstateManager& chainman,
+                               const CMasternodeSync& mn_sync, const CSporkManager& sporkman,
+                               const llmq::QvvecSyncModeMap& sync_map, bool quorums_recovery, bool quorums_watch);
     ~QuorumParticipant();
 
 public:
@@ -59,17 +59,17 @@ public:
     bool IsMasternode() const override;
     bool IsWatching() const override;
     bool SetQuorumSecretKeyShare(CQuorum& quorum, Span<CBLSSecretKey> skContributions) const override;
-    [[nodiscard]] MessageProcessingResult ProcessEncryptedContribs(CNode& pfrom, CConnman& connman,
-                                                                   bool request_limit_exceeded, CDataStream& vStream,
-                                                                   CQuorum& quorum, CQuorumDataRequest& request,
+    [[nodiscard]] MessageProcessingResult ProcessEncryptedContribs(CNode& pfrom, bool request_limit_exceeded,
+                                                                   CDataStream& vStream, CQuorum& quorum,
+                                                                   CQuorumDataRequest& request,
                                                                    const CBlockIndex* const block_index,
                                                                    std::string_view msg_type) override;
 
 protected:
     // QuorumObserver
-    void CheckQuorumConnections(CConnman& connman, const Consensus::LLMQParams& llmqParams,
+    void CheckQuorumConnections(const Consensus::LLMQParams& llmqParams,
                                 gsl::not_null<const CBlockIndex*> pindexNew) const override;
-    void TriggerQuorumDataRecoveryThreads(CConnman& connman, gsl::not_null<const CBlockIndex*> block_index) const override;
+    void TriggerQuorumDataRecoveryThreads(gsl::not_null<const CBlockIndex*> block_index) const override;
 
 private:
     /// Returns the start offset for the masternode with the given proTxHash. This offset is applied when picking data
@@ -78,8 +78,7 @@ private:
     /// llmqType members requests data from one llmqType quorum.
     size_t GetQuorumRecoveryStartOffset(const CQuorum& quorum, gsl::not_null<const CBlockIndex*> pIndex) const;
 
-    void StartDataRecoveryThread(CConnman& connman, gsl::not_null<const CBlockIndex*> pIndex, CQuorumCPtr pQuorum,
-                                 uint16_t nDataMaskIn) const;
+    void StartDataRecoveryThread(gsl::not_null<const CBlockIndex*> pIndex, CQuorumCPtr pQuorum, uint16_t nDataMaskIn) const;
 };
 } // namespace llmq
 
