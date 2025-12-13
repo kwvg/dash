@@ -9,7 +9,7 @@
 #include <llmq/commitment.h>
 #include <llmq/dkgsessionmgr.h>
 #include <llmq/options.h>
-#include <llmq/quorums.h>
+#include <llmq/quorumsman.h>
 #include <llmq/utils.h>
 #include <masternode/node.h>
 #include <masternode/sync.h>

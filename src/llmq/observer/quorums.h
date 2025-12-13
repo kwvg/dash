@@ -6,7 +6,7 @@
 #define BITCOIN_LLMQ_OBSERVER_QUORUMS_H
 
 #include <bls/bls.h>
-#include <llmq/quorums.h>
+#include <llmq/quorumsman.h>
 #include <llmq/types.h>
 #include <msg_result.h>
 

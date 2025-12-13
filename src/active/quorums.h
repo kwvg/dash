@@ -7,7 +7,7 @@
 
 #include <bls/bls.h>
 #include <llmq/observer/quorums.h>
-#include <llmq/quorums.h>
+#include <llmq/quorumsman.h>
 #include <llmq/types.h>
 #include <msg_result.h>
 
