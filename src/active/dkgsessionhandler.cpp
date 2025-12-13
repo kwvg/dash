@@ -4,6 +4,7 @@
 
 #include <active/dkgsessionhandler.h>
 
+#include <active/dkgsession.h>
 #include <evo/deterministicmns.h>
 #include <llmq/blockprocessor.h>
 #include <llmq/debug.h>
@@ -24,8 +25,7 @@ ActiveDKGSessionHandler::ActiveDKGSessionHandler(CBLSWorker& bls_worker, CDeterm
                                                  const CActiveMasternodeManager& mn_activeman, const ChainstateManager& chainman,
                                                  const CSporkManager& sporkman, const Consensus::LLMQParams& llmq_params,
                                                  bool quorums_watch, int quorums_idx) :
-    llmq::CDKGSessionHandler(bls_worker, dmnman, dkgdbgman, qdkgsman, mn_metaman, qblockman, qsnapman,
-                             &mn_activeman, chainman, sporkman, llmq_params, quorums_watch, quorums_idx),
+    llmq::CDKGSessionHandler(bls_worker, dmnman, dkgdbgman, qdkgsman, qsnapman, chainman, llmq_params, quorums_watch, quorums_idx),
     m_bls_worker{bls_worker},
     m_dmnman{dmnman},
     m_mn_metaman{mn_metaman},
@@ -38,6 +38,11 @@ ActiveDKGSessionHandler::ActiveDKGSessionHandler(CBLSWorker& bls_worker, CDeterm
     m_sporkman{sporkman},
     m_quorums_watch{quorums_watch}
 {
+    // Overwrite session initialized in parent
+    curSession.reset();
+    curSession = std::make_unique<ActiveDKGSession>(m_bls_worker, m_dmnman, m_dkgdbgman, m_qdkgsman, m_mn_metaman,
+                                                    m_qsnapman, m_mn_activeman, m_chainman, m_sporkman,
+                                                    /*pQuorumBaseBlockIndex=*/nullptr, llmq_params);
 }
 
 ActiveDKGSessionHandler::~ActiveDKGSessionHandler() = default;
@@ -100,9 +105,9 @@ bool ActiveDKGSessionHandler::InitNewQuorum(const CBlockIndex* pQuorumBaseBlockI
         return false;
     }
 
-    curSession = std::make_unique<CDKGSession>(pQuorumBaseBlockIndex, params, m_bls_worker, m_dmnman, m_qdkgsman,
-                                               m_dkgdbgman, m_mn_metaman, m_qsnapman, &m_mn_activeman, m_chainman,
-                                               m_sporkman);
+    curSession = std::make_unique<ActiveDKGSession>(m_bls_worker, m_dmnman, m_dkgdbgman, m_qdkgsman, m_mn_metaman,
+                                                    m_qsnapman, m_mn_activeman, m_chainman, m_sporkman,
+                                                    pQuorumBaseBlockIndex, params);
 
     if (!curSession->Init(m_mn_activeman.GetProTxHash(), quorumIndex)) {
         LogPrintf("ActiveDKGSessionHandler::%s -- height[%d] quorum initialization failed for %s qi[%d]\n", __func__,
