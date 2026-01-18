@@ -1045,11 +1045,6 @@ void OptionsModel::setDisplayUnit(const QVariant& new_unit)
     Q_EMIT displayUnitChanged(m_display_bitcoin_unit);
 }
 
-void OptionsModel::emitCoinJoinEnabledChanged()
-{
-    Q_EMIT coinJoinEnabledChanged();
-}
-
 void OptionsModel::setRestartRequired(bool fRequired)
 {
     QSettings settings;
