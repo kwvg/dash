@@ -25,6 +25,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QSpinBox>
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QTimer>
@@ -43,28 +44,16 @@ ProposalWizard::ProposalWizard(interfaces::Node& node, WalletModel* walletModel,
     m_ui(new Ui::ProposalWizard)
 {
     m_ui->setupUi(this);
+    m_ui->labelTotalValue->setFont(
+        GUIUtil::getScaledFont(GUIUtil::FontRegistry::DEFAULT_FONT_SIZE, /*bold=*/true, /*multiplier=*/1.05));
 
-    GUIUtil::setFont({m_ui->labelHeader}, {GUIUtil::g_font_registry.GetWeightBold(), 16});
-    GUIUtil::disableMacFocusRect(this);
-    GUIUtil::updateFonts();
-
-    // Prefer the minimum vertical size needed for current content
-    if (this->layout()) {
-        this->layout()->setSizeConstraint(QLayout::SetMinimumSize);
+    // Allow payment amount field to stretch horizontally
+    if (auto* lineEdit = m_ui->paymentAmount->findChild<QLineEdit*>()) {
+        lineEdit->setMaximumWidth(QWIDGETSIZE_MAX);
     }
-    this->adjustSize();
-    this->setMinimumHeight(this->sizeHint().height());
 
     // Attach address validators
     GUIUtil::setupAddressWidget(static_cast<QValidatedLineEdit*>(m_ui->editPayAddr), this, /*fAllowURI=*/false);
-
-    // Initialize fields
-    // Populate payments dropdown (mainnet 1..12 by default; adjust by network later if needed)
-    for (int i = 1; i <= 12; ++i) {
-        m_ui->comboPayments->addItem(QString().setNum(i), i);
-    }
-    m_ui->comboPayments->setCurrentIndex(0);
-
     {
         // Load governance parameters
         const auto info = m_walletModel->node().gov().getGovernanceInfo();
@@ -87,7 +76,7 @@ ProposalWizard::ProposalWizard(interfaces::Node& node, WalletModel* walletModel,
     updateDisplayUnit();
 
     // First payment options are populated on load. No separate suggest-times button.
-    connect(m_ui->comboPayments, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &ProposalWizard::updateLabels);
+    connect(m_ui->spinPayments, QOverload<int>::of(&QSpinBox::valueChanged), this, &ProposalWizard::updateLabels);
     connect(m_ui->paymentAmount, &BitcoinAmountField::valueChanged, this, &ProposalWizard::updateLabels);
     connect(m_ui->btnNext1, &QPushButton::clicked, this, &ProposalWizard::onNextFromDetails);
     connect(m_ui->btnBack1, &QPushButton::clicked, this, &ProposalWizard::onBackToDetails);
@@ -116,11 +105,9 @@ ProposalWizard::ProposalWizard(interfaces::Node& node, WalletModel* walletModel,
                 &ProposalWizard::updateDisplayUnit);
     }
 
-    // Re-compute minimum vertical size when switching pages
-    connect(m_ui->stackedWidget, &QStackedWidget::currentChanged, this, [this](int) {
-        this->adjustSize();
-        this->setMinimumHeight(this->sizeHint().height());
-    });
+    GUIUtil::disableMacFocusRect(this);
+    GUIUtil::updateFonts();
+    setFixedSize(size());
 }
 
 ProposalWizard::~ProposalWizard()
@@ -135,7 +122,7 @@ void ProposalWizard::buildJsonAndHex()
     int start_epoch = 0;
     int end_epoch = 0;
     int firstSb = m_ui->comboFirstPayment->currentData().toInt();
-    int payments = m_ui->comboPayments->currentData().toInt();
+    int payments = m_ui->spinPayments->value();
     if (firstSb > 0 && payments > 0) {
         const int cycle = Params().GetConsensus().nSuperblockCycle;
         if (cycle > 0) {
@@ -348,17 +335,11 @@ void ProposalWizard::updateLabels()
     if (m_walletModel && m_walletModel->getOptionsModel()) {
         const auto unit = m_walletModel->getOptionsModel()->getDisplayUnit();
         const CAmount totalAmount = static_cast<CAmount>(m_ui->paymentAmount->value() *
-                                                         m_ui->comboPayments->currentData().toInt());
+                                                         m_ui->spinPayments->value());
         m_ui->labelTotalValue->setText(
             BitcoinUnits::formatWithUnit(unit, totalAmount, false, BitcoinUnits::SeparatorStyle::ALWAYS));
         m_fee_formatted = BitcoinUnits::formatWithUnit(unit, GOVERNANCE_PROPOSAL_FEE_TX, false,
                                                        BitcoinUnits::SeparatorStyle::ALWAYS);
-        m_ui->labelFeeValue->setText(m_fee_formatted.isEmpty() ? QString("-") : m_fee_formatted);
-        // Dynamic header/subheader and prepare text
-        if (m_ui->labelSubheader) {
-            m_ui->labelSubheader->setText(
-                tr("A fee of %1 will be burned when you prepare the proposal.").arg(m_fee_formatted));
-        }
         if (m_ui->labelPrepare) {
             m_ui->labelPrepare->setText(
                 tr("Prepare (burn %1) and wait for %2 confirmations.").arg(m_fee_formatted).arg(m_requiredConfs));
