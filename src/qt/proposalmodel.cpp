@@ -108,6 +108,13 @@ int Proposal::blocksUntilSuperblock() const
     return params.nextsuperblock - clientModel->getNumBlocks();
 }
 
+double Proposal::votingProgress() const
+{
+    const auto params = clientModel->node().gov().getGovernanceInfo();
+    const int blocksRemaining = params.nextsuperblock - clientModel->getNumBlocks();
+    return 1.0 - (static_cast<double>(blocksRemaining) / static_cast<double>(params.superblockcycle));
+}
+
 ProposalStatus Proposal::status() const
 {
     const auto params = clientModel->node().gov().getGovernanceInfo();
@@ -266,8 +273,10 @@ QVariant ProposalModel::data(const QModelIndex& index, int role) const
     {
         if (index.column() == Column::STATUS) {
             switch (proposal->status()) {
-            case ProposalStatus::Voting:
-                return GUIUtil::getIcon("transaction_5", GUIUtil::ThemedColor::ORANGE);
+            case ProposalStatus::Voting: {
+                const int icon_idx{std::clamp<int>(proposal->votingProgress() * 6, 0, 5)};
+                return GUIUtil::getIcon(QString("transaction_%1").arg(icon_idx), GUIUtil::ThemedColor::ORANGE);
+            }
             case ProposalStatus::Pending:
                 return GUIUtil::getIcon("transaction_5", GUIUtil::ThemedColor::BLUE);
             case ProposalStatus::Funded:

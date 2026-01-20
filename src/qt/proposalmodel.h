@@ -49,6 +49,7 @@ public:
 
     bool isActive() const;
     double paymentAmount() const { return m_paymentAmount; }
+    double votingProgress() const;
     int blocksUntilSuperblock() const;
     int paymentsRequested() const;
     ProposalStatus status() const;
