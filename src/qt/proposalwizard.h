@@ -8,22 +8,14 @@
 #include <qt/forms/ui_proposalwizard.h>
 
 #include <QByteArray>
-#include <QCloseEvent>
 #include <QDialog>
-#include <QObject>
 #include <QString>
-
-class QTimer;
 
 namespace interfaces {
 class Node;
 }
-namespace Ui {
-class SendCoinsEntry;
-}
 
 class WalletModel;
-// The UI header is included above for complete type to satisfy unique_ptr deleter
 
 class ProposalWizard : public QDialog
 {
@@ -33,12 +25,7 @@ public:
     ~ProposalWizard();
 
 private Q_SLOTS:
-    void onNextFromDetails();
-    void onBackToDetails();
-    void onPrepare();
-    void onMaybeAdvanceAfterConfirmations();
-    void onSubmit();
-    void onGoToSubmit();
+    void onCreate();
     void onViewJson();
     void onViewPayload();
 
@@ -54,18 +41,10 @@ private:
     // State
     QByteArray m_json;
     QString m_hex;
-    QString m_txid;
     QString m_fee_formatted;
-    qint64 m_prepareTime{0};
-    int m_relayRequiredConfs{1};
     int m_requiredConfs{6};
-    int m_lastConfs{-1};
-    bool m_submitted{false};
-    QTimer* m_confirmTimer{nullptr};
 
     void buildJsonAndHex();
-    int queryConfirmations(const QString& txid);
-    void closeEvent(QCloseEvent* event) override;
 };
 
 #endif // BITCOIN_QT_PROPOSALWIZARD_H
