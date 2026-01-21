@@ -76,6 +76,7 @@ private:
     void refreshColumnWidths();
     void updateEmptyPagePalette();
     void updateEmptyState();
+    void updateProposalButtons();
     void updateVotingCapability();
     void voteForProposal(vote_outcome_enum_t outcome);
 
