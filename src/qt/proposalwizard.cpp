@@ -9,11 +9,14 @@
 #include <governance/object.h>
 #include <governance/validators.h>
 
+#include <qt/descriptiondialog.h>
+#include <qt/guiutil_font.h>
+
 #include <interfaces/node.h>
+
 #include <qt/bitcoinamountfield.h>
 #include <qt/bitcoinunits.h>
 #include <qt/guiutil.h>
-#include <qt/guiutil_font.h>
 #include <qt/optionsmodel.h>
 #include <qt/qvalidatedlineedit.h>
 #include <qt/rpcconsole.h>
@@ -44,6 +47,7 @@ ProposalWizard::ProposalWizard(interfaces::Node& node, WalletModel* walletModel,
     m_ui(new Ui::ProposalWizard)
 {
     m_ui->setupUi(this);
+    m_ui->labelError->setStyleSheet(GUIUtil::getThemedStyleQString(GUIUtil::ThemedStyle::TS_ERROR));
     m_ui->labelTotalValue->setFont(
         GUIUtil::getScaledFont(GUIUtil::FontRegistry::DEFAULT_FONT_SIZE, /*bold=*/true, /*multiplier=*/1.05));
 
@@ -76,12 +80,16 @@ ProposalWizard::ProposalWizard(interfaces::Node& node, WalletModel* walletModel,
     updateDisplayUnit();
 
     // First payment options are populated on load. No separate suggest-times button.
+    connect(m_ui->btnViewJson, &QPushButton::clicked, this, &ProposalWizard::onViewJson);
+    connect(m_ui->btnViewPayload, &QPushButton::clicked, this, &ProposalWizard::onViewPayload);
+    connect(m_ui->editName, &QLineEdit::textChanged, this, &ProposalWizard::validateFields);
+    connect(m_ui->editUrl, &QLineEdit::textChanged, this, &ProposalWizard::validateFields);
+    connect(m_ui->editPayAddr, &QLineEdit::textChanged, this, &ProposalWizard::validateFields);
     connect(m_ui->spinPayments, QOverload<int>::of(&QSpinBox::valueChanged), this, &ProposalWizard::updateLabels);
     connect(m_ui->paymentAmount, &BitcoinAmountField::valueChanged, this, &ProposalWizard::updateLabels);
+    connect(m_ui->paymentAmount, &BitcoinAmountField::valueChanged, this, &ProposalWizard::validateFields);
     connect(m_ui->btnNext1, &QPushButton::clicked, this, &ProposalWizard::onNextFromDetails);
-    connect(m_ui->btnBack1, &QPushButton::clicked, this, &ProposalWizard::onBackToDetails);
-    connect(m_ui->btnNext2, &QPushButton::clicked, this, &ProposalWizard::onNextFromReview);
-    connect(m_ui->btnBack2, &QPushButton::clicked, this, &ProposalWizard::onBackToReview);
+    connect(m_ui->btnBack2, &QPushButton::clicked, this, &ProposalWizard::onBackToDetails);
     connect(m_ui->btnPrepare, &QPushButton::clicked, this, &ProposalWizard::onPrepare);
     connect(m_ui->btnCopyTxid, &QPushButton::clicked, this, [this]() {
         if (m_ui->editTxid) {
@@ -164,10 +172,30 @@ void ProposalWizard::buildJsonAndHex()
     if (start_epoch > 0) o.insert("start_epoch", start_epoch);
     if (end_epoch > 0) o.insert("end_epoch", end_epoch);
     o.insert("type", 1);
-    const auto json = QJsonDocument(o).toJson(QJsonDocument::Compact);
-    m_ui->plainJson->setPlainText(QString::fromUtf8(json));
-    m_hex = toHex(json);
-    m_ui->editHex->setText(m_hex);
+    m_json = QJsonDocument(o).toJson(QJsonDocument::Compact);
+    m_hex = toHex(m_json);
+}
+
+void ProposalWizard::onViewJson()
+{
+    buildJsonAndHex();
+    const QString html = QString("<code style=\"white-space: pre-wrap;\">%1</code>").arg(QString::fromUtf8(m_json).toHtmlEscaped());
+    DescriptionDialog* dlg = new DescriptionDialog("", html, this);
+    dlg->resize(700, 300);
+    dlg->setWindowModality(Qt::WindowModal);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->show();
+}
+
+void ProposalWizard::onViewPayload()
+{
+    buildJsonAndHex();
+    const QString html = QString("<code style=\"word-wrap: break-word;\">%1</code>").arg(m_hex.toHtmlEscaped());
+    DescriptionDialog* dlg = new DescriptionDialog("", html, this);
+    dlg->resize(700, 300);
+    dlg->setWindowModality(Qt::WindowModal);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->show();
 }
 
 int ProposalWizard::queryConfirmations(const QString& txid)
@@ -184,29 +212,17 @@ int ProposalWizard::queryConfirmations(const QString& txid)
 
 void ProposalWizard::onNextFromDetails()
 {
+    // Validate fields first
+    validateFields();
+    if (!m_ui->labelError->text().isEmpty()) {
+        return; // Don't proceed if there are errors
+    }
+
     buildJsonAndHex();
-    m_ui->stackedWidget->setCurrentIndex(1);
-    onValidateJson(); // Automatically validate when entering the review page
+    m_ui->stackedWidget->setCurrentIndex(1); // Go to pagePrepare
 }
 
 void ProposalWizard::onBackToDetails() { m_ui->stackedWidget->setCurrentIndex(0); }
-
-void ProposalWizard::onValidateJson()
-{
-    buildJsonAndHex();
-    CProposalValidator validator(m_hex.toStdString());
-    if (validator.Validate()) {
-        m_ui->labelValidateStatus->setText(tr("Valid"));
-        m_ui->btnNext2->setEnabled(true);
-    } else {
-        m_ui->labelValidateStatus->setText(tr("Invalid: %1").arg(QString::fromStdString(validator.GetErrorMessages())));
-        m_ui->btnNext2->setEnabled(false);
-    }
-}
-
-void ProposalWizard::onNextFromReview() { m_ui->stackedWidget->setCurrentIndex(2); }
-
-void ProposalWizard::onBackToReview() { m_ui->stackedWidget->setCurrentIndex(1); }
 
 void ProposalWizard::onPrepare()
 {
@@ -327,7 +343,7 @@ void ProposalWizard::onGoToSubmit()
     // Only allow entering the submit step if we have a prepared txid and at least relay confirmations
     if (m_txid.isEmpty()) return;
     if (m_lastConfs < m_relayRequiredConfs) return;
-    m_ui->stackedWidget->setCurrentIndex(3);
+    m_ui->stackedWidget->setCurrentIndex(2); // Go to pageSubmit
 }
 
 void ProposalWizard::updateLabels()
@@ -353,4 +369,28 @@ void ProposalWizard::updateDisplayUnit()
         m_ui->paymentAmount->setDisplayUnit(m_walletModel->getOptionsModel()->getDisplayUnit());
     }
     updateLabels();
+}
+
+void ProposalWizard::validateFields()
+{
+    if (m_ui->editName->text().trimmed().isEmpty() && m_ui->editUrl->text().trimmed().isEmpty() &&
+        m_ui->editPayAddr->text().trimmed().isEmpty() && m_ui->paymentAmount->value() == 0)
+    {
+        // If all fields are empty, clear the error label
+        m_ui->labelError->clear();
+        return;
+    }
+
+    buildJsonAndHex();
+    CProposalValidator validator(m_hex.toStdString());
+    if (validator.Validate()) {
+        m_ui->labelError->clear();
+    } else {
+        // Show first error only
+        QString errors = QString::fromStdString(validator.GetErrorMessages());
+        if (int semicolon = errors.indexOf(';'); semicolon > 0) {
+            errors = errors.left(semicolon);
+        }
+        m_ui->labelError->setText(errors);
+    }
 }
