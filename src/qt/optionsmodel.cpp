@@ -856,7 +856,7 @@ bool OptionsModel::setOption(OptionID option, const QVariant& value, const std::
     case CoinJoinEnabled:
         if (changed()) {
             update(value.toBool());
-            Q_EMIT coinJoinEnabledChanged();
+            Q_EMIT showCoinJoinChanged();
         }
         break;
     case ShowAdvancedCJUI:
