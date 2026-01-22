@@ -27,7 +27,7 @@ class GovernanceList;
 class ClientModel;
 class ProposalModel;
 class WalletModel;
-class ProposalWizard;
+class ProposalCreate;
 
 class CDeterministicMNList;
 enum vote_outcome_enum_t : int;
