@@ -16,6 +16,7 @@
 #include <atomic>
 #include <map>
 #include <memory>
+#include <vector>
 
 inline constexpr int GOVERNANCELIST_UPDATE_SECONDS = 10;
 
@@ -30,6 +31,15 @@ class ProposalWizard;
 
 class CDeterministicMNList;
 enum vote_outcome_enum_t : int;
+
+namespace Governance {
+class Object;
+} // namespace Governance
+
+enum class ProposalSource : uint8_t {
+    Active,
+    Local
+};
 
 /** Governance Manager page widget */
 class GovernanceList : public QWidget
@@ -58,8 +68,11 @@ private:
     // Voting-related members
     std::map<uint256, CKeyID> votableMasternodes; // proTxHash -> voting keyID
 
+    ProposalSource currentSource{ProposalSource::Active};
+
 private:
     bool canVote() const { return !votableMasternodes.empty(); }
+    std::vector<Governance::Object> getWalletProposals(bool pending) const;
     void refreshColumnWidths();
     void updateVotingCapability();
     void voteForProposal(vote_outcome_enum_t outcome);
@@ -73,6 +86,7 @@ private Q_SLOTS:
     void updateProposalList();
     void updateProposalCount();
     void updateMasternodeCount() const;
+    void setProposalSource(int index);
     void showProposalContextMenu(const QPoint& pos);
     void showAdditionalInfo(const QModelIndex& index);
     void showCreateProposalDialog();

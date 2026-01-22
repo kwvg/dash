@@ -7,6 +7,7 @@
 #include <evo/deterministicmns.h>
 #include <governance/governance.h>
 #include <governance/vote.h>
+#include <util/underlying.h>
 
 #include <qt/descriptiondialog.h>
 #include <qt/governancelist.h>
@@ -66,6 +67,10 @@ GovernanceList::GovernanceList(QWidget* parent) :
     connect(ui->govTableView, &QTableView::doubleClicked, this, &GovernanceList::showAdditionalInfo);
     connect(ui->govTableView->horizontalHeader(), &QHeaderView::sectionResized, this, &GovernanceList::refreshColumnWidths);
 
+    ui->proposalSourceCombo->addItem(tr("Active Proposals"), ToUnderlying(ProposalSource::Active));
+    ui->proposalSourceCombo->setMinimumWidth(250);
+    connect(ui->proposalSourceCombo, qOverload<int>(&QComboBox::activated), this, &GovernanceList::setProposalSource);
+
     // Set up filtering.
     proposalModelProxy->setSourceModel(proposalModel);
     proposalModelProxy->setSortRole(Qt::EditRole);
@@ -90,22 +95,71 @@ GovernanceList::GovernanceList(QWidget* parent) :
 
 GovernanceList::~GovernanceList() = default;
 
+std::vector<Governance::Object> GovernanceList::getWalletProposals(bool pending) const
+{
+    if (!clientModel || !walletModel) {
+        return {};
+    }
+
+    wallet::CWallet* pwallet = walletModel->wallet().wallet();
+    if (!pwallet) {
+        return {};
+    }
+
+    std::vector<Governance::Object> wallet_objs;
+    {
+        LOCK(pwallet->cs_wallet);
+        for (const auto* obj : pwallet->GetGovernanceObjects()) {
+            wallet_objs.push_back(*obj);
+        }
+    }
+
+    const int64_t now{GetTime()};
+    std::vector<Governance::Object> result{};
+    for (const auto& obj : wallet_objs) {
+        const bool is_broadcast{clientModel->node().gov().existsObj(obj.GetHash())};
+        bool is_stale{false};
+        try {
+            UniValue json_data;
+            json_data.read(obj.GetDataAsPlainString());
+            if (json_data.exists("type") && json_data["type"].getInt<int>() != 1) {
+                // Not a voting proposal
+                continue;
+            }
+            if (json_data.exists("end_epoch")) {
+                is_stale = json_data["end_epoch"].getInt<int64_t>() < now;
+            }
+        } catch (const std::exception&) {
+            // Unparsable objects are skipped
+            continue;
+        }
+        if (pending != (is_broadcast || is_stale)) {
+            result.push_back(obj);
+        }
+    }
+
+    return result;
+}
+
 void GovernanceList::setClientModel(ClientModel* model)
 {
-    this->clientModel = model;
-    if (model != nullptr) {
-        connect(model->getOptionsModel(), &OptionsModel::displayUnitChanged, this, &GovernanceList::updateDisplayUnit);
-
-        updateProposalList();
+    clientModel = model;
+    if (!model) return;
+    connect(model->getOptionsModel(), &OptionsModel::displayUnitChanged, this, &GovernanceList::updateDisplayUnit);
+    if (walletModel && ui->proposalSourceCombo->findData(ToUnderlying(ProposalSource::Local)) == -1) {
+        ui->proposalSourceCombo->addItem(tr("My Proposals"), ToUnderlying(ProposalSource::Local));
     }
+    updateProposalList();
 }
 
 void GovernanceList::setWalletModel(WalletModel* model)
 {
-    this->walletModel = model;
-    if (model && clientModel) {
-        updateVotingCapability();
+    walletModel = model;
+    if (!model) return;
+    if (clientModel && ui->proposalSourceCombo->findData(ToUnderlying(ProposalSource::Local)) == -1) {
+        ui->proposalSourceCombo->addItem(tr("My Proposals"), ToUnderlying(ProposalSource::Local));
     }
+    updateVotingCapability();
 }
 
 void GovernanceList::updateDisplayUnit()
@@ -126,18 +180,23 @@ void GovernanceList::updateProposalList()
         const int nAbsVoteReq = std::max(Params().GetConsensus().nGovernanceMinQuorum, nWeightedMnCount / 10);
         proposalModel->setVotingParams(nAbsVoteReq);
 
-        std::vector<CGovernanceObject> govObjList;
-        clientModel->getAllGovernanceObjects(govObjList);
         ProposalList newProposals;
-        for (const auto& govObj : govObjList) {
-            if (govObj.GetObjectType() != GovernanceObject::PROPOSAL) {
-                continue; // Skip triggers.
+        if (currentSource == ProposalSource::Active) {
+            std::vector<CGovernanceObject> govObjList;
+            clientModel->getAllGovernanceObjects(govObjList);
+            for (const auto& govObj : govObjList) {
+                if (govObj.GetObjectType() != GovernanceObject::PROPOSAL) {
+                    continue; // Skip triggers.
+                }
+                newProposals.emplace_back(std::make_unique<Proposal>(this->clientModel, govObj));
             }
-            newProposals.emplace_back(std::make_unique<Proposal>(this->clientModel, govObj));
+        } else if (currentSource == ProposalSource::Local) {
+            for (const auto& obj : getWalletProposals(/*pending=*/false)) {
+                CGovernanceObject govObj(obj.hashParent, obj.revision, obj.time, obj.collateralHash, obj.GetDataAsHexString());
+                newProposals.emplace_back(std::make_unique<Proposal>(this->clientModel, govObj));
+            }
         }
         proposalModel->reconcile(std::move(newProposals));
-
-        // Update voting capability if we now have both client and wallet models
         if (walletModel) {
             updateVotingCapability();
         }
@@ -244,6 +303,13 @@ void GovernanceList::updateMasternodeCount() const
     if (ui && ui->mnCountLabel) {
         ui->mnCountLabel->setText(QString::number(votableMasternodes.size()));
     }
+}
+
+void GovernanceList::setProposalSource(int index)
+{
+    currentSource = static_cast<ProposalSource>(ui->proposalSourceCombo->itemData(index).toInt());
+    ui->govTableView->setColumnHidden(ProposalModel::Column::VOTING_STATUS, currentSource == ProposalSource::Local);
+    updateProposalList();
 }
 
 void GovernanceList::voteYes() { voteForProposal(VOTE_OUTCOME_YES); }
@@ -424,10 +490,10 @@ void GovernanceList::refreshColumnWidths()
     header->setSectionResizeMode(ProposalModel::Column::HASH, QHeaderView::ResizeToContents);
 
     // Calculate width used by ResizeToContents columns
-    const int availableWidth = [&header, &tableWidth](){
+    const int availableWidth = [this, &header, &tableWidth](){
         int fixedWidth = 0;
         for (int idx = 0; idx < ProposalModel::Column::_COUNT; idx++) {
-            if (idx != ProposalModel::Column::TITLE && idx != ProposalModel::Column::HASH) {
+            if (idx != ProposalModel::Column::TITLE && idx != ProposalModel::Column::HASH && !ui->govTableView->isColumnHidden(idx)) {
                 fixedWidth += header->sectionSize(idx);
             }
         }

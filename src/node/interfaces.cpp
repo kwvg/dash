@@ -257,6 +257,13 @@ public:
         }
         return 0;
     }
+    bool existsObj(const uint256& hash) override
+    {
+        if (context().govman != nullptr) {
+            return context().govman->HaveObjectForHash(hash);
+        }
+        return false;
+    }
     bool getObjLocalValidity(const CGovernanceObject& obj, std::string& error, bool check_collateral) override
     {
         if (context().govman != nullptr && context().chainman != nullptr && context().dmnman != nullptr) {
