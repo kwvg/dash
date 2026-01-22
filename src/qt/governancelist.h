@@ -74,10 +74,13 @@ private:
     bool canVote() const { return !votableMasternodes.empty(); }
     std::vector<Governance::Object> getWalletProposals(bool pending) const;
     void refreshColumnWidths();
+    void updateEmptyPagePalette();
+    void updateEmptyState();
     void updateVotingCapability();
     void voteForProposal(vote_outcome_enum_t outcome);
 
 protected:
+    void changeEvent(QEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
 
