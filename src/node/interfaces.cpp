@@ -292,13 +292,7 @@ public:
         const Consensus::Params& consensusParams = Params().GetConsensus();
 
         if (ctx.chainman) {
-            const CBlockIndex* tip = WITH_LOCK(::cs_main, return ctx.chainman->ActiveChain().Tip());
-            int last = 0;
-            int next = 0;
-            const int height = tip ? tip->nHeight : 0;
-            CSuperblock::GetNearestSuperblocksHeights(height, last, next);
-            info.lastsuperblock = last;
-            info.nextsuperblock = next;
+            CSuperblock::GetNearestSuperblocksHeights(ctx.chainman->ActiveHeight(), info.lastsuperblock, info.nextsuperblock);
         }
         info.proposalfee = GOVERNANCE_PROPOSAL_FEE_TX;
         info.superblockcycle = consensusParams.nSuperblockCycle;
@@ -312,6 +306,21 @@ public:
             info.governancebudget = CSuperblock::GetPaymentsLimit(ctx.chainman->ActiveChain(), info.nextsuperblock);
         }
         return info;
+    }
+    std::optional<int32_t> getProposalFundedHeight(const uint256& proposal_hash) override
+    {
+        if (context().govman != nullptr && context().chainman != nullptr) {
+            const int32_t nTipHeight = context().chainman->ActiveHeight();
+            for (const auto& trigger : context().govman->GetActiveTriggers()) {
+                if (!trigger || trigger->GetBlockHeight() > nTipHeight) continue;
+                for (const auto& hash : trigger->GetProposalHashes()) {
+                    if (hash == proposal_hash) {
+                        return trigger->GetBlockHeight();
+                    }
+                }
+            }
+        }
+        return std::nullopt;
     }
     std::optional<CGovernanceObject> createProposal(int32_t revision, int64_t created_time,
                         const std::string& data_hex, std::string& error) override

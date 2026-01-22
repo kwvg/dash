@@ -102,6 +102,26 @@ QString Proposal::toJson() const
     return QString::fromStdString(json.write(2));
 }
 
+int Proposal::blocksUntilSuperblock() const
+{
+    const auto params = clientModel->node().gov().getGovernanceInfo();
+    return params.nextsuperblock - clientModel->getNumBlocks();
+}
+
+ProposalStatus Proposal::status() const
+{
+    const auto params = clientModel->node().gov().getGovernanceInfo();
+    if (const auto height{FundedHeight()}; height.has_value()) {
+        return ProposalStatus::Funded;
+    } else if (QDateTime::currentDateTime() >= endDate()) {
+        return ProposalStatus::Lapsed;
+    } else if (QDateTime::currentDateTime() >= startDate() &&
+               clientModel->getNumBlocks() % params.superblockcycle >= params.superblockcycle - params.superblockmaturitywindow) {
+        return ProposalStatus::Pending;
+    }
+    return ProposalStatus::Voting;
+}
+
 bool Proposal::isActive() const
 {
     std::string strError;
@@ -126,6 +146,11 @@ int Proposal::GetYesCount() const
 int Proposal::GetNoCount() const
 {
     return clientModel->node().gov().getObjNoCount(govObj, VOTE_SIGNAL_FUNDING);
+}
+
+std::optional<int> Proposal::FundedHeight() const
+{
+    return clientModel->node().gov().getProposalFundedHeight(govObj.GetHash());
 }
 
 ///
@@ -155,7 +180,7 @@ QVariant ProposalModel::data(const QModelIndex& index, int role) const
             return QVariant::fromValue(GUIUtil::getThemedQColor(GUIUtil::ThemedColor::UNCONFIRMED));
         }
     }
-    if (role != Qt::DisplayRole && role != Qt::EditRole && role != Qt::ToolTipRole) {
+    if (role != Qt::DisplayRole && role != Qt::DecorationRole && role != Qt::EditRole && role != Qt::ToolTipRole) {
         return {};
     }
 
@@ -164,6 +189,8 @@ QVariant ProposalModel::data(const QModelIndex& index, int role) const
     case Qt::DisplayRole:
     {
         switch (index.column()) {
+        case Column::STATUS:
+            return {};
         case Column::HASH:
             return proposal->hash();
         case Column::TITLE:
@@ -176,8 +203,6 @@ QVariant ProposalModel::data(const QModelIndex& index, int role) const
             return BitcoinUnits::floorWithUnit(m_display_unit, proposal->paymentAmount() * COIN, false,
                                                BitcoinUnits::SeparatorStyle::ALWAYS);
         }
-        case Column::IS_ACTIVE:
-            return proposal->isActive() ? tr("Yes") : tr("No");
         case Column::VOTING_STATUS: {
             const int margin = proposal->GetAbsoluteYesCount() - nAbsVoteReq;
             return QString("%1Y, %2N, %3A (%4%5)").arg(proposal->GetYesCount()).arg(proposal->GetNoCount())
@@ -194,6 +219,8 @@ QVariant ProposalModel::data(const QModelIndex& index, int role) const
     {
         // Edit role is used for sorting, so return the raw values where possible
         switch (index.column()) {
+        case Column::STATUS:
+            return static_cast<int>(proposal->status());
         case Column::HASH:
             return proposal->hash();
         case Column::TITLE:
@@ -204,8 +231,6 @@ QVariant ProposalModel::data(const QModelIndex& index, int role) const
             return proposal->endDate();
         case Column::PAYMENT_AMOUNT:
             return proposal->paymentAmount();
-        case Column::IS_ACTIVE:
-            return proposal->isActive();
         case Column::VOTING_STATUS:
             return proposal->GetAbsoluteYesCount();
         default:
@@ -215,6 +240,20 @@ QVariant ProposalModel::data(const QModelIndex& index, int role) const
     }
     case Qt::ToolTipRole:
     {
+        if (index.column() == Column::STATUS) {
+            switch (proposal->status()) {
+            case ProposalStatus::Voting:
+            case ProposalStatus::Pending: {
+                const int blocks{std::max(0, proposal->blocksUntilSuperblock())};
+                return tr("%1, %2 %3 till superblock").arg(proposal->status() == ProposalStatus::Voting ? tr("Voting") : tr("Voted"))
+                                                      .arg(blocks).arg(blocks == 1 ? tr("block") : tr("blocks"));
+            }
+            case ProposalStatus::Funded:
+                return tr("Funded at block %1").arg(proposal->FundedHeight().value_or(0));
+            case ProposalStatus::Lapsed:
+                return tr("Lapsed, proposal validity ended");
+            }
+        }
         if (index.column() == Column::VOTING_STATUS) {
             const int margin = proposal->GetAbsoluteYesCount() - nAbsVoteReq;
             return tr("%1 Yes, %2 No, %3 Abstain, %4").arg(proposal->GetYesCount()).arg(proposal->GetNoCount())
@@ -223,7 +262,23 @@ QVariant ProposalModel::data(const QModelIndex& index, int role) const
         }
         return {};
     }
-    };
+    case Qt::DecorationRole:
+    {
+        if (index.column() == Column::STATUS) {
+            switch (proposal->status()) {
+            case ProposalStatus::Voting:
+                return GUIUtil::getIcon("transaction_5", GUIUtil::ThemedColor::ORANGE);
+            case ProposalStatus::Pending:
+                return GUIUtil::getIcon("transaction_5", GUIUtil::ThemedColor::BLUE);
+            case ProposalStatus::Funded:
+                return GUIUtil::getIcon("synced", GUIUtil::ThemedColor::GREEN);
+            case ProposalStatus::Lapsed:
+                return GUIUtil::getIcon("lock_closed", GUIUtil::ThemedColor::RED);
+            }
+        }
+        return {};
+    }
+    }
     return {};
 }
 
@@ -234,6 +289,8 @@ QVariant ProposalModel::headerData(int section, Qt::Orientation orientation, int
     }
 
     switch (section) {
+    case Column::STATUS:
+        return {};
     case Column::HASH:
         return tr("Hash");
     case Column::TITLE:
@@ -244,8 +301,6 @@ QVariant ProposalModel::headerData(int section, Qt::Orientation orientation, int
         return tr("End");
     case Column::PAYMENT_AMOUNT:
         return tr("Amount");
-    case Column::IS_ACTIVE:
-        return tr("Active");
     case Column::VOTING_STATUS:
         return tr("Votes");
     default:

@@ -153,6 +153,7 @@ public:
         int requiredConfs{6};
     };
     virtual GovernanceInfo getGovernanceInfo() = 0;
+    virtual std::optional<int32_t> getProposalFundedHeight(const uint256& proposal_hash) = 0;
     virtual std::optional<CGovernanceObject> createProposal(int32_t revision, int64_t created_time,
                                 const std::string& data_hex, std::string& error) = 0;
     virtual bool submitProposal(const uint256& parent, int32_t revision, int64_t created_time, const std::string& data_hex,

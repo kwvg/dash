@@ -416,10 +416,10 @@ void GovernanceList::refreshColumnWidths()
 
     auto* header = ui->govTableView->horizontalHeader();
     header->setMinimumSectionSize(0);
+    header->setSectionResizeMode(ProposalModel::Column::STATUS, QHeaderView::ResizeToContents);
     header->setSectionResizeMode(ProposalModel::Column::PAYMENT_AMOUNT, QHeaderView::ResizeToContents);
     header->setSectionResizeMode(ProposalModel::Column::START_DATE, QHeaderView::ResizeToContents);
     header->setSectionResizeMode(ProposalModel::Column::END_DATE, QHeaderView::ResizeToContents);
-    header->setSectionResizeMode(ProposalModel::Column::IS_ACTIVE, QHeaderView::ResizeToContents);
     header->setSectionResizeMode(ProposalModel::Column::VOTING_STATUS, QHeaderView::ResizeToContents);
     header->setSectionResizeMode(ProposalModel::Column::HASH, QHeaderView::ResizeToContents);
 

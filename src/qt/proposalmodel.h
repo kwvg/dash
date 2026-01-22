@@ -16,7 +16,16 @@
 #include <memory>
 #include <vector>
 
+#include <optional>
+
 class ClientModel;
+
+enum class ProposalStatus : uint8_t {
+    Voting,
+    Pending,
+    Funded,
+    Lapsed
+};
 
 class Proposal
 {
@@ -40,7 +49,9 @@ public:
 
     bool isActive() const;
     double paymentAmount() const { return m_paymentAmount; }
+    int blocksUntilSuperblock() const;
     int paymentsRequested() const;
+    ProposalStatus status() const;
     QDateTime collateralDate() const { return m_date_collateral; }
     QDateTime endDate() const { return m_endDate; }
     QDateTime startDate() const { return m_startDate; }
@@ -57,6 +68,7 @@ public:
     int GetAbstainCount() const;
     int GetYesCount() const;
     int GetNoCount() const;
+    std::optional<int> FundedHeight() const;
 };
 
 using ProposalList = std::vector<std::unique_ptr<Proposal>>;
@@ -75,11 +87,11 @@ public:
         QAbstractTableModel(parent){};
 
     enum Column : int {
-        TITLE = 0,
+        STATUS = 0,
+        TITLE,
         PAYMENT_AMOUNT,
         START_DATE,
         END_DATE,
-        IS_ACTIVE,
         VOTING_STATUS,
         HASH,
         _COUNT // for internal use only
