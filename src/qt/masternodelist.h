@@ -43,8 +43,8 @@ public:
     explicit MasternodeList(QWidget* parent = nullptr);
     ~MasternodeList();
 
-    enum {
-        COLUMN_SERVICE,
+    enum Column : int {
+        COLUMN_SERVICE = 0,
         COLUMN_TYPE,
         COLUMN_STATUS,
         COLUMN_POSE,
@@ -57,7 +57,10 @@ public:
         COLUMN_OWNER_ADDRESS,
         COLUMN_VOTING_ADDRESS,
         COLUMN_PROTX_HASH,
+        COLUMN_COUNT
     };
+
+    static int columnWidth(int column);
 
     void setClientModel(ClientModel* clientModel);
     void setWalletModel(WalletModel* walletModel);

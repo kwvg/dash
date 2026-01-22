@@ -34,6 +34,32 @@ public:
     }
 };
 
+int MasternodeList::columnWidth(int column)
+{
+    switch (column) {
+    case COLUMN_SERVICE:
+        return 200;
+    case COLUMN_TYPE:
+        return 160;
+    case COLUMN_STATUS:
+    case COLUMN_POSE:
+    case COLUMN_REGISTERED:
+    case COLUMN_LAST_PAYMENT:
+        return 80;
+    case COLUMN_NEXT_PAYMENT:
+        return 100;
+    case COLUMN_PAYOUT_ADDRESS:
+    case COLUMN_OPERATOR_REWARD:
+    case COLUMN_COLLATERAL_ADDRESS:
+    case COLUMN_OWNER_ADDRESS:
+    case COLUMN_VOTING_ADDRESS:
+        return 130;
+    case COLUMN_PROTX_HASH:
+    default:
+        return 80;
+    }
+}
+
 MasternodeList::MasternodeList(QWidget* parent) :
     QWidget(parent),
     ui(new Ui::MasternodeList)
@@ -45,31 +71,10 @@ MasternodeList::MasternodeList(QWidget* parent) :
                      }, {GUIUtil::g_font_registry.GetWeightBold(), 14});
     GUIUtil::setFont({ui->label_filter_2}, {GUIUtil::g_font_registry.GetWeightNormal(), 15});
 
-    int columnAddressWidth = 200;
-    int columnTypeWidth = 160;
-    int columnStatusWidth = 80;
-    int columnPoSeScoreWidth = 80;
-    int columnRegisteredWidth = 80;
-    int columnLastPaidWidth = 80;
-    int columnNextPaymentWidth = 100;
-    int columnPayeeWidth = 130;
-    int columnOperatorRewardWidth = 130;
-    int columnCollateralWidth = 130;
-    int columnOwnerWidth = 130;
-    int columnVotingWidth = 130;
-
-    ui->tableWidgetMasternodesDIP3->setColumnWidth(COLUMN_SERVICE, columnAddressWidth);
-    ui->tableWidgetMasternodesDIP3->setColumnWidth(COLUMN_TYPE, columnTypeWidth);
-    ui->tableWidgetMasternodesDIP3->setColumnWidth(COLUMN_STATUS, columnStatusWidth);
-    ui->tableWidgetMasternodesDIP3->setColumnWidth(COLUMN_POSE, columnPoSeScoreWidth);
-    ui->tableWidgetMasternodesDIP3->setColumnWidth(COLUMN_REGISTERED, columnRegisteredWidth);
-    ui->tableWidgetMasternodesDIP3->setColumnWidth(COLUMN_LAST_PAYMENT, columnLastPaidWidth);
-    ui->tableWidgetMasternodesDIP3->setColumnWidth(COLUMN_NEXT_PAYMENT, columnNextPaymentWidth);
-    ui->tableWidgetMasternodesDIP3->setColumnWidth(COLUMN_PAYOUT_ADDRESS, columnPayeeWidth);
-    ui->tableWidgetMasternodesDIP3->setColumnWidth(COLUMN_OPERATOR_REWARD, columnOperatorRewardWidth);
-    ui->tableWidgetMasternodesDIP3->setColumnWidth(COLUMN_COLLATERAL_ADDRESS, columnCollateralWidth);
-    ui->tableWidgetMasternodesDIP3->setColumnWidth(COLUMN_OWNER_ADDRESS, columnOwnerWidth);
-    ui->tableWidgetMasternodesDIP3->setColumnWidth(COLUMN_VOTING_ADDRESS, columnVotingWidth);
+    // Set column widths
+    for (int col = 0; col < COLUMN_PROTX_HASH; ++col) {
+        ui->tableWidgetMasternodesDIP3->setColumnWidth(col, columnWidth(col));
+    }
 
     // dummy column for proTxHash
     ui->tableWidgetMasternodesDIP3->insertColumn(COLUMN_PROTX_HASH);
