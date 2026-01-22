@@ -7,6 +7,7 @@
 
 #include <evo/dmn_types.h>
 
+#include <QAbstractTableModel>
 #include <QByteArray>
 #include <QString>
 
@@ -74,5 +75,50 @@ public:
 };
 
 using MasternodeEntryList = std::vector<std::unique_ptr<MasternodeEntry>>;
+
+///
+/// MasternodeModel - Qt model for masternode list
+///
+class MasternodeModel : public QAbstractTableModel
+{
+    Q_OBJECT
+
+private:
+    MasternodeEntryList m_data;
+
+    bool isValidRow(int row) const { return row >= 0 && row < static_cast<int>(m_data.size()); }
+
+public:
+    enum Column : int {
+        SERVICE = 0,
+        TYPE,
+        STATUS,
+        POSE,
+        REGISTERED,
+        LAST_PAYMENT,
+        NEXT_PAYMENT,
+        PAYOUT_ADDRESS,
+        OPERATOR_REWARD,
+        COLLATERAL_ADDRESS,
+        OWNER_ADDRESS,
+        VOTING_ADDRESS,
+        PROTX_HASH,
+        _COUNT
+    };
+
+    explicit MasternodeModel(QObject* parent = nullptr) : QAbstractTableModel(parent) {}
+
+    int rowCount(const QModelIndex& index = {}) const override;
+    int columnCount(const QModelIndex& index = {}) const override;
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+
+    static int columnWidth(int section);
+
+    void append(std::unique_ptr<MasternodeEntry>&& entry);
+    void remove(int row);
+    void reconcile(MasternodeEntryList&& entries);
+    const MasternodeEntry* getEntryAt(const QModelIndex& index) const;
+};
 
 #endif // BITCOIN_QT_MASTERNODEMODEL_H

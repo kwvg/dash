@@ -5,14 +5,15 @@
 #ifndef BITCOIN_QT_MASTERNODELIST_H
 #define BITCOIN_QT_MASTERNODELIST_H
 
-#include <qt/masternodemodel.h>
-
-#include <sync.h>
 #include <util/system.h>
 
 #include <QMenu>
+#include <QSortFilterProxyModel>
+#include <QString>
 #include <QTimer>
 #include <QWidget>
+
+#include <set>
 
 #define MASTERNODELIST_UPDATE_SECONDS 3
 #define MASTERNODELIST_FILTER_COOLDOWN_SECONDS 3
@@ -23,11 +24,33 @@ class MasternodeList;
 }
 
 class ClientModel;
+class MasternodeEntry;
+class MasternodeModel;
 class WalletModel;
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
 QT_END_NAMESPACE
+
+class MasternodeListSortFilterProxyModel : public QSortFilterProxyModel
+{
+    Q_OBJECT
+
+public:
+    explicit MasternodeListSortFilterProxyModel(QObject* parent = nullptr) :
+        QSortFilterProxyModel(parent) {}
+
+    void setShowMyMasternodesOnly(bool show) { m_show_my_only = show; }
+    void setMyMasternodeHashes(const std::set<QString>& hashes) { m_my_mn_hashes = hashes; }
+    void forceInvalidateFilter() { invalidateFilter(); }
+
+protected:
+    bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override;
+
+private:
+    bool m_show_my_only{false};
+    std::set<QString> m_my_mn_hashes;
+};
 
 /** Masternode Manager page widget */
 class MasternodeList : public QWidget
@@ -37,25 +60,6 @@ class MasternodeList : public QWidget
 public:
     explicit MasternodeList(QWidget* parent = nullptr);
     ~MasternodeList();
-
-    enum Column : int {
-        COLUMN_SERVICE = 0,
-        COLUMN_TYPE,
-        COLUMN_STATUS,
-        COLUMN_POSE,
-        COLUMN_REGISTERED,
-        COLUMN_LAST_PAYMENT,
-        COLUMN_NEXT_PAYMENT,
-        COLUMN_PAYOUT_ADDRESS,
-        COLUMN_OPERATOR_REWARD,
-        COLUMN_COLLATERAL_ADDRESS,
-        COLUMN_OWNER_ADDRESS,
-        COLUMN_VOTING_ADDRESS,
-        COLUMN_PROTX_HASH,
-        COLUMN_COUNT
-    };
-
-    static int columnWidth(int column);
 
     void setClientModel(ClientModel* clientModel);
     void setWalletModel(WalletModel* walletModel);
@@ -71,18 +75,15 @@ private:
     ClientModel* clientModel{nullptr};
     WalletModel* walletModel{nullptr};
 
-    // Protects tableWidgetMasternodesDIP3
-    RecursiveMutex cs_dip3list;
-
-    QString strCurrentFilterDIP3;
+    MasternodeModel* m_model{nullptr};
+    MasternodeListSortFilterProxyModel* m_proxy_model{nullptr};
 
     bool mnListChanged{true};
-
-    MasternodeEntryList m_entries;
 
     const MasternodeEntry* GetSelectedEntry();
 
     void updateDIP3List();
+    void updateMyMasternodeHashes();
 
 Q_SIGNALS:
     void doubleClicked(const QModelIndex&);
@@ -98,5 +99,6 @@ private Q_SLOTS:
 
     void handleMasternodeListChanged();
     void updateDIP3ListScheduled();
+    void updateFilteredCount();
 };
 #endif // BITCOIN_QT_MASTERNODELIST_H
