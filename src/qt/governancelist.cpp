@@ -5,6 +5,7 @@
 #include <qt/forms/ui_governancelist.h>
 
 #include <evo/deterministicmns.h>
+#include <governance/common.h>
 #include <governance/governance.h>
 #include <governance/vote.h>
 #include <util/underlying.h>
@@ -13,6 +14,7 @@
 #include <qt/governancelist.h>
 #include <qt/guiutil_font.h>
 #include <qt/proposalmodel.h>
+#include <qt/proposalresume.h>
 #include <qt/proposalwizard.h>
 
 #include <chainparams.h>
@@ -20,6 +22,7 @@
 #include <interfaces/wallet.h>
 #include <script/standard.h>
 #include <util/strencodings.h>
+#include <util/time.h>
 #include <wallet/wallet.h>
 
 #include <qt/clientmodel.h>
@@ -36,6 +39,8 @@
 #include <QShowEvent>
 #include <QMessageBox>
 #include <QUrl>
+
+#include <univalue.h>
 
 namespace {
 constexpr int TITLE_MIN_WIDTH{220};
@@ -86,8 +91,9 @@ GovernanceList::GovernanceList(QWidget* parent) :
     connect(proposalModelProxy, &QSortFilterProxyModel::rowsRemoved, this, &GovernanceList::updateProposalCount);
     connect(proposalModelProxy, &QSortFilterProxyModel::layoutChanged, this, &GovernanceList::updateProposalCount);
 
-    // Create Proposal button
+    // Connect buttons
     connect(ui->btnCreateProposal, &QPushButton::clicked, this, &GovernanceList::showCreateProposalDialog);
+    connect(ui->btnResumeProposal, &QPushButton::clicked, this, &GovernanceList::showResumeProposalDialog);
 
     connect(timer, &QTimer::timeout, this, &GovernanceList::updateProposalList);
 
@@ -264,6 +270,22 @@ void GovernanceList::showCreateProposalDialog()
     proposalWizard->setModal(false);
     proposalWizard->setWindowFlag(Qt::Window, true);
     proposalWizard->show();
+}
+
+void GovernanceList::showResumeProposalDialog()
+{
+    if (!clientModel || !walletModel) {
+        QMessageBox::warning(this, tr("Resume proposal"), tr("A synced node and an unlocked wallet are required."));
+        return;
+    }
+
+    const auto proposals = getWalletProposals(/*pending=*/true);
+    ProposalResume* dialog = new ProposalResume(clientModel->node(), clientModel, walletModel, proposals, this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+    dialog->setWindowModality(Qt::NonModal);
+    dialog->setModal(false);
+    dialog->setWindowFlag(Qt::Window, true);
+    dialog->show();
 }
 
 void GovernanceList::showProposalContextMenu(const QPoint& pos)
