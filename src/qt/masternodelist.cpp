@@ -19,10 +19,31 @@
 
 bool MasternodeListSortFilterProxyModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
 {
-    // First check text filter
+    // Check type filter
+    if (m_type_filter != All) {
+        QModelIndex idx = sourceModel()->index(source_row, MasternodeModel::TYPE, source_parent);
+        int type = sourceModel()->data(idx, Qt::EditRole).toInt();
+        // MnType::Regular = 0, MnType::Evo = 1
+        if (m_type_filter == Regular && type != 0) {
+            return false;
+        }
+        if (m_type_filter == Evo && type != 1) {
+            return false;
+        }
+    }
+
+    // Check banned filter
+    if (m_hide_banned) {
+        QModelIndex idx = sourceModel()->index(source_row, MasternodeModel::STATUS, source_parent);
+        int banned = sourceModel()->data(idx, Qt::EditRole).toInt();
+        if (banned != 0) {
+            return false;
+        }
+    }
+
+    // Check text filter
     if (!filterRegularExpression().pattern().isEmpty()) {
         bool matches = false;
-        // Check all columns for match
         for (int col = 0; col < sourceModel()->columnCount(); ++col) {
             QModelIndex idx = sourceModel()->index(source_row, col, source_parent);
             QString data = sourceModel()->data(idx, Qt::DisplayRole).toString();
@@ -36,8 +57,8 @@ bool MasternodeListSortFilterProxyModel::filterAcceptsRow(int source_row, const 
         }
     }
 
-    // Then check "my masternodes only" filter
-    if (m_show_my_only && !m_my_mn_hashes.empty()) {
+    // Check "owned" filter
+    if (m_show_owned_only && !m_my_mn_hashes.empty()) {
         QModelIndex idx = sourceModel()->index(source_row, MasternodeModel::PROTX_HASH, source_parent);
         QString proTxHash = sourceModel()->data(idx, Qt::DisplayRole).toString();
         if (m_my_mn_hashes.find(proTxHash) == m_my_mn_hashes.end()) {
@@ -59,7 +80,6 @@ MasternodeList::MasternodeList(QWidget* parent) :
     GUIUtil::setFont({ui->label_count,
                       ui->countLabelDIP3
                      }, {GUIUtil::g_font_registry.GetWeightBold(), 14});
-    GUIUtil::setFont({ui->label_filter_2}, {GUIUtil::g_font_registry.GetWeightNormal(), 15});
 
     // Set up proxy model
     m_proxy_model->setSourceModel(m_model);
@@ -80,7 +100,7 @@ MasternodeList::MasternodeList(QWidget* parent) :
     // Hide ProTx Hash column (used for internal lookup)
     ui->tableViewMasternodes->setColumnHidden(MasternodeModel::PROTX_HASH, true);
 
-    ui->checkBoxMyMasternodesOnly->setEnabled(false);
+    ui->checkBoxOwned->setEnabled(false);
 
     contextMenuDIP3 = new QMenu(this);
     contextMenuDIP3->addAction(tr("Copy ProTx Hash"), this, &MasternodeList::copyProTxHash_clicked);
@@ -116,7 +136,7 @@ void MasternodeList::setClientModel(ClientModel* model)
 void MasternodeList::setWalletModel(WalletModel* model)
 {
     this->walletModel = model;
-    ui->checkBoxMyMasternodesOnly->setEnabled(model != nullptr);
+    ui->checkBoxOwned->setEnabled(model != nullptr);
 }
 
 void MasternodeList::showContextMenuDIP3(const QPoint& point)
@@ -228,7 +248,7 @@ void MasternodeList::updateDIP3List()
     m_model->reconcile(std::move(entries));
 
     // Update my masternodes filter if needed
-    if (walletModel && ui->checkBoxMyMasternodesOnly->isChecked()) {
+    if (walletModel && ui->checkBoxOwned->isChecked()) {
         updateMyMasternodeHashes();
     }
 
@@ -279,12 +299,26 @@ void MasternodeList::on_filterLineEditDIP3_textChanged(const QString& strFilterI
     ui->countLabelDIP3->setText(tr("Please wait…") + " " + QString::number(MASTERNODELIST_FILTER_COOLDOWN_SECONDS));
 }
 
-void MasternodeList::on_checkBoxMyMasternodesOnly_stateChanged(int state)
+void MasternodeList::on_comboBoxType_currentIndexChanged(int index)
 {
-    m_proxy_model->setShowMyMasternodesOnly(state == Qt::Checked);
+    m_proxy_model->setTypeFilter(static_cast<MasternodeListSortFilterProxyModel::TypeFilter>(index));
+    m_proxy_model->forceInvalidateFilter();
+    updateFilteredCount();
+}
+
+void MasternodeList::on_checkBoxOwned_stateChanged(int state)
+{
+    m_proxy_model->setShowOwnedOnly(state == Qt::Checked);
     if (state == Qt::Checked) {
         updateMyMasternodeHashes();
     }
+    m_proxy_model->forceInvalidateFilter();
+    updateFilteredCount();
+}
+
+void MasternodeList::on_checkBoxHideBanned_stateChanged(int state)
+{
+    m_proxy_model->setHideBanned(state == Qt::Checked);
     m_proxy_model->forceInvalidateFilter();
     updateFilteredCount();
 }
