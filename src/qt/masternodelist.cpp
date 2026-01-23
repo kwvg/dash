@@ -16,6 +16,7 @@
 
 #include <QApplication>
 #include <QClipboard>
+#include <QHeaderView>
 
 bool MasternodeListSortFilterProxyModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
 {
@@ -94,7 +95,11 @@ MasternodeList::MasternodeList(QWidget* parent) :
 
     // Set column widths
     for (int col = 0; col < MasternodeModel::_COUNT; ++col) {
-        ui->tableViewMasternodes->setColumnWidth(col, MasternodeModel::columnWidth(col));
+        if (col == MasternodeModel::STATUS) {
+            ui->tableViewMasternodes->horizontalHeader()->setSectionResizeMode(col, QHeaderView::ResizeToContents);
+        } else {
+            ui->tableViewMasternodes->setColumnWidth(col, MasternodeModel::columnWidth(col));
+        }
     }
 
     // Hide ProTx Hash column (used for internal lookup)

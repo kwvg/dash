@@ -11,6 +11,7 @@
 #include <script/standard.h>
 
 #include <qt/clientmodel.h>
+#include <qt/guiutil.h>
 
 #include <univalue.h>
 
@@ -191,11 +192,22 @@ QVariant MasternodeModel::data(const QModelIndex& index, int role) const
         return {};
     }
 
-    if (role != Qt::DisplayRole && role != Qt::EditRole) {
+    if (role != Qt::DisplayRole && role != Qt::EditRole && role != Qt::DecorationRole) {
         return {};
     }
 
     const auto* entry = m_data[index.row()].get();
+
+    if (role == Qt::DecorationRole) {
+        if (index.column() == Column::STATUS) {
+            // Cache icons to avoid expensive pixel-by-pixel colorization on every data() call
+            static QIcon iconEnabled = GUIUtil::getIcon("synced", GUIUtil::ThemedColor::GREEN);
+            static QIcon iconBanned = GUIUtil::getIcon("warning", GUIUtil::ThemedColor::RED);
+            return entry->isBanned() ? iconBanned : iconEnabled;
+        }
+        return {};
+    }
+
     if (role == Qt::DisplayRole) {
         switch (index.column()) {
         case Column::SERVICE:
@@ -203,7 +215,7 @@ QVariant MasternodeModel::data(const QModelIndex& index, int role) const
         case Column::TYPE:
             return entry->typeDescription();
         case Column::STATUS:
-            return entry->isBanned() ? tr("POSE_BANNED") : tr("ENABLED");
+            return {};
         case Column::POSE:
             return QString::number(entry->posePenalty());
         case Column::REGISTERED:
@@ -275,7 +287,7 @@ QVariant MasternodeModel::headerData(int section, Qt::Orientation orientation, i
     case Column::TYPE:
         return tr("Type");
     case Column::STATUS:
-        return tr("Status");
+        return {};
     case Column::POSE:
         return tr("PoSe Score");
     case Column::REGISTERED:
@@ -309,6 +321,7 @@ int MasternodeModel::columnWidth(int section)
     case Column::TYPE:
         return 160;
     case Column::STATUS:
+        return 0; // Uses ResizeToContents
     case Column::POSE:
     case Column::REGISTERED:
     case Column::LAST_PAYMENT:

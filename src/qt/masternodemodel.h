@@ -111,9 +111,9 @@ private:
 
 public:
     enum Column : int {
-        SERVICE = 0,
+        STATUS = 0,
+        SERVICE,
         TYPE,
-        STATUS,
         POSE,
         REGISTERED,
         LAST_PAYMENT,
