@@ -105,6 +105,9 @@ MasternodeList::MasternodeList(QWidget* parent) :
     // Hide ProTx Hash column (used for internal lookup)
     ui->tableViewMasternodes->setColumnHidden(MasternodeModel::PROTX_HASH, true);
 
+    // Hide PoSe column by default (since "Hide banned" is checked by default)
+    ui->tableViewMasternodes->setColumnHidden(MasternodeModel::POSE, true);
+
     ui->checkBoxOwned->setEnabled(false);
 
     contextMenuDIP3 = new QMenu(this);
@@ -323,7 +326,9 @@ void MasternodeList::on_checkBoxOwned_stateChanged(int state)
 
 void MasternodeList::on_checkBoxHideBanned_stateChanged(int state)
 {
-    m_proxy_model->setHideBanned(state == Qt::Checked);
+    const bool hideBanned = state == Qt::Checked;
+    m_proxy_model->setHideBanned(hideBanned);
+    ui->tableViewMasternodes->setColumnHidden(MasternodeModel::POSE, hideBanned);
     m_proxy_model->forceInvalidateFilter();
     updateFilteredCount();
 }
