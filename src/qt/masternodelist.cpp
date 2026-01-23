@@ -56,7 +56,7 @@ MasternodeList::MasternodeList(QWidget* parent) :
 {
     ui->setupUi(this);
 
-    GUIUtil::setFont({ui->label_count_2,
+    GUIUtil::setFont({ui->label_count,
                       ui->countLabelDIP3
                      }, {GUIUtil::g_font_registry.GetWeightBold(), 14});
     GUIUtil::setFont({ui->label_filter_2}, {GUIUtil::g_font_registry.GetWeightNormal(), 15});
