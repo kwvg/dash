@@ -104,6 +104,10 @@ private Q_SLOTS:
     void extraInfoDIP3_clicked();
     void copyProTxHash_clicked();
     void copyCollateralOutpoint_clicked();
+    void filterByCollateralAddress();
+    void filterByPayoutAddress();
+    void filterByOwnerAddress();
+    void filterByVotingAddress();
 
     void handleMasternodeListChanged();
     void updateDIP3ListScheduled();
