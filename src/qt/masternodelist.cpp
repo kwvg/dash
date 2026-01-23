@@ -58,7 +58,7 @@ bool MasternodeListSortFilterProxyModel::filterAcceptsRow(int source_row, const 
     }
 
     // Check "owned" filter
-    if (m_show_owned_only && !m_my_mn_hashes.empty()) {
+    if (m_show_owned_only) {
         QModelIndex idx = sourceModel()->index(source_row, MasternodeModel::PROTX_HASH, source_parent);
         QString proTxHash = sourceModel()->data(idx, Qt::DisplayRole).toString();
         if (m_my_mn_hashes.find(proTxHash) == m_my_mn_hashes.end()) {
