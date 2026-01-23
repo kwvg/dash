@@ -14,6 +14,8 @@
 
 #include <univalue.h>
 
+#include <QStringList>
+
 ///
 /// MasternodeEntry wrapper
 ///
@@ -54,24 +56,109 @@ MasternodeEntry::MasternodeEntry(ClientModel* _clientModel, std::unique_ptr<cons
 
     // Cache operator reward string
     if (m_operator_reward_pct) {
-        m_operator_reward = QString::number(m_operator_reward_pct / 100.0, 'f', 2) + "% ";
+        m_operator_reward = QString::number(m_operator_reward_pct / 100.0, 'f', 2) + "%";
 
         if (m_dmn->getScriptOperatorPayout() != CScript()) {
             CTxDestination operatorDest;
             if (ExtractDestination(m_dmn->getScriptOperatorPayout(), operatorDest)) {
-                m_operator_reward += QObject::tr("to %1").arg(QString::fromStdString(EncodeDestination(operatorDest)));
+                m_operator_reward += " " + QObject::tr("to %1").arg(QString::fromStdString(EncodeDestination(operatorDest)));
             } else {
-                m_operator_reward += QObject::tr("to UNKNOWN");
+                m_operator_reward += " " + QObject::tr("to UNKNOWN");
             }
         } else {
-            m_operator_reward += QObject::tr("but not claimed");
+            m_operator_reward += " " + QObject::tr("but not claimed");
         }
     } else {
         m_operator_reward = QObject::tr("NONE");
     }
+
+    // Parse JSON for additional fields not exposed by the interface
+    UniValue json = m_dmn->toJson();
+    m_collateral_hash = QString::fromStdString(json["collateralHash"].get_str());
+    m_collateral_index = json["collateralIndex"].getInt<int>();
+
+    const UniValue& state = json["state"];
+    m_consecutive_payments = state["consecutivePayments"].getInt<int>();
+    m_pose_ban_height = state["PoSeBanHeight"].getInt<int>();
+    m_pose_revived_height = state["PoSeRevivedHeight"].getInt<int>();
+    m_pub_key_operator = QString::fromStdString(state["pubKeyOperator"].get_str());
+
+    // Parse network addresses from addresses object (arrays joined with comma)
+    auto joinAddressArray = [](const UniValue& arr) -> QString {
+        if (!arr.isArray() || arr.empty()) return {};
+        QStringList list;
+        for (size_t i = 0; i < arr.size(); ++i) {
+            list << QString::fromStdString(arr[i].get_str());
+        }
+        return list.join(", ");
+    };
+
+    const UniValue& addresses = state["addresses"];
+    if (addresses.isObject()) {
+        m_network_addresses = joinAddressArray(addresses["core_p2p"]);
+        if (m_type == MnType::Evo) {
+            m_platform_p2p_addresses = joinAddressArray(addresses["platform_p2p"]);
+            m_platform_https_addresses = joinAddressArray(addresses["platform_https"]);
+        }
+    }
+
+    // Platform Node ID (EvoNode only)
+    if (m_type == MnType::Evo) {
+        if (const UniValue& nodeId = state["platformNodeID"]; nodeId.isStr()) {
+            m_platform_node_id = QString::fromStdString(nodeId.get_str());
+        }
+    }
 }
 
 MasternodeEntry::~MasternodeEntry() = default;
+
+QString MasternodeEntry::toHtml() const
+{
+    QString ret;
+    ret.reserve(4000);
+    ret += "<html>";
+
+    ret += "<b>" + QObject::tr("ProTx Hash") + ":</b> " + m_protx_hash + "<br>";
+    ret += "<b>" + QObject::tr("Public Key Operator") + ":</b> " + m_pub_key_operator + "<br>";
+    ret += "<b>" + QObject::tr("Owner Address") + ":</b> " + m_owner_address + "<br>";
+    ret += "<b>" + QObject::tr("Payout Address") + ":</b> " + m_payout_address + "<br>";
+    ret += "<b>" + QObject::tr("Voting Address") + ":</b> " + m_voting_address + "<br>";
+    ret += "<b>" + QObject::tr("Collateral Address") + ":</b> " + m_collateral_address + "<br>";
+    ret += "<b>" + QObject::tr("Collateral Hash") + ":</b> " + m_collateral_hash + "<br>";
+    ret += "<b>" + QObject::tr("Collateral Index") + ":</b> " + QString::number(m_collateral_index) + "<br>";
+    ret += "<br>";
+
+    ret += "<b>" + QObject::tr("Masternode Type") + ":</b> " + m_type_description + "<br>";
+    ret += "<b>" + QObject::tr("Registered Height") + ":</b> " + QString::number(m_registered_height) + "<br>";
+    ret += "<b>" + QObject::tr("Last Paid Height") + ":</b> " + QString::number(m_last_paid_height) + "<br>";
+    ret += "<b>" + QObject::tr("Consecutive Payments") + ":</b> " + QString::number(m_consecutive_payments) + "<br>";
+    ret += "<b>" + QObject::tr("Operator Reward") + ":</b> " + QString::number(m_operator_reward_pct / 100.0, 'f', 2) + "%<br>";
+    ret += "<b>" + QObject::tr("Network Addresses") + ":</b> " + m_network_addresses + "<br>";
+
+    if (m_type == MnType::Evo) {
+        if (!m_platform_https_addresses.isEmpty()) {
+            ret += "<b>" + QObject::tr("Platform HTTPS Addresses") + ":</b> " + m_platform_https_addresses + "<br>";
+        }
+        if (!m_platform_p2p_addresses.isEmpty()) {
+            ret += "<b>" + QObject::tr("Platform P2P Addresses") + ":</b> " + m_platform_p2p_addresses + "<br>";
+        }
+        if (!m_platform_node_id.isEmpty()) {
+            ret += "<b>" + QObject::tr("Platform Node ID") + ":</b> " + m_platform_node_id + "<br>";
+        }
+    }
+    ret += "<br>";
+
+    ret += "<b>" + QObject::tr("PoSe Penalty") + ":</b> " + QString::number(m_pose_penalty) + "<br>";
+    if (m_pose_ban_height != -1) {
+        ret += "<b>" + QObject::tr("PoSe Ban Height") + ":</b> " + QString::number(m_pose_ban_height) + "<br>";
+    }
+    if (m_pose_revived_height != -1) {
+        ret += "<b>" + QObject::tr("PoSe Revived Height") + ":</b> " + QString::number(m_pose_revived_height) + "<br>";
+    }
+
+    ret += "</html>";
+    return ret;
+}
 
 QString MasternodeEntry::toJson() const
 {

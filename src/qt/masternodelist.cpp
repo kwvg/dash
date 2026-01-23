@@ -8,6 +8,7 @@
 #include <coins.h>
 #include <evo/deterministicmns.h>
 #include <qt/clientmodel.h>
+#include <qt/descriptiondialog.h>
 #include <qt/guiutil.h>
 #include <qt/guiutil_font.h>
 #include <qt/masternodemodel.h>
@@ -15,7 +16,6 @@
 
 #include <QApplication>
 #include <QClipboard>
-#include <QMessageBox>
 
 bool MasternodeListSortFilterProxyModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
 {
@@ -314,11 +314,13 @@ void MasternodeList::extraInfoDIP3_clicked()
         return;
     }
 
-    // Title of popup window
-    QString strWindowtitle = tr("Additional information for DIP3 Masternode %1").arg(entry->proTxHash());
-    QString strText = entry->toJson();
-
-    QMessageBox::information(this, strWindowtitle, strText);
+    auto* dialog = new DescriptionDialog(
+        tr("Details for Masternode %1").arg(entry->proTxHash()),
+        entry->toHtml(),
+        /*parent=*/this);
+    dialog->resize(1100, 550);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
 }
 
 void MasternodeList::copyProTxHash_clicked()
