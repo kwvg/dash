@@ -18,6 +18,7 @@
 #include <univalue.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <map>
 
@@ -273,17 +274,30 @@ QVariant ProposalModel::data(const QModelIndex& index, int role) const
     case Qt::DecorationRole:
     {
         if (index.column() == Column::STATUS) {
+            // Cache icons to avoid expensive pixel-by-pixel colorization on every data() call
+            static std::array<QIcon, 6> votingIcons = {
+                GUIUtil::getIcon("transaction_0", GUIUtil::ThemedColor::ORANGE),
+                GUIUtil::getIcon("transaction_1", GUIUtil::ThemedColor::ORANGE),
+                GUIUtil::getIcon("transaction_2", GUIUtil::ThemedColor::ORANGE),
+                GUIUtil::getIcon("transaction_3", GUIUtil::ThemedColor::ORANGE),
+                GUIUtil::getIcon("transaction_4", GUIUtil::ThemedColor::ORANGE),
+                GUIUtil::getIcon("transaction_5", GUIUtil::ThemedColor::ORANGE)
+            };
+            static QIcon iconPending = GUIUtil::getIcon("transaction_5", GUIUtil::ThemedColor::BLUE);
+            static QIcon iconFunded = GUIUtil::getIcon("synced", GUIUtil::ThemedColor::GREEN);
+            static QIcon iconLapsed = GUIUtil::getIcon("lock_closed", GUIUtil::ThemedColor::RED);
+
             switch (proposal->status()) {
             case ProposalStatus::Voting: {
                 const int icon_idx{std::clamp<int>(proposal->votingProgress() * 6, 0, 5)};
-                return GUIUtil::getIcon(QString("transaction_%1").arg(icon_idx), GUIUtil::ThemedColor::ORANGE);
+                return votingIcons[icon_idx];
             }
             case ProposalStatus::Pending:
-                return GUIUtil::getIcon("transaction_5", GUIUtil::ThemedColor::BLUE);
+                return iconPending;
             case ProposalStatus::Funded:
-                return GUIUtil::getIcon("synced", GUIUtil::ThemedColor::GREEN);
+                return iconFunded;
             case ProposalStatus::Lapsed:
-                return GUIUtil::getIcon("lock_closed", GUIUtil::ThemedColor::RED);
+                return iconLapsed;
             }
         }
         return {};
