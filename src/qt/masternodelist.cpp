@@ -380,6 +380,9 @@ void MasternodeList::on_filterLineEditDIP3_textChanged(const QString& strFilterI
 void MasternodeList::on_comboBoxType_currentIndexChanged(int index)
 {
     m_proxy_model->setTypeFilter(static_cast<MasternodeListSortFilterProxyModel::TypeFilter>(index));
+    // Hide TYPE column when filtering by specific type (already known from filter)
+    ui->tableViewMasternodes->setColumnHidden(MasternodeModel::TYPE, index != MasternodeListSortFilterProxyModel::All);
+    refreshColumnWidths();
     m_proxy_model->forceInvalidateFilter();
     updateFilteredCount();
 }
