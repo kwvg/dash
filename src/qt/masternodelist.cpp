@@ -306,7 +306,6 @@ void MasternodeList::updateMyMasternodeHashes()
 void MasternodeList::updateFilteredCount()
 {
     ui->countLabelDIP3->setText(QString::number(m_proxy_model->rowCount()));
-    refreshColumnWidths();
 }
 
 void MasternodeList::refreshColumnWidths()

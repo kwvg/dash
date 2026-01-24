@@ -17,6 +17,8 @@
 
 #include <QStringList>
 
+#include <map>
+
 ///
 /// MasternodeEntry wrapper
 ///
@@ -308,40 +310,40 @@ void MasternodeModel::remove(int row)
 
 void MasternodeModel::reconcile(MasternodeEntryList&& entries)
 {
-    // Track which existing entries to keep. After processing new entries,
-    // remove any existing entries that weren't found in the new set.
-    const int original_sz{rowCount()};
-    std::vector<bool> keep_index(original_sz, false);
+    beginResetModel();
+
+    // Build index of existing entries by proTxHash for O(1) lookup
+    std::map<QString, std::unique_ptr<MasternodeEntry>> existing_map;
+    for (auto& entry : m_data) {
+        existing_map[entry->proTxHash()] = std::move(entry);
+    }
+    m_data.clear();
+
+    // Build new data set, preserving existing entries where possible
+    m_data.reserve(entries.size());
 
     for (auto& entry : entries) {
-        auto it{std::ranges::find_if(m_data, [&entry](const auto& existing) {
-            return existing->proTxHash() == entry->proTxHash();
-        })};
+        auto it = existing_map.find(entry->proTxHash());
 
-        if (it != m_data.end()) {
-            const auto idx{static_cast<int>(std::distance(m_data.begin(), it))};
-            keep_index[static_cast<size_t>(idx)] = true;
+        if (it != existing_map.end()) {
             // Check if any data has changed that requires an update
-            if ((*it)->isBanned() != entry->isBanned() ||
-                (*it)->posePenalty() != entry->posePenalty() ||
-                (*it)->lastPaidHeight() != entry->lastPaidHeight() ||
-                (*it)->nextPaymentHeight() != entry->nextPaymentHeight()) {
-                // Replace entry to update data
-                *it = std::move(entry);
-                Q_EMIT dataChanged(createIndex(idx, 0), createIndex(idx, Column::_COUNT - 1));
+            if (it->second->isBanned() != entry->isBanned() ||
+                it->second->posePenalty() != entry->posePenalty() ||
+                it->second->lastPaidHeight() != entry->lastPaidHeight() ||
+                it->second->nextPaymentHeight() != entry->nextPaymentHeight()) {
+                // Use new entry with updated data
+                m_data.push_back(std::move(entry));
+            } else {
+                // Reuse existing entry
+                m_data.push_back(std::move(it->second));
             }
-            // else: no changes, entry unique_ptr goes out of scope and gets deleted
         } else {
-            append(std::move(entry));
+            // New entry
+            m_data.push_back(std::move(entry));
         }
     }
 
-    // Remove in reverse order to preserve indices during removal
-    for (int idx{original_sz}; idx-- > 0;) {
-        if (!keep_index[static_cast<size_t>(idx)]) {
-            remove(idx);
-        }
-    }
+    endResetModel();
 }
 
 const MasternodeEntry* MasternodeModel::getEntryAt(const QModelIndex& index) const
