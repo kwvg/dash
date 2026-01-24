@@ -85,8 +85,14 @@ private:
     MasternodeListSortFilterProxyModel* m_proxy_model{nullptr};
 
     bool mnListChanged{true};
+    bool m_col_refresh{false};
 
     const MasternodeEntry* GetSelectedEntry();
+    void refreshColumnWidths();
+
+protected:
+    void showEvent(QShowEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
     void updateDIP3List();
     void updateMyMasternodeHashes();

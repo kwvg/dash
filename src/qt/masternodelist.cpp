@@ -17,6 +17,12 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QHeaderView>
+#include <QResizeEvent>
+#include <QShowEvent>
+
+namespace {
+constexpr int ADDRESS_MIN_WIDTH{220};
+} // anonymous namespace
 
 bool MasternodeListSortFilterProxyModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
 {
@@ -91,17 +97,11 @@ MasternodeList::MasternodeList(QWidget* parent) :
     ui->tableViewMasternodes->setModel(m_proxy_model);
     ui->tableViewMasternodes->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->tableViewMasternodes->verticalHeader()->setVisible(false);
+    ui->tableViewMasternodes->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    // Set column resize modes: SERVICE stretches, all others fit content
     auto* header = ui->tableViewMasternodes->horizontalHeader();
     header->setStretchLastSection(false);
-    for (int col = 0; col < MasternodeModel::_COUNT; ++col) {
-        if (col == MasternodeModel::SERVICE) {
-            header->setSectionResizeMode(col, QHeaderView::Stretch);
-        } else {
-            header->setSectionResizeMode(col, QHeaderView::ResizeToContents);
-        }
-    }
+    connect(header, &QHeaderView::sectionResized, this, &MasternodeList::refreshColumnWidths);
 
     // Hide ProTx Hash column (used for internal lookup)
     ui->tableViewMasternodes->setColumnHidden(MasternodeModel::PROTX_HASH, true);
@@ -132,6 +132,8 @@ MasternodeList::MasternodeList(QWidget* parent) :
     timer->start(1000);
 
     GUIUtil::updateFonts();
+
+    refreshColumnWidths();
 }
 
 MasternodeList::~MasternodeList()
@@ -261,6 +263,7 @@ void MasternodeList::updateDIP3List()
 
     // Update model
     m_model->reconcile(std::move(entries));
+    refreshColumnWidths();
 
     // Update my masternodes filter if needed
     if (walletModel && ui->checkBoxOwned->isChecked()) {
@@ -303,6 +306,66 @@ void MasternodeList::updateMyMasternodeHashes()
 void MasternodeList::updateFilteredCount()
 {
     ui->countLabelDIP3->setText(QString::number(m_proxy_model->rowCount()));
+    refreshColumnWidths();
+}
+
+void MasternodeList::refreshColumnWidths()
+{
+    // Bail out if resize in progress or viewport is too small
+    const int tableWidth = ui->tableViewMasternodes->viewport()->width();
+    if (m_col_refresh || tableWidth <= 0) {
+        return;
+    }
+    m_col_refresh = true;
+
+    auto* header = ui->tableViewMasternodes->horizontalHeader();
+    header->setMinimumSectionSize(0);
+
+    // Set fixed columns to ResizeToContents to get natural widths
+    for (int col = 0; col < MasternodeModel::_COUNT; ++col) {
+        if (col != MasternodeModel::SERVICE && col != MasternodeModel::OPERATOR_REWARD) {
+            header->setSectionResizeMode(col, QHeaderView::ResizeToContents);
+        }
+    }
+
+    // Calculate width used by fixed columns (excluding SERVICE and OPERATOR_REWARD)
+    const int availableWidth = [this, &header, &tableWidth]() {
+        int fixedWidth = 0;
+        for (int idx = 0; idx < MasternodeModel::_COUNT; ++idx) {
+            if (idx != MasternodeModel::SERVICE && idx != MasternodeModel::OPERATOR_REWARD &&
+                !ui->tableViewMasternodes->isColumnHidden(idx)) {
+                fixedWidth += header->sectionSize(idx);
+            }
+        }
+        return std::max(0, tableWidth - fixedWidth);
+    }();
+
+    // Temporarily set OPERATOR_REWARD to ResizeToContents to measure its natural width
+    header->setSectionResizeMode(MasternodeModel::OPERATOR_REWARD, QHeaderView::ResizeToContents);
+    const int operatorRewardContentWidth = header->sectionSize(MasternodeModel::OPERATOR_REWARD);
+
+    // OPERATOR_REWARD gets what's left after SERVICE takes its minimum, clamped to [0, contentWidth]
+    const int operatorRewardWidth = std::clamp<int>(availableWidth - ADDRESS_MIN_WIDTH, 0, operatorRewardContentWidth);
+    const int serviceWidth = availableWidth - operatorRewardWidth;
+
+    header->setSectionResizeMode(MasternodeModel::SERVICE, QHeaderView::Interactive);
+    header->setSectionResizeMode(MasternodeModel::OPERATOR_REWARD, QHeaderView::Interactive);
+    header->resizeSection(MasternodeModel::SERVICE, serviceWidth);
+    header->resizeSection(MasternodeModel::OPERATOR_REWARD, operatorRewardWidth);
+
+    m_col_refresh = false;
+}
+
+void MasternodeList::showEvent(QShowEvent* event)
+{
+    QWidget::showEvent(event);
+    refreshColumnWidths();
+}
+
+void MasternodeList::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    refreshColumnWidths();
 }
 
 void MasternodeList::on_filterLineEditDIP3_textChanged(const QString& strFilterIn)
@@ -336,6 +399,7 @@ void MasternodeList::on_checkBoxHideBanned_stateChanged(int state)
     const bool hideBanned = state == Qt::Checked;
     m_proxy_model->setHideBanned(hideBanned);
     ui->tableViewMasternodes->setColumnHidden(MasternodeModel::POSE, hideBanned);
+    refreshColumnWidths();
     m_proxy_model->forceInvalidateFilter();
     updateFilteredCount();
 }
