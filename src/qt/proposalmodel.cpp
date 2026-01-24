@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <map>
 
 ///
 /// Proposal wrapper
@@ -336,36 +337,36 @@ void ProposalModel::remove(int row)
 
 void ProposalModel::reconcile(ProposalList&& proposals)
 {
-    // Track which existing proposals to keep. After processing new proposals,
-    // remove any existing proposals that weren't found in the new set.
-    const int original_sz{rowCount()};
-    std::vector<bool> keep_index(original_sz, false);
+    beginResetModel();
+
+    // Build index of existing proposals by hash for O(1) lookup
+    std::map<QString, std::unique_ptr<Proposal>> existing_map;
+    for (auto& proposal : m_data) {
+        existing_map[proposal->hash()] = std::move(proposal);
+    }
+    m_data.clear();
+
+    // Build new data set, preserving existing proposals where possible
+    m_data.reserve(proposals.size());
 
     for (auto& proposal : proposals) {
-        auto it{std::ranges::find_if(m_data, [&proposal](const auto& existing) {
-            return existing->hash() == proposal->hash();
-        })};
+        auto it = existing_map.find(proposal->hash());
 
-        if (it != m_data.end()) {
-            const auto idx{static_cast<int>(std::distance(m_data.begin(), it))};
-            keep_index[static_cast<size_t>(idx)] = true;
-            if ((*it)->GetAbsoluteYesCount() != proposal->GetAbsoluteYesCount()) {
-                // Replace proposal to update vote count
-                *it = std::move(proposal);
-                Q_EMIT dataChanged(createIndex(idx, Column::VOTING_STATUS), createIndex(idx, Column::VOTING_STATUS));
+        if (it != existing_map.end()) {
+            if (it->second->GetAbsoluteYesCount() != proposal->GetAbsoluteYesCount()) {
+                // Use new proposal with updated vote count
+                m_data.push_back(std::move(proposal));
+            } else {
+                // Reuse existing proposal
+                m_data.push_back(std::move(it->second));
             }
-            // else: no changes, proposal unique_ptr goes out of scope and gets deleted
         } else {
-            append(std::move(proposal));
+            // New proposal
+            m_data.push_back(std::move(proposal));
         }
     }
 
-    // Remove in reverse order to preserve indices during removal
-    for (int idx{original_sz}; idx-- > 0;) {
-        if (!keep_index[static_cast<size_t>(idx)]) {
-            remove(idx);
-        }
-    }
+    endResetModel();
 }
 
 void ProposalModel::setVotingParams(int newAbsVoteReq)
