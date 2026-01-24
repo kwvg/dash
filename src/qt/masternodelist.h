@@ -15,11 +15,7 @@
 
 #include <set>
 
-#define MASTERNODELIST_UPDATE_SECONDS 3
-#define MASTERNODELIST_FILTER_COOLDOWN_SECONDS 3
-
-namespace Ui
-{
+namespace Ui {
 class MasternodeList;
 }
 
@@ -72,9 +68,7 @@ public:
 
 private:
     QMenu* contextMenuDIP3;
-    int64_t nTimeFilterUpdatedDIP3{0};
     int64_t nTimeUpdatedDIP3{0};
-    bool fFilterUpdatedDIP3{true};
 
     QTimer* timer;
     Ui::MasternodeList* ui;

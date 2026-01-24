@@ -22,6 +22,7 @@
 
 namespace {
 constexpr int ADDRESS_MIN_WIDTH{220};
+constexpr int MASTERNODELIST_UPDATE_SECONDS{3};
 } // anonymous namespace
 
 bool MasternodeListSortFilterProxyModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
@@ -175,17 +176,7 @@ void MasternodeList::updateDIP3ListScheduled()
         return;
     }
 
-    // To prevent high cpu usage update only once in MASTERNODELIST_FILTER_COOLDOWN_SECONDS seconds
-    // after filter was last changed unless we want to force the update.
-    if (fFilterUpdatedDIP3) {
-        int64_t nSecondsToWait = nTimeFilterUpdatedDIP3 - GetTime() + MASTERNODELIST_FILTER_COOLDOWN_SECONDS;
-        ui->countLabelDIP3->setText(tr("Please wait…") + " " + QString::number(nSecondsToWait));
-
-        if (nSecondsToWait <= 0) {
-            updateDIP3List();
-            fFilterUpdatedDIP3 = false;
-        }
-    } else if (mnListChanged) {
+    if (mnListChanged) {
         int64_t nMnListUpdateSecods = clientModel->masternodeSync().isBlockchainSynced() ? MASTERNODELIST_UPDATE_SECONDS : MASTERNODELIST_UPDATE_SECONDS * 10;
         int64_t nSecondsToWait = nTimeUpdatedDIP3 - GetTime() + nMnListUpdateSecods;
 
@@ -371,9 +362,6 @@ void MasternodeList::on_filterLineEditDIP3_textChanged(const QString& strFilterI
 {
     m_proxy_model->setFilterRegularExpression(QRegularExpression(QRegularExpression::escape(strFilterIn),
                                                                   QRegularExpression::CaseInsensitiveOption));
-    nTimeFilterUpdatedDIP3 = GetTime();
-    fFilterUpdatedDIP3 = true;
-    ui->countLabelDIP3->setText(tr("Please wait…") + " " + QString::number(MASTERNODELIST_FILTER_COOLDOWN_SECONDS));
 }
 
 void MasternodeList::on_comboBoxType_currentIndexChanged(int index)
