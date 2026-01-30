@@ -1,8 +1,22 @@
 [workspace]
+resolver = "2"
+exclude = [
+  "rust/grovedb/grovedb/grovedbg",
+  "rust/grovedb/node-grove",
+]
 members = [
   "rust/chirp",
+  "rust/grovedb/costs",
+  "rust/grovedb/grovedb",
+  "rust/grovedb/grovedb-element",
+  "rust/grovedb/grovedb-epoch-based-storage-flags",
+  "rust/grovedb/grovedb-version",
+  "rust/grovedb/grovedbg-types",
+  "rust/grovedb/merk",
+  "rust/grovedb/path",
+  "rust/grovedb/storage",
+  "rust/grovedb/visualize",
 ]
-resolver = "2"
 
 [profile.release]
 codegen-units = 1
