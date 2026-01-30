@@ -1,0 +1,26 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 2
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Documentation
+[*.md]
+trim_trailing_whitespace = false
+
+# Build scripts
+[*.mk]
+indent_style = tab
+
+[include/grovedb/vendor/**]
+# Equivalent to ignore
+
+[src/bench/vendor/**]
+# Equivalent to ignore
+
+[src/fuzz/vendor/**]
+# Equivalent to ignore
