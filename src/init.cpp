@@ -112,7 +112,7 @@
 #include <coinjoin/options.h>
 #endif // ENABLE_WALLET
 
-#include <grovedb/grovedb.h>
+#include <grovedb/db.h>
 
 #include <algorithm>
 #include <condition_variable>

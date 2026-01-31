@@ -2,13 +2,17 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef GROVEDB_GROVEDB_H
-#define GROVEDB_GROVEDB_H
+#ifndef GROVEDB_TYPES_H
+#define GROVEDB_TYPES_H
 
-#include <string>
+#include <array>
+#include <cstdint>
 
 namespace grovedb {
-std::string GetWhoami();
+
+/** 32-byte Merkle root hash. */
+using Hash = std::array<uint8_t, 32>;
+
 } // namespace grovedb
 
-#endif // GROVEDB_GROVEDB_H
+#endif // GROVEDB_TYPES_H

@@ -4,7 +4,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <grovedb/grovedb.h>
+#include <grovedb/db.h>
 
 #include <string>
 
