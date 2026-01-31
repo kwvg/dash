@@ -37,18 +37,18 @@ $(LIBRUST_CHIRP_SRCS): ;
 
 $(LIBRUST_CHIRP_CPP): $(LIBRUST_CHIRP_SRCS)
 	$(AM_V_at)$(MKDIR_P) $(@D)
-	$(AM_V_GEN)if test -f $(LIBRUST_CHIRP_GEN_SRCDIR)/src/lib.cpp; then \
-	  cp $(LIBRUST_CHIRP_GEN_SRCDIR)/src/lib.cpp $@; \
-	else \
-	  $(CXXBRIDGE) $< -o $@; \
+	$(AM_V_GEN)if test -f $(LIBRUST_CHIRP_GEN_SRCDIR)/src/lib.cpp && ! test $(LIBRUST_CHIRP_GEN_SRCDIR)/src/lib.cpp -ef $@; then \
+		cp $(LIBRUST_CHIRP_GEN_SRCDIR)/src/lib.cpp $@; \
+	elif ! test -f $@; then \
+		$(CXXBRIDGE) $< -o $@; \
 	fi
 
 $(LIBRUST_CHIRP_H): $(LIBRUST_CHIRP_SRCS)
 	$(AM_V_at)$(MKDIR_P) $(@D)
-	$(AM_V_GEN)if test -f $(LIBRUST_CHIRP_GEN_SRCDIR)/include/rust/chirp/lib.h; then \
-	  cp $(LIBRUST_CHIRP_GEN_SRCDIR)/include/rust/chirp/lib.h $@; \
-	else \
-   	  $(CXXBRIDGE) $< --header -o $@; \
+	$(AM_V_GEN)if test -f $(LIBRUST_CHIRP_GEN_SRCDIR)/include/rust/chirp/lib.h && ! test $(LIBRUST_CHIRP_GEN_SRCDIR)/include/rust/chirp/lib.h -ef $@; then \
+		cp $(LIBRUST_CHIRP_GEN_SRCDIR)/include/rust/chirp/lib.h $@; \
+	elif ! test -f $@; then \
+		$(CXXBRIDGE) $< --header -o $@; \
 	fi
 
 $(LIBRUST_CHIRP): $(LIBRUST_CHIRP_SRCS) $(LIBRUST_CHIRP_BUILD) $(LIBRUST_CHIRP_MANIFEST)

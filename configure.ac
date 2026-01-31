@@ -1745,6 +1745,8 @@ case $host in
   *mingw*)
     RUST_LIBS="$RUST_LIBS -luserenv -lntdll"
     ;;
+  *darwin*)
+    ;;
   *)
     RUST_LIBS="$RUST_LIBS -ldl"
     ;;
@@ -2141,6 +2143,9 @@ AC_SUBST(RUST_NATIVE)
 AC_SUBST(RUST_OSX_SDK)
 AC_SUBST(RUST_TARGET)
 AC_SUBST(RUST_VENDORED_SOURCES)
+if test "$enable_online_rust" = "no" && test -z "$RUST_VENDORED_SOURCES"; then
+  AC_MSG_WARN([RUST_VENDORED_SOURCES is not set and --enable-online-rust is not active. Rust builds will fail unless vendored sources are provided via the depends system or --enable-online-rust is passed.])
+fi
 AC_SUBST(RUSTUP_TOOLCHAIN)
 
 AC_SUBST(RELDFLAGS)

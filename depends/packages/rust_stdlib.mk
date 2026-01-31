@@ -10,11 +10,6 @@ package:=rust_stdlib
 $(package)_version:=1.85.1
 $(package)_download_path:=https://static.rust-lang.org/dist
 $(package)_dependencies:=native_rust
-$(package)_target=$(or \
-  $($(package)_target_$(canonical_host)),\
-  $($(package)_target_$(subst -pc-,-unknown-,$(canonical_host))),\
-  $($(package)_target_$(subst -unknown-,-pc-,$(canonical_host))),\
-  $($(package)_target_$(subst -linux-,-unknown-linux-,$(canonical_host))))
 
 # FreeBSD (x86_64)
 $(package)_targets += x86_64-unknown-freebsd
@@ -64,8 +59,15 @@ $(package)_targets += x86_64-pc-windows-gnu
 $(package)_target_x86_64-w64-mingw32:=x86_64-pc-windows-gnu
 $(package)_sha256_hash_x86_64-pc-windows-gnu:=ae5c8942b3ccab5841c9ea65d1ac839c62553a763512799eb4c89de2ffad3d3e
 
-$(package)_file_name=rust-std-$($(package)_version)-$($(package)_target).tar.gz
-$(package)_sha256_hash=$($(package)_sha256_hash_$($(package)_target))
+$(package)_target:=$(or \
+  $($(package)_target_$(canonical_host)),\
+  $($(package)_target_$(host_arch)-$(host_vendor)-$(host_os)),\
+  $($(package)_target_$(subst -pc-,-unknown-,$(canonical_host))),\
+  $($(package)_target_$(subst -unknown-,-pc-,$(canonical_host))),\
+  $($(package)_target_$(subst -linux-,-unknown-linux-,$(canonical_host))))
+
+$(package)_file_name:=rust-std-$($(package)_version)-$($(package)_target).tar.gz
+$(package)_sha256_hash:=$($(package)_sha256_hash_$($(package)_target))
 
 define $(package)_fetch_cmds
   $(call fetch_file,$(package),$($(package)_download_path),$($(package)_file_name),$($(package)_file_name),$($(package)_sha256_hash))
