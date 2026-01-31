@@ -5,7 +5,6 @@ exclude = [
   "rust/grovedb/node-grove",
 ]
 members = [
-  "rust/chirp",
   "rust/grovedb/costs",
   "rust/grovedb/grovedb",
   "rust/grovedb/grovedb-element",
