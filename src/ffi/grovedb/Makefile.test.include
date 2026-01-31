@@ -6,7 +6,9 @@ TESTS = src/test/test_grovedb
 noinst_PROGRAMS = src/test/test_grovedb
 
 src_test_test_grovedb_SOURCES = \
+	src/test/lifecycle_tests.cpp \
 	src/test/main.cpp \
+	src/test/util/tempdir.cpp \
 	src/test/whoami.cpp
 
 src_test_test_grovedb_CPPFLAGS = $(GROVEDB_CXX_CPPFLAGS) $(BOOST_CPPFLAGS)
