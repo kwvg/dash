@@ -7,57 +7,57 @@
 # ./contrib/devtools/update-rust-hashes.py
 
 package:=rust_stdlib
-$(package)_version:=1.85.1
+$(package)_version:=1.88.0
 $(package)_download_path:=https://static.rust-lang.org/dist
 $(package)_dependencies:=native_rust
 
 # FreeBSD (x86_64)
 $(package)_targets += x86_64-unknown-freebsd
 $(package)_target_x86_64-unknown-freebsd:=x86_64-unknown-freebsd
-$(package)_sha256_hash_x86_64-unknown-freebsd:=08a691bcdb5bde37178368e9e49dbd822d9e39c68b9371191bd16ab7f8b321c4
+$(package)_sha256_hash_x86_64-unknown-freebsd:=ac55f0f90ef9ba0ed1cd740ba9aa294d31934cd26676b8157a803a37a82b6995
 
 # Linux (ARMv7)
 $(package)_targets += armv7-unknown-linux-musleabihf
 $(package)_target_arm-unknown-linux-gnueabihf:=armv7-unknown-linux-musleabihf
 $(package)_target_armv7-unknown-linux-gnueabihf:=armv7-unknown-linux-musleabihf
-$(package)_sha256_hash_armv7-unknown-linux-musleabihf:=fbdb48968dd7af3a862c29e4e3ff85bcf333d97d21d262f347106542cc08b96d
+$(package)_sha256_hash_armv7-unknown-linux-musleabihf:=fe0b2d4c4abb6ec8fab1205e5700e0c59b64c1687488c984c9a0730370dee9bc
 
 # Linux (ARMv8)
 $(package)_targets += aarch64-unknown-linux-musl
 $(package)_target_aarch64-unknown-linux-gnu:=aarch64-unknown-linux-musl
-$(package)_sha256_hash_aarch64-unknown-linux-musl:=991cc2f78d3db8fa1131ee2bb5807497e93e1efb9f447e2a7def0c4032ba4c54
+$(package)_sha256_hash_aarch64-unknown-linux-musl:=b49c15ec0e2a4d0315a39ef16be9018adbc2ac0ab246a2a930b0287fa3fe17b7
 
 # Linux (PowerPC 64-bit little-endian)
 $(package)_targets += powerpc64le-unknown-linux-musl
 $(package)_target_powerpc64le-unknown-linux-gnu:=powerpc64le-unknown-linux-musl
-$(package)_sha256_hash_powerpc64le-unknown-linux-musl:=f6fad3f1c69acdd832ea2f487863f6428ba6e77b16c18e8db7fcd91b88e9e254
+$(package)_sha256_hash_powerpc64le-unknown-linux-musl:=f993e1feb81b38c7e1c671d58c8af047d67d3ef3f28608f5c167320c862c6a69
 
 # Linux (RISCV64GC)
 $(package)_targets += riscv64gc-unknown-linux-musl
 $(package)_target_riscv64-unknown-linux-gnu:=riscv64gc-unknown-linux-musl
 $(package)_target_riscv64gc-unknown-linux-gnu:=riscv64gc-unknown-linux-musl
-$(package)_sha256_hash_riscv64gc-unknown-linux-musl:=4a85e0c909d6a3202919638c3b95a496acdfec7e1245be1c406b7c1d26c32fba
+$(package)_sha256_hash_riscv64gc-unknown-linux-musl:=5ed55315d49756544abb1aa185d3fa65a0a97ab2db851cd984cb0bfef3edfd9b
 
 # Linux (x86_64)
 $(package)_targets += x86_64-unknown-linux-musl
 $(package)_target_x86_64-unknown-linux-gnu:=x86_64-unknown-linux-musl
-$(package)_sha256_hash_x86_64-unknown-linux-musl:=3035f0c3ea9ae10ba1c21871c7a53cdb54a398616febffd42825965627a77216
+$(package)_sha256_hash_x86_64-unknown-linux-musl:=6fe8b3106b14ea92eb33b3dc3cbe3cd367489e12b5c015f851d9713733438354
 
 # macOS (ARMv8)
 $(package)_targets += aarch64-apple-darwin
 $(package)_target_aarch64-apple-darwin:=aarch64-apple-darwin
 $(package)_target_arm64-apple-darwin:=aarch64-apple-darwin
-$(package)_sha256_hash_aarch64-apple-darwin:=5d2fd6b5c3c482750074b6ab04443b1ec41ca824fddc814aab6a1fbcf5cfb53a
+$(package)_sha256_hash_aarch64-apple-darwin:=f852990a4bb1a84cef74fb92d0c9715b453379c32af43a8b3b357cadcc78f542
 
 # macOS (x86_64)
 $(package)_targets += x86_64-apple-darwin
 $(package)_target_x86_64-apple-darwin:=x86_64-apple-darwin
-$(package)_sha256_hash_x86_64-apple-darwin:=b5111b105cfeb2772d92ca54e6f1c01d11def9c675c633f7d1ebdd09b83b0139
+$(package)_sha256_hash_x86_64-apple-darwin:=1e3494b90a88e8c01492f4d2e21bb60792f8b9c6e307e716db86822ccc55a77e
 
 # Windows (x86_64)
 $(package)_targets += x86_64-pc-windows-gnu
 $(package)_target_x86_64-w64-mingw32:=x86_64-pc-windows-gnu
-$(package)_sha256_hash_x86_64-pc-windows-gnu:=ae5c8942b3ccab5841c9ea65d1ac839c62553a763512799eb4c89de2ffad3d3e
+$(package)_sha256_hash_x86_64-pc-windows-gnu:=5dae719c6c2b11f9ce7858cc4b3f6302a1a83519adf7066bcf0c79e5c4cda568
 
 $(package)_target:=$(or \
   $($(package)_target_$(canonical_host)),\

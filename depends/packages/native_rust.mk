@@ -7,28 +7,28 @@
 # ./contrib/devtools/update-rust-hashes.py
 
 package:=native_rust
-$(package)_version:=1.85.1
+$(package)_version:=1.88.0
 $(package)_download_path:=https://static.rust-lang.org/dist
 
 # FreeBSD (x86_64)
 $(package)_file_name_x86_64_freebsd:=rust-$($(package)_version)-x86_64-unknown-freebsd.tar.gz
-$(package)_sha256_hash_x86_64_freebsd:=f905730e22a9a8a2dfce1ab0c50d427b7978c5b235c33018b09552041b6f6329
+$(package)_sha256_hash_x86_64_freebsd:=961de5d723b034c1308d2b4a4d710fe006fb87bdbf914d045c01a5df87a0b332
 
 # Linux (ARMv8)
 $(package)_file_name_aarch64_linux:=rust-$($(package)_version)-aarch64-unknown-linux-gnu.tar.gz
-$(package)_sha256_hash_aarch64_linux:=d2609d8cd965060f0b4a8c509131066369e8d3d31a92fedce177b42b32af6b4d
+$(package)_sha256_hash_aarch64_linux:=dbc75abc31d142eacf15e60d0e51c4f291539974221d217b80786756b0ce1d6b
 
 # Linux (x86_64)
 $(package)_file_name_x86_64_linux:=rust-$($(package)_version)-x86_64-unknown-linux-gnu.tar.gz
-$(package)_sha256_hash_x86_64_linux:=b7202563a52b47f575b284a5a4794fafd688e39bfe8fd855b5e80129e671cb7f
+$(package)_sha256_hash_x86_64_linux:=ad6f0cc845e7fcca17fd451bafd2c04a7bbcb543f8f3ef5bc412fd1fef99ef7b
 
 # macOS (ARMv8)
 $(package)_file_name_aarch64_darwin:=rust-$($(package)_version)-aarch64-apple-darwin.tar.gz
-$(package)_sha256_hash_aarch64_darwin:=64b0341a47e684d648c9b7defd0b7ff9d5397a64718cf803c1e114544f94bbe9
+$(package)_sha256_hash_aarch64_darwin:=dee921b9a41b1c3fbb088ad31dcca3b232de2cb89c268db75f40912eeaa474db
 
 # macOS (x86_64)
 $(package)_file_name_x86_64_darwin:=rust-$($(package)_version)-x86_64-apple-darwin.tar.gz
-$(package)_sha256_hash_x86_64_darwin:=6e321957b7301d48e5ecf61bdeea6560400a5948b3e72830348367a8a9696ad7
+$(package)_sha256_hash_x86_64_darwin:=b36b0bfac17e0a1f6cc06b9fdc4e2131ad578b4122a67792236b58650ae4c5c8
 
 $(package)_file_name:=$($(package)_file_name_$(build_arch)_$(build_os))
 $(package)_sha256_hash:=$($(package)_sha256_hash_$(build_arch)_$(build_os))
