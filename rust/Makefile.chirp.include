@@ -64,10 +64,4 @@ cxxbridge-clean-chirp:
 
 cxxbridge-chirp: $(LIBRUST_CHIRP_CPP) $(LIBRUST_CHIRP_H)
 
-dist-hook: cxxbridge-chirp
-	$(MKDIR_P) $(distdir)/chirp/gen/src
-	$(MKDIR_P) $(distdir)/chirp/gen/include/rust/chirp
-	cp $(LIBRUST_CHIRP_CPP) $(distdir)/chirp/gen/src/
-	cp $(LIBRUST_CHIRP_H) $(distdir)/chirp/gen/include/rust/chirp/
-
 .PHONY: cargo-build-chirp cargo-clean-chirp cxxbridge-chirp cxxbridge-clean-chirp

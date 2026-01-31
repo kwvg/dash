@@ -81,4 +81,14 @@ cargo-clean-config:
 
 clean-local: cargo-clean-chirp cargo-clean-grovedb cxxbridge-clean-chirp cxxbridge-clean-grovedb clean-librustdeps-la cargo-clean-config
 
+dist-hook: cxxbridge-chirp cxxbridge-grovedb
+	$(MKDIR_P) $(distdir)/chirp/gen/src
+	$(MKDIR_P) $(distdir)/chirp/gen/include/rust/chirp
+	cp $(LIBRUST_CHIRP_CPP) $(distdir)/chirp/gen/src/
+	cp $(LIBRUST_CHIRP_H) $(distdir)/chirp/gen/include/rust/chirp/
+	$(MKDIR_P) $(distdir)/grovedb_cxx/gen/src
+	$(MKDIR_P) $(distdir)/grovedb_cxx/gen/include/rust/grovedb_cxx
+	cp $(LIBRUST_GROVEDB_CPP) $(distdir)/grovedb_cxx/gen/src/
+	cp $(LIBRUST_GROVEDB_H) $(distdir)/grovedb_cxx/gen/include/rust/grovedb_cxx/
+
 .PHONY: cargo-build cargo-clean cargo-clean-config
