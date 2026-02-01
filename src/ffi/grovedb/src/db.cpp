@@ -9,6 +9,7 @@
 #include <grovedb/db.h>
 
 #include <rust/grovedb_cxx/lib.h>
+#include <types/query.h>
 #include <types/transaction.h>
 
 #include <algorithm>
@@ -654,6 +655,69 @@ Status Db::Clear(const Path& path, const Transaction& txn, bool& result)
 
         result = grovedb_cxx::grovedb_clear_subtree_with_tx(
             *m_impl->m_db, path_slice, *txn.m_impl->m_tx);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Query operations
+// ---------------------------------------------------------------------------
+
+/** Decode query result values from the flat wire format.
+ *
+ *  Wire format: [u32 count][u32 len₁][bytes₁][u32 len₂][bytes₂]…
+ */
+static std::vector<Bytes> decode_values(const rust::Vec<uint8_t>& wire)
+{
+    auto read_u32 = [](const uint8_t* p) -> uint32_t {
+        return static_cast<uint32_t>(p[0])
+             | (static_cast<uint32_t>(p[1]) << 8)
+             | (static_cast<uint32_t>(p[2]) << 16)
+             | (static_cast<uint32_t>(p[3]) << 24);
+    };
+
+    std::vector<Bytes> result;
+    if (wire.size() < 4) return result;
+
+    const uint8_t* ptr = wire.data();
+    uint32_t count = read_u32(ptr);
+    ptr += 4;
+
+    result.reserve(count);
+    for (uint32_t i = 0; i < count; ++i) {
+        uint32_t len = read_u32(ptr);
+        ptr += 4;
+        result.emplace_back(ptr, ptr + len);
+        ptr += len;
+    }
+
+    return result;
+}
+
+Status Db::QueryValues(const PathQuery& query, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_item_value(
+            *m_impl->m_db, *query.m_impl->m_query);
+        values = decode_values(result.values);
+        skipped = result.skipped;
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Db::QueryValues(const PathQuery& query, const Transaction& txn, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_item_value_with_tx(
+            *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx);
+        values = decode_values(result.values);
+        skipped = result.skipped;
+        cost = convert_cost(result.cost);
         return Status::Ok();
     } catch (const std::exception& e) {
         return Status::IOError(e.what());

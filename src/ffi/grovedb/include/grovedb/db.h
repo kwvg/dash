@@ -7,6 +7,7 @@
 
 #include <grovedb/cost.h>
 #include <grovedb/element.h>
+#include <grovedb/query.h>
 #include <grovedb/status.h>
 #include <grovedb/transaction.h>
 #include <grovedb/types.h>
@@ -254,6 +255,20 @@ public:
      */
     Status Clear(const Path& path, bool& result);
     Status Clear(const Path& path, const Transaction& txn, bool& result);
+
+    // -- Query operations -------------------------------------------------
+
+    /**
+     * Execute a query and return the raw item values.
+     *
+     * @param[in]  query    A PathQuery describing what to retrieve.
+     * @param[out] values   Receives the result values (raw item bytes).
+     * @param[out] skipped  Number of results skipped due to offset.
+     * @param[out] cost     Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status QueryValues(const PathQuery& query, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost);
+    Status QueryValues(const PathQuery& query, const Transaction& txn, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost);
 
 private:
     struct Impl;
