@@ -6,11 +6,14 @@
 #include <config/grovedb-config.h>
 #endif
 
+#include "db_internal.h"
+
 #include <grovedb/query.h>
 #include <grovedb/wire.h>
 
 #include <rust/grovedb_cxx/lib.h>
 #include <types/query.h>
+#include <types/transaction.h>
 
 namespace grovedb {
 
@@ -174,6 +177,42 @@ Status PathQuery::NewWithSubquery(
         return Status::Ok();
     } catch (const std::exception& e) {
         return Status::InvalidArgument(e.what());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Db::QueryValues
+// ---------------------------------------------------------------------------
+
+Status Db::QueryValues(const PathQuery& query, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_item_value(
+            *m_impl->m_db, *query.m_impl->m_query);
+        if (auto s = wire::Decode(std::span<const uint8_t>{result.values.data(), result.values.size()}, values); !s.ok()) {
+            return s;
+        }
+        skipped = result.skipped;
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Db::QueryValues(const PathQuery& query, const Transaction& txn, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_item_value_with_tx(
+            *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx);
+        if (auto s = wire::Decode(std::span<const uint8_t>{result.values.data(), result.values.size()}, values); !s.ok()) {
+            return s;
+        }
+        skipped = result.skipped;
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
     }
 }
 
