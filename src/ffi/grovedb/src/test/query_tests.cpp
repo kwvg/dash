@@ -285,4 +285,347 @@ BOOST_AUTO_TEST_CASE(test_query_with_subquery)
     BOOST_CHECK(values[1] == grovedb::Bytes{'b'});
 }
 
+// ---------------------------------------------------------------------------
+// QueryItemsOrSums — SumValue variant
+// ---------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(test_query_items_or_sums_sum_value)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_items_or_sums_sum"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+    grovedb::Path root{};
+
+    // Create a sum tree at root with key "s".
+    grovedb::Element sum_tree;
+    BOOST_REQUIRE(grovedb::Element::EmptySumTree(sum_tree).ok());
+    BOOST_REQUIRE(db.Put(root, {'s'}, sum_tree, cost).ok());
+
+    // Insert sum items into the sum tree.
+    grovedb::Path sum_path{{'s'}};
+    grovedb::Element si;
+    BOOST_REQUIRE(grovedb::Element::SumItem(42, si).ok());
+    BOOST_REQUIRE(db.Put(sum_path, {'a'}, si, cost).ok());
+    BOOST_REQUIRE(grovedb::Element::SumItem(-7, si).ok());
+    BOOST_REQUIRE(db.Put(sum_path, {'b'}, si, cost).ok());
+
+    // Query all items in the sum tree.
+    grovedb::PathQuery query;
+    BOOST_REQUIRE(grovedb::PathQuery::New(
+        sum_path,
+        {grovedb::QueryItem::RangeFull()},
+        0, 0,
+        query).ok());
+
+    std::vector<grovedb::QueryItemOrSum> results;
+    uint16_t skipped{0};
+    auto status = db.QueryItemsOrSums(query, results, skipped, cost);
+    BOOST_CHECK_MESSAGE(status.ok(), status.message());
+    BOOST_CHECK_EQUAL(results.size(), 2);
+    // Sum items should come back as ItemData (serialized element bytes).
+    // The kind depends on the GroveDB implementation for sum items.
+    BOOST_CHECK_EQUAL(skipped, 0);
+}
+
+// ---------------------------------------------------------------------------
+// QueryItemsOrSums — ItemData variant
+// ---------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(test_query_items_or_sums_item_data)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_items_or_sums_item"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+    grovedb::Path root{};
+
+    // Insert regular items.
+    grovedb::Element item;
+    BOOST_REQUIRE(grovedb::Element::Item({'v', '1'}, item).ok());
+    BOOST_REQUIRE(db.Put(root, {'a'}, item, cost).ok());
+    BOOST_REQUIRE(grovedb::Element::Item({'v', '2'}, item).ok());
+    BOOST_REQUIRE(db.Put(root, {'b'}, item, cost).ok());
+
+    grovedb::PathQuery query;
+    BOOST_REQUIRE(grovedb::PathQuery::New(
+        root,
+        {grovedb::QueryItem::RangeFull()},
+        0, 0,
+        query).ok());
+
+    std::vector<grovedb::QueryItemOrSum> results;
+    uint16_t skipped{0};
+    auto status = db.QueryItemsOrSums(query, results, skipped, cost);
+    BOOST_CHECK_MESSAGE(status.ok(), status.message());
+    BOOST_CHECK_EQUAL(results.size(), 2);
+    for (const auto& r : results) {
+        BOOST_CHECK(r.m_kind == grovedb::QueryItemOrSum::Kind::ItemData);
+        BOOST_CHECK(!r.m_item_data.empty());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// QuerySums
+// ---------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(test_query_sums)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_query_sums"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+    grovedb::Path root{};
+
+    // Create a sum tree.
+    grovedb::Element sum_tree;
+    BOOST_REQUIRE(grovedb::Element::EmptySumTree(sum_tree).ok());
+    BOOST_REQUIRE(db.Put(root, {'s'}, sum_tree, cost).ok());
+
+    // Insert sum items.
+    grovedb::Path sum_path{{'s'}};
+    grovedb::Element si;
+    BOOST_REQUIRE(grovedb::Element::SumItem(100, si).ok());
+    BOOST_REQUIRE(db.Put(sum_path, {'x'}, si, cost).ok());
+    BOOST_REQUIRE(grovedb::Element::SumItem(200, si).ok());
+    BOOST_REQUIRE(db.Put(sum_path, {'y'}, si, cost).ok());
+    BOOST_REQUIRE(grovedb::Element::SumItem(-50, si).ok());
+    BOOST_REQUIRE(db.Put(sum_path, {'z'}, si, cost).ok());
+
+    grovedb::PathQuery query;
+    BOOST_REQUIRE(grovedb::PathQuery::New(
+        sum_path,
+        {grovedb::QueryItem::RangeFull()},
+        0, 0,
+        query).ok());
+
+    std::vector<int64_t> sums;
+    uint16_t skipped{0};
+    auto status = db.QuerySums(query, sums, skipped, cost);
+    BOOST_CHECK_MESSAGE(status.ok(), status.message());
+    BOOST_CHECK_EQUAL(sums.size(), 3);
+
+    // Sum items should return their values in key order.
+    BOOST_CHECK_EQUAL(sums[0], 100);
+    BOOST_CHECK_EQUAL(sums[1], 200);
+    BOOST_CHECK_EQUAL(sums[2], -50);
+}
+
+// ---------------------------------------------------------------------------
+// QueryRaw — Element result type
+// ---------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(test_query_raw_element)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_query_raw_elem"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+    grovedb::Path root{};
+
+    grovedb::Element item;
+    BOOST_REQUIRE(grovedb::Element::Item({'v'}, item).ok());
+    BOOST_REQUIRE(db.Put(root, {'k'}, item, cost).ok());
+
+    grovedb::PathQuery query;
+    BOOST_REQUIRE(grovedb::PathQuery::New(
+        root,
+        {grovedb::QueryItem::Key({'k'})},
+        0, 0,
+        query).ok());
+
+    std::vector<grovedb::QueryResultElement> elements;
+    uint16_t skipped{0};
+    auto status = db.QueryRaw(query, 0, elements, skipped, cost);
+    BOOST_CHECK_MESSAGE(status.ok(), status.message());
+    BOOST_CHECK_EQUAL(elements.size(), 1);
+    BOOST_CHECK(elements[0].m_kind == grovedb::QueryResultElement::Kind::Element);
+    BOOST_CHECK(!elements[0].m_element.data().empty());
+}
+
+// ---------------------------------------------------------------------------
+// QueryRaw — KeyElementPair result type
+// ---------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(test_query_raw_key_element_pair)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_query_raw_kep"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+    grovedb::Path root{};
+
+    grovedb::Element item;
+    BOOST_REQUIRE(grovedb::Element::Item({'v'}, item).ok());
+    BOOST_REQUIRE(db.Put(root, {'k'}, item, cost).ok());
+
+    grovedb::PathQuery query;
+    BOOST_REQUIRE(grovedb::PathQuery::New(
+        root,
+        {grovedb::QueryItem::Key({'k'})},
+        0, 0,
+        query).ok());
+
+    std::vector<grovedb::QueryResultElement> elements;
+    uint16_t skipped{0};
+    auto status = db.QueryRaw(query, 1, elements, skipped, cost);
+    BOOST_CHECK_MESSAGE(status.ok(), status.message());
+    BOOST_CHECK_EQUAL(elements.size(), 1);
+    BOOST_CHECK(elements[0].m_kind == grovedb::QueryResultElement::Kind::KeyElementPair);
+    BOOST_CHECK(elements[0].m_key == grovedb::Bytes{'k'});
+    BOOST_CHECK(!elements[0].m_element.data().empty());
+}
+
+// ---------------------------------------------------------------------------
+// QueryRaw — PathKeyElementTrio result type
+// ---------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(test_query_raw_path_key_element_trio)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_query_raw_pket"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+    grovedb::Path root{};
+
+    grovedb::Element item;
+    BOOST_REQUIRE(grovedb::Element::Item({'v'}, item).ok());
+    BOOST_REQUIRE(db.Put(root, {'k'}, item, cost).ok());
+
+    grovedb::PathQuery query;
+    BOOST_REQUIRE(grovedb::PathQuery::New(
+        root,
+        {grovedb::QueryItem::Key({'k'})},
+        0, 0,
+        query).ok());
+
+    std::vector<grovedb::QueryResultElement> elements;
+    uint16_t skipped{0};
+    auto status = db.QueryRaw(query, 2, elements, skipped, cost);
+    BOOST_CHECK_MESSAGE(status.ok(), status.message());
+    BOOST_CHECK_EQUAL(elements.size(), 1);
+    BOOST_CHECK(elements[0].m_kind == grovedb::QueryResultElement::Kind::PathKeyElementTrio);
+    BOOST_CHECK(elements[0].m_key == grovedb::Bytes{'k'});
+    BOOST_CHECK(elements[0].m_path.empty()); // root path is empty
+    BOOST_CHECK(!elements[0].m_element.data().empty());
+}
+
+// ---------------------------------------------------------------------------
+// QueryManyRaw
+// ---------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(test_query_many_raw)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_query_many_raw"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+    grovedb::Path root{};
+
+    // Insert items at root.
+    grovedb::Element item;
+    BOOST_REQUIRE(grovedb::Element::Item({'1'}, item).ok());
+    BOOST_REQUIRE(db.Put(root, {'a'}, item, cost).ok());
+    BOOST_REQUIRE(grovedb::Element::Item({'2'}, item).ok());
+    BOOST_REQUIRE(db.Put(root, {'b'}, item, cost).ok());
+
+    // Create two queries for individual keys.
+    std::vector<grovedb::QueryItem> items_a{grovedb::QueryItem::Key({'a'})};
+    std::vector<grovedb::QueryItem> items_b{grovedb::QueryItem::Key({'b'})};
+
+    std::vector<grovedb::Db::RawQuerySpec> queries{
+        {.path = root, .items = items_a, .limit = 0, .offset = 0},
+        {.path = root, .items = items_b, .limit = 0, .offset = 0},
+    };
+
+    std::vector<grovedb::QueryResultElement> elements;
+    auto status = db.QueryManyRaw(queries, 0, elements, cost);
+    BOOST_CHECK_MESSAGE(status.ok(), status.message());
+    BOOST_CHECK_EQUAL(elements.size(), 2);
+}
+
+// ---------------------------------------------------------------------------
+// QueryKeysOptional — existing and missing keys
+// ---------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(test_query_keys_optional)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_query_keys_opt"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+    grovedb::Path root{};
+
+    // Insert one item.
+    grovedb::Element item;
+    BOOST_REQUIRE(grovedb::Element::Item({'v'}, item).ok());
+    BOOST_REQUIRE(db.Put(root, {'a'}, item, cost).ok());
+
+    // Query for existing key 'a' and non-existing key 'z'.
+    // query_keys_optional requires a limit.
+    grovedb::PathQuery query;
+    BOOST_REQUIRE(grovedb::PathQuery::New(
+        root,
+        {grovedb::QueryItem::Key({'a'}), grovedb::QueryItem::Key({'z'})},
+        100, 0,
+        query).ok());
+
+    std::vector<grovedb::PathKeyElement> results;
+    auto status = db.QueryKeysOptional(query, results, cost);
+    BOOST_CHECK_MESSAGE(status.ok(), status.message());
+    BOOST_CHECK_EQUAL(results.size(), 2);
+
+    // Key 'a' should have an element.
+    BOOST_CHECK(results[0].m_key == grovedb::Bytes{'a'});
+    BOOST_CHECK(results[0].m_element.has_value());
+
+    // Key 'z' should be absent.
+    BOOST_CHECK(results[1].m_key == grovedb::Bytes{'z'});
+    BOOST_CHECK(!results[1].m_element.has_value());
+}
+
+// ---------------------------------------------------------------------------
+// QueryRawKeysOptional
+// ---------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(test_query_raw_keys_optional)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_query_raw_keys_opt"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+    grovedb::Path root{};
+
+    grovedb::Element item;
+    BOOST_REQUIRE(grovedb::Element::Item({'v'}, item).ok());
+    BOOST_REQUIRE(db.Put(root, {'x'}, item, cost).ok());
+
+    grovedb::PathQuery query;
+    BOOST_REQUIRE(grovedb::PathQuery::New(
+        root,
+        {grovedb::QueryItem::Key({'x'}), grovedb::QueryItem::Key({'y'})},
+        100, 0,
+        query).ok());
+
+    std::vector<grovedb::PathKeyElement> results;
+    auto status = db.QueryRawKeysOptional(query, results, cost);
+    BOOST_CHECK_MESSAGE(status.ok(), status.message());
+    BOOST_CHECK_EQUAL(results.size(), 2);
+
+    BOOST_CHECK(results[0].m_key == grovedb::Bytes{'x'});
+    BOOST_CHECK(results[0].m_element.has_value());
+
+    BOOST_CHECK(results[1].m_key == grovedb::Bytes{'y'});
+    BOOST_CHECK(!results[1].m_element.has_value());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
