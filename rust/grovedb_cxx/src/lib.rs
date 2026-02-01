@@ -44,6 +44,12 @@ use delete::{
     grovedb_delete_with_tx,
 };
 
+mod query;
+use query::{
+    grovedb_path_query_new, grovedb_path_query_new_with_subquery,
+    grovedb_query_item_value, grovedb_query_item_value_with_tx,
+};
+
 /// Opaque wrapper around `grovedb::GroveDb` for use across the CXX bridge.
 pub struct BoxedGroveDb {
   db: grovedb::GroveDb,
@@ -70,6 +76,17 @@ pub struct BoxedTransaction {
 impl std::fmt::Debug for BoxedTransaction {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("BoxedTransaction").finish_non_exhaustive()
+  }
+}
+
+/// Opaque wrapper around a `grovedb::PathQuery` for use across the CXX bridge.
+pub struct BoxedPathQuery {
+  query: grovedb::PathQuery,
+}
+
+impl std::fmt::Debug for BoxedPathQuery {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("BoxedPathQuery").finish_non_exhaustive()
   }
 }
 
@@ -126,9 +143,19 @@ pub(crate) mod ffi {
     cost: FfiOperationCost,
   }
 
+  /// Result of a query_item_value operation: wire-encoded values, skipped
+  /// count, and operation costs.
+  struct FfiQueryResult {
+    /// Wire-encoded values: `[u32 count][u32 len₁][bytes₁]…`
+    values: Vec<u8>,
+    skipped: u16,
+    cost: FfiOperationCost,
+  }
+
   extern "Rust" {
     type BoxedGroveDb;
     type BoxedTransaction;
+    type BoxedPathQuery;
 
     fn whoami() -> String;
 
@@ -199,6 +226,14 @@ pub(crate) mod ffi {
     // -- Clear subtree --
     fn grovedb_clear_subtree(db: &BoxedGroveDb, path: &[u8]) -> Result<bool>;
     fn grovedb_clear_subtree_with_tx(db: &BoxedGroveDb, path: &[u8], tx: &BoxedTransaction) -> Result<bool>;
+
+    // -- PathQuery factories --
+    fn grovedb_path_query_new(path: &[u8], query_items: &[u8], limit: u32, offset: u32) -> Result<Box<BoxedPathQuery>>;
+    fn grovedb_path_query_new_with_subquery(path: &[u8], query_items: &[u8], limit: u32, offset: u32, subquery_path: &[u8], subquery_items: &[u8]) -> Result<Box<BoxedPathQuery>>;
+
+    // -- Query item value --
+    fn grovedb_query_item_value(db: &BoxedGroveDb, query: &BoxedPathQuery) -> Result<FfiQueryResult>;
+    fn grovedb_query_item_value_with_tx(db: &BoxedGroveDb, query: &BoxedPathQuery, tx: &BoxedTransaction) -> Result<FfiQueryResult>;
   }
 }
 
