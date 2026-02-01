@@ -7,45 +7,17 @@
 #endif
 
 #include <grovedb/db.h>
+#include <grovedb/wire.h>
 
 #include <rust/grovedb_cxx/lib.h>
 #include <types/query.h>
 #include <types/transaction.h>
 
-#include <algorithm>
 #include <format>
+#include <span>
 #include <string>
 
 namespace {
-/** Encode a grovedb::Path into the flat wire format expected by the CXX bridge.
- *
- *  Layout (little-endian u32):
- *  [segment_count][len₁][bytes₁][len₂][bytes₂]…
- */
-std::vector<uint8_t> encode_path(const grovedb::Path& path)
-{
-    size_t total{4};
-    for (const auto& seg : path) total += 4 + seg.size();
-
-    std::vector<uint8_t> buf;
-    buf.reserve(total);
-
-    auto push_u32 = [&buf](uint32_t v) {
-        buf.push_back(static_cast<uint8_t>(v));
-        buf.push_back(static_cast<uint8_t>(v >> 8));
-        buf.push_back(static_cast<uint8_t>(v >> 16));
-        buf.push_back(static_cast<uint8_t>(v >> 24));
-    };
-
-    push_u32(static_cast<uint32_t>(path.size()));
-    for (const auto& seg : path) {
-        push_u32(static_cast<uint32_t>(seg.size()));
-        buf.insert(buf.end(), seg.begin(), seg.end());
-    }
-
-    return buf;
-}
-
 /** Convert an FFI operation cost struct to the public C++ type. */
 grovedb::OperationCost convert_cost(const grovedb_cxx::FfiOperationCost& ffi)
 {
@@ -188,7 +160,7 @@ Status Db::Rollback(Transaction& txn)
 Status Db::Get(const Path& path, const Bytes& key, Element& element, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -204,7 +176,7 @@ Status Db::Get(const Path& path, const Bytes& key, Element& element, OperationCo
 Status Db::Get(const Path& path, const Bytes& key, const Transaction& txn, Element& element, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -221,7 +193,7 @@ Status Db::Get(const Path& path, const Bytes& key, const Transaction& txn, Eleme
 Status Db::GetDirect(const Path& path, const Bytes& key, Element& element, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -237,7 +209,7 @@ Status Db::GetDirect(const Path& path, const Bytes& key, Element& element, Opera
 Status Db::GetDirect(const Path& path, const Bytes& key, const Transaction& txn, Element& element, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -254,7 +226,7 @@ Status Db::GetDirect(const Path& path, const Bytes& key, const Transaction& txn,
 Status Db::GetOptional(const Path& path, const Bytes& key, std::optional<Element>& element, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -276,7 +248,7 @@ Status Db::GetOptional(const Path& path, const Bytes& key, std::optional<Element
 Status Db::GetOptional(const Path& path, const Bytes& key, const Transaction& txn, std::optional<Element>& element, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -299,7 +271,7 @@ Status Db::GetOptional(const Path& path, const Bytes& key, const Transaction& tx
 Status Db::KeyExists(const Path& path, const Bytes& key, bool& result, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -315,7 +287,7 @@ Status Db::KeyExists(const Path& path, const Bytes& key, bool& result, Operation
 Status Db::KeyExists(const Path& path, const Bytes& key, const Transaction& txn, bool& result, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -332,7 +304,7 @@ Status Db::KeyExists(const Path& path, const Bytes& key, const Transaction& txn,
 Status Db::SubtreeExists(const Path& path, bool& result, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
 
         auto ffi_result = grovedb_cxx::grovedb_check_subtree_exists(
@@ -348,7 +320,7 @@ Status Db::SubtreeExists(const Path& path, bool& result, OperationCost& cost)
 Status Db::SubtreeExists(const Path& path, const Transaction& txn, bool& result, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
 
         auto ffi_result = grovedb_cxx::grovedb_check_subtree_exists_with_tx(
@@ -368,7 +340,7 @@ Status Db::SubtreeExists(const Path& path, const Transaction& txn, bool& result,
 Status Db::Put(const Path& path, const Bytes& key, const Element& element, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
         rust::Slice<const uint8_t> elem_slice{element.m_data.data(), element.m_data.size()};
@@ -384,7 +356,7 @@ Status Db::Put(const Path& path, const Bytes& key, const Element& element, Opera
 Status Db::Put(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
         rust::Slice<const uint8_t> elem_slice{element.m_data.data(), element.m_data.size()};
@@ -401,7 +373,7 @@ Status Db::Put(const Path& path, const Bytes& key, const Element& element, const
 Status Db::PutIfAbsent(const Path& path, const Bytes& key, const Element& element, bool& inserted, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
         rust::Slice<const uint8_t> elem_slice{element.m_data.data(), element.m_data.size()};
@@ -419,7 +391,7 @@ Status Db::PutIfAbsent(const Path& path, const Bytes& key, const Element& elemen
 Status Db::PutIfAbsent(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, bool& inserted, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
         rust::Slice<const uint8_t> elem_slice{element.m_data.data(), element.m_data.size()};
@@ -437,7 +409,7 @@ Status Db::PutIfAbsent(const Path& path, const Bytes& key, const Element& elemen
 Status Db::PutIfAbsentAndGet(const Path& path, const Bytes& key, const Element& element, std::optional<Element>& existing, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
         rust::Slice<const uint8_t> elem_slice{element.m_data.data(), element.m_data.size()};
@@ -461,7 +433,7 @@ Status Db::PutIfAbsentAndGet(const Path& path, const Bytes& key, const Element& 
 Status Db::PutIfAbsentAndGet(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, std::optional<Element>& existing, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
         rust::Slice<const uint8_t> elem_slice{element.m_data.data(), element.m_data.size()};
@@ -485,7 +457,7 @@ Status Db::PutIfAbsentAndGet(const Path& path, const Bytes& key, const Element& 
 Status Db::PutIfChanged(const Path& path, const Bytes& key, const Element& element, bool& changed, std::optional<Element>& previous, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
         rust::Slice<const uint8_t> elem_slice{element.m_data.data(), element.m_data.size()};
@@ -510,7 +482,7 @@ Status Db::PutIfChanged(const Path& path, const Bytes& key, const Element& eleme
 Status Db::PutIfChanged(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, bool& changed, std::optional<Element>& previous, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
         rust::Slice<const uint8_t> elem_slice{element.m_data.data(), element.m_data.size()};
@@ -539,7 +511,7 @@ Status Db::PutIfChanged(const Path& path, const Bytes& key, const Element& eleme
 Status Db::Delete(const Path& path, const Bytes& key, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -554,7 +526,7 @@ Status Db::Delete(const Path& path, const Bytes& key, OperationCost& cost)
 Status Db::Delete(const Path& path, const Bytes& key, const Transaction& txn, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -570,7 +542,7 @@ Status Db::Delete(const Path& path, const Bytes& key, const Transaction& txn, Op
 Status Db::DeleteIfEmpty(const Path& path, const Bytes& key, bool& deleted, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -586,7 +558,7 @@ Status Db::DeleteIfEmpty(const Path& path, const Bytes& key, bool& deleted, Oper
 Status Db::DeleteIfEmpty(const Path& path, const Bytes& key, const Transaction& txn, bool& deleted, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -603,7 +575,7 @@ Status Db::DeleteIfEmpty(const Path& path, const Bytes& key, const Transaction& 
 Status Db::PruneEmptyAncestors(const Path& path, const Bytes& key, uint32_t& removed_count, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -620,7 +592,7 @@ Status Db::PruneEmptyAncestors(const Path& path, const Bytes& key, uint32_t& rem
 Status Db::PruneEmptyAncestors(const Path& path, const Bytes& key, const Transaction& txn, uint32_t& removed_count, OperationCost& cost)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -637,7 +609,7 @@ Status Db::PruneEmptyAncestors(const Path& path, const Bytes& key, const Transac
 Status Db::Clear(const Path& path, bool& result)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
 
         result = grovedb_cxx::grovedb_clear_subtree(*m_impl->m_db, path_slice);
@@ -650,7 +622,7 @@ Status Db::Clear(const Path& path, bool& result)
 Status Db::Clear(const Path& path, const Transaction& txn, bool& result)
 {
     try {
-        auto path_buf = encode_path(path);
+        auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
 
         result = grovedb_cxx::grovedb_clear_subtree_with_tx(
@@ -665,43 +637,14 @@ Status Db::Clear(const Path& path, const Transaction& txn, bool& result)
 // Query operations
 // ---------------------------------------------------------------------------
 
-/** Decode query result values from the flat wire format.
- *
- *  Wire format: [u32 count][u32 len₁][bytes₁][u32 len₂][bytes₂]…
- */
-static std::vector<Bytes> decode_values(const rust::Vec<uint8_t>& wire)
-{
-    auto read_u32 = [](const uint8_t* p) -> uint32_t {
-        return static_cast<uint32_t>(p[0])
-             | (static_cast<uint32_t>(p[1]) << 8)
-             | (static_cast<uint32_t>(p[2]) << 16)
-             | (static_cast<uint32_t>(p[3]) << 24);
-    };
-
-    std::vector<Bytes> result;
-    if (wire.size() < 4) return result;
-
-    const uint8_t* ptr = wire.data();
-    uint32_t count = read_u32(ptr);
-    ptr += 4;
-
-    result.reserve(count);
-    for (uint32_t i = 0; i < count; ++i) {
-        uint32_t len = read_u32(ptr);
-        ptr += 4;
-        result.emplace_back(ptr, ptr + len);
-        ptr += len;
-    }
-
-    return result;
-}
-
 Status Db::QueryValues(const PathQuery& query, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost)
 {
     try {
         auto result = grovedb_cxx::grovedb_query_item_value(
             *m_impl->m_db, *query.m_impl->m_query);
-        values = decode_values(result.values);
+        if (auto s = wire::Decode(std::span<const uint8_t>{result.values.data(), result.values.size()}, values); !s.ok()) {
+            return s;
+        }
         skipped = result.skipped;
         cost = convert_cost(result.cost);
         return Status::Ok();
@@ -715,7 +658,9 @@ Status Db::QueryValues(const PathQuery& query, const Transaction& txn, std::vect
     try {
         auto result = grovedb_cxx::grovedb_query_item_value_with_tx(
             *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx);
-        values = decode_values(result.values);
+        if (auto s = wire::Decode(std::span<const uint8_t>{result.values.data(), result.values.size()}, values); !s.ok()) {
+            return s;
+        }
         skipped = result.skipped;
         cost = convert_cost(result.cost);
         return Status::Ok();
