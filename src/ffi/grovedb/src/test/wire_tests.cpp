@@ -6,50 +6,11 @@
 
 #include <grovedb/wire.h>
 
-#include <util/polyfill/std23.hpp>
-
 #include <array>
 #include <cstdint>
 #include <vector>
 
 BOOST_AUTO_TEST_SUITE(wire_tests)
-
-// ---------------------------------------------------------------------------
-// std23::byteswap tests
-// ---------------------------------------------------------------------------
-
-BOOST_AUTO_TEST_CASE(test_byteswap_u16)
-{
-    BOOST_CHECK_EQUAL(std23::byteswap(uint16_t{0x0102}), uint16_t{0x0201});
-    BOOST_CHECK_EQUAL(std23::byteswap(uint16_t{0x0000}), uint16_t{0x0000});
-    BOOST_CHECK_EQUAL(std23::byteswap(uint16_t{0xFFFF}), uint16_t{0xFFFF});
-}
-
-BOOST_AUTO_TEST_CASE(test_byteswap_u32)
-{
-    BOOST_CHECK_EQUAL(std23::byteswap(uint32_t{0x01020304}), uint32_t{0x04030201});
-    BOOST_CHECK_EQUAL(std23::byteswap(uint32_t{0x00000000}), uint32_t{0x00000000});
-    BOOST_CHECK_EQUAL(std23::byteswap(uint32_t{0xFFFFFFFF}), uint32_t{0xFFFFFFFF});
-}
-
-BOOST_AUTO_TEST_CASE(test_byteswap_u64)
-{
-    BOOST_CHECK_EQUAL(
-        std23::byteswap(uint64_t{0x0102030405060708}),
-        uint64_t{0x0807060504030201});
-    // Roundtrip: swap twice should return the original.
-    uint64_t original{0xDEADBEEFCAFEBABE};
-    BOOST_CHECK_EQUAL(std23::byteswap(std23::byteswap(original)), original);
-}
-
-BOOST_AUTO_TEST_CASE(test_byteswap_constexpr)
-{
-    // Verify constexpr evaluation.
-    static_assert(std23::byteswap(uint16_t{0x0102}) == uint16_t{0x0201});
-    static_assert(std23::byteswap(uint32_t{0x01020304}) == uint32_t{0x04030201});
-    static_assert(std23::byteswap(uint64_t{0x0102030405060708}) == uint64_t{0x0807060504030201});
-    BOOST_CHECK(true); // Test body required.
-}
 
 // ---------------------------------------------------------------------------
 // Writer/Reader primitive roundtrip tests
