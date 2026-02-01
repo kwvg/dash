@@ -25,7 +25,8 @@ libgrovedb_la_SOURCES = \
 	src/put.cpp \
 	src/query.cpp \
 	src/transaction.cpp \
-	src/wire.cpp
+	src/util/wire_read.cpp \
+	src/util/wire_write.cpp
 libgrovedb_la_CPPFLAGS = -DHAVE_GROVEDB_CONFIG -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_builddir)/src $(GROVEDB_CXX_CPPFLAGS)
 libgrovedb_la_CXXFLAGS = $(AM_CXXFLAGS)
 
