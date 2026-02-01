@@ -57,6 +57,41 @@
         };
       };
 
+      # Build packages for CI environments
+      # Matches contrib/containers/ci/ci.Dockerfile
+      buildPackagesList = pkgs: with pkgs; [
+        autoconf
+        automake
+        bc
+        bear
+        bison
+        ccache
+        cmake
+        file
+        gawk
+        gettext
+        gmp
+        gmpxx
+        libtool
+        m4
+        parallel
+        pkg-config
+        python310  # For build scripts
+        unzip
+        which
+        zip
+      ];
+
+      # Cross-compilation toolchains
+      crossToolchains = pkgs: with pkgs; [
+        # ARM Linux (for ci-arm-linux)
+        pkgsCross.armv7l-hf-multiplatform.stdenv.cc
+
+        # Windows (for ci-win64)
+        pkgsCross.mingwW64.stdenv.cc
+        wine
+      ];
+
     in {
       # Development shells will be added in later commits
       # Structure will be:
@@ -138,6 +173,50 @@
             '';
           };
 
+          # Layer 2: CI environment builder
+          # Adds build tools + compilers to test environment
+          # Matches contrib/containers/ci/ci.Dockerfile
+          mkCIEnv = { name, compiler, extraBuildInputs ? [], extraShellHook ? "" }: pkgs.mkShellNoCC {
+            inherit name;
+
+            # Use mkShellNoCC to avoid default stdenv compiler (GCC 13)
+            # Then explicitly add our desired compiler
+            buildInputs = [ compiler ]
+              ++ (buildPackagesList pkgs)
+              ++ [
+                # Python 3.10 with test packages (from testEnv)
+                (python.withPackages (ps: [
+                  (getPythonPkg "pyzmq" pythonHashes.pyzmq)
+                  (getPythonPkg "jinja2" pythonHashes.jinja2)
+                  (getPythonPkg "dash_hash" pythonHashes.dash_hash)
+                  (getPythonPkg "multiprocess" pythonHashes.multiprocess)
+                ]))
+                # Linters (from testEnv)
+                (getPythonPkg "codespell" pythonHashes.codespell)
+                (getPythonPkg "flake8" pythonHashes.flake8)
+                (getPythonPkg "mypy" pythonHashes.mypy)
+                (getPythonPkg "vulture" pythonHashes.vulture)
+                # Static analysis (from testEnv)
+                pkgs.cppcheck
+                pkgs.shellcheck
+              ]
+              ++ extraBuildInputs;
+
+            shellHook = ''
+              ${testEnv.shellHook}
+              echo ""
+              echo "=== CI Environment: ${name} ==="
+              echo "Compiler: ${compiler.name}"
+              echo "Build tools available: autoconf, automake, cmake, libtool, pkg-config"
+              echo ""
+              echo "Build scripts:"
+              echo "  contrib/nix/libexec/env_setup.py - Environment configuration"
+              echo "  contrib/nix/libexec/build.py - Build orchestration"
+              echo ""
+              ${extraShellHook}
+            '';
+          };
+
         in {
           # Default shell
           default = pkgs.mkShell {
@@ -148,12 +227,39 @@
               echo "See contrib/nix/README.md for usage"
               echo ""
               echo "Available environments:"
-              echo "  nix develop .#test - Test environment (Python ${pythonHashes.codespell.version} + linters)"
+              echo "  nix develop .#test - Test environment (Python + linters)"
+              echo "  nix develop .#ci-linux64-nowallet - CI environment (GCC 15, no wallet)"
             '';
           };
 
           # Test environment (Layer 1)
           test = testEnv;
+
+          # CI environments (Layer 2)
+          # Each environment builds on test + adds compilers and build tools
+
+          # linux64_nowallet - GCC 15, no wallet, no GUI
+          # Matches CI_TARGET=linux64_nowallet in ci.Dockerfile
+          ci-linux64-nowallet = mkCIEnv {
+            name = "dash-ci-linux64-nowallet";
+            compiler = pkgs.gcc15;
+            extraShellHook = ''
+              export CI_TARGET="linux64_nowallet"
+              export HOST="x86_64-pc-linux-gnu"
+              export CONFIGURE_FLAGS="--disable-wallet --without-gui --without-bdb --without-sqlite --enable-reduce-exports"
+              export MAKE_FLAGS="NO_WALLET=1"
+              echo "CI Target: linux64_nowallet"
+              echo "  Host: x86_64-pc-linux-gnu"
+              echo "  Compiler: GCC 15"
+              echo "  Features: NO wallet, NO GUI"
+              echo ""
+              echo "Build commands:"
+              echo "  ./autogen.sh"
+              echo "  make -C depends HOST=\$HOST \$MAKE_FLAGS -j\$(nproc)"
+              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
+              echo "  make -j\$(nproc)"
+            '';
+          };
         });
     };
 }
