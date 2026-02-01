@@ -4,6 +4,7 @@ lib_LTLIBRARIES = libgrovedb.la
 
 include_grovedir = $(includedir)/grovedb
 include_grove_HEADERS = \
+	include/grovedb/batch.h \
 	include/grovedb/cost.h \
 	include/grovedb/db.h \
 	include/grovedb/element.h \

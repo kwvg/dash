@@ -5,6 +5,7 @@
 #ifndef GROVEDB_DB_H
 #define GROVEDB_DB_H
 
+#include <grovedb/batch.h>
 #include <grovedb/cost.h>
 #include <grovedb/element.h>
 #include <grovedb/proof.h>
@@ -345,7 +346,33 @@ public:
         const Bytes& proof, const PathQuery& query,
         Hash& root_hash, std::vector<ProofResultEntry>& entries);
 
+    // -- Batch operations -------------------------------------------------
+
+    /**
+     * Atomically apply a batch of operations.
+     *
+     * @param[in]  ops   Operations to apply (constructed via BatchOperation
+     *                    factory methods).
+     * @param[out] cost  Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status ApplyBatch(const std::vector<BatchOperation>& ops,
+                      OperationCost& cost);
+    Status ApplyBatch(const std::vector<BatchOperation>& ops,
+                      const BatchApplyOptions& options,
+                      OperationCost& cost);
+    Status ApplyBatch(const std::vector<BatchOperation>& ops,
+                      const Transaction& txn,
+                      OperationCost& cost);
+    Status ApplyBatch(const std::vector<BatchOperation>& ops,
+                      const BatchApplyOptions& options,
+                      const Transaction& txn,
+                      OperationCost& cost);
+
 private:
+    /** Wire-encode batch operations for the FFI boundary. */
+    static Bytes EncodeBatchOps(const std::vector<BatchOperation>& ops);
+
     /** Decode wire-encoded verification result into C++ types. */
     static Status DecodeVerifyResult(
         std::span<const uint8_t> root_hash_bytes,
