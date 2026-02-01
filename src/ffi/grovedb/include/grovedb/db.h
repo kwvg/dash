@@ -7,14 +7,18 @@
 
 #include <grovedb/cost.h>
 #include <grovedb/element.h>
+#include <grovedb/proof.h>
 #include <grovedb/query.h>
 #include <grovedb/status.h>
 #include <grovedb/transaction.h>
 #include <grovedb/types.h>
 
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
+#include <vector>
 
 namespace grovedb {
 class Db
@@ -270,7 +274,85 @@ public:
     Status QueryValues(const PathQuery& query, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost);
     Status QueryValues(const PathQuery& query, const Transaction& txn, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost);
 
+    // -- Proof operations -------------------------------------------------
+
+    /**
+     * Generate a cryptographic proof for a query.
+     *
+     * @param[in]  query  The path query to prove.
+     * @param[out] proof  Receives the opaque proof bytes.
+     * @param[out] cost   Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status Prove(const PathQuery& query, Bytes& proof, OperationCost& cost);
+    Status Prove(const PathQuery& query, const ProveOptions& options,
+                 Bytes& proof, OperationCost& cost);
+
+    /**
+     * Verify a proof against a query (no database instance needed).
+     *
+     * @param[in]  proof      Opaque proof bytes from Prove().
+     * @param[in]  query      The query the proof was generated for.
+     * @param[out] root_hash  Receives the 32-byte Merkle root from the proof.
+     * @param[out] entries    Receives the verified path-key-element triples.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    static Status VerifyQuery(
+        const Bytes& proof, const PathQuery& query,
+        Hash& root_hash, std::vector<ProofResultEntry>& entries);
+    static Status VerifyQuery(
+        const Bytes& proof, const PathQuery& query,
+        const VerifyOptions& options,
+        Hash& root_hash, std::vector<ProofResultEntry>& entries);
+
+    /**
+     * Verify a subset proof (proof may contain more data than the query
+     * requests).
+     *
+     * @param[in]  proof      Opaque proof bytes.
+     * @param[in]  query      The query to verify against.
+     * @param[out] root_hash  Receives the 32-byte Merkle root from the proof.
+     * @param[out] entries    Receives the verified path-key-element triples.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    static Status VerifySubsetQuery(
+        const Bytes& proof, const PathQuery& query,
+        Hash& root_hash, std::vector<ProofResultEntry>& entries);
+
+    /**
+     * Verify a query and check for absence proofs of non-existing keys.
+     *
+     * @param[in]  proof      Opaque proof bytes.
+     * @param[in]  query      The query to verify against.
+     * @param[out] root_hash  Receives the 32-byte Merkle root from the proof.
+     * @param[out] entries    Receives the verified path-key-element triples.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    static Status VerifyQueryWithAbsenceProof(
+        const Bytes& proof, const PathQuery& query,
+        Hash& root_hash, std::vector<ProofResultEntry>& entries);
+
+    /**
+     * Verify a subset query with absence proofs.
+     *
+     * @param[in]  proof      Opaque proof bytes.
+     * @param[in]  query      The query to verify against.
+     * @param[out] root_hash  Receives the 32-byte Merkle root from the proof.
+     * @param[out] entries    Receives the verified path-key-element triples.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    static Status VerifySubsetQueryWithAbsenceProof(
+        const Bytes& proof, const PathQuery& query,
+        Hash& root_hash, std::vector<ProofResultEntry>& entries);
+
 private:
+    /** Decode wire-encoded verification result into C++ types. */
+    static Status DecodeVerifyResult(
+        std::span<const uint8_t> root_hash_bytes,
+        std::span<const uint8_t> entries_bytes,
+        Hash& root_hash,
+        std::vector<ProofResultEntry>& entries);
+
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };

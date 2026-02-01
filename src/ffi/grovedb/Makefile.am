@@ -7,6 +7,7 @@ include_grove_HEADERS = \
 	include/grovedb/cost.h \
 	include/grovedb/db.h \
 	include/grovedb/element.h \
+	include/grovedb/proof.h \
 	include/grovedb/query.h \
 	include/grovedb/status.h \
 	include/grovedb/transaction.h \
