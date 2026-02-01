@@ -233,6 +233,7 @@
               echo "  nix develop .#ci-linux64-sqlite - CI: GCC 15, SQLite"
               echo "  nix develop .#ci-linux64-multiprocess - CI: Clang 19, multiprocess"
               echo "  nix develop .#ci-arm-linux - CI: GCC 11, ARM cross"
+              echo "  nix develop .#ci-mac - CI: Clang 19, macOS cross"
             '';
           };
 
@@ -416,6 +417,29 @@
               echo "  Host: arm-linux-gnueabihf"
               echo "  Compiler: GCC 11 (cross-compile)"
               echo "  Features: ARM 32-bit cross-compilation"
+              echo ""
+              echo "Build commands:"
+              echo "  ./autogen.sh"
+              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
+              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
+              echo "  make -j\$(nproc)"
+            '';
+          };
+
+          # mac - Clang 19 macOS cross-compilation
+          # Matches CI_TARGET=mac in ci.Dockerfile
+          ci-mac = mkCIEnv {
+            name = "dash-ci-mac";
+            compiler = pkgs.clang_19;
+            extraBuildInputs = [ pkgs.llvm_19 pkgs.lld_19 ];
+            extraShellHook = ''
+              export CI_TARGET="mac"
+              export HOST="x86_64-apple-darwin"
+              export CONFIGURE_FLAGS="--enable-reduce-exports --enable-werror"
+              echo "CI Target: mac"
+              echo "  Host: x86_64-apple-darwin"
+              echo "  Compiler: Clang 19 (cross-compile)"
+              echo "  Features: macOS cross-compilation with LLD linker"
               echo ""
               echo "Build commands:"
               echo "  ./autogen.sh"
