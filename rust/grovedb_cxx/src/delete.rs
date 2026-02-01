@@ -113,7 +113,10 @@ pub fn grovedb_delete_up_tree_while_empty(
 ) -> Result<FfiU32Result, String> {
     let version = GroveVersion::latest();
     let segments = decode_path(path)?;
-    let options = DeleteUpTreeOptions::default();
+    let options = DeleteUpTreeOptions {
+        stop_path_height: Some(0),
+        ..DeleteUpTreeOptions::default()
+    };
     let ctx = db.db.delete_up_tree_while_empty(
         segments.as_slice(),
         key,
@@ -139,7 +142,10 @@ pub fn grovedb_delete_up_tree_while_empty_with_tx(
 ) -> Result<FfiU32Result, String> {
     let version = GroveVersion::latest();
     let segments = decode_path(path)?;
-    let options = DeleteUpTreeOptions::default();
+    let options = DeleteUpTreeOptions {
+        stop_path_height: Some(0),
+        ..DeleteUpTreeOptions::default()
+    };
     let ctx = db.db.delete_up_tree_while_empty(
         segments.as_slice(),
         key,
