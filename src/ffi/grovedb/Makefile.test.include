@@ -12,6 +12,7 @@ src_test_test_grovedb_SOURCES = \
 	src/test/lifecycle_tests.cpp \
 	src/test/main.cpp \
 	src/test/polyfill_tests.cpp \
+	src/test/proof_tests.cpp \
 	src/test/query_tests.cpp \
 	src/test/transaction_tests.cpp \
 	src/test/util/tempdir.cpp \
