@@ -14,9 +14,36 @@
       # Helper to generate attributes for each system
       forAllSystems = nixpkgs.lib.genAttrs systems;
 
-      # Helper to get pkgs for a system
+      # Compiler overlay - pins specific compiler versions
+      # NO patchelf needed - binaries built with correct --dynamic-linker
+      compilerOverlay = final: prev:
+        let
+          unstable = import nixpkgs-unstable {
+            inherit (final) system;
+            config.allowUnfree = false;
+          };
+        in {
+          # GCC versions
+          gcc11 = prev.gcc11;          # From stable (oldest supported for depends)
+          gcc14 = prev.gcc14 or unstable.gcc14;  # Fallback to unstable if not in stable
+          gcc15 = unstable.gcc15;      # Latest from unstable
+
+          # Clang/LLVM 19 (for sanitizers, multiprocess, fuzz)
+          clang_19 = unstable.clang_19;
+          llvm_19 = unstable.llvm_19;
+          compiler-rt_19 = unstable.compiler-rt_19;
+          libcxx_19 = unstable.libcxx_19;
+          libcxxabi_19 = unstable.libcxxabi_19;
+          clang-tools_19 = unstable.clang-tools_19;  # For clang-tidy
+
+          # LLD linker (for macOS cross-compilation)
+          lld_19 = unstable.lld_19;
+        };
+
+      # Helper to get pkgs for a system with compiler overlay
       pkgsFor = system: import nixpkgs {
         inherit system;
+        overlays = [ compilerOverlay ];
         config = {
           allowUnfree = false;
         };
