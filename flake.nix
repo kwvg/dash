@@ -31,7 +31,7 @@
           # Clang/LLVM 19 (for sanitizers, multiprocess, fuzz)
           clang_19 = unstable.clang_19;
           llvm_19 = unstable.llvm_19;
-          clang-tools_19 = unstable.clang-tools_19;  # For clang-tidy
+          llvmPackages_19 = unstable.llvmPackages_19;
 
           # LLD linker (for macOS cross-compilation)
           lld_19 = unstable.lld_19;
@@ -77,6 +77,28 @@
         unzip
         which
         zip
+      ];
+
+      # Development tools (for develop environments)
+      devToolsList = pkgs: with pkgs; [
+        # Clang tools for code quality
+        pkgs.llvmPackages_19.clang-tools  # clang-tidy, clang-format, etc.
+
+        # Build system generators
+        bear  # Generate compile_commands.json
+
+        # Code analysis
+        cppcheck
+        shellcheck
+
+        # Performance tools
+        ccache
+
+        # Documentation
+        doxygen
+
+        # Version control
+        git
       ];
 
       # Cross-compilation toolchains
@@ -214,6 +236,88 @@
             '';
           };
 
+          # Layer 3: Develop environment builder
+          # Kitchen sink - all compilers, all tools, everything for local development
+          # Matches contrib/containers/develop/Dockerfile
+          mkDevelopEnv = { name }: pkgs.mkShellNoCC {
+            inherit name;
+
+            # All compilers available
+            # Note: Only one GCC can be default - we choose GCC 15
+            buildInputs = [
+              # GCC 15 as default
+              pkgs.gcc15
+
+              # Clang/LLVM 19 suite
+              pkgs.clang_19
+              pkgs.llvm_19
+              pkgs.lld_19
+            ]
+            ++ (buildPackagesList pkgs)
+            ++ (devToolsList pkgs)
+            ++ [
+              # Python 3.10 with all packages
+              (python.withPackages (ps: [
+                (getPythonPkg "pyzmq" pythonHashes.pyzmq)
+                (getPythonPkg "jinja2" pythonHashes.jinja2)
+                (getPythonPkg "dash_hash" pythonHashes.dash_hash)
+                (getPythonPkg "multiprocess" pythonHashes.multiprocess)
+              ]))
+              # All linters
+              (getPythonPkg "codespell" pythonHashes.codespell)
+              (getPythonPkg "flake8" pythonHashes.flake8)
+              (getPythonPkg "mypy" pythonHashes.mypy)
+              (getPythonPkg "vulture" pythonHashes.vulture)
+            ]
+            ++ (if system == "x86_64-linux" then [ pkgs.wine ] else []);
+
+            shellHook = ''
+              echo "Dash Core Development Environment (Layer 3)"
+              echo "Full-featured environment for local development"
+              echo ""
+              echo "=== Available Compilers ==="
+              echo "  GCC 15: $(gcc --version 2>&1 | head -1) [default]"
+              echo "  Clang 19: $(clang --version 2>&1 | head -1)"
+              echo ""
+              echo "=== Development Tools ==="
+              echo "  Code quality: clang-tidy, clang-format, cppcheck"
+              echo "  Build tools: bear (compile_commands.json), ccache"
+              echo "  Analysis: shellcheck, mypy, flake8, vulture, codespell"
+              echo "  Documentation: doxygen"
+              ${if system == "x86_64-linux" then ''echo "  Windows: wine"'' else ""}
+              echo ""
+              echo "=== Quick Start ==="
+              echo "  1. Build depends:"
+              echo "     make -C depends HOST=x86_64-pc-linux-gnu -j\$(nproc)"
+              echo ""
+              echo "  2. Configure (GCC 15):"
+              echo "     ./autogen.sh"
+              echo "     ./configure --prefix=\$(pwd)/depends/x86_64-pc-linux-gnu"
+              echo ""
+              echo "  3. Build Dash Core:"
+              echo "     make -j\$(nproc)"
+              echo ""
+              echo "  4. Run tests:"
+              echo "     ./src/test/test_dash"
+              echo "     test/functional/test_runner.py"
+              echo ""
+              echo "=== Alternative Compilers ==="
+              echo "  With Clang 19:"
+              echo "    CC=clang CXX=clang++ ./configure ..."
+              echo ""
+              echo "=== Code Quality ==="
+              echo "  Linting:"
+              echo "    test/lint/all-lint.py"
+              echo ""
+              echo "  Generate compile_commands.json:"
+              echo "    bear -- make -j\$(nproc)"
+              echo ""
+              echo "  Run clang-tidy:"
+              echo "    clang-tidy -p . src/*.cpp"
+              echo ""
+            '';
+          };
+
         in {
           # Default shell
           default = pkgs.mkShell {
@@ -235,11 +339,19 @@
               echo "  nix develop .#ci-arm-linux - CI: GCC 11, ARM cross"
               echo "  nix develop .#ci-mac - CI: Clang 19, macOS cross"
               ${if system == "x86_64-linux" then ''echo "  nix develop .#ci-win64 - CI: GCC 15, Windows cross + Wine"'' else ""}
+              echo ""
+              echo "Development environments (all tools):"
+              echo "  nix develop .#develop - All compilers, all tools"
             '';
           };
 
           # Test environment (Layer 1)
           test = testEnv;
+
+          # Develop environment (Layer 3) - All compilers and tools
+          develop = mkDevelopEnv {
+            name = "dash-develop";
+          };
 
           # CI environments (Layer 2)
           # Each environment builds on test + adds compilers and build tools
