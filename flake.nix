@@ -230,6 +230,7 @@
               echo "  nix develop .#test - Test environment (Python + linters)"
               echo "  nix develop .#ci-linux64-nowallet - CI: GCC 15, no wallet"
               echo "  nix develop .#ci-linux64 - CI: GCC 15, full build"
+              echo "  nix develop .#ci-linux64-fuzz - CI: Clang 19, fuzzing"
             '';
           };
 
@@ -279,6 +280,30 @@
               echo "Build commands:"
               echo "  ./autogen.sh"
               echo "  make -C depends HOST=\$HOST -j\$(nproc)"
+              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
+              echo "  make -j\$(nproc)"
+            '';
+          };
+
+          # linux64_fuzz - Clang 19, fuzzing with libFuzzer
+          # Matches CI_TARGET=linux64_fuzz in ci.Dockerfile
+          ci-linux64-fuzz = mkCIEnv {
+            name = "dash-ci-linux64-fuzz";
+            compiler = pkgs.clang_19;
+            extraBuildInputs = [ pkgs.llvm_19 ];
+            extraShellHook = ''
+              export CI_TARGET="linux64_fuzz"
+              export HOST="x86_64-pc-linux-gnu"
+              export CONFIGURE_FLAGS="--enable-fuzz --with-sanitizers=fuzzer,address,undefined --disable-wallet --without-gui --without-bdb --without-sqlite CC=clang CXX=clang++"
+              export MAKE_FLAGS="NO_WALLET=1"
+              echo "CI Target: linux64_fuzz"
+              echo "  Host: x86_64-pc-linux-gnu"
+              echo "  Compiler: Clang 19"
+              echo "  Features: Fuzz testing (libFuzzer + ASan + UBSan)"
+              echo ""
+              echo "Build commands:"
+              echo "  ./autogen.sh"
+              echo "  make -C depends HOST=\$HOST \$MAKE_FLAGS -j\$(nproc)"
               echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
               echo "  make -j\$(nproc)"
             '';
