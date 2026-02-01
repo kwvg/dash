@@ -13,6 +13,7 @@
 #include <types/query.h>
 
 #include <span>
+#include <vector>
 
 namespace grovedb {
 
@@ -161,6 +162,82 @@ Status Db::VerifySubsetQueryWithAbsenceProof(
             {result.root_hash.data(), result.root_hash.size()},
             {result.entries.data(), result.entries.size()},
             root_hash, entries);
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Chained query verification
+// ---------------------------------------------------------------------------
+
+Status Db::DecodeChainedVerifyResult(
+    std::span<const uint8_t> root_hash_bytes,
+    std::span<const uint8_t> result_sets_bytes,
+    Hash& root_hash,
+    std::vector<std::vector<ProofResultEntry>>& all_results)
+{
+    if (root_hash_bytes.size() != 32) {
+        return Status::Corruption("proof: root hash is not 32 bytes");
+    }
+    std::copy(root_hash_bytes.begin(), root_hash_bytes.end(), root_hash.begin());
+
+    wire::Reader r{result_sets_bytes};
+    uint32_t set_count{0};
+    if (auto s = r.U32(set_count); !s.ok()) return s;
+
+    all_results.clear();
+    all_results.reserve(set_count);
+    for (uint32_t si{0}; si < set_count; ++si) {
+        uint32_t entry_count{0};
+        if (auto s = r.U32(entry_count); !s.ok()) return s;
+
+        std::vector<ProofResultEntry> result_set;
+        result_set.reserve(entry_count);
+        for (uint32_t ei{0}; ei < entry_count; ++ei) {
+            ProofResultEntry entry;
+            if (auto s = wire::WireRead(r, entry.m_path); !s.ok()) return s;
+            if (auto s = r.Bytes(entry.m_key); !s.ok()) return s;
+
+            uint8_t has_elem{0};
+            if (auto s = r.U8(has_elem); !s.ok()) return s;
+            if (has_elem) {
+                Bytes elem_bytes;
+                if (auto s = r.Bytes(elem_bytes); !s.ok()) return s;
+                Element elem;
+                elem.m_data = std::move(elem_bytes);
+                entry.m_element = std::move(elem);
+            }
+
+            result_set.push_back(std::move(entry));
+        }
+        all_results.push_back(std::move(result_set));
+    }
+    return Status::Ok();
+}
+
+Status Db::VerifyChainedQueries(
+    const Bytes& proof,
+    const PathQuery& first_query,
+    const std::vector<const PathQuery*>& chained_queries,
+    Hash& root_hash,
+    std::vector<std::vector<ProofResultEntry>>& all_results)
+{
+    try {
+        // Build the PathQueryVec accumulator.
+        auto vec = grovedb_cxx::grovedb_path_query_vec_new();
+        for (const auto* q : chained_queries) {
+            grovedb_cxx::grovedb_path_query_vec_push(*vec, *q->m_impl->m_query);
+        }
+
+        rust::Slice<const uint8_t> proof_slice{proof.data(), proof.size()};
+        auto result = grovedb_cxx::grovedb_verify_chained_queries(
+            proof_slice, *first_query.m_impl->m_query, *vec);
+
+        return DecodeChainedVerifyResult(
+            {result.root_hash.data(), result.root_hash.size()},
+            {result.result_sets.data(), result.result_sets.size()},
+            root_hash, all_results);
     } catch (const std::exception& e) {
         return Status::IOError(e.what());
     }

@@ -436,6 +436,27 @@ public:
         const Bytes& proof, const PathQuery& query,
         Hash& root_hash, std::vector<ProofResultEntry>& entries);
 
+    /**
+     * Verify a proof with chained path queries.
+     *
+     * Each chained query is applied unconditionally after the first query.
+     * The C++ side provides pre-computed queries rather than closures.
+     *
+     * @param[in]  proof           Opaque proof bytes.
+     * @param[in]  first_query     The initial query to verify against.
+     * @param[in]  chained_queries Subsequent queries applied in order.
+     * @param[out] root_hash       Receives the 32-byte Merkle root from the proof.
+     * @param[out] all_results     Receives one result set per query
+     *                             (first + chained).
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    static Status VerifyChainedQueries(
+        const Bytes& proof,
+        const PathQuery& first_query,
+        const std::vector<const PathQuery*>& chained_queries,
+        Hash& root_hash,
+        std::vector<std::vector<ProofResultEntry>>& all_results);
+
     // -- Batch operations -------------------------------------------------
 
     /**
@@ -492,6 +513,13 @@ private:
     static Status DecodePathKeyElements(
         std::span<const uint8_t> data,
         std::vector<PathKeyElement>& results);
+
+    /** Decode wire-encoded chained verification result sets. */
+    static Status DecodeChainedVerifyResult(
+        std::span<const uint8_t> root_hash_bytes,
+        std::span<const uint8_t> result_sets_bytes,
+        Hash& root_hash,
+        std::vector<std::vector<ProofResultEntry>>& all_results);
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;
