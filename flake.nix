@@ -31,7 +31,6 @@
           # Clang/LLVM 19 (for sanitizers, multiprocess, fuzz)
           clang_19 = unstable.clang_19;
           llvm_19 = unstable.llvm_19;
-          compiler-rt_19 = unstable.compiler-rt_19;
           libcxx_19 = unstable.libcxx_19;
           libcxxabi_19 = unstable.libcxxabi_19;
           clang-tools_19 = unstable.clang-tools_19;  # For clang-tidy
@@ -231,6 +230,7 @@
               echo "  nix develop .#ci-linux64-nowallet - CI: GCC 15, no wallet"
               echo "  nix develop .#ci-linux64 - CI: GCC 15, full build"
               echo "  nix develop .#ci-linux64-fuzz - CI: Clang 19, fuzzing"
+              echo "  nix develop .#ci-linux64-tsan - CI: Clang 19, TSan"
             '';
           };
 
@@ -304,6 +304,29 @@
               echo "Build commands:"
               echo "  ./autogen.sh"
               echo "  make -C depends HOST=\$HOST \$MAKE_FLAGS -j\$(nproc)"
+              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
+              echo "  make -j\$(nproc)"
+            '';
+          };
+
+          # linux64_tsan - Clang 19 with ThreadSanitizer
+          # Matches CI_TARGET=linux64_tsan in ci.Dockerfile
+          ci-linux64-tsan = mkCIEnv {
+            name = "dash-ci-linux64-tsan";
+            compiler = pkgs.clang_19;
+            extraBuildInputs = [ pkgs.llvm_19 ];
+            extraShellHook = ''
+              export CI_TARGET="linux64_tsan"
+              export HOST="x86_64-pc-linux-gnu"
+              export CONFIGURE_FLAGS="--enable-reduce-exports --with-sanitizers=thread --with-boost-process CC=clang CXX=clang++"
+              echo "CI Target: linux64_tsan"
+              echo "  Host: x86_64-pc-linux-gnu"
+              echo "  Compiler: Clang 19"
+              echo "  Features: ThreadSanitizer (TSan) for race detection"
+              echo ""
+              echo "Build commands:"
+              echo "  ./autogen.sh"
+              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
               echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
               echo "  make -j\$(nproc)"
             '';
