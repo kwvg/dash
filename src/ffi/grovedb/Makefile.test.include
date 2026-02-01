@@ -8,6 +8,7 @@ noinst_PROGRAMS = src/test/test_grovedb
 src_test_test_grovedb_SOURCES = \
 	src/test/lifecycle_tests.cpp \
 	src/test/main.cpp \
+	src/test/transaction_tests.cpp \
 	src/test/util/tempdir.cpp \
 	src/test/whoami.cpp
 
