@@ -112,6 +112,8 @@
 #include <coinjoin/options.h>
 #endif // ENABLE_WALLET
 
+#include <grovedb/grovedb.h>
+
 #include <rust/chirp/lib.h>
 
 #include <algorithm>
@@ -1509,6 +1511,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     }
 
     LogPrintf("%s\n", std::string(chirp::chirp()));
+    LogPrintf("%s\n", grovedb::GetWhoami());
 
     LogPrintf("Using at most %i automatic connections (%i file descriptors available)\n", nMaxConnections, nFD);
 

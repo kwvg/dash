@@ -1,0 +1,20 @@
+# Copyright (c) 2026-present, The Dash Core developers
+# Distributed under the MIT software license, see the accompanying
+# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+TESTS = src/test/test_grovedb
+noinst_PROGRAMS = src/test/test_grovedb
+
+src_test_test_grovedb_SOURCES = \
+	src/test/main.cpp \
+	src/test/whoami.cpp
+
+src_test_test_grovedb_CPPFLAGS = $(GROVEDB_CXX_CPPFLAGS) $(BOOST_CPPFLAGS)
+src_test_test_grovedb_CPPFLAGS += \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/src \
+	-I$(top_builddir)/src
+
+src_test_test_grovedb_LDADD = libgrovedb.la $(GROVEDB_CXX_LIBS)
+
+src_test_test_grovedb_LDFLAGS = -static

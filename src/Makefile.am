@@ -11,6 +11,7 @@ print-%: FORCE
 include $(top_srcdir)/rust/Makefile.libs.include
 
 DIST_SUBDIRS = secp256k1
+DIST_SUBDIRS += ffi/grovedb
 
 AM_LDFLAGS = $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS) $(GPROF_LDFLAGS) $(SANITIZER_LDFLAGS) $(CORE_LDFLAGS) $(BACKTRACE_LDFLAGS)
 AM_CFLAGS = $(DEBUG_CFLAGS) $(BACKTRACE_FLAGS)
@@ -46,6 +47,7 @@ endif # ENABLE_CRASH_HOOKS
 endif # ENABLE_STACKTRACES
 
 BITCOIN_INCLUDES=-I$(builddir) -I$(srcdir)/$(MINISKETCH_INCLUDE_DIR_INT) -I$(srcdir)/secp256k1/include -I$(srcdir)/$(UNIVALUE_INCLUDE_DIR_INT) $(LEVELDB_CPPFLAGS)
+BITCOIN_INCLUDES+=-I$(srcdir)/ffi/grovedb/include
 BITCOIN_INCLUDES+=-isystem$(srcdir)/dashbls/include -isystem$(srcdir)/dashbls/depends/relic/include -isystem$(srcdir)/dashbls/depends/minialloc/include
 BITCOIN_INCLUDES+=-isystem$(srcdir)/immer
 BITCOIN_INCLUDES+=$(LIBRUSTDEPS_INCLUDES)
@@ -57,8 +59,10 @@ LIBBITCOIN_CLI=libbitcoin_cli.a
 LIBBITCOIN_UTIL=libbitcoin_util.a
 LIBBITCOIN_CRYPTO_BASE=crypto/libbitcoin_crypto_base.la
 LIBBITCOINQT=qt/libbitcoinqt.a
-LIBDASHBLS=dashbls/libdashbls.la
 LIBSECP256K1=secp256k1/libsecp256k1.la
+
+LIBDASHBLS=dashbls/libdashbls.la
+LIBGROVEDB=ffi/grovedb/libgrovedb.la
 
 if ENABLE_ZMQ
 LIBBITCOIN_ZMQ=libbitcoin_zmq.a
@@ -113,6 +117,9 @@ $(LIBDASHBLS):
 
 $(LIBSECP256K1): $(wildcard secp256k1/src/*.h) $(wildcard secp256k1/src/*.c) $(wildcard secp256k1/include/*)
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
+
+$(LIBGROVEDB): $(wildcard ffi/grovedb/src/*.cpp) $(wildcard ffi/grovedb/include/grovedb/*.h) $(LIBRUSTDEPS_H)
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C ffi/grovedb libgrovedb.la
 
 LIBCXXBRIDGE=libcxxbridge.la
 
@@ -1064,6 +1071,7 @@ bitcoin_bin_ldadd = \
   $(LIBMEMENV) \
   $(LIBSECP256K1) \
   $(LIBCXXBRIDGE) \
+  $(LIBGROVEDB) \
   $(LIBRUSTDEPS)
 
 bitcoin_bin_ldadd += $(BACKTRACE_LIBS) $(BDB_LIBS) $(MINIUPNPC_LIBS) $(NATPMP_LIBS) $(SQLITE_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS) $(GMP_LIBS) $(RUST_LIBS)
@@ -1249,6 +1257,7 @@ $(top_srcdir)/$(subdir)/config/bitcoin-config.h.in:  $(am__configure_deps)
 
 clean-local:
 	-$(MAKE) -C dashbls clean
+	-$(MAKE) -C ffi/grovedb clean
 	-$(MAKE) -C secp256k1 clean
 	-rm -f leveldb/*/*.gcda leveldb/*/*.gcno leveldb/helpers/memenv/*.gcda leveldb/helpers/memenv/*.gcno
 	-rm -f config.h

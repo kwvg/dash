@@ -2226,8 +2226,24 @@ CPPFLAGS_TEMP="$CPPFLAGS"
 unset CPPFLAGS
 CPPFLAGS="$CPPFLAGS_TEMP"
 
-ac_configure_args="${ac_configure_args} --disable-shared --with-pic --enable-benchmark=no --enable-module-recovery --disable-module-ecdh --disable-openssl-tests"
-AC_CONFIG_SUBDIRS([src/dashbls src/secp256k1])
+# Compute absolute paths for grovedb sub-configure
+case "$srcdir" in
+  /*) _grovedb_abs_srcdir="$srcdir" ;;
+  *)  _grovedb_abs_srcdir="`cd \"$srcdir\" && pwd`" ;;
+esac
+_grovedb_abs_builddir="`pwd`"
+
+# Pass FFI paths and test configuration to grovedb's configure
+ac_configure_args="${ac_configure_args} --disable-shared --with-pic"
+ac_configure_args="${ac_configure_args} GROVEDB_CXX_CPPFLAGS='-I${_grovedb_abs_srcdir}/rust/grovedb_cxx/gen/include'"
+ac_configure_args="${ac_configure_args} GROVEDB_CXX_LIBS='${_grovedb_abs_builddir}/src/.libs/libcxxbridge.a ${_grovedb_abs_builddir}/rust/.libs/librustdeps.a ${RUST_LIBS}'"
+
+if test "x$BUILD_TEST" != "xyes"; then
+  ac_configure_args="${ac_configure_args} --disable-tests"
+fi
+
+ac_configure_args="${ac_configure_args} --enable-benchmark=no --enable-module-recovery --disable-module-ecdh --disable-openssl-tests"
+AC_CONFIG_SUBDIRS([src/dashbls src/ffi/grovedb src/secp256k1])
 
 AC_OUTPUT
 
