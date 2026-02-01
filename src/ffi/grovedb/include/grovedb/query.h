@@ -61,6 +61,9 @@ public:
     /** Second operand (end / to), empty for single-operand items. */
     const Bytes& second() const { return m_b; }
 
+    /** Default-construct an empty QueryItem (kind 0, no data). */
+    QueryItem() = default;
+
 private:
     friend class PathQuery;
 
