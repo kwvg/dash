@@ -18,7 +18,7 @@ use crate::BoxedGroveDb;
 /// `StorageRemovedBytes::SectionedStorageRemoval` is collapsed to a single
 /// `u32` total — the per-identity-per-epoch breakdown is only meaningful for
 /// the callback-based methods which are excluded from the bridge.
-fn operation_cost_to_ffi(cost: &grovedb_costs::OperationCost) -> FfiOperationCost {
+pub(crate) fn operation_cost_to_ffi(cost: &grovedb_costs::OperationCost) -> FfiOperationCost {
     let removed_bytes = match &cost.storage_cost.removed_bytes {
         StorageRemovedBytes::NoStorageRemoval => 0,
         StorageRemovedBytes::BasicStorageRemoval(n) => *n,

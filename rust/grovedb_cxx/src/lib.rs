@@ -13,6 +13,9 @@ mod built_info {
 mod lifecycle;
 use lifecycle::{grovedb_flush, grovedb_open, grovedb_root_hash, grovedb_verify, grovedb_wipe};
 
+mod transaction;
+use transaction::{grovedb_commit_transaction, grovedb_rollback_transaction, grovedb_start_transaction};
+
 /// Opaque wrapper around `grovedb::GroveDb` for use across the CXX bridge.
 pub struct BoxedGroveDb {
   db: grovedb::GroveDb,
@@ -21,6 +24,24 @@ pub struct BoxedGroveDb {
 impl std::fmt::Debug for BoxedGroveDb {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("BoxedGroveDb").finish_non_exhaustive()
+  }
+}
+
+/// Opaque wrapper around a `grovedb::Transaction` with an erased lifetime.
+///
+/// # Safety
+///
+/// The `'static` lifetime is a lie — the C++ `Transaction` RAII wrapper
+/// enforces the invariant that this never outlives the `BoxedGroveDb` that
+/// created it.
+#[allow(unsafe_code)]
+pub struct BoxedTransaction {
+  tx: grovedb::Transaction<'static>,
+}
+
+impl std::fmt::Debug for BoxedTransaction {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("BoxedTransaction").finish_non_exhaustive()
   }
 }
 
@@ -45,6 +66,7 @@ pub(crate) mod ffi {
 
   extern "Rust" {
     type BoxedGroveDb;
+    type BoxedTransaction;
 
     fn whoami() -> String;
 
@@ -54,6 +76,11 @@ pub(crate) mod ffi {
     fn grovedb_wipe(db: &BoxedGroveDb) -> Result<()>;
     fn grovedb_root_hash(db: &BoxedGroveDb) -> Result<FfiRootHashResult>;
     fn grovedb_verify(db: &BoxedGroveDb) -> Result<bool>;
+
+    // -- Transactions --
+    fn grovedb_start_transaction(db: &BoxedGroveDb) -> Result<Box<BoxedTransaction>>;
+    fn grovedb_commit_transaction(db: &BoxedGroveDb, tx: Box<BoxedTransaction>) -> Result<FfiOperationCost>;
+    fn grovedb_rollback_transaction(db: &BoxedGroveDb, tx: &BoxedTransaction) -> Result<()>;
   }
 }
 
