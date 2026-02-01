@@ -9,6 +9,7 @@
 #include <grovedb/db.h>
 
 #include <rust/grovedb_cxx/lib.h>
+#include <types/transaction.h>
 
 #include <algorithm>
 #include <format>
@@ -83,6 +84,52 @@ Status Db::VerifyIntegrity(bool& result)
 {
     try {
         result = grovedb_cxx::grovedb_verify(*m_impl->m_db);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Db::BeginTransaction(Transaction& txn)
+{
+    try {
+        auto tx = grovedb_cxx::grovedb_start_transaction(*m_impl->m_db);
+        txn.m_impl = std::make_unique<Transaction::Impl>(*m_impl->m_db, std::move(tx));
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Db::Commit(Transaction& txn, OperationCost& cost)
+{
+    try {
+        // Mark committed before the call -- the Rust side consumes the
+        // Box regardless of success or failure.
+        txn.m_impl->m_committed = true;
+        auto result = grovedb_cxx::grovedb_commit_transaction(
+            txn.m_impl->m_db, std::move(txn.m_impl->m_tx));
+
+        cost = OperationCost{
+            .m_seek_count = result.seek_count,
+            .m_storage_added_bytes = result.storage_added_bytes,
+            .m_storage_replaced_bytes = result.storage_replaced_bytes,
+            .m_storage_removed_bytes = result.storage_removed_bytes,
+            .m_storage_loaded_bytes = result.storage_loaded_bytes,
+            .m_hash_node_calls = result.hash_node_calls,
+        };
+
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Db::Rollback(Transaction& txn)
+{
+    try {
+        grovedb_cxx::grovedb_rollback_transaction(txn.m_impl->m_db, *txn.m_impl->m_tx);
+        txn.m_impl->m_rolled_back = true;
         return Status::Ok();
     } catch (const std::exception& e) {
         return Status::IOError(e.what());

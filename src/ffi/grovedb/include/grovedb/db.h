@@ -7,6 +7,7 @@
 
 #include <grovedb/cost.h>
 #include <grovedb/status.h>
+#include <grovedb/transaction.h>
 #include <grovedb/types.h>
 
 #include <memory>
@@ -55,6 +56,34 @@ public:
      * @return Status::Ok() on success; an error Status otherwise.
      */
     Status VerifyIntegrity(bool& result);
+
+    /**
+     * Begin a new transaction.
+     *
+     * @param[out] txn  Receives the transaction handle on success.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status BeginTransaction(Transaction& txn);
+
+    /**
+     * Commit an active transaction to persistent storage.
+     *
+     * The transaction is consumed — no further operations are possible
+     * on the handle after a successful or failed commit.
+     *
+     * @param[in,out] txn   The transaction to commit.
+     * @param[out]    cost  Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status Commit(Transaction& txn, OperationCost& cost);
+
+    /**
+     * Explicitly roll back an active transaction.
+     *
+     * @param[in,out] txn  The transaction to roll back.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status Rollback(Transaction& txn);
 
 private:
     struct Impl;
