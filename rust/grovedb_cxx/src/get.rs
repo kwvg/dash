@@ -6,19 +6,12 @@
 
 use grovedb_version::version::GroveVersion;
 
+use crate::element::serialize_element;
 use crate::ffi::{FfiBoolResult, FfiElementResult, FfiOptionalElementResult};
 use crate::lifecycle::operation_cost_to_ffi;
 use crate::types::decode_path;
 use crate::BoxedGroveDb;
 use crate::BoxedTransaction;
-
-/// Serialize an Element to its bincode wire format.
-fn serialize_element(
-    element: &grovedb::Element,
-    version: &GroveVersion,
-) -> Result<Vec<u8>, String> {
-    element.serialize(version).map_err(|e| e.to_string())
-}
 
 // ---------------------------------------------------------------------------
 // get — follows references
