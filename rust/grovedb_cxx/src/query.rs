@@ -4,14 +4,23 @@
 // See the accompanying file LICENSE or https://opensource.org/license/mit
 //
 
+use grovedb::operations::QueryItemOrSumReturnType;
+use grovedb::query_result_type::{
+    PathKeyOptionalElementTrio, QueryResultElement, QueryResultElements, QueryResultType,
+};
 use grovedb::{PathQuery, Query, QueryItem, SizedQuery};
 use grovedb_version::version::GroveVersion;
 
-use crate::ffi::FfiQueryResult;
+use crate::element::serialize_element;
+use crate::ffi::{
+    FfiQueryItemOrSumResult, FfiQueryKeysOptionalResult, FfiQueryRawResult, FfiQueryResult,
+    FfiQuerySumsResult,
+};
 use crate::lifecycle::operation_cost_to_ffi;
 use crate::types::decode_path;
 use crate::BoxedGroveDb;
 use crate::BoxedPathQuery;
+use crate::BoxedPathQueryVec;
 use crate::BoxedTransaction;
 
 // ---------------------------------------------------------------------------
@@ -157,6 +166,22 @@ fn encode_values(values: &[Vec<u8>]) -> Vec<u8> {
 }
 
 // ---------------------------------------------------------------------------
+// BoxedPathQueryVec helpers
+// ---------------------------------------------------------------------------
+
+/// Create a new empty `BoxedPathQueryVec`.
+pub fn grovedb_path_query_vec_new() -> Box<BoxedPathQueryVec> {
+    Box::new(BoxedPathQueryVec {
+        queries: Vec::new(),
+    })
+}
+
+/// Push a clone of a `BoxedPathQuery` into a `BoxedPathQueryVec`.
+pub fn grovedb_path_query_vec_push(vec: &mut BoxedPathQueryVec, query: &BoxedPathQuery) {
+    vec.queries.push(query.query.clone());
+}
+
+// ---------------------------------------------------------------------------
 // PathQuery factory
 // ---------------------------------------------------------------------------
 
@@ -297,6 +322,553 @@ pub fn grovedb_query_item_value_with_tx(
     Ok(FfiQueryResult {
         values: encode_values(&values),
         skipped,
+        cost,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// query_item_value_or_sum — returns tagged union of items/sums/counts
+// ---------------------------------------------------------------------------
+//
+// Wire format for each entry:
+//   [u8 tag][data]
+//   tag=0 ItemData:          [u32 len][bytes]
+//   tag=1 SumValue:          [i64 le]
+//   tag=2 BigSumValue:       [i128 le] (16 bytes)
+//   tag=3 CountValue:        [u64 le]
+//   tag=4 CountSumValue:     [u64 count le][i64 sum le]
+//   tag=5 ItemDataWithSum:   [u32 len][bytes][i64 sum le]
+//
+// Full result: [u32 count][entry₁][entry₂]…
+
+/// Encode a vector of `QueryItemOrSumReturnType` into the wire format.
+fn encode_item_or_sum_results(items: &[QueryItemOrSumReturnType]) -> Vec<u8> {
+    let mut buf = Vec::new();
+    buf.extend_from_slice(&(items.len() as u32).to_le_bytes());
+
+    for item in items {
+        match item {
+            QueryItemOrSumReturnType::ItemData(data) => {
+                buf.push(0u8);
+                buf.extend_from_slice(&(data.len() as u32).to_le_bytes());
+                buf.extend_from_slice(data);
+            }
+            QueryItemOrSumReturnType::SumValue(v) => {
+                buf.push(1u8);
+                buf.extend_from_slice(&v.to_le_bytes());
+            }
+            QueryItemOrSumReturnType::BigSumValue(v) => {
+                buf.push(2u8);
+                buf.extend_from_slice(&v.to_le_bytes());
+            }
+            QueryItemOrSumReturnType::CountValue(v) => {
+                buf.push(3u8);
+                buf.extend_from_slice(&v.to_le_bytes());
+            }
+            QueryItemOrSumReturnType::CountSumValue(count, sum) => {
+                buf.push(4u8);
+                buf.extend_from_slice(&count.to_le_bytes());
+                buf.extend_from_slice(&sum.to_le_bytes());
+            }
+            QueryItemOrSumReturnType::ItemDataWithSumValue(data, sum) => {
+                buf.push(5u8);
+                buf.extend_from_slice(&(data.len() as u32).to_le_bytes());
+                buf.extend_from_slice(data);
+                buf.extend_from_slice(&sum.to_le_bytes());
+            }
+        }
+    }
+
+    buf
+}
+
+/// Execute a `query_item_value_or_sum` query.
+pub fn grovedb_query_item_value_or_sum(
+    db: &BoxedGroveDb,
+    query: &BoxedPathQuery,
+) -> Result<FfiQueryItemOrSumResult, String> {
+    let version = GroveVersion::latest();
+    let ctx = db.db.query_item_value_or_sum(
+        &query.query,
+        true,  // allow_cache
+        true,  // decrease_limit_on_range_with_no_sub_elements
+        true,  // error_if_intermediate_path_tree_not_present
+        None,  // transaction
+        version,
+    );
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let (items, skipped) = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiQueryItemOrSumResult {
+        values: encode_item_or_sum_results(&items),
+        skipped,
+        cost,
+    })
+}
+
+/// Execute a `query_item_value_or_sum` query within a transaction.
+pub fn grovedb_query_item_value_or_sum_with_tx(
+    db: &BoxedGroveDb,
+    query: &BoxedPathQuery,
+    tx: &BoxedTransaction,
+) -> Result<FfiQueryItemOrSumResult, String> {
+    let version = GroveVersion::latest();
+    let ctx = db.db.query_item_value_or_sum(
+        &query.query,
+        true,  // allow_cache
+        true,  // decrease_limit_on_range_with_no_sub_elements
+        true,  // error_if_intermediate_path_tree_not_present
+        Some(&tx.tx),
+        version,
+    );
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let (items, skipped) = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiQueryItemOrSumResult {
+        values: encode_item_or_sum_results(&items),
+        skipped,
+        cost,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// query_sums — returns sum values only
+// ---------------------------------------------------------------------------
+
+/// Encode a vector of i64 sum values into the wire format.
+///
+/// Wire format: `[u32 count][i64₁ le][i64₂ le]…`
+fn encode_sums(sums: &[i64]) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(4 + sums.len() * 8);
+    buf.extend_from_slice(&(sums.len() as u32).to_le_bytes());
+    for sum in sums {
+        buf.extend_from_slice(&sum.to_le_bytes());
+    }
+    buf
+}
+
+/// Execute a `query_sums` query.
+pub fn grovedb_query_sums(
+    db: &BoxedGroveDb,
+    query: &BoxedPathQuery,
+) -> Result<FfiQuerySumsResult, String> {
+    let version = GroveVersion::latest();
+    let ctx = db.db.query_sums(
+        &query.query,
+        true,
+        true,
+        true,
+        None,
+        version,
+    );
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let (sums, skipped) = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiQuerySumsResult {
+        values: encode_sums(&sums),
+        skipped,
+        cost,
+    })
+}
+
+/// Execute a `query_sums` query within a transaction.
+pub fn grovedb_query_sums_with_tx(
+    db: &BoxedGroveDb,
+    query: &BoxedPathQuery,
+    tx: &BoxedTransaction,
+) -> Result<FfiQuerySumsResult, String> {
+    let version = GroveVersion::latest();
+    let ctx = db.db.query_sums(
+        &query.query,
+        true,
+        true,
+        true,
+        Some(&tx.tx),
+        version,
+    );
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let (sums, skipped) = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiQuerySumsResult {
+        values: encode_sums(&sums),
+        skipped,
+        cost,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// query_raw — returns full Element structures
+// ---------------------------------------------------------------------------
+//
+// Wire format per element depends on QueryResultType:
+//   variant=0 Element:            [element bincode bytes]
+//   variant=1 KeyElementPair:     [u32 key_len][key][element bytes]
+//   variant=2 PathKeyElementTrio: [u32 seg_count][seg₁]…[u32 key_len][key][element bytes]
+//
+// Full result: [u32 count][entry₁][entry₂]…
+
+/// Encode a `QueryResultElements` into the wire format.
+fn encode_query_result_elements(elements: &QueryResultElements) -> Result<Vec<u8>, String> {
+    let version = GroveVersion::latest();
+    let mut buf = Vec::new();
+    buf.extend_from_slice(&(elements.elements.len() as u32).to_le_bytes());
+
+    for elem in &elements.elements {
+        match elem {
+            QueryResultElement::ElementResultItem(element) => {
+                buf.push(0u8);
+                let elem_bytes = serialize_element(element, version)?;
+                buf.extend_from_slice(&(elem_bytes.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&elem_bytes);
+            }
+            QueryResultElement::KeyElementPairResultItem((key, element)) => {
+                buf.push(1u8);
+                buf.extend_from_slice(&(key.len() as u32).to_le_bytes());
+                buf.extend_from_slice(key);
+                let elem_bytes = serialize_element(element, version)?;
+                buf.extend_from_slice(&(elem_bytes.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&elem_bytes);
+            }
+            QueryResultElement::PathKeyElementTrioResultItem((path, key, element)) => {
+                buf.push(2u8);
+                // Encode path
+                buf.extend_from_slice(&(path.len() as u32).to_le_bytes());
+                for seg in path {
+                    buf.extend_from_slice(&(seg.len() as u32).to_le_bytes());
+                    buf.extend_from_slice(seg);
+                }
+                // Encode key
+                buf.extend_from_slice(&(key.len() as u32).to_le_bytes());
+                buf.extend_from_slice(key);
+                // Encode element
+                let elem_bytes = serialize_element(element, version)?;
+                buf.extend_from_slice(&(elem_bytes.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&elem_bytes);
+            }
+        }
+    }
+
+    Ok(buf)
+}
+
+/// Execute a `query_raw` query returning `QueryElementResultType` results.
+pub fn grovedb_query_raw(
+    db: &BoxedGroveDb,
+    query: &BoxedPathQuery,
+    result_type: u8,
+) -> Result<FfiQueryRawResult, String> {
+    let version = GroveVersion::latest();
+    let rt = match result_type {
+        0 => QueryResultType::QueryElementResultType,
+        1 => QueryResultType::QueryKeyElementPairResultType,
+        2 => QueryResultType::QueryPathKeyElementTrioResultType,
+        _ => return Err(format!("unknown query result type: {result_type}")),
+    };
+    let ctx = db.db.query_raw(
+        &query.query,
+        true,
+        true,
+        true,
+        rt,
+        None,
+        version,
+    );
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let (elements, skipped) = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiQueryRawResult {
+        values: encode_query_result_elements(&elements)?,
+        skipped,
+        cost,
+    })
+}
+
+/// Execute a `query_raw` query within a transaction.
+pub fn grovedb_query_raw_with_tx(
+    db: &BoxedGroveDb,
+    query: &BoxedPathQuery,
+    result_type: u8,
+    tx: &BoxedTransaction,
+) -> Result<FfiQueryRawResult, String> {
+    let version = GroveVersion::latest();
+    let rt = match result_type {
+        0 => QueryResultType::QueryElementResultType,
+        1 => QueryResultType::QueryKeyElementPairResultType,
+        2 => QueryResultType::QueryPathKeyElementTrioResultType,
+        _ => return Err(format!("unknown query result type: {result_type}")),
+    };
+    let ctx = db.db.query_raw(
+        &query.query,
+        true,
+        true,
+        true,
+        rt,
+        Some(&tx.tx),
+        version,
+    );
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let (elements, skipped) = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiQueryRawResult {
+        values: encode_query_result_elements(&elements)?,
+        skipped,
+        cost,
+    })
+}
+
+/// Execute a `query_many_raw` query across multiple path queries.
+///
+/// The `encoded_queries` parameter is a wire-encoded list of path queries:
+/// ```text
+/// [u32 query_count]
+/// For each query:
+///   [path wire][query_items wire][u32 limit][u32 offset]
+/// ```
+pub fn grovedb_query_many_raw(
+    db: &BoxedGroveDb,
+    encoded_queries: &[u8],
+    result_type: u8,
+) -> Result<FfiQueryRawResult, String> {
+    let version = GroveVersion::latest();
+    let rt = match result_type {
+        0 => QueryResultType::QueryElementResultType,
+        1 => QueryResultType::QueryKeyElementPairResultType,
+        2 => QueryResultType::QueryPathKeyElementTrioResultType,
+        _ => return Err(format!("unknown query result type: {result_type}")),
+    };
+
+    // Decode the queries from the wire format.
+    let queries = decode_path_queries(encoded_queries)?;
+    let refs: Vec<&PathQuery> = queries.iter().collect();
+
+    let ctx = db.db.query_many_raw(
+        &refs,
+        true,
+        true,
+        true,
+        rt,
+        None,
+        version,
+    );
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let elements = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiQueryRawResult {
+        values: encode_query_result_elements(&elements)?,
+        skipped: 0,
+        cost,
+    })
+}
+
+/// Decode a wire-encoded list of PathQuery objects.
+///
+/// Wire format:
+/// ```text
+/// [u32 query_count]
+/// For each query:
+///   [path wire: u32 seg_count + segments][query_items wire: u32 count + items][u32 limit][u32 offset]
+/// ```
+fn decode_path_queries(encoded: &[u8]) -> Result<Vec<PathQuery>, String> {
+    let mut offset = 0usize;
+    let count = read_u32(encoded, &mut offset)? as usize;
+    let mut queries = Vec::with_capacity(count);
+
+    for i in 0..count {
+        // Decode path segments inline.
+        let seg_count = read_u32(encoded, &mut offset)? as usize;
+        let mut segments = Vec::with_capacity(seg_count);
+        for _ in 0..seg_count {
+            let seg = read_bytes(encoded, &mut offset)?;
+            segments.push(seg);
+        }
+
+        // Decode query items inline.
+        let item_count = read_u32(encoded, &mut offset)? as usize;
+        let mut query = Query::new();
+        for j in 0..item_count {
+            if offset >= encoded.len() {
+                return Err(format!(
+                    "query {i}: item {j}: truncated, missing kind byte"
+                ));
+            }
+            let kind = encoded[offset];
+            offset += 1;
+
+            let item = match kind {
+                0 => QueryItem::Key(read_bytes(encoded, &mut offset)?),
+                1 => {
+                    let start = read_bytes(encoded, &mut offset)?;
+                    let end = read_bytes(encoded, &mut offset)?;
+                    QueryItem::Range(start..end)
+                }
+                2 => {
+                    let start = read_bytes(encoded, &mut offset)?;
+                    let end = read_bytes(encoded, &mut offset)?;
+                    QueryItem::RangeInclusive(start..=end)
+                }
+                3 => QueryItem::RangeFull(..),
+                4 => QueryItem::RangeFrom(read_bytes(encoded, &mut offset)?..),
+                5 => QueryItem::RangeTo(..read_bytes(encoded, &mut offset)?),
+                6 => QueryItem::RangeToInclusive(..=read_bytes(encoded, &mut offset)?),
+                7 => QueryItem::RangeAfter(read_bytes(encoded, &mut offset)?..),
+                8 => {
+                    let after = read_bytes(encoded, &mut offset)?;
+                    let to = read_bytes(encoded, &mut offset)?;
+                    QueryItem::RangeAfterTo(after..to)
+                }
+                9 => {
+                    let after = read_bytes(encoded, &mut offset)?;
+                    let to = read_bytes(encoded, &mut offset)?;
+                    QueryItem::RangeAfterToInclusive(after..=to)
+                }
+                _ => {
+                    return Err(format!(
+                        "query {i}: item {j}: unknown kind {kind}"
+                    ))
+                }
+            };
+            query.items.push(item);
+        }
+
+        let limit = read_u32(encoded, &mut offset)?;
+        let offset_val = read_u32(encoded, &mut offset)?;
+
+        let limit = if limit == 0 { None } else { Some(limit as u16) };
+        let offset_opt = if offset_val == 0 { None } else { Some(offset_val as u16) };
+
+        let sized_query = SizedQuery::new(query, limit, offset_opt);
+        queries.push(PathQuery::new(segments, sized_query));
+    }
+
+    Ok(queries)
+}
+
+// ---------------------------------------------------------------------------
+// query_keys_optional / query_raw_keys_optional
+// ---------------------------------------------------------------------------
+//
+// Wire format:
+// [u32 count]
+// For each triple:
+//   [u32 seg_count][seg₁]…[segₙ]  (path encoding)
+//   [u32 key_len][key]
+//   [u8 has_element]  (0=None, 1=Some)
+//   If has_element: [u32 elem_len][elem bincode]
+
+/// Encode a vector of `PathKeyOptionalElementTrio` into the wire format.
+fn encode_path_key_element_triples(
+    entries: Vec<PathKeyOptionalElementTrio>,
+) -> Result<Vec<u8>, String> {
+    let version = GroveVersion::latest();
+    let mut buf = Vec::new();
+    buf.extend_from_slice(&(entries.len() as u32).to_le_bytes());
+
+    for (path, key, opt_element) in entries {
+        // path
+        buf.extend_from_slice(&(path.len() as u32).to_le_bytes());
+        for seg in &path {
+            buf.extend_from_slice(&(seg.len() as u32).to_le_bytes());
+            buf.extend_from_slice(seg);
+        }
+        // key
+        buf.extend_from_slice(&(key.len() as u32).to_le_bytes());
+        buf.extend_from_slice(&key);
+        // optional element
+        match opt_element {
+            Some(element) => {
+                buf.push(1u8);
+                let elem_bytes = serialize_element(&element, version)?;
+                buf.extend_from_slice(&(elem_bytes.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&elem_bytes);
+            }
+            None => {
+                buf.push(0u8);
+            }
+        }
+    }
+
+    Ok(buf)
+}
+
+/// Execute a `query_keys_optional` query.
+pub fn grovedb_query_keys_optional(
+    db: &BoxedGroveDb,
+    query: &BoxedPathQuery,
+) -> Result<FfiQueryKeysOptionalResult, String> {
+    let version = GroveVersion::latest();
+    let ctx = db.db.query_keys_optional(
+        &query.query,
+        true,
+        true,
+        true,
+        None,
+        version,
+    );
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let entries = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiQueryKeysOptionalResult {
+        values: encode_path_key_element_triples(entries)?,
+        cost,
+    })
+}
+
+/// Execute a `query_keys_optional` query within a transaction.
+pub fn grovedb_query_keys_optional_with_tx(
+    db: &BoxedGroveDb,
+    query: &BoxedPathQuery,
+    tx: &BoxedTransaction,
+) -> Result<FfiQueryKeysOptionalResult, String> {
+    let version = GroveVersion::latest();
+    let ctx = db.db.query_keys_optional(
+        &query.query,
+        true,
+        true,
+        true,
+        Some(&tx.tx),
+        version,
+    );
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let entries = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiQueryKeysOptionalResult {
+        values: encode_path_key_element_triples(entries)?,
+        cost,
+    })
+}
+
+/// Execute a `query_raw_keys_optional` query (no reference following).
+pub fn grovedb_query_raw_keys_optional(
+    db: &BoxedGroveDb,
+    query: &BoxedPathQuery,
+) -> Result<FfiQueryKeysOptionalResult, String> {
+    let version = GroveVersion::latest();
+    let ctx = db.db.query_raw_keys_optional(
+        &query.query,
+        true,
+        true,
+        true,
+        None,
+        version,
+    );
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let entries = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiQueryKeysOptionalResult {
+        values: encode_path_key_element_triples(entries)?,
+        cost,
+    })
+}
+
+/// Execute a `query_raw_keys_optional` query within a transaction.
+pub fn grovedb_query_raw_keys_optional_with_tx(
+    db: &BoxedGroveDb,
+    query: &BoxedPathQuery,
+    tx: &BoxedTransaction,
+) -> Result<FfiQueryKeysOptionalResult, String> {
+    let version = GroveVersion::latest();
+    let ctx = db.db.query_raw_keys_optional(
+        &query.query,
+        true,
+        true,
+        true,
+        Some(&tx.tx),
+        version,
+    );
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let entries = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiQueryKeysOptionalResult {
+        values: encode_path_key_element_triples(entries)?,
         cost,
     })
 }

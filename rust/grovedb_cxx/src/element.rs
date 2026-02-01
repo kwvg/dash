@@ -39,3 +39,17 @@ pub fn grovedb_element_empty_tree() -> Result<Vec<u8>, String> {
     let element = grovedb::Element::empty_tree();
     serialize_element(&element, version)
 }
+
+/// Create a serialized `Element::empty_sum_tree`.
+pub fn grovedb_element_empty_sum_tree() -> Result<Vec<u8>, String> {
+    let version = GroveVersion::latest();
+    let element = grovedb::Element::empty_sum_tree();
+    serialize_element(&element, version)
+}
+
+/// Create a serialized `Element::new_sum_item(value)`.
+pub fn grovedb_element_sum_item(value: i64) -> Result<Vec<u8>, String> {
+    let version = GroveVersion::latest();
+    let element = grovedb::Element::new_sum_item(value);
+    serialize_element(&element, version)
+}

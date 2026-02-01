@@ -19,7 +19,10 @@ use transaction::{grovedb_commit_transaction, grovedb_rollback_transaction, grov
 mod types;
 
 mod element;
-use element::{grovedb_element_empty_tree, grovedb_element_item};
+use element::{
+    grovedb_element_empty_sum_tree, grovedb_element_empty_tree, grovedb_element_item,
+    grovedb_element_sum_item,
+};
 
 mod get;
 use get::{
@@ -46,15 +49,21 @@ use delete::{
 
 mod proof;
 use proof::{
-    grovedb_prove_query, grovedb_verify_query, grovedb_verify_query_with_absence_proof,
-    grovedb_verify_query_with_options, grovedb_verify_subset_query,
-    grovedb_verify_subset_query_with_absence_proof,
+    grovedb_prove_query, grovedb_verify_query,
+    grovedb_verify_query_with_absence_proof, grovedb_verify_query_with_options,
+    grovedb_verify_subset_query, grovedb_verify_subset_query_with_absence_proof,
 };
 
 mod query;
 use query::{
     grovedb_path_query_new, grovedb_path_query_new_with_subquery,
     grovedb_query_item_value, grovedb_query_item_value_with_tx,
+    grovedb_query_item_value_or_sum, grovedb_query_item_value_or_sum_with_tx,
+    grovedb_query_keys_optional, grovedb_query_keys_optional_with_tx,
+    grovedb_query_many_raw,
+    grovedb_query_raw, grovedb_query_raw_with_tx,
+    grovedb_query_raw_keys_optional, grovedb_query_raw_keys_optional_with_tx,
+    grovedb_query_sums, grovedb_query_sums_with_tx,
 };
 
 mod batch;
@@ -162,6 +171,40 @@ pub(crate) mod ffi {
     cost: FfiOperationCost,
   }
 
+  /// Result of a query_item_value_or_sum operation: wire-encoded tagged union
+  /// entries, skipped count, and operation costs.
+  struct FfiQueryItemOrSumResult {
+    /// Wire-encoded: `[u32 count][u8 tag + data]…`
+    values: Vec<u8>,
+    skipped: u16,
+    cost: FfiOperationCost,
+  }
+
+  /// Result of a query_sums operation: wire-encoded i64 sum values.
+  struct FfiQuerySumsResult {
+    /// Wire-encoded: `[u32 count][i64₁ le]…`
+    values: Vec<u8>,
+    skipped: u16,
+    cost: FfiOperationCost,
+  }
+
+  /// Result of a query_raw or query_many_raw operation: wire-encoded
+  /// QueryResultElement entries.
+  struct FfiQueryRawResult {
+    /// Wire-encoded: `[u32 count][u8 variant + data]…`
+    values: Vec<u8>,
+    skipped: u16,
+    cost: FfiOperationCost,
+  }
+
+  /// Result of a query_keys_optional or query_raw_keys_optional operation:
+  /// wire-encoded PathKeyOptionalElementTrio entries.
+  struct FfiQueryKeysOptionalResult {
+    /// Wire-encoded: `[u32 count][path][key][has_elem][opt elem]…`
+    values: Vec<u8>,
+    cost: FfiOperationCost,
+  }
+
   /// Result of proof generation: opaque proof bytes plus operation costs.
   struct FfiProofResult {
     proof: Vec<u8>,
@@ -208,6 +251,8 @@ pub(crate) mod ffi {
     // -- Element factories --
     fn grovedb_element_item(value: &[u8]) -> Result<Vec<u8>>;
     fn grovedb_element_empty_tree() -> Result<Vec<u8>>;
+    fn grovedb_element_empty_sum_tree() -> Result<Vec<u8>>;
+    fn grovedb_element_sum_item(value: i64) -> Result<Vec<u8>>;
 
     // -- Get (follows references) --
     fn grovedb_get(db: &BoxedGroveDb, path: &[u8], key: &[u8]) -> Result<FfiElementResult>;
@@ -268,6 +313,29 @@ pub(crate) mod ffi {
     // -- Query item value --
     fn grovedb_query_item_value(db: &BoxedGroveDb, query: &BoxedPathQuery) -> Result<FfiQueryResult>;
     fn grovedb_query_item_value_with_tx(db: &BoxedGroveDb, query: &BoxedPathQuery, tx: &BoxedTransaction) -> Result<FfiQueryResult>;
+
+    // -- Query item value or sum --
+    fn grovedb_query_item_value_or_sum(db: &BoxedGroveDb, query: &BoxedPathQuery) -> Result<FfiQueryItemOrSumResult>;
+    fn grovedb_query_item_value_or_sum_with_tx(db: &BoxedGroveDb, query: &BoxedPathQuery, tx: &BoxedTransaction) -> Result<FfiQueryItemOrSumResult>;
+
+    // -- Query sums --
+    fn grovedb_query_sums(db: &BoxedGroveDb, query: &BoxedPathQuery) -> Result<FfiQuerySumsResult>;
+    fn grovedb_query_sums_with_tx(db: &BoxedGroveDb, query: &BoxedPathQuery, tx: &BoxedTransaction) -> Result<FfiQuerySumsResult>;
+
+    // -- Query raw --
+    fn grovedb_query_raw(db: &BoxedGroveDb, query: &BoxedPathQuery, result_type: u8) -> Result<FfiQueryRawResult>;
+    fn grovedb_query_raw_with_tx(db: &BoxedGroveDb, query: &BoxedPathQuery, result_type: u8, tx: &BoxedTransaction) -> Result<FfiQueryRawResult>;
+
+    // -- Query many raw --
+    fn grovedb_query_many_raw(db: &BoxedGroveDb, encoded_queries: &[u8], result_type: u8) -> Result<FfiQueryRawResult>;
+
+    // -- Query keys optional --
+    fn grovedb_query_keys_optional(db: &BoxedGroveDb, query: &BoxedPathQuery) -> Result<FfiQueryKeysOptionalResult>;
+    fn grovedb_query_keys_optional_with_tx(db: &BoxedGroveDb, query: &BoxedPathQuery, tx: &BoxedTransaction) -> Result<FfiQueryKeysOptionalResult>;
+
+    // -- Query raw keys optional --
+    fn grovedb_query_raw_keys_optional(db: &BoxedGroveDb, query: &BoxedPathQuery) -> Result<FfiQueryKeysOptionalResult>;
+    fn grovedb_query_raw_keys_optional_with_tx(db: &BoxedGroveDb, query: &BoxedPathQuery, tx: &BoxedTransaction) -> Result<FfiQueryKeysOptionalResult>;
 
     // -- Proofs --
     fn grovedb_prove_query(db: &BoxedGroveDb, query: &BoxedPathQuery, decrease_limit_on_empty: bool) -> Result<FfiProofResult>;
