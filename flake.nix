@@ -231,6 +231,7 @@
               echo "  nix develop .#ci-linux64 - CI: GCC 15, full build"
               echo "  nix develop .#ci-linux64-fuzz - CI: Clang 19, fuzzing"
               echo "  nix develop .#ci-linux64-tsan - CI: Clang 19, TSan"
+              echo "  nix develop .#ci-linux64-ubsan - CI: Clang 19, UBSan"
             '';
           };
 
@@ -323,6 +324,29 @@
               echo "  Host: x86_64-pc-linux-gnu"
               echo "  Compiler: Clang 19"
               echo "  Features: ThreadSanitizer (TSan) for race detection"
+              echo ""
+              echo "Build commands:"
+              echo "  ./autogen.sh"
+              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
+              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
+              echo "  make -j\$(nproc)"
+            '';
+          };
+
+          # linux64_ubsan - Clang 19 with UndefinedBehaviorSanitizer
+          # Matches CI_TARGET=linux64_ubsan in ci.Dockerfile
+          ci-linux64-ubsan = mkCIEnv {
+            name = "dash-ci-linux64-ubsan";
+            compiler = pkgs.clang_19;
+            extraBuildInputs = [ pkgs.llvm_19 ];
+            extraShellHook = ''
+              export CI_TARGET="linux64_ubsan"
+              export HOST="x86_64-pc-linux-gnu"
+              export CONFIGURE_FLAGS="--enable-reduce-exports --with-sanitizers=undefined --with-boost-process CC=clang CXX=clang++"
+              echo "CI Target: linux64_ubsan"
+              echo "  Host: x86_64-pc-linux-gnu"
+              echo "  Compiler: Clang 19"
+              echo "  Features: UndefinedBehaviorSanitizer (UBSan)"
               echo ""
               echo "Build commands:"
               echo "  ./autogen.sh"
