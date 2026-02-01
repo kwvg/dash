@@ -207,6 +207,54 @@ public:
     Status PutIfChanged(const Path& path, const Bytes& key, const Element& element, bool& changed, std::optional<Element>& previous, OperationCost& cost);
     Status PutIfChanged(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, bool& changed, std::optional<Element>& previous, OperationCost& cost);
 
+    // -- Delete operations ------------------------------------------------
+
+    /**
+     * Delete the element at the given path and key.
+     *
+     * @param[in]  path  Path to the subtree.
+     * @param[in]  key   Key to delete.
+     * @param[out] cost  Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status Delete(const Path& path, const Bytes& key, OperationCost& cost);
+    Status Delete(const Path& path, const Bytes& key, const Transaction& txn, OperationCost& cost);
+
+    /**
+     * Delete the element only if it is an empty subtree.
+     *
+     * @param[in]  path     Path to the subtree.
+     * @param[in]  key      Key to conditionally delete.
+     * @param[out] deleted  Set to true if the element was deleted.
+     * @param[out] cost     Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status DeleteIfEmpty(const Path& path, const Bytes& key, bool& deleted, OperationCost& cost);
+    Status DeleteIfEmpty(const Path& path, const Bytes& key, const Transaction& txn, bool& deleted, OperationCost& cost);
+
+    /**
+     * Delete the element and recursively remove empty parent subtrees.
+     *
+     * @param[in]  path           Path to the subtree.
+     * @param[in]  key            Key to delete.
+     * @param[out] removed_count  Number of levels removed (including the
+     *                            target element).
+     * @param[out] cost           Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status PruneEmptyAncestors(const Path& path, const Bytes& key, uint32_t& removed_count, OperationCost& cost);
+    Status PruneEmptyAncestors(const Path& path, const Bytes& key, const Transaction& txn, uint32_t& removed_count, OperationCost& cost);
+
+    /**
+     * Remove all elements within the subtree at the given path.
+     *
+     * @param[in]  path    Path to the subtree to clear.
+     * @param[out] result  Set to true if the subtree was cleared.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status Clear(const Path& path, bool& result);
+    Status Clear(const Path& path, const Transaction& txn, bool& result);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;
