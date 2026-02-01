@@ -57,6 +57,9 @@ use query::{
     grovedb_query_item_value, grovedb_query_item_value_with_tx,
 };
 
+mod batch;
+use batch::{grovedb_apply_batch, grovedb_apply_batch_with_tx};
+
 /// Opaque wrapper around `grovedb::GroveDb` for use across the CXX bridge.
 pub struct BoxedGroveDb {
   db: grovedb::GroveDb,
@@ -173,6 +176,16 @@ pub(crate) mod ffi {
     entries: Vec<u8>,
   }
 
+  /// Options controlling batch application behavior.
+  struct FfiBatchApplyOptions {
+    validate_insertion_does_not_override: bool,
+    validate_insertion_does_not_override_tree: bool,
+    allow_deleting_non_empty_trees: bool,
+    deleting_non_empty_trees_returns_error: bool,
+    disable_operation_consistency_check: bool,
+    base_root_storage_is_free: bool,
+  }
+
   extern "Rust" {
     type BoxedGroveDb;
     type BoxedTransaction;
@@ -263,6 +276,10 @@ pub(crate) mod ffi {
     fn grovedb_verify_subset_query(proof: &[u8], query: &BoxedPathQuery) -> Result<FfiVerifyResult>;
     fn grovedb_verify_query_with_absence_proof(proof: &[u8], query: &BoxedPathQuery) -> Result<FfiVerifyResult>;
     fn grovedb_verify_subset_query_with_absence_proof(proof: &[u8], query: &BoxedPathQuery) -> Result<FfiVerifyResult>;
+
+    // -- Batch --
+    fn grovedb_apply_batch(db: &BoxedGroveDb, ops: &[u8], options: &FfiBatchApplyOptions) -> Result<FfiOperationCost>;
+    fn grovedb_apply_batch_with_tx(db: &BoxedGroveDb, ops: &[u8], options: &FfiBatchApplyOptions, tx: &BoxedTransaction) -> Result<FfiOperationCost>;
   }
 }
 
