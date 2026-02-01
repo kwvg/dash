@@ -36,6 +36,14 @@ use insert::{
     grovedb_insert_with_tx,
 };
 
+mod delete;
+use delete::{
+    grovedb_clear_subtree, grovedb_clear_subtree_with_tx, grovedb_delete,
+    grovedb_delete_if_empty_tree, grovedb_delete_if_empty_tree_with_tx,
+    grovedb_delete_up_tree_while_empty, grovedb_delete_up_tree_while_empty_with_tx,
+    grovedb_delete_with_tx,
+};
+
 /// Opaque wrapper around `grovedb::GroveDb` for use across the CXX bridge.
 pub struct BoxedGroveDb {
   db: grovedb::GroveDb,
@@ -112,6 +120,12 @@ pub(crate) mod ffi {
     cost: FfiOperationCost,
   }
 
+  /// Result of an operation that returns a count (u32) plus operation costs.
+  struct FfiU32Result {
+    value: u32,
+    cost: FfiOperationCost,
+  }
+
   extern "Rust" {
     type BoxedGroveDb;
     type BoxedTransaction;
@@ -169,6 +183,22 @@ pub(crate) mod ffi {
     // -- Insert if changed value --
     fn grovedb_insert_if_changed_value(db: &BoxedGroveDb, path: &[u8], key: &[u8], element: &[u8]) -> Result<FfiChangedValueResult>;
     fn grovedb_insert_if_changed_value_with_tx(db: &BoxedGroveDb, path: &[u8], key: &[u8], element: &[u8], tx: &BoxedTransaction) -> Result<FfiChangedValueResult>;
+
+    // -- Delete (unconditional) --
+    fn grovedb_delete(db: &BoxedGroveDb, path: &[u8], key: &[u8]) -> Result<FfiOperationCost>;
+    fn grovedb_delete_with_tx(db: &BoxedGroveDb, path: &[u8], key: &[u8], tx: &BoxedTransaction) -> Result<FfiOperationCost>;
+
+    // -- Delete if empty tree --
+    fn grovedb_delete_if_empty_tree(db: &BoxedGroveDb, path: &[u8], key: &[u8]) -> Result<FfiBoolResult>;
+    fn grovedb_delete_if_empty_tree_with_tx(db: &BoxedGroveDb, path: &[u8], key: &[u8], tx: &BoxedTransaction) -> Result<FfiBoolResult>;
+
+    // -- Delete up tree while empty (prune ancestors) --
+    fn grovedb_delete_up_tree_while_empty(db: &BoxedGroveDb, path: &[u8], key: &[u8]) -> Result<FfiU32Result>;
+    fn grovedb_delete_up_tree_while_empty_with_tx(db: &BoxedGroveDb, path: &[u8], key: &[u8], tx: &BoxedTransaction) -> Result<FfiU32Result>;
+
+    // -- Clear subtree --
+    fn grovedb_clear_subtree(db: &BoxedGroveDb, path: &[u8]) -> Result<bool>;
+    fn grovedb_clear_subtree_with_tx(db: &BoxedGroveDb, path: &[u8], tx: &BoxedTransaction) -> Result<bool>;
   }
 }
 
