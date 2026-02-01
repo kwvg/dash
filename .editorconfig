@@ -24,3 +24,25 @@ indent_style = tab
 # Autoconf scripts
 [configure.ac]
 indent_size = 2
+
+# Nix infrastructure (contrib/nix/)
+[contrib/nix/**/*.py]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[contrib/nix/**/*.nix]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+
+[contrib/nix/**/Makefile]
+charset = utf-8
+end_of_line = lf
+indent_style = tab
+insert_final_newline = true
