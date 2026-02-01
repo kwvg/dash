@@ -42,6 +42,23 @@ public:
      */
     static Status EmptyTree(Element& element);
 
+    /**
+     * Create an empty sum tree element.
+     *
+     * @param[out] element  Receives the serialized element on success.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    static Status EmptySumTree(Element& element);
+
+    /**
+     * Create a sum item element with the given value.
+     *
+     * @param[in]  value    The sum value.
+     * @param[out] element  Receives the serialized element on success.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    static Status SumItem(int64_t value, Element& element);
+
     // -- Accessors --------------------------------------------------------
 
     /** Access the raw serialized representation. */

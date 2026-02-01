@@ -33,4 +33,26 @@ Status Element::EmptyTree(Element& element)
         return Status::IOError(e.what());
     }
 }
+
+Status Element::EmptySumTree(Element& element)
+{
+    try {
+        auto bytes = grovedb_cxx::grovedb_element_empty_sum_tree();
+        element.m_data.assign(bytes.begin(), bytes.end());
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Element::SumItem(int64_t value, Element& element)
+{
+    try {
+        auto bytes = grovedb_cxx::grovedb_element_sum_item(value);
+        element.m_data.assign(bytes.begin(), bytes.end());
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
 } // namespace grovedb

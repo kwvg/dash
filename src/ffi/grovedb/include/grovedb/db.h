@@ -275,6 +275,96 @@ public:
     Status QueryValues(const PathQuery& query, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost);
     Status QueryValues(const PathQuery& query, const Transaction& txn, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost);
 
+    /**
+     * Execute a query returning items, sum values, or count values.
+     *
+     * Handles SumTree, CountTree, and mixed element queries.
+     *
+     * @param[in]  query    A PathQuery describing what to retrieve.
+     * @param[out] results  Receives the tagged-union result entries.
+     * @param[out] skipped  Number of results skipped due to offset.
+     * @param[out] cost     Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status QueryItemsOrSums(const PathQuery& query, std::vector<QueryItemOrSum>& results, uint16_t& skipped, OperationCost& cost);
+    Status QueryItemsOrSums(const PathQuery& query, const Transaction& txn, std::vector<QueryItemOrSum>& results, uint16_t& skipped, OperationCost& cost);
+
+    /**
+     * Execute a query returning only sum values (i64).
+     *
+     * Returns an error if any result element is not a sum value.
+     *
+     * @param[in]  query    A PathQuery describing what to retrieve.
+     * @param[out] sums     Receives the i64 sum values.
+     * @param[out] skipped  Number of results skipped due to offset.
+     * @param[out] cost     Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status QuerySums(const PathQuery& query, std::vector<int64_t>& sums, uint16_t& skipped, OperationCost& cost);
+    Status QuerySums(const PathQuery& query, const Transaction& txn, std::vector<int64_t>& sums, uint16_t& skipped, OperationCost& cost);
+
+    /**
+     * Execute a raw query returning full Element structures.
+     *
+     * Does not follow references.
+     *
+     * @param[in]  query        A PathQuery describing what to retrieve.
+     * @param[in]  result_type  0=Element, 1=KeyElementPair, 2=PathKeyElementTrio.
+     * @param[out] elements     Receives the result elements.
+     * @param[out] skipped      Number of results skipped due to offset.
+     * @param[out] cost         Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status QueryRaw(const PathQuery& query, uint8_t result_type, std::vector<QueryResultElement>& elements, uint16_t& skipped, OperationCost& cost);
+    Status QueryRaw(const PathQuery& query, uint8_t result_type, const Transaction& txn, std::vector<QueryResultElement>& elements, uint16_t& skipped, OperationCost& cost);
+
+    /**
+     * Execute multiple raw queries atomically with merged results.
+     *
+     * Each query is specified as a tuple of (path, items, limit, offset) —
+     * the same arguments as PathQuery::New().  They are wire-encoded and
+     * sent to GroveDB as a batch.
+     *
+     * @param[in]  queries      The path queries to execute.
+     * @param[in]  result_type  0=Element, 1=KeyElementPair, 2=PathKeyElementTrio.
+     * @param[out] elements     Receives the merged result elements.
+     * @param[out] cost         Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    struct RawQuerySpec {
+        const Path& path;
+        const std::vector<QueryItem>& items;
+        uint32_t limit{0};
+        uint32_t offset{0};
+    };
+    Status QueryManyRaw(const std::vector<RawQuerySpec>& queries, uint8_t result_type, std::vector<QueryResultElement>& elements, OperationCost& cost);
+
+    /**
+     * Execute a query returning path-key-element triples with optional elements.
+     *
+     * Follows references. Missing keys appear with std::nullopt for the element.
+     * The query must have a limit set.
+     *
+     * @param[in]  query    A PathQuery describing what to retrieve.
+     * @param[out] results  Receives the path-key-element triples.
+     * @param[out] cost     Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status QueryKeysOptional(const PathQuery& query, std::vector<PathKeyElement>& results, OperationCost& cost);
+    Status QueryKeysOptional(const PathQuery& query, const Transaction& txn, std::vector<PathKeyElement>& results, OperationCost& cost);
+
+    /**
+     * Execute a raw query returning path-key-element triples with optional
+     * elements.  Does not follow references.
+     *
+     * @param[in]  query    A PathQuery describing what to retrieve.
+     * @param[out] results  Receives the path-key-element triples.
+     * @param[out] cost     Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status QueryRawKeysOptional(const PathQuery& query, std::vector<PathKeyElement>& results, OperationCost& cost);
+    Status QueryRawKeysOptional(const PathQuery& query, const Transaction& txn, std::vector<PathKeyElement>& results, OperationCost& cost);
+
     // -- Proof operations -------------------------------------------------
 
     /**
@@ -373,12 +463,35 @@ private:
     /** Wire-encode batch operations for the FFI boundary. */
     static Bytes EncodeBatchOps(const std::vector<BatchOperation>& ops);
 
+    /** Wire-encode multiple raw query specs for query_many_raw. */
+    static Bytes EncodeManyQueries(const std::vector<RawQuerySpec>& queries);
+
     /** Decode wire-encoded verification result into C++ types. */
     static Status DecodeVerifyResult(
         std::span<const uint8_t> root_hash_bytes,
         std::span<const uint8_t> entries_bytes,
         Hash& root_hash,
         std::vector<ProofResultEntry>& entries);
+
+    /** Decode wire-encoded QueryItemOrSum results. */
+    static Status DecodeItemsOrSums(
+        std::span<const uint8_t> data,
+        std::vector<QueryItemOrSum>& results);
+
+    /** Decode wire-encoded i64 sums. */
+    static Status DecodeSums(
+        std::span<const uint8_t> data,
+        std::vector<int64_t>& sums);
+
+    /** Decode wire-encoded QueryResultElement entries. */
+    static Status DecodeQueryResultElements(
+        std::span<const uint8_t> data,
+        std::vector<QueryResultElement>& elements);
+
+    /** Decode wire-encoded PathKeyOptionalElementTrio entries. */
+    static Status DecodePathKeyElements(
+        std::span<const uint8_t> data,
+        std::vector<PathKeyElement>& results);
 
     struct Impl;
     std::unique_ptr<Impl> m_impl;

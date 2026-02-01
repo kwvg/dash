@@ -216,4 +216,365 @@ Status Db::QueryValues(const PathQuery& query, const Transaction& txn, std::vect
     }
 }
 
+// ---------------------------------------------------------------------------
+// Db::QueryItemsOrSums
+// ---------------------------------------------------------------------------
+
+Status Db::DecodeItemsOrSums(std::span<const uint8_t> data, std::vector<QueryItemOrSum>& results)
+{
+    wire::Reader r{data};
+    uint32_t count{0};
+    if (auto s = r.U32(count); !s.ok()) return s;
+
+    results.clear();
+    results.reserve(count);
+    for (uint32_t i{0}; i < count; ++i) {
+        QueryItemOrSum entry;
+        uint8_t tag{0};
+        if (auto s = r.U8(tag); !s.ok()) return s;
+
+        switch (tag) {
+        case 0: { // ItemData
+            entry.m_kind = QueryItemOrSum::Kind::ItemData;
+            if (auto s = r.Bytes(entry.m_item_data); !s.ok()) return s;
+            break;
+        }
+        case 1: { // SumValue
+            entry.m_kind = QueryItemOrSum::Kind::SumValue;
+            uint64_t raw{0};
+            if (auto s = r.U64(raw); !s.ok()) return s;
+            entry.m_sum_value = static_cast<int64_t>(raw);
+            break;
+        }
+        case 2: { // BigSumValue (i128 as 16 LE bytes)
+            entry.m_kind = QueryItemOrSum::Kind::BigSumValue;
+            uint64_t lo{0}, hi{0};
+            if (auto s = r.U64(lo); !s.ok()) return s;
+            if (auto s = r.U64(hi); !s.ok()) return s;
+            entry.m_big_sum_lo = static_cast<int64_t>(lo);
+            entry.m_big_sum_hi = static_cast<int64_t>(hi);
+            break;
+        }
+        case 3: { // CountValue
+            entry.m_kind = QueryItemOrSum::Kind::CountValue;
+            if (auto s = r.U64(entry.m_count_value); !s.ok()) return s;
+            break;
+        }
+        case 4: { // CountSumValue
+            entry.m_kind = QueryItemOrSum::Kind::CountSumValue;
+            if (auto s = r.U64(entry.m_count_value); !s.ok()) return s;
+            uint64_t raw{0};
+            if (auto s = r.U64(raw); !s.ok()) return s;
+            entry.m_sum_value = static_cast<int64_t>(raw);
+            break;
+        }
+        case 5: { // ItemDataWithSum
+            entry.m_kind = QueryItemOrSum::Kind::ItemDataWithSum;
+            if (auto s = r.Bytes(entry.m_item_data); !s.ok()) return s;
+            uint64_t raw{0};
+            if (auto s = r.U64(raw); !s.ok()) return s;
+            entry.m_sum_value = static_cast<int64_t>(raw);
+            break;
+        }
+        default:
+            return Status::Corruption("wire: unknown QueryItemOrSum tag");
+        }
+
+        results.push_back(std::move(entry));
+    }
+    return Status::Ok();
+}
+
+Status Db::QueryItemsOrSums(const PathQuery& query, std::vector<QueryItemOrSum>& results, uint16_t& skipped, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_item_value_or_sum(
+            *m_impl->m_db, *query.m_impl->m_query);
+        if (auto s = DecodeItemsOrSums({result.values.data(), result.values.size()}, results); !s.ok()) {
+            return s;
+        }
+        skipped = result.skipped;
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Db::QueryItemsOrSums(const PathQuery& query, const Transaction& txn, std::vector<QueryItemOrSum>& results, uint16_t& skipped, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_item_value_or_sum_with_tx(
+            *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx);
+        if (auto s = DecodeItemsOrSums({result.values.data(), result.values.size()}, results); !s.ok()) {
+            return s;
+        }
+        skipped = result.skipped;
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Db::QuerySums
+// ---------------------------------------------------------------------------
+
+Status Db::DecodeSums(std::span<const uint8_t> data, std::vector<int64_t>& sums)
+{
+    wire::Reader r{data};
+    uint32_t count{0};
+    if (auto s = r.U32(count); !s.ok()) return s;
+
+    sums.clear();
+    sums.reserve(count);
+    for (uint32_t i{0}; i < count; ++i) {
+        uint64_t raw{0};
+        if (auto s = r.U64(raw); !s.ok()) return s;
+        sums.push_back(static_cast<int64_t>(raw));
+    }
+    return Status::Ok();
+}
+
+Status Db::QuerySums(const PathQuery& query, std::vector<int64_t>& sums, uint16_t& skipped, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_sums(
+            *m_impl->m_db, *query.m_impl->m_query);
+        if (auto s = DecodeSums({result.values.data(), result.values.size()}, sums); !s.ok()) {
+            return s;
+        }
+        skipped = result.skipped;
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Db::QuerySums(const PathQuery& query, const Transaction& txn, std::vector<int64_t>& sums, uint16_t& skipped, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_sums_with_tx(
+            *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx);
+        if (auto s = DecodeSums({result.values.data(), result.values.size()}, sums); !s.ok()) {
+            return s;
+        }
+        skipped = result.skipped;
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Db::QueryRaw / Db::QueryManyRaw
+// ---------------------------------------------------------------------------
+
+Status Db::DecodeQueryResultElements(std::span<const uint8_t> data, std::vector<QueryResultElement>& elements)
+{
+    wire::Reader r{data};
+    uint32_t count{0};
+    if (auto s = r.U32(count); !s.ok()) return s;
+
+    elements.clear();
+    elements.reserve(count);
+    for (uint32_t i{0}; i < count; ++i) {
+        QueryResultElement entry;
+        uint8_t variant{0};
+        if (auto s = r.U8(variant); !s.ok()) return s;
+
+        switch (variant) {
+        case 0: { // Element
+            entry.m_kind = QueryResultElement::Kind::Element;
+            Bytes elem_bytes;
+            if (auto s = r.Bytes(elem_bytes); !s.ok()) return s;
+            entry.m_element.m_data = std::move(elem_bytes);
+            break;
+        }
+        case 1: { // KeyElementPair
+            entry.m_kind = QueryResultElement::Kind::KeyElementPair;
+            if (auto s = r.Bytes(entry.m_key); !s.ok()) return s;
+            Bytes elem_bytes;
+            if (auto s = r.Bytes(elem_bytes); !s.ok()) return s;
+            entry.m_element.m_data = std::move(elem_bytes);
+            break;
+        }
+        case 2: { // PathKeyElementTrio
+            entry.m_kind = QueryResultElement::Kind::PathKeyElementTrio;
+            if (auto s = wire::WireRead(r, entry.m_path); !s.ok()) return s;
+            if (auto s = r.Bytes(entry.m_key); !s.ok()) return s;
+            Bytes elem_bytes;
+            if (auto s = r.Bytes(elem_bytes); !s.ok()) return s;
+            entry.m_element.m_data = std::move(elem_bytes);
+            break;
+        }
+        default:
+            return Status::Corruption("wire: unknown QueryResultElement variant");
+        }
+
+        elements.push_back(std::move(entry));
+    }
+    return Status::Ok();
+}
+
+Status Db::QueryRaw(const PathQuery& query, uint8_t result_type, std::vector<QueryResultElement>& elements, uint16_t& skipped, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_raw(
+            *m_impl->m_db, *query.m_impl->m_query, result_type);
+        if (auto s = DecodeQueryResultElements({result.values.data(), result.values.size()}, elements); !s.ok()) {
+            return s;
+        }
+        skipped = result.skipped;
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Db::QueryRaw(const PathQuery& query, uint8_t result_type, const Transaction& txn, std::vector<QueryResultElement>& elements, uint16_t& skipped, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_raw_with_tx(
+            *m_impl->m_db, *query.m_impl->m_query, result_type, *txn.m_impl->m_tx);
+        if (auto s = DecodeQueryResultElements({result.values.data(), result.values.size()}, elements); !s.ok()) {
+            return s;
+        }
+        skipped = result.skipped;
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Bytes Db::EncodeManyQueries(const std::vector<RawQuerySpec>& queries)
+{
+    wire::Writer w;
+    w.U32(static_cast<uint32_t>(queries.size()));
+    for (const auto& q : queries) {
+        // Path
+        wire::WireWrite(w, q.path);
+        // Query items
+        wire::WireWrite(w, q.items);
+        // Limit and offset
+        w.U32(q.limit);
+        w.U32(q.offset);
+    }
+    return w.Take();
+}
+
+Status Db::QueryManyRaw(const std::vector<RawQuerySpec>& queries, uint8_t result_type, std::vector<QueryResultElement>& elements, OperationCost& cost)
+{
+    try {
+        auto encoded = EncodeManyQueries(queries);
+        rust::Slice<const uint8_t> encoded_slice{encoded.data(), encoded.size()};
+        auto result = grovedb_cxx::grovedb_query_many_raw(
+            *m_impl->m_db, encoded_slice, result_type);
+        if (auto s = DecodeQueryResultElements({result.values.data(), result.values.size()}, elements); !s.ok()) {
+            return s;
+        }
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Db::QueryKeysOptional / Db::QueryRawKeysOptional
+// ---------------------------------------------------------------------------
+
+Status Db::DecodePathKeyElements(std::span<const uint8_t> data, std::vector<PathKeyElement>& results)
+{
+    wire::Reader r{data};
+    uint32_t count{0};
+    if (auto s = r.U32(count); !s.ok()) return s;
+
+    results.clear();
+    results.reserve(count);
+    for (uint32_t i{0}; i < count; ++i) {
+        PathKeyElement entry;
+        if (auto s = wire::WireRead(r, entry.m_path); !s.ok()) return s;
+        if (auto s = r.Bytes(entry.m_key); !s.ok()) return s;
+
+        uint8_t has_elem{0};
+        if (auto s = r.U8(has_elem); !s.ok()) return s;
+        if (has_elem) {
+            Bytes elem_bytes;
+            if (auto s = r.Bytes(elem_bytes); !s.ok()) return s;
+            Element elem;
+            elem.m_data = std::move(elem_bytes);
+            entry.m_element = std::move(elem);
+        }
+
+        results.push_back(std::move(entry));
+    }
+    return Status::Ok();
+}
+
+Status Db::QueryKeysOptional(const PathQuery& query, std::vector<PathKeyElement>& results, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_keys_optional(
+            *m_impl->m_db, *query.m_impl->m_query);
+        if (auto s = DecodePathKeyElements({result.values.data(), result.values.size()}, results); !s.ok()) {
+            return s;
+        }
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Db::QueryKeysOptional(const PathQuery& query, const Transaction& txn, std::vector<PathKeyElement>& results, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_keys_optional_with_tx(
+            *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx);
+        if (auto s = DecodePathKeyElements({result.values.data(), result.values.size()}, results); !s.ok()) {
+            return s;
+        }
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Db::QueryRawKeysOptional(const PathQuery& query, std::vector<PathKeyElement>& results, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_raw_keys_optional(
+            *m_impl->m_db, *query.m_impl->m_query);
+        if (auto s = DecodePathKeyElements({result.values.data(), result.values.size()}, results); !s.ok()) {
+            return s;
+        }
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Db::QueryRawKeysOptional(const PathQuery& query, const Transaction& txn, std::vector<PathKeyElement>& results, OperationCost& cost)
+{
+    try {
+        auto result = grovedb_cxx::grovedb_query_raw_keys_optional_with_tx(
+            *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx);
+        if (auto s = DecodePathKeyElements({result.values.data(), result.values.size()}, results); !s.ok()) {
+            return s;
+        }
+        cost = convert_cost(result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
 } // namespace grovedb
