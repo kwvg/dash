@@ -150,6 +150,63 @@ public:
     Status SubtreeExists(const Path& path, bool& result, OperationCost& cost);
     Status SubtreeExists(const Path& path, const Transaction& txn, bool& result, OperationCost& cost);
 
+    // -- Put operations ---------------------------------------------------
+
+    /**
+     * Insert or replace an element at the given path and key.
+     *
+     * @param[in]  path     Path to the subtree.
+     * @param[in]  key      Key within the subtree.
+     * @param[in]  element  Element to store (serialized via Element factories).
+     * @param[out] cost     Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status Put(const Path& path, const Bytes& key, const Element& element, OperationCost& cost);
+    Status Put(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, OperationCost& cost);
+
+    /**
+     * Insert an element only if the key does not already exist.
+     *
+     * @param[in]  path      Path to the subtree.
+     * @param[in]  key       Key within the subtree.
+     * @param[in]  element   Element to store.
+     * @param[out] inserted  Set to true if the element was inserted.
+     * @param[out] cost      Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status PutIfAbsent(const Path& path, const Bytes& key, const Element& element, bool& inserted, OperationCost& cost);
+    Status PutIfAbsent(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, bool& inserted, OperationCost& cost);
+
+    /**
+     * Insert an element if the key does not exist; return the existing
+     * element if it does.
+     *
+     * @param[in]  path      Path to the subtree.
+     * @param[in]  key       Key within the subtree.
+     * @param[in]  element   Element to store if absent.
+     * @param[out] existing  Receives the existing element, or std::nullopt
+     *                       when the new element was inserted.
+     * @param[out] cost      Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status PutIfAbsentAndGet(const Path& path, const Bytes& key, const Element& element, std::optional<Element>& existing, OperationCost& cost);
+    Status PutIfAbsentAndGet(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, std::optional<Element>& existing, OperationCost& cost);
+
+    /**
+     * Insert an element only if its value differs from the existing one.
+     *
+     * @param[in]  path      Path to the subtree.
+     * @param[in]  key       Key within the subtree.
+     * @param[in]  element   Element to store.
+     * @param[out] changed   Set to true if a new value was written.
+     * @param[out] previous  Receives the previous element if it existed
+     *                       and was replaced, or std::nullopt otherwise.
+     * @param[out] cost      Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status PutIfChanged(const Path& path, const Bytes& key, const Element& element, bool& changed, std::optional<Element>& previous, OperationCost& cost);
+    Status PutIfChanged(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, bool& changed, std::optional<Element>& previous, OperationCost& cost);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;

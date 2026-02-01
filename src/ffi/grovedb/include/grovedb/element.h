@@ -5,6 +5,7 @@
 #ifndef GROVEDB_ELEMENT_H
 #define GROVEDB_ELEMENT_H
 
+#include <grovedb/status.h>
 #include <grovedb/types.h>
 
 namespace grovedb {
@@ -13,14 +14,35 @@ class Db;
 /**
  * Opaque container for a GroveDB element in its serialized (bincode) form.
  *
- * Populated by Db::Get / Db::GetDirect / Db::GetOptional.  The raw bytes
- * can be inspected via data() and will be accepted by future Db::Put
- * methods for round-tripping without re-serialization.
+ * Populated by Db::Get / Db::GetDirect / Db::GetOptional, or constructed
+ * with one of the static factory methods.  The raw bytes can be inspected
+ * via data() and are accepted by Db::Put and related methods.
  */
 class Element
 {
 public:
     constexpr Element() = default;
+
+    // -- Factories --------------------------------------------------------
+
+    /**
+     * Create an item element containing arbitrary value bytes.
+     *
+     * @param[in]  value    Raw value payload.
+     * @param[out] element  Receives the serialized element on success.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    static Status Item(const Bytes& value, Element& element);
+
+    /**
+     * Create an empty subtree element.
+     *
+     * @param[out] element  Receives the serialized element on success.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    static Status EmptyTree(Element& element);
+
+    // -- Accessors --------------------------------------------------------
 
     /** Access the raw serialized representation. */
     const Bytes& data() const { return m_data; }
