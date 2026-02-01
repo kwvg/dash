@@ -14,7 +14,8 @@ src_test_test_grovedb_SOURCES = \
 	src/test/query_tests.cpp \
 	src/test/transaction_tests.cpp \
 	src/test/util/tempdir.cpp \
-	src/test/whoami.cpp
+	src/test/whoami.cpp \
+	src/test/wire_tests.cpp
 
 src_test_test_grovedb_CPPFLAGS = $(GROVEDB_CXX_CPPFLAGS) $(BOOST_CPPFLAGS)
 src_test_test_grovedb_CPPFLAGS += \
