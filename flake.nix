@@ -232,6 +232,7 @@
               echo "  nix develop .#ci-linux64-fuzz - CI: Clang 19, fuzzing"
               echo "  nix develop .#ci-linux64-tsan - CI: Clang 19, TSan"
               echo "  nix develop .#ci-linux64-ubsan - CI: Clang 19, UBSan"
+              echo "  nix develop .#ci-linux64-sqlite - CI: GCC 15, SQLite"
             '';
           };
 
@@ -347,6 +348,28 @@
               echo "  Host: x86_64-pc-linux-gnu"
               echo "  Compiler: Clang 19"
               echo "  Features: UndefinedBehaviorSanitizer (UBSan)"
+              echo ""
+              echo "Build commands:"
+              echo "  ./autogen.sh"
+              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
+              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
+              echo "  make -j\$(nproc)"
+            '';
+          };
+
+          # linux64_sqlite - GCC 15 with SQLite wallet (no BDB)
+          # Matches CI_TARGET=linux64_sqlite in ci.Dockerfile
+          ci-linux64-sqlite = mkCIEnv {
+            name = "dash-ci-linux64-sqlite";
+            compiler = pkgs.gcc15;
+            extraShellHook = ''
+              export CI_TARGET="linux64_sqlite"
+              export HOST="x86_64-pc-linux-gnu"
+              export CONFIGURE_FLAGS="--enable-reduce-exports --with-boost-process --with-sqlite --without-bdb"
+              echo "CI Target: linux64_sqlite"
+              echo "  Host: x86_64-pc-linux-gnu"
+              echo "  Compiler: GCC 15"
+              echo "  Features: SQLite wallet only (no BDB)"
               echo ""
               echo "Build commands:"
               echo "  ./autogen.sh"
