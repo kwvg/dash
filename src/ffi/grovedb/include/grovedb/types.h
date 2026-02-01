@@ -7,11 +7,22 @@
 
 #include <array>
 #include <cstdint>
+#include <vector>
 
 namespace grovedb {
 
 /** 32-byte Merkle root hash. */
 using Hash = std::array<uint8_t, 32>;
+
+/** Variable-length byte buffer. */
+using Bytes = std::vector<uint8_t>;
+
+/**
+ * Path to a GroveDB subtree, represented as a sequence of byte segments.
+ *
+ * Example: `Path{Bytes{'r','o','o','t'}, Bytes{'c','h','i','l','d'}}`
+ */
+using Path = std::vector<Bytes>;
 
 } // namespace grovedb
 

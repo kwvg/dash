@@ -6,11 +6,13 @@
 #define GROVEDB_DB_H
 
 #include <grovedb/cost.h>
+#include <grovedb/element.h>
 #include <grovedb/status.h>
 #include <grovedb/transaction.h>
 #include <grovedb/types.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace grovedb {
@@ -84,6 +86,69 @@ public:
      * @return Status::Ok() on success; an error Status otherwise.
      */
     Status Rollback(Transaction& txn);
+
+    // -- Get operations ---------------------------------------------------
+
+    /**
+     * Get an element by path and key, following any references.
+     *
+     * @param[in]  path     Path to the subtree.
+     * @param[in]  key      Key within the subtree.
+     * @param[out] element  Receives the element on success.
+     * @param[out] cost     Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status Get(const Path& path, const Bytes& key, Element& element, OperationCost& cost);
+    Status Get(const Path& path, const Bytes& key, const Transaction& txn, Element& element, OperationCost& cost);
+
+    /**
+     * Get an element by path and key without following references.
+     *
+     * @param[in]  path     Path to the subtree.
+     * @param[in]  key      Key within the subtree.
+     * @param[out] element  Receives the element on success.
+     * @param[out] cost     Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status GetDirect(const Path& path, const Bytes& key, Element& element, OperationCost& cost);
+    Status GetDirect(const Path& path, const Bytes& key, const Transaction& txn, Element& element, OperationCost& cost);
+
+    /**
+     * Get an element optionally — returns std::nullopt instead of an error
+     * when the key is not found.
+     *
+     * @param[in]  path     Path to the subtree.
+     * @param[in]  key      Key within the subtree.
+     * @param[out] element  Receives the element, or std::nullopt if not found.
+     * @param[out] cost     Receives the operation resource counters.
+     * @return Status::Ok() on success (even when not found); an error Status
+     *         only for unexpected failures.
+     */
+    Status GetOptional(const Path& path, const Bytes& key, std::optional<Element>& element, OperationCost& cost);
+    Status GetOptional(const Path& path, const Bytes& key, const Transaction& txn, std::optional<Element>& element, OperationCost& cost);
+
+    /**
+     * Check whether a key exists at the given path (no reference following).
+     *
+     * @param[in]  path    Path to the subtree.
+     * @param[in]  key     Key to check.
+     * @param[out] result  Set to true if the key exists.
+     * @param[out] cost    Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status KeyExists(const Path& path, const Bytes& key, bool& result, OperationCost& cost);
+    Status KeyExists(const Path& path, const Bytes& key, const Transaction& txn, bool& result, OperationCost& cost);
+
+    /**
+     * Check whether a subtree path is valid (all parent subtrees exist).
+     *
+     * @param[in]  path    Path to validate.
+     * @param[out] result  Set to true if the path is valid.
+     * @param[out] cost    Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status SubtreeExists(const Path& path, bool& result, OperationCost& cost);
+    Status SubtreeExists(const Path& path, const Transaction& txn, bool& result, OperationCost& cost);
 
 private:
     struct Impl;

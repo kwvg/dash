@@ -6,6 +6,7 @@ include_grovedir = $(includedir)/grovedb
 include_grove_HEADERS = \
 	include/grovedb/cost.h \
 	include/grovedb/db.h \
+	include/grovedb/element.h \
 	include/grovedb/status.h \
 	include/grovedb/transaction.h \
 	include/grovedb/types.h
