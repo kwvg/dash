@@ -49,7 +49,7 @@ use delete::{
 
 mod proof;
 use proof::{
-    grovedb_prove_query, grovedb_verify_query,
+    grovedb_prove_query, grovedb_verify_chained_queries, grovedb_verify_query,
     grovedb_verify_query_with_absence_proof, grovedb_verify_query_with_options,
     grovedb_verify_subset_query, grovedb_verify_subset_query_with_absence_proof,
 };
@@ -57,6 +57,7 @@ use proof::{
 mod query;
 use query::{
     grovedb_path_query_new, grovedb_path_query_new_with_subquery,
+    grovedb_path_query_vec_new, grovedb_path_query_vec_push,
     grovedb_query_item_value, grovedb_query_item_value_with_tx,
     grovedb_query_item_value_or_sum, grovedb_query_item_value_or_sum_with_tx,
     grovedb_query_keys_optional, grovedb_query_keys_optional_with_tx,
@@ -103,9 +104,23 @@ pub struct BoxedPathQuery {
   query: grovedb::PathQuery,
 }
 
+/// Opaque accumulator of `PathQuery` objects for multi-query operations.
+///
+/// Used by `grovedb_verify_chained_queries` to collect the chained queries
+/// before passing them to the verification function.
+pub struct BoxedPathQueryVec {
+  queries: Vec<grovedb::PathQuery>,
+}
+
 impl std::fmt::Debug for BoxedPathQuery {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("BoxedPathQuery").finish_non_exhaustive()
+  }
+}
+
+impl std::fmt::Debug for BoxedPathQueryVec {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("BoxedPathQueryVec").finish_non_exhaustive()
   }
 }
 
@@ -219,6 +234,14 @@ pub(crate) mod ffi {
     entries: Vec<u8>,
   }
 
+  /// Result of chained proof verification: root hash and nested result sets.
+  struct FfiChainedVerifyResult {
+    /// 32-byte Merkle root hash extracted from the proof.
+    root_hash: Vec<u8>,
+    /// Wire-encoded nested result sets.
+    result_sets: Vec<u8>,
+  }
+
   /// Options controlling batch application behavior.
   struct FfiBatchApplyOptions {
     validate_insertion_does_not_override: bool,
@@ -233,6 +256,7 @@ pub(crate) mod ffi {
     type BoxedGroveDb;
     type BoxedTransaction;
     type BoxedPathQuery;
+    type BoxedPathQueryVec;
 
     fn whoami() -> String;
 
@@ -344,6 +368,13 @@ pub(crate) mod ffi {
     fn grovedb_verify_subset_query(proof: &[u8], query: &BoxedPathQuery) -> Result<FfiVerifyResult>;
     fn grovedb_verify_query_with_absence_proof(proof: &[u8], query: &BoxedPathQuery) -> Result<FfiVerifyResult>;
     fn grovedb_verify_subset_query_with_absence_proof(proof: &[u8], query: &BoxedPathQuery) -> Result<FfiVerifyResult>;
+
+    // -- Path query vec helpers --
+    fn grovedb_path_query_vec_new() -> Box<BoxedPathQueryVec>;
+    fn grovedb_path_query_vec_push(vec: &mut BoxedPathQueryVec, query: &BoxedPathQuery);
+
+    // -- Chained proof verification --
+    fn grovedb_verify_chained_queries(proof: &[u8], first_query: &BoxedPathQuery, chained: &BoxedPathQueryVec) -> Result<FfiChainedVerifyResult>;
 
     // -- Batch --
     fn grovedb_apply_batch(db: &BoxedGroveDb, ops: &[u8], options: &FfiBatchApplyOptions) -> Result<FfiOperationCost>;

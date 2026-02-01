@@ -11,10 +11,11 @@ use grovedb::VerifyOptions;
 use grovedb_version::version::GroveVersion;
 
 use crate::element::serialize_element;
-use crate::ffi::{FfiProofResult, FfiVerifyResult};
+use crate::ffi::{FfiChainedVerifyResult, FfiProofResult, FfiVerifyResult};
 use crate::lifecycle::operation_cost_to_ffi;
 use crate::BoxedGroveDb;
 use crate::BoxedPathQuery;
+use crate::BoxedPathQueryVec;
 
 // ---------------------------------------------------------------------------
 // Wire encoding helpers
@@ -177,4 +178,93 @@ pub(crate) fn grovedb_verify_subset_query_with_absence_proof(
         GroveDb::verify_subset_query_with_absence_proof(proof, &query.query, version)
             .map_err(|e| e.to_string())?;
     make_verify_result(hash, entries)
+}
+
+// ---------------------------------------------------------------------------
+// Chained query verification
+// ---------------------------------------------------------------------------
+
+/// Encode the result of chained verification into wire format.
+///
+/// Wire format:
+/// ```text
+/// [u32 result_set_count]
+/// For each result set:
+///   [u32 entry_count]
+///   For each entry: [path][key][has_element][optional element]
+/// ```
+fn encode_chained_verify_result(
+    hash: [u8; 32],
+    all_results: Vec<Vec<PathKeyOptionalElementTrio>>,
+) -> Result<FfiChainedVerifyResult, String> {
+    let version = GroveVersion::latest();
+    let mut buf = Vec::new();
+
+    // Result set count.
+    buf.extend_from_slice(&(all_results.len() as u32).to_le_bytes());
+
+    for result_set in all_results {
+        // Entry count for this result set.
+        buf.extend_from_slice(&(result_set.len() as u32).to_le_bytes());
+
+        for (path, key, opt_element) in result_set {
+            // path
+            encode_path(&path, &mut buf);
+            // key
+            buf.extend_from_slice(&(key.len() as u32).to_le_bytes());
+            buf.extend_from_slice(&key);
+            // optional element
+            match opt_element {
+                Some(element) => {
+                    buf.push(1u8);
+                    let elem_bytes = serialize_element(&element, version)?;
+                    buf.extend_from_slice(&(elem_bytes.len() as u32).to_le_bytes());
+                    buf.extend_from_slice(&elem_bytes);
+                }
+                None => {
+                    buf.push(0u8);
+                }
+            }
+        }
+    }
+
+    Ok(FfiChainedVerifyResult {
+        root_hash: hash.to_vec(),
+        result_sets: buf,
+    })
+}
+
+/// Verify a proof with chained path queries.
+///
+/// The C++ side provides pre-computed queries rather than closures.
+/// Each chained query is applied regardless of the previous result
+/// (the closure always returns `Some(query_clone)`).
+pub(crate) fn grovedb_verify_chained_queries(
+    proof: &[u8],
+    first_query: &BoxedPathQuery,
+    chained: &BoxedPathQueryVec,
+) -> Result<FfiChainedVerifyResult, String> {
+    let version = GroveVersion::latest();
+
+    // Build closures from pre-computed queries.
+    let closures: Vec<_> = chained
+        .queries
+        .iter()
+        .map(|query| {
+            let query_clone = query.clone();
+            move |_prev: Vec<PathKeyOptionalElementTrio>| -> Option<grovedb::PathQuery> {
+                Some(query_clone.clone())
+            }
+        })
+        .collect();
+
+    let (hash, all_results) = GroveDb::verify_query_with_chained_path_queries(
+        proof,
+        &first_query.query,
+        closures,
+        version,
+    )
+    .map_err(|e| e.to_string())?;
+
+    encode_chained_verify_result(hash, all_results)
 }
