@@ -31,8 +31,6 @@
           # Clang/LLVM 19 (for sanitizers, multiprocess, fuzz)
           clang_19 = unstable.clang_19;
           llvm_19 = unstable.llvm_19;
-          libcxx_19 = unstable.libcxx_19;
-          libcxxabi_19 = unstable.libcxxabi_19;
           clang-tools_19 = unstable.clang-tools_19;  # For clang-tidy
 
           # LLD linker (for macOS cross-compilation)
@@ -233,6 +231,7 @@
               echo "  nix develop .#ci-linux64-tsan - CI: Clang 19, TSan"
               echo "  nix develop .#ci-linux64-ubsan - CI: Clang 19, UBSan"
               echo "  nix develop .#ci-linux64-sqlite - CI: GCC 15, SQLite"
+              echo "  nix develop .#ci-linux64-multiprocess - CI: Clang 19, multiprocess"
             '';
           };
 
@@ -370,6 +369,29 @@
               echo "  Host: x86_64-pc-linux-gnu"
               echo "  Compiler: GCC 15"
               echo "  Features: SQLite wallet only (no BDB)"
+              echo ""
+              echo "Build commands:"
+              echo "  ./autogen.sh"
+              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
+              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
+              echo "  make -j\$(nproc)"
+            '';
+          };
+
+          # linux64_multiprocess - Clang 19 with multiprocess
+          # Matches CI_TARGET=linux64_multiprocess in ci.Dockerfile
+          ci-linux64-multiprocess = mkCIEnv {
+            name = "dash-ci-linux64-multiprocess";
+            compiler = pkgs.clang_19;
+            extraBuildInputs = [ pkgs.llvm_19 ];
+            extraShellHook = ''
+              export CI_TARGET="linux64_multiprocess"
+              export HOST="x86_64-pc-linux-gnu"
+              export CONFIGURE_FLAGS="--enable-reduce-exports --with-boost-process --enable-multiprocess CC=clang CXX=clang++"
+              echo "CI Target: linux64_multiprocess"
+              echo "  Host: x86_64-pc-linux-gnu"
+              echo "  Compiler: Clang 19"
+              echo "  Features: Multiprocess node/wallet separation"
               echo ""
               echo "Build commands:"
               echo "  ./autogen.sh"
