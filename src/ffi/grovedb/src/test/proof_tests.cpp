@@ -511,4 +511,102 @@ BOOST_AUTO_TEST_CASE(test_verify_entry_elements)
     BOOST_CHECK(entries[0].m_element->data() == fetched.data());
 }
 
+// ---------------------------------------------------------------------------
+// Verify chained queries
+// ---------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(test_verify_chained_queries)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_verify_chained"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+    grovedb::Path root{};
+
+    // Create two subtrees "s1" and "s2" at the root.
+    grovedb::Element tree;
+    BOOST_REQUIRE(grovedb::Element::EmptyTree(tree).ok());
+    BOOST_REQUIRE(db.Put(root, {'s', '1'}, tree, cost).ok());
+    BOOST_REQUIRE(grovedb::Element::EmptyTree(tree).ok());
+    BOOST_REQUIRE(db.Put(root, {'s', '2'}, tree, cost).ok());
+
+    // Insert items into s1.
+    grovedb::Path s1{{'s', '1'}};
+    grovedb::Element item;
+    BOOST_REQUIRE(grovedb::Element::Item({'a', '1'}, item).ok());
+    BOOST_REQUIRE(db.Put(s1, {'a'}, item, cost).ok());
+    BOOST_REQUIRE(grovedb::Element::Item({'b', '1'}, item).ok());
+    BOOST_REQUIRE(db.Put(s1, {'b'}, item, cost).ok());
+
+    // Insert items into s2.
+    grovedb::Path s2{{'s', '2'}};
+    BOOST_REQUIRE(grovedb::Element::Item({'x', '2'}, item).ok());
+    BOOST_REQUIRE(db.Put(s2, {'x'}, item, cost).ok());
+    BOOST_REQUIRE(grovedb::Element::Item({'y', '2'}, item).ok());
+    BOOST_REQUIRE(db.Put(s2, {'y'}, item, cost).ok());
+
+    // First query: all items in s1.
+    grovedb::PathQuery q1;
+    BOOST_REQUIRE(grovedb::PathQuery::New(
+        s1,
+        {grovedb::QueryItem::RangeFull()},
+        0, 0,
+        q1).ok());
+
+    // Second (chained) query: all items in s2.
+    grovedb::PathQuery q2;
+    BOOST_REQUIRE(grovedb::PathQuery::New(
+        s2,
+        {grovedb::QueryItem::RangeFull()},
+        0, 0,
+        q2).ok());
+
+    // Generate a proof that covers both queries.
+    // GroveDB's prove_query_many can generate a combined proof.
+    // For chained verification we need a single proof covering all subtrees.
+    // Use the first query to prove (the proof must cover the chained queries too).
+    // Actually, we need to generate the proof via prove on the merged query space.
+    // The simplest approach: prove with a root-level query covering both subtrees.
+    grovedb::PathQuery root_query;
+    BOOST_REQUIRE(grovedb::PathQuery::NewWithSubquery(
+        root,
+        {grovedb::QueryItem::RangeFull()},
+        0, 0,
+        grovedb::Path{},
+        {grovedb::QueryItem::RangeFull()},
+        root_query).ok());
+
+    grovedb::Bytes proof;
+    BOOST_REQUIRE(db.Prove(root_query, proof, cost).ok());
+    BOOST_CHECK(!proof.empty());
+
+    // Verify chained: first query + one chained query.
+    grovedb::Hash root_hash{};
+    std::vector<std::vector<grovedb::ProofResultEntry>> all_results;
+    auto status = grovedb::Db::VerifyChainedQueries(
+        proof, q1, {&q2}, root_hash, all_results);
+    BOOST_CHECK_MESSAGE(status.ok(), status.message());
+
+    // Root hash should be non-zero.
+    bool all_zero = std::all_of(root_hash.begin(), root_hash.end(),
+                                [](uint8_t b) { return b == 0; });
+    BOOST_CHECK(!all_zero);
+
+    // Should have 2 result sets (first query + 1 chained).
+    BOOST_CHECK_EQUAL(all_results.size(), 2);
+
+    // First result set: items from s1 (a, b).
+    BOOST_CHECK_EQUAL(all_results[0].size(), 2);
+    for (const auto& entry : all_results[0]) {
+        BOOST_CHECK(entry.m_element.has_value());
+    }
+
+    // Second result set: items from s2 (x, y).
+    BOOST_CHECK_EQUAL(all_results[1].size(), 2);
+    for (const auto& entry : all_results[1]) {
+        BOOST_CHECK(entry.m_element.has_value());
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
