@@ -232,6 +232,7 @@
               echo "  nix develop .#ci-linux64-ubsan - CI: Clang 19, UBSan"
               echo "  nix develop .#ci-linux64-sqlite - CI: GCC 15, SQLite"
               echo "  nix develop .#ci-linux64-multiprocess - CI: Clang 19, multiprocess"
+              echo "  nix develop .#ci-arm-linux - CI: GCC 11, ARM cross"
             '';
           };
 
@@ -392,6 +393,29 @@
               echo "  Host: x86_64-pc-linux-gnu"
               echo "  Compiler: Clang 19"
               echo "  Features: Multiprocess node/wallet separation"
+              echo ""
+              echo "Build commands:"
+              echo "  ./autogen.sh"
+              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
+              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
+              echo "  make -j\$(nproc)"
+            '';
+          };
+
+          # arm-linux - GCC 11 ARM cross-compilation
+          # Matches CI_TARGET=arm-linux in ci.Dockerfile
+          ci-arm-linux = mkCIEnv {
+            name = "dash-ci-arm-linux";
+            compiler = pkgs.gcc11;
+            extraBuildInputs = [ pkgs.pkgsCross.armv7l-hf-multiplatform.stdenv.cc ];
+            extraShellHook = ''
+              export CI_TARGET="arm-linux"
+              export HOST="arm-linux-gnueabihf"
+              export CONFIGURE_FLAGS="--enable-reduce-exports --enable-glibc-back-compat"
+              echo "CI Target: arm-linux"
+              echo "  Host: arm-linux-gnueabihf"
+              echo "  Compiler: GCC 11 (cross-compile)"
+              echo "  Features: ARM 32-bit cross-compilation"
               echo ""
               echo "Build commands:"
               echo "  ./autogen.sh"
