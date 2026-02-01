@@ -16,6 +16,15 @@ use lifecycle::{grovedb_flush, grovedb_open, grovedb_root_hash, grovedb_verify, 
 mod transaction;
 use transaction::{grovedb_commit_transaction, grovedb_rollback_transaction, grovedb_start_transaction};
 
+mod types;
+
+mod get;
+use get::{
+    grovedb_check_subtree_exists, grovedb_check_subtree_exists_with_tx, grovedb_get,
+    grovedb_get_raw, grovedb_get_raw_optional, grovedb_get_raw_optional_with_tx,
+    grovedb_get_raw_with_tx, grovedb_get_with_tx, grovedb_has_raw, grovedb_has_raw_with_tx,
+};
+
 /// Opaque wrapper around `grovedb::GroveDb` for use across the CXX bridge.
 pub struct BoxedGroveDb {
   db: grovedb::GroveDb,
@@ -64,6 +73,25 @@ pub(crate) mod ffi {
     cost: FfiOperationCost,
   }
 
+  /// Result of a get operation: serialized element plus operation costs.
+  struct FfiElementResult {
+    element: Vec<u8>,
+    cost: FfiOperationCost,
+  }
+
+  /// Result of an optional get: flag + optional serialized element + costs.
+  struct FfiOptionalElementResult {
+    has_element: bool,
+    element: Vec<u8>,
+    cost: FfiOperationCost,
+  }
+
+  /// Result of a boolean query (existence check) plus operation costs.
+  struct FfiBoolResult {
+    value: bool,
+    cost: FfiOperationCost,
+  }
+
   extern "Rust" {
     type BoxedGroveDb;
     type BoxedTransaction;
@@ -81,6 +109,26 @@ pub(crate) mod ffi {
     fn grovedb_start_transaction(db: &BoxedGroveDb) -> Result<Box<BoxedTransaction>>;
     fn grovedb_commit_transaction(db: &BoxedGroveDb, tx: Box<BoxedTransaction>) -> Result<FfiOperationCost>;
     fn grovedb_rollback_transaction(db: &BoxedGroveDb, tx: &BoxedTransaction) -> Result<()>;
+
+    // -- Get (follows references) --
+    fn grovedb_get(db: &BoxedGroveDb, path: &[u8], key: &[u8]) -> Result<FfiElementResult>;
+    fn grovedb_get_with_tx(db: &BoxedGroveDb, path: &[u8], key: &[u8], tx: &BoxedTransaction) -> Result<FfiElementResult>;
+
+    // -- Get raw (no reference following) --
+    fn grovedb_get_raw(db: &BoxedGroveDb, path: &[u8], key: &[u8]) -> Result<FfiElementResult>;
+    fn grovedb_get_raw_with_tx(db: &BoxedGroveDb, path: &[u8], key: &[u8], tx: &BoxedTransaction) -> Result<FfiElementResult>;
+
+    // -- Get raw optional --
+    fn grovedb_get_raw_optional(db: &BoxedGroveDb, path: &[u8], key: &[u8]) -> Result<FfiOptionalElementResult>;
+    fn grovedb_get_raw_optional_with_tx(db: &BoxedGroveDb, path: &[u8], key: &[u8], tx: &BoxedTransaction) -> Result<FfiOptionalElementResult>;
+
+    // -- Has raw (existence check) --
+    fn grovedb_has_raw(db: &BoxedGroveDb, path: &[u8], key: &[u8]) -> Result<FfiBoolResult>;
+    fn grovedb_has_raw_with_tx(db: &BoxedGroveDb, path: &[u8], key: &[u8], tx: &BoxedTransaction) -> Result<FfiBoolResult>;
+
+    // -- Subtree exists --
+    fn grovedb_check_subtree_exists(db: &BoxedGroveDb, path: &[u8]) -> Result<FfiBoolResult>;
+    fn grovedb_check_subtree_exists_with_tx(db: &BoxedGroveDb, path: &[u8], tx: &BoxedTransaction) -> Result<FfiBoolResult>;
   }
 }
 
