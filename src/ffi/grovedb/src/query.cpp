@@ -15,6 +15,94 @@
 namespace grovedb {
 
 // ---------------------------------------------------------------------------
+// QueryItem serialization
+// ---------------------------------------------------------------------------
+
+void QueryItem::Encode(wire::Writer& w) const
+{
+    w.U8(m_kind);
+    switch (m_kind) {
+    case 0: // Key
+        w.Bytes(m_a);
+        break;
+    case 1: // Range
+    case 2: // RangeInclusive
+    case 8: // RangeAfterTo
+    case 9: // RangeAfterToInclusive
+        w.Bytes(m_a);
+        w.Bytes(m_b);
+        break;
+    case 3: // RangeFull
+        break;
+    case 4: // RangeFrom
+    case 5: // RangeTo
+    case 6: // RangeToInclusive
+    case 7: // RangeAfter
+        w.Bytes(m_a);
+        break;
+    }
+}
+
+Status QueryItem::Decode(wire::Reader& r, QueryItem& item)
+{
+    uint8_t kind{0};
+    if (auto s = r.U8(kind); !s.ok()) return s;
+
+    Bytes a;
+    Bytes b;
+
+    switch (kind) {
+    case 0: // Key
+        if (auto s = r.Bytes(a); !s.ok()) return s;
+        item = QueryItem::Key(a);
+        break;
+    case 1: // Range
+        if (auto s = r.Bytes(a); !s.ok()) return s;
+        if (auto s = r.Bytes(b); !s.ok()) return s;
+        item = QueryItem::Range(a, b);
+        break;
+    case 2: // RangeInclusive
+        if (auto s = r.Bytes(a); !s.ok()) return s;
+        if (auto s = r.Bytes(b); !s.ok()) return s;
+        item = QueryItem::RangeInclusive(a, b);
+        break;
+    case 3: // RangeFull
+        item = QueryItem::RangeFull();
+        break;
+    case 4: // RangeFrom
+        if (auto s = r.Bytes(a); !s.ok()) return s;
+        item = QueryItem::RangeFrom(a);
+        break;
+    case 5: // RangeTo
+        if (auto s = r.Bytes(a); !s.ok()) return s;
+        item = QueryItem::RangeTo(a);
+        break;
+    case 6: // RangeToInclusive
+        if (auto s = r.Bytes(a); !s.ok()) return s;
+        item = QueryItem::RangeToInclusive(a);
+        break;
+    case 7: // RangeAfter
+        if (auto s = r.Bytes(a); !s.ok()) return s;
+        item = QueryItem::RangeAfter(a);
+        break;
+    case 8: // RangeAfterTo
+        if (auto s = r.Bytes(a); !s.ok()) return s;
+        if (auto s = r.Bytes(b); !s.ok()) return s;
+        item = QueryItem::RangeAfterTo(a, b);
+        break;
+    case 9: // RangeAfterToInclusive
+        if (auto s = r.Bytes(a); !s.ok()) return s;
+        if (auto s = r.Bytes(b); !s.ok()) return s;
+        item = QueryItem::RangeAfterToInclusive(a, b);
+        break;
+    default:
+        return Status::Corruption("wire: unknown QueryItem kind");
+    }
+
+    return Status::Ok();
+}
+
+// ---------------------------------------------------------------------------
 // QueryItem factories
 // ---------------------------------------------------------------------------
 

@@ -15,6 +15,10 @@
 
 namespace grovedb {
 class Db;
+namespace wire {
+class Writer;
+class Reader;
+} // namespace wire
 
 /**
  * Descriptor for a single query predicate within a PathQuery.
@@ -60,6 +64,26 @@ public:
     const Bytes& first() const { return m_a; }
     /** Second operand (end / to), empty for single-operand items. */
     const Bytes& second() const { return m_b; }
+
+    /**
+     * Serialize this item to a wire::Writer.
+     *
+     * Wire layout: [u8 kind][kind-specific length-prefixed fields].
+     *
+     * @param[in] w  Writer to append to.
+     */
+    void Encode(wire::Writer& w) const;
+
+    /**
+     * Deserialize a QueryItem from a wire::Reader.
+     *
+     * Reconstructs the item via the appropriate factory method.
+     *
+     * @param[in]  r     Reader to consume from.
+     * @param[out] item  Receives the decoded QueryItem.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    static Status Decode(wire::Reader& r, QueryItem& item);
 
     /** Default-construct an empty QueryItem (kind 0, no data). */
     QueryItem() = default;

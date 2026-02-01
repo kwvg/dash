@@ -110,43 +110,18 @@ inline Status WireRead(Reader& r, Path& path)
 // ---------------------------------------------------------------------------
 
 /**
- * Encode a QueryItem as [u8 kind][kind-specific fields].
- *
- * Each field is length-prefixed bytes.  The layout matches the wire format
- * expected by the CXX bridge.
+ * Encode a QueryItem via its Encode() method.
  *
  * @param[in] w     Writer to append to.
  * @param[in] item  QueryItem to encode.
  */
 inline void WireWrite(Writer& w, const QueryItem& item)
 {
-    w.U8(item.kind());
-    switch (item.kind()) {
-    case 0: // Key
-        w.Bytes(item.first());
-        break;
-    case 1: // Range
-    case 2: // RangeInclusive
-    case 8: // RangeAfterTo
-    case 9: // RangeAfterToInclusive
-        w.Bytes(item.first());
-        w.Bytes(item.second());
-        break;
-    case 3: // RangeFull
-        break;
-    case 4: // RangeFrom
-    case 5: // RangeTo
-    case 6: // RangeToInclusive
-    case 7: // RangeAfter
-        w.Bytes(item.first());
-        break;
-    }
+    item.Encode(w);
 }
 
 /**
- * Decode a QueryItem from [u8 kind][kind-specific fields].
- *
- * Reconstructs QueryItem via factory methods.
+ * Decode a QueryItem via its Decode() method.
  *
  * @param[in]  r     Reader to consume from.
  * @param[out] item  Receives the decoded QueryItem.
@@ -154,61 +129,7 @@ inline void WireWrite(Writer& w, const QueryItem& item)
  */
 inline Status WireRead(Reader& r, QueryItem& item)
 {
-    uint8_t kind{0};
-    if (auto s = r.U8(kind); !s.ok()) return s;
-
-    Bytes a;
-    Bytes b;
-
-    switch (kind) {
-    case 0: // Key
-        if (auto s = r.Bytes(a); !s.ok()) return s;
-        item = QueryItem::Key(a);
-        break;
-    case 1: // Range
-        if (auto s = r.Bytes(a); !s.ok()) return s;
-        if (auto s = r.Bytes(b); !s.ok()) return s;
-        item = QueryItem::Range(a, b);
-        break;
-    case 2: // RangeInclusive
-        if (auto s = r.Bytes(a); !s.ok()) return s;
-        if (auto s = r.Bytes(b); !s.ok()) return s;
-        item = QueryItem::RangeInclusive(a, b);
-        break;
-    case 3: // RangeFull
-        item = QueryItem::RangeFull();
-        break;
-    case 4: // RangeFrom
-        if (auto s = r.Bytes(a); !s.ok()) return s;
-        item = QueryItem::RangeFrom(a);
-        break;
-    case 5: // RangeTo
-        if (auto s = r.Bytes(a); !s.ok()) return s;
-        item = QueryItem::RangeTo(a);
-        break;
-    case 6: // RangeToInclusive
-        if (auto s = r.Bytes(a); !s.ok()) return s;
-        item = QueryItem::RangeToInclusive(a);
-        break;
-    case 7: // RangeAfter
-        if (auto s = r.Bytes(a); !s.ok()) return s;
-        item = QueryItem::RangeAfter(a);
-        break;
-    case 8: // RangeAfterTo
-        if (auto s = r.Bytes(a); !s.ok()) return s;
-        if (auto s = r.Bytes(b); !s.ok()) return s;
-        item = QueryItem::RangeAfterTo(a, b);
-        break;
-    case 9: // RangeAfterToInclusive
-        if (auto s = r.Bytes(a); !s.ok()) return s;
-        if (auto s = r.Bytes(b); !s.ok()) return s;
-        item = QueryItem::RangeAfterToInclusive(a, b);
-        break;
-    default:
-        return Status::Corruption("wire: unknown QueryItem kind");
-    }
-
-    return Status::Ok();
+    return QueryItem::Decode(r, item);
 }
 
 // ---------------------------------------------------------------------------
