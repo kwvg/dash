@@ -44,6 +44,13 @@ use delete::{
     grovedb_delete_with_tx,
 };
 
+mod proof;
+use proof::{
+    grovedb_prove_query, grovedb_verify_query, grovedb_verify_query_with_absence_proof,
+    grovedb_verify_query_with_options, grovedb_verify_subset_query,
+    grovedb_verify_subset_query_with_absence_proof,
+};
+
 mod query;
 use query::{
     grovedb_path_query_new, grovedb_path_query_new_with_subquery,
@@ -152,6 +159,20 @@ pub(crate) mod ffi {
     cost: FfiOperationCost,
   }
 
+  /// Result of proof generation: opaque proof bytes plus operation costs.
+  struct FfiProofResult {
+    proof: Vec<u8>,
+    cost: FfiOperationCost,
+  }
+
+  /// Result of proof verification: root hash and wire-encoded entries.
+  struct FfiVerifyResult {
+    /// 32-byte Merkle root hash extracted from the proof.
+    root_hash: Vec<u8>,
+    /// Wire-encoded `PathKeyOptionalElementTrio` entries.
+    entries: Vec<u8>,
+  }
+
   extern "Rust" {
     type BoxedGroveDb;
     type BoxedTransaction;
@@ -234,6 +255,14 @@ pub(crate) mod ffi {
     // -- Query item value --
     fn grovedb_query_item_value(db: &BoxedGroveDb, query: &BoxedPathQuery) -> Result<FfiQueryResult>;
     fn grovedb_query_item_value_with_tx(db: &BoxedGroveDb, query: &BoxedPathQuery, tx: &BoxedTransaction) -> Result<FfiQueryResult>;
+
+    // -- Proofs --
+    fn grovedb_prove_query(db: &BoxedGroveDb, query: &BoxedPathQuery, decrease_limit_on_empty: bool) -> Result<FfiProofResult>;
+    fn grovedb_verify_query(proof: &[u8], query: &BoxedPathQuery) -> Result<FfiVerifyResult>;
+    fn grovedb_verify_query_with_options(proof: &[u8], query: &BoxedPathQuery, absence_proofs: bool, verify_succinctness: bool, include_empty_trees: bool) -> Result<FfiVerifyResult>;
+    fn grovedb_verify_subset_query(proof: &[u8], query: &BoxedPathQuery) -> Result<FfiVerifyResult>;
+    fn grovedb_verify_query_with_absence_proof(proof: &[u8], query: &BoxedPathQuery) -> Result<FfiVerifyResult>;
+    fn grovedb_verify_subset_query_with_absence_proof(proof: &[u8], query: &BoxedPathQuery) -> Result<FfiVerifyResult>;
   }
 }
 
