@@ -6,6 +6,7 @@ TESTS = src/test/test_grovedb
 noinst_PROGRAMS = src/test/test_grovedb
 
 src_test_test_grovedb_SOURCES = \
+	src/test/batch_tests.cpp \
 	src/test/delete_tests.cpp \
 	src/test/get_tests.cpp \
 	src/test/insert_tests.cpp \

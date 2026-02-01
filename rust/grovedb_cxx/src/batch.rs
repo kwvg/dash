@@ -11,7 +11,6 @@ use grovedb_version::version::GroveVersion;
 use crate::element::deserialize_element;
 use crate::ffi::{FfiBatchApplyOptions, FfiOperationCost};
 use crate::lifecycle::operation_cost_to_ffi;
-use crate::types::decode_path;
 use crate::BoxedGroveDb;
 use crate::BoxedTransaction;
 
