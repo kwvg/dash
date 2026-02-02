@@ -29,6 +29,7 @@ use get::{
     grovedb_check_subtree_exists, grovedb_check_subtree_exists_with_tx, grovedb_get,
     grovedb_get_raw, grovedb_get_raw_optional, grovedb_get_raw_optional_with_tx,
     grovedb_get_raw_with_tx, grovedb_get_with_tx, grovedb_has_raw, grovedb_has_raw_with_tx,
+    grovedb_is_empty_tree, grovedb_is_empty_tree_with_tx,
 };
 
 mod insert;
@@ -318,6 +319,10 @@ pub(crate) mod ffi {
     // -- Subtree exists --
     fn grovedb_check_subtree_exists(db: &BoxedGroveDb, path: &[u8]) -> Result<FfiBoolResult>;
     fn grovedb_check_subtree_exists_with_tx(db: &BoxedGroveDb, path: &[u8], tx: &BoxedTransaction) -> Result<FfiBoolResult>;
+
+    // -- Is empty tree --
+    fn grovedb_is_empty_tree(db: &BoxedGroveDb, path: &[u8]) -> Result<FfiBoolResult>;
+    fn grovedb_is_empty_tree_with_tx(db: &BoxedGroveDb, path: &[u8], tx: &BoxedTransaction) -> Result<FfiBoolResult>;
 
     // -- Insert (unconditional) --
     fn grovedb_insert(db: &BoxedGroveDb, path: &[u8], key: &[u8], element: &[u8]) -> Result<FfiOperationCost>;

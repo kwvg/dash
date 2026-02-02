@@ -4,6 +4,7 @@
 // See the accompanying file LICENSE or https://opensource.org/license/mit
 //
 
+use grovedb_path::SubtreePath;
 use grovedb_version::version::GroveVersion;
 
 use crate::element::serialize_element;
@@ -238,6 +239,45 @@ pub fn grovedb_check_subtree_exists_with_tx(
     let cost = operation_cost_to_ffi(&ctx.cost);
     Ok(FfiBoolResult {
         value: ctx.value.is_ok(),
+        cost,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// is_empty_tree — check whether a subtree is empty
+// ---------------------------------------------------------------------------
+
+/// Check whether the subtree at the given path is empty.
+pub fn grovedb_is_empty_tree(
+    db: &BoxedGroveDb,
+    path: &[u8],
+) -> Result<FfiBoolResult, String> {
+    let version = GroveVersion::latest();
+    let segments = decode_path(path)?;
+    let subtree_path: SubtreePath<Vec<u8>> = segments.as_slice().into();
+    let ctx = db.db.is_empty_tree(subtree_path, None, version);
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let empty = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiBoolResult {
+        value: empty,
+        cost,
+    })
+}
+
+/// Check whether the subtree at the given path is empty, within a transaction.
+pub fn grovedb_is_empty_tree_with_tx(
+    db: &BoxedGroveDb,
+    path: &[u8],
+    tx: &BoxedTransaction,
+) -> Result<FfiBoolResult, String> {
+    let version = GroveVersion::latest();
+    let segments = decode_path(path)?;
+    let subtree_path: SubtreePath<Vec<u8>> = segments.as_slice().into();
+    let ctx = db.db.is_empty_tree(subtree_path, Some(&tx.tx), version);
+    let cost = operation_cost_to_ffi(&ctx.cost);
+    let empty = ctx.value.map_err(|e| e.to_string())?;
+    Ok(FfiBoolResult {
+        value: empty,
         cost,
     })
 }
