@@ -466,6 +466,7 @@ if build_fuzz
   fuzz_inc = include_directories('src/fuzz', 'src/fuzz/utils')
 
   fuzz_targets = [
+    'fuzz_element',
   ]
 
   foreach target : fuzz_targets
