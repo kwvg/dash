@@ -5,27 +5,38 @@
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 """
-Check for formatting issues in Nix files using nixfmt.
+Check for formatting issues in Nix files using nix fmt or nixfmt.
 """
 
 import subprocess
 import sys
+import os
 
 
-def check_nixfmt_install():
-    """Check if nixfmt is installed."""
+def check_formatter():
+    """Check if nix fmt or nixfmt is available and return the command to use."""
+    shell_prefix = ['bash', '-c', 'source ~/.zshrc 2>/dev/null || source ~/.bashrc 2>/dev/null || true; ']
+
+    # First, try 'nix fmt'
     try:
-        subprocess.run(['nixfmt', '--version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
-    except FileNotFoundError:
-        print('Skipping Nix linting since nixfmt is not installed.')
-        sys.exit(0)
-    except subprocess.CalledProcessError:
-        # Some versions of nixfmt don't support --version, try --help
-        try:
-            subprocess.run(['nixfmt', '--help'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
-        except (FileNotFoundError, subprocess.CalledProcessError):
-            print('Skipping Nix linting since nixfmt is not installed.')
-            sys.exit(0)
+        cmd = shell_prefix + ['nix fmt -- --version 2>/dev/null || nix fmt -- --help 2>/dev/null']
+        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+        if result.returncode == 0:
+            return ('nix-fmt', shell_prefix)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    # Then try 'nixfmt'
+    try:
+        cmd = shell_prefix + ['nixfmt --version 2>/dev/null || nixfmt --help 2>/dev/null']
+        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+        if result.returncode == 0:
+            return ('nixfmt', shell_prefix)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    print('Skipping Nix linting since neither "nix fmt" nor "nixfmt" is available.')
+    sys.exit(0)
 
 
 def get_nix_files():
@@ -50,7 +61,7 @@ def get_nix_files():
 
 
 def main():
-    check_nixfmt_install()
+    formatter, shell_prefix = check_formatter()
 
     files = get_nix_files()
 
@@ -58,15 +69,24 @@ def main():
         print('No Nix files found in contrib/nix/')
         sys.exit(0)
 
-    # Run nixfmt in check mode
-    nixfmt_cmd = ['nixfmt', '--check'] + files
+    # Build the check command based on which formatter we're using
+    if formatter == 'nix-fmt':
+        # nix fmt expects files as arguments and uses -- to separate formatter args
+        check_cmd = f'nix fmt -- --check {" ".join(files)}'
+        fix_cmd = f'nix fmt'
+    else:  # nixfmt
+        check_cmd = f'nixfmt --check {" ".join(files)}'
+        fix_cmd = f'nixfmt {" ".join(files)}'
+
+    # Run formatter in check mode
+    full_cmd = shell_prefix + [check_cmd]
 
     try:
-        subprocess.check_call(nixfmt_cmd)
+        subprocess.check_call(full_cmd)
     except subprocess.CalledProcessError:
         print()
         print('Nix formatting issues detected.')
-        print('To fix, run: nixfmt ' + ' '.join(files))
+        print(f'To fix, run: {fix_cmd}')
         sys.exit(1)
 
 
