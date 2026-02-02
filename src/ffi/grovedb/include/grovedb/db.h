@@ -519,6 +519,35 @@ public:
     Status FindSubtrees(const Path& path, std::vector<Path>& subtrees, OperationCost& cost);
     Status FindSubtrees(const Path& path, const Transaction& txn, std::vector<Path>& subtrees, OperationCost& cost);
 
+    // -- Checkpoint operations --------------------------------------------
+
+    /**
+     * Create a filesystem checkpoint of the current database state.
+     *
+     * Checkpoints are full snapshots stored separately from the main database.
+     *
+     * @param[in] path  Filesystem path where the checkpoint will be created.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status CreateCheckpoint(const std::string& path);
+
+    /**
+     * Open a GroveDB instance from a previously created checkpoint.
+     *
+     * @param[in]  path  Filesystem path to the checkpoint.
+     * @param[out] db    Receives the opened checkpoint Db instance.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    static Status OpenCheckpoint(const std::string& path, Db& db);
+
+    /**
+     * Delete a checkpoint from the filesystem.
+     *
+     * @param[in] path  Filesystem path to the checkpoint to delete.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    static Status DeleteCheckpoint(const std::string& path);
+
     // -- Batch operations -------------------------------------------------
 
     /**

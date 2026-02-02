@@ -18,6 +18,7 @@ include_grove_HEADERS = \
 libgrovedb_la_SOURCES = \
 	src/auxiliary.cpp \
 	src/batch.cpp \
+	src/checkpoint.cpp \
 	src/db.cpp \
 	src/delete.cpp \
 	src/element.cpp \
