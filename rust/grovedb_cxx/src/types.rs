@@ -4,6 +4,9 @@
 // See the accompanying file LICENSE or https://opensource.org/license/mit
 //
 
+/// Maximum number of segments allowed in a wire-encoded path.
+const MAX_PATH_SEGMENTS: u32 = 256;
+
 /// Decode a flat-encoded path from C++.
 ///
 /// Wire format (little-endian u32):
@@ -19,8 +22,15 @@ pub(crate) fn decode_path(encoded: &[u8]) -> Result<Vec<Vec<u8>>, String> {
         encoded[..4]
             .try_into()
             .map_err(|_| "failed to read segment count".to_string())?,
-    ) as usize;
+    );
 
+    if count > MAX_PATH_SEGMENTS {
+        return Err(format!(
+            "segment count {count} exceeds maximum {MAX_PATH_SEGMENTS}"
+        ));
+    }
+
+    let count = count as usize;
     let mut offset = 4usize;
     let mut segments = Vec::with_capacity(count);
 

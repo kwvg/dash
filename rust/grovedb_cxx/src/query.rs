@@ -43,6 +43,11 @@ use crate::BoxedTransaction;
 //     8 = RangeAfterTo    : [u32 after_len][after][u32 to_len][to]
 //     9 = RangeAfterToInclusive : [u32 after_len][after][u32 to_len][to]
 
+/// Convert a `usize` to `u32` for wire encoding, returning an error on overflow.
+fn to_wire_u32(len: usize) -> Result<u32, String> {
+    u32::try_from(len).map_err(|_| format!("wire encoding: length {len} exceeds u32::MAX"))
+}
+
 /// Read a u32 from the buffer at the given offset.
 fn read_u32(buf: &[u8], offset: &mut usize) -> Result<u32, String> {
     if *offset + 4 > buf.len() {
@@ -152,17 +157,17 @@ fn decode_query_items(encoded: &[u8]) -> Result<Vec<QueryItem>, String> {
 /// Encode query result values into the flat wire format.
 ///
 /// Wire format: `[u32 count][u32 len₁][bytes₁][u32 len₂][bytes₂]…`
-fn encode_values(values: &[Vec<u8>]) -> Vec<u8> {
+fn encode_values(values: &[Vec<u8>]) -> Result<Vec<u8>, String> {
     let total: usize = 4 + values.iter().map(|v| 4 + v.len()).sum::<usize>();
     let mut buf = Vec::with_capacity(total);
 
-    buf.extend_from_slice(&(values.len() as u32).to_le_bytes());
+    buf.extend_from_slice(&to_wire_u32(values.len())?.to_le_bytes());
     for value in values {
-        buf.extend_from_slice(&(value.len() as u32).to_le_bytes());
+        buf.extend_from_slice(&to_wire_u32(value.len())?.to_le_bytes());
         buf.extend_from_slice(value);
     }
 
-    buf
+    Ok(buf)
 }
 
 // ---------------------------------------------------------------------------
@@ -205,8 +210,20 @@ pub fn grovedb_path_query_new(
         query.items.push(item);
     }
 
-    let limit = if limit == 0 { None } else { Some(limit as u16) };
-    let offset = if offset == 0 { None } else { Some(offset as u16) };
+    let limit = if limit == 0 {
+        None
+    } else if limit > u16::MAX as u32 {
+        return Err(format!("limit {limit} exceeds u16::MAX ({})", u16::MAX));
+    } else {
+        Some(limit as u16)
+    };
+    let offset = if offset == 0 {
+        None
+    } else if offset > u16::MAX as u32 {
+        return Err(format!("offset {offset} exceeds u16::MAX ({})", u16::MAX));
+    } else {
+        Some(offset as u16)
+    };
 
     let sized_query = SizedQuery::new(query, limit, offset);
     let path_query = PathQuery::new(segments, sized_query);
@@ -266,8 +283,20 @@ pub fn grovedb_path_query_new_with_subquery(
         query.set_subquery(*sq);
     }
 
-    let limit = if limit == 0 { None } else { Some(limit as u16) };
-    let offset = if offset == 0 { None } else { Some(offset as u16) };
+    let limit = if limit == 0 {
+        None
+    } else if limit > u16::MAX as u32 {
+        return Err(format!("limit {limit} exceeds u16::MAX ({})", u16::MAX));
+    } else {
+        Some(limit as u16)
+    };
+    let offset = if offset == 0 {
+        None
+    } else if offset > u16::MAX as u32 {
+        return Err(format!("offset {offset} exceeds u16::MAX ({})", u16::MAX));
+    } else {
+        Some(offset as u16)
+    };
 
     let sized_query = SizedQuery::new(query, limit, offset);
     let path_query = PathQuery::new(segments, sized_query);
@@ -296,7 +325,7 @@ pub fn grovedb_query_item_value(
     let cost = operation_cost_to_ffi(&ctx.cost);
     let (values, skipped) = ctx.value.map_err(|e| e.to_string())?;
     Ok(FfiQueryResult {
-        values: encode_values(&values),
+        values: encode_values(&values)?,
         skipped,
         cost,
     })
@@ -320,7 +349,7 @@ pub fn grovedb_query_item_value_with_tx(
     let cost = operation_cost_to_ffi(&ctx.cost);
     let (values, skipped) = ctx.value.map_err(|e| e.to_string())?;
     Ok(FfiQueryResult {
-        values: encode_values(&values),
+        values: encode_values(&values)?,
         skipped,
         cost,
     })
@@ -342,15 +371,15 @@ pub fn grovedb_query_item_value_with_tx(
 // Full result: [u32 count][entry₁][entry₂]…
 
 /// Encode a vector of `QueryItemOrSumReturnType` into the wire format.
-fn encode_item_or_sum_results(items: &[QueryItemOrSumReturnType]) -> Vec<u8> {
+fn encode_item_or_sum_results(items: &[QueryItemOrSumReturnType]) -> Result<Vec<u8>, String> {
     let mut buf = Vec::new();
-    buf.extend_from_slice(&(items.len() as u32).to_le_bytes());
+    buf.extend_from_slice(&to_wire_u32(items.len())?.to_le_bytes());
 
     for item in items {
         match item {
             QueryItemOrSumReturnType::ItemData(data) => {
                 buf.push(0u8);
-                buf.extend_from_slice(&(data.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&to_wire_u32(data.len())?.to_le_bytes());
                 buf.extend_from_slice(data);
             }
             QueryItemOrSumReturnType::SumValue(v) => {
@@ -372,14 +401,14 @@ fn encode_item_or_sum_results(items: &[QueryItemOrSumReturnType]) -> Vec<u8> {
             }
             QueryItemOrSumReturnType::ItemDataWithSumValue(data, sum) => {
                 buf.push(5u8);
-                buf.extend_from_slice(&(data.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&to_wire_u32(data.len())?.to_le_bytes());
                 buf.extend_from_slice(data);
                 buf.extend_from_slice(&sum.to_le_bytes());
             }
         }
     }
 
-    buf
+    Ok(buf)
 }
 
 /// Execute a `query_item_value_or_sum` query.
@@ -399,7 +428,7 @@ pub fn grovedb_query_item_value_or_sum(
     let cost = operation_cost_to_ffi(&ctx.cost);
     let (items, skipped) = ctx.value.map_err(|e| e.to_string())?;
     Ok(FfiQueryItemOrSumResult {
-        values: encode_item_or_sum_results(&items),
+        values: encode_item_or_sum_results(&items)?,
         skipped,
         cost,
     })
@@ -423,7 +452,7 @@ pub fn grovedb_query_item_value_or_sum_with_tx(
     let cost = operation_cost_to_ffi(&ctx.cost);
     let (items, skipped) = ctx.value.map_err(|e| e.to_string())?;
     Ok(FfiQueryItemOrSumResult {
-        values: encode_item_or_sum_results(&items),
+        values: encode_item_or_sum_results(&items)?,
         skipped,
         cost,
     })
@@ -436,13 +465,13 @@ pub fn grovedb_query_item_value_or_sum_with_tx(
 /// Encode a vector of i64 sum values into the wire format.
 ///
 /// Wire format: `[u32 count][i64₁ le][i64₂ le]…`
-fn encode_sums(sums: &[i64]) -> Vec<u8> {
+fn encode_sums(sums: &[i64]) -> Result<Vec<u8>, String> {
     let mut buf = Vec::with_capacity(4 + sums.len() * 8);
-    buf.extend_from_slice(&(sums.len() as u32).to_le_bytes());
+    buf.extend_from_slice(&to_wire_u32(sums.len())?.to_le_bytes());
     for sum in sums {
         buf.extend_from_slice(&sum.to_le_bytes());
     }
-    buf
+    Ok(buf)
 }
 
 /// Execute a `query_sums` query.
@@ -462,7 +491,7 @@ pub fn grovedb_query_sums(
     let cost = operation_cost_to_ffi(&ctx.cost);
     let (sums, skipped) = ctx.value.map_err(|e| e.to_string())?;
     Ok(FfiQuerySumsResult {
-        values: encode_sums(&sums),
+        values: encode_sums(&sums)?,
         skipped,
         cost,
     })
@@ -486,7 +515,7 @@ pub fn grovedb_query_sums_with_tx(
     let cost = operation_cost_to_ffi(&ctx.cost);
     let (sums, skipped) = ctx.value.map_err(|e| e.to_string())?;
     Ok(FfiQuerySumsResult {
-        values: encode_sums(&sums),
+        values: encode_sums(&sums)?,
         skipped,
         cost,
     })
@@ -507,38 +536,38 @@ pub fn grovedb_query_sums_with_tx(
 fn encode_query_result_elements(elements: &QueryResultElements) -> Result<Vec<u8>, String> {
     let version = GroveVersion::latest();
     let mut buf = Vec::new();
-    buf.extend_from_slice(&(elements.elements.len() as u32).to_le_bytes());
+    buf.extend_from_slice(&to_wire_u32(elements.elements.len())?.to_le_bytes());
 
     for elem in &elements.elements {
         match elem {
             QueryResultElement::ElementResultItem(element) => {
                 buf.push(0u8);
                 let elem_bytes = serialize_element(element, version)?;
-                buf.extend_from_slice(&(elem_bytes.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&to_wire_u32(elem_bytes.len())?.to_le_bytes());
                 buf.extend_from_slice(&elem_bytes);
             }
             QueryResultElement::KeyElementPairResultItem((key, element)) => {
                 buf.push(1u8);
-                buf.extend_from_slice(&(key.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&to_wire_u32(key.len())?.to_le_bytes());
                 buf.extend_from_slice(key);
                 let elem_bytes = serialize_element(element, version)?;
-                buf.extend_from_slice(&(elem_bytes.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&to_wire_u32(elem_bytes.len())?.to_le_bytes());
                 buf.extend_from_slice(&elem_bytes);
             }
             QueryResultElement::PathKeyElementTrioResultItem((path, key, element)) => {
                 buf.push(2u8);
                 // Encode path
-                buf.extend_from_slice(&(path.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&to_wire_u32(path.len())?.to_le_bytes());
                 for seg in path {
-                    buf.extend_from_slice(&(seg.len() as u32).to_le_bytes());
+                    buf.extend_from_slice(&to_wire_u32(seg.len())?.to_le_bytes());
                     buf.extend_from_slice(seg);
                 }
                 // Encode key
-                buf.extend_from_slice(&(key.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&to_wire_u32(key.len())?.to_le_bytes());
                 buf.extend_from_slice(key);
                 // Encode element
                 let elem_bytes = serialize_element(element, version)?;
-                buf.extend_from_slice(&(elem_bytes.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&to_wire_u32(elem_bytes.len())?.to_le_bytes());
                 buf.extend_from_slice(&elem_bytes);
             }
         }
@@ -726,8 +755,20 @@ fn decode_path_queries(encoded: &[u8]) -> Result<Vec<PathQuery>, String> {
         let limit = read_u32(encoded, &mut offset)?;
         let offset_val = read_u32(encoded, &mut offset)?;
 
-        let limit = if limit == 0 { None } else { Some(limit as u16) };
-        let offset_opt = if offset_val == 0 { None } else { Some(offset_val as u16) };
+        let limit = if limit == 0 {
+            None
+        } else if limit > u16::MAX as u32 {
+            return Err(format!("query {i}: limit {limit} exceeds u16::MAX ({})", u16::MAX));
+        } else {
+            Some(limit as u16)
+        };
+        let offset_opt = if offset_val == 0 {
+            None
+        } else if offset_val > u16::MAX as u32 {
+            return Err(format!("query {i}: offset {offset_val} exceeds u16::MAX ({})", u16::MAX));
+        } else {
+            Some(offset_val as u16)
+        };
 
         let sized_query = SizedQuery::new(query, limit, offset_opt);
         queries.push(PathQuery::new(segments, sized_query));
@@ -754,24 +795,24 @@ fn encode_path_key_element_triples(
 ) -> Result<Vec<u8>, String> {
     let version = GroveVersion::latest();
     let mut buf = Vec::new();
-    buf.extend_from_slice(&(entries.len() as u32).to_le_bytes());
+    buf.extend_from_slice(&to_wire_u32(entries.len())?.to_le_bytes());
 
     for (path, key, opt_element) in entries {
         // path
-        buf.extend_from_slice(&(path.len() as u32).to_le_bytes());
+        buf.extend_from_slice(&to_wire_u32(path.len())?.to_le_bytes());
         for seg in &path {
-            buf.extend_from_slice(&(seg.len() as u32).to_le_bytes());
+            buf.extend_from_slice(&to_wire_u32(seg.len())?.to_le_bytes());
             buf.extend_from_slice(seg);
         }
         // key
-        buf.extend_from_slice(&(key.len() as u32).to_le_bytes());
+        buf.extend_from_slice(&to_wire_u32(key.len())?.to_le_bytes());
         buf.extend_from_slice(&key);
         // optional element
         match opt_element {
             Some(element) => {
                 buf.push(1u8);
                 let elem_bytes = serialize_element(&element, version)?;
-                buf.extend_from_slice(&(elem_bytes.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&to_wire_u32(elem_bytes.len())?.to_le_bytes());
                 buf.extend_from_slice(&elem_bytes);
             }
             None => {

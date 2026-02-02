@@ -134,17 +134,27 @@ pub fn grovedb_get_aux_with_tx(
 ///   For each segment:
 ///     [u32 len][bytes]
 /// ```
-fn encode_paths(paths: Vec<Vec<Vec<u8>>>) -> Vec<u8> {
+fn encode_paths(paths: Vec<Vec<Vec<u8>>>) -> Result<Vec<u8>, String> {
     let mut buf = Vec::new();
-    buf.extend_from_slice(&(paths.len() as u32).to_le_bytes());
-    for path in &paths {
-        buf.extend_from_slice(&(path.len() as u32).to_le_bytes());
-        for seg in path {
-            buf.extend_from_slice(&(seg.len() as u32).to_le_bytes());
+
+    let path_count = u32::try_from(paths.len())
+        .map_err(|_| format!("path count {} exceeds u32::MAX", paths.len()))?;
+    buf.extend_from_slice(&path_count.to_le_bytes());
+
+    for (i, path) in paths.iter().enumerate() {
+        let seg_count = u32::try_from(path.len())
+            .map_err(|_| format!("segment count in path {i} exceeds u32::MAX"))?;
+        buf.extend_from_slice(&seg_count.to_le_bytes());
+
+        for (j, seg) in path.iter().enumerate() {
+            let seg_len = u32::try_from(seg.len())
+                .map_err(|_| format!("segment {j} in path {i} exceeds u32::MAX bytes"))?;
+            buf.extend_from_slice(&seg_len.to_le_bytes());
             buf.extend_from_slice(seg);
         }
     }
-    buf
+
+    Ok(buf)
 }
 
 /// Find all subtrees under a given path.
@@ -159,7 +169,7 @@ pub fn grovedb_find_subtrees(
     let cost = operation_cost_to_ffi(&ctx.cost);
     let paths = ctx.value.map_err(|e| e.to_string())?;
     Ok(FfiFindSubtreesResult {
-        paths: encode_paths(paths),
+        paths: encode_paths(paths)?,
         cost,
     })
 }
@@ -177,7 +187,7 @@ pub fn grovedb_find_subtrees_with_tx(
     let cost = operation_cost_to_ffi(&ctx.cost);
     let paths = ctx.value.map_err(|e| e.to_string())?;
     Ok(FfiFindSubtreesResult {
-        paths: encode_paths(paths),
+        paths: encode_paths(paths)?,
         cost,
     })
 }

@@ -21,15 +21,21 @@ use crate::BoxedPathQueryVec;
 // Wire encoding helpers
 // ---------------------------------------------------------------------------
 
+/// Convert a `usize` to `u32` for wire encoding, returning an error on overflow.
+fn to_wire_u32(len: usize) -> Result<u32, String> {
+    u32::try_from(len).map_err(|_| format!("wire encoding: length {len} exceeds u32::MAX"))
+}
+
 /// Encode a path (Vec<Vec<u8>>) into the wire format used by the C++ side.
 ///
 /// Wire format: `[u32 seg_count][u32 len₁][bytes₁][u32 len₂][bytes₂]…`
-fn encode_path(path: &[Vec<u8>], buf: &mut Vec<u8>) {
-    buf.extend_from_slice(&(path.len() as u32).to_le_bytes());
+fn encode_path(path: &[Vec<u8>], buf: &mut Vec<u8>) -> Result<(), String> {
+    buf.extend_from_slice(&to_wire_u32(path.len())?.to_le_bytes());
     for seg in path {
-        buf.extend_from_slice(&(seg.len() as u32).to_le_bytes());
+        buf.extend_from_slice(&to_wire_u32(seg.len())?.to_le_bytes());
         buf.extend_from_slice(seg);
     }
+    Ok(())
 }
 
 /// Encode verification result entries into the wire format.
@@ -49,20 +55,20 @@ fn encode_verify_entries(
 ) -> Result<Vec<u8>, String> {
     let version = GroveVersion::latest();
     let mut buf = Vec::new();
-    buf.extend_from_slice(&(entries.len() as u32).to_le_bytes());
+    buf.extend_from_slice(&to_wire_u32(entries.len())?.to_le_bytes());
 
     for (path, key, opt_element) in entries {
         // path
-        encode_path(&path, &mut buf);
+        encode_path(&path, &mut buf)?;
         // key
-        buf.extend_from_slice(&(key.len() as u32).to_le_bytes());
+        buf.extend_from_slice(&to_wire_u32(key.len())?.to_le_bytes());
         buf.extend_from_slice(&key);
         // has_element + optional element
         match opt_element {
             Some(element) => {
                 buf.push(1u8);
                 let elem_bytes = serialize_element(&element, version)?;
-                buf.extend_from_slice(&(elem_bytes.len() as u32).to_le_bytes());
+                buf.extend_from_slice(&to_wire_u32(elem_bytes.len())?.to_le_bytes());
                 buf.extend_from_slice(&elem_bytes);
             }
             None => {
@@ -201,24 +207,24 @@ fn encode_chained_verify_result(
     let mut buf = Vec::new();
 
     // Result set count.
-    buf.extend_from_slice(&(all_results.len() as u32).to_le_bytes());
+    buf.extend_from_slice(&to_wire_u32(all_results.len())?.to_le_bytes());
 
     for result_set in all_results {
         // Entry count for this result set.
-        buf.extend_from_slice(&(result_set.len() as u32).to_le_bytes());
+        buf.extend_from_slice(&to_wire_u32(result_set.len())?.to_le_bytes());
 
         for (path, key, opt_element) in result_set {
             // path
-            encode_path(&path, &mut buf);
+            encode_path(&path, &mut buf)?;
             // key
-            buf.extend_from_slice(&(key.len() as u32).to_le_bytes());
+            buf.extend_from_slice(&to_wire_u32(key.len())?.to_le_bytes());
             buf.extend_from_slice(&key);
             // optional element
             match opt_element {
                 Some(element) => {
                     buf.push(1u8);
                     let elem_bytes = serialize_element(&element, version)?;
-                    buf.extend_from_slice(&(elem_bytes.len() as u32).to_le_bytes());
+                    buf.extend_from_slice(&to_wire_u32(elem_bytes.len())?.to_le_bytes());
                     buf.extend_from_slice(&elem_bytes);
                 }
                 None => {
