@@ -45,5 +45,6 @@ build-aux/missing
 build-aux/compile
 build-aux/test-driver
 
+.cache/
 /CMakeUserPresets.json
 /build
