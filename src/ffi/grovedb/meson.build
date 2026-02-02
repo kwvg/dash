@@ -470,6 +470,7 @@ if build_fuzz
     'fuzz_put_get',
     'fuzz_subtree',
     'fuzz_sum_tree',
+    'fuzz_query',
   ]
 
   foreach target : fuzz_targets
