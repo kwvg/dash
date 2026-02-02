@@ -168,8 +168,8 @@ libgrovedb_inc = include_directories('include', 'src')
 
 # Generate config header
 conf_data = configuration_data()
-conf_data.set('PACKAGE_NAME', meson.project_name())
-conf_data.set('PACKAGE_VERSION', meson.project_version())
+conf_data.set_quoted('PACKAGE_NAME', meson.project_name())
+conf_data.set_quoted('PACKAGE_VERSION', meson.project_version())
 
 configure_file(
   output: 'grovedb-config.h',
