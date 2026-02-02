@@ -456,12 +456,38 @@ if build_tests
   endif
 endif
 
+# Fuzz targets
+build_fuzz = get_option('build_fuzz')
+if build_fuzz
+  fuzz_util_sources = files(
+    'src/fuzz/utils/tempdir.cpp',
+  )
+
+  fuzz_inc = include_directories('src/fuzz', 'src/fuzz/utils')
+
+  fuzz_targets = [
+  ]
+
+  foreach target : fuzz_targets
+    exe = executable(target,
+      'src/fuzz/@0@.cpp'.format(target),
+      fuzz_util_sources,
+      include_directories: [libgrovedb_inc, fuzz_inc],
+      dependencies: [libgrovedb_dep],
+      build_by_default: true,
+    )
+  endforeach
+
+  summary({'Fuzz targets': fuzz_targets.length()}, section: 'Fuzz')
+endif
+
 # Summary
 summary({
   'prefix': get_option('prefix'),
   'libdir': get_option('libdir'),
   'includedir': get_option('includedir'),
   'Build tests': build_tests,
+  'Build fuzz targets': build_fuzz,
   'Boost available': build_tests ? boost_dep.found() : false,
 }, section: 'Configuration')
 
