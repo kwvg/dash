@@ -24,3 +24,51 @@ option('grovedb_cxx_build_dir',
   value: '',
   description: 'Path to grovedb_cxx build directory (auto-detected if empty, ignored if use_rustdeps=true)'
 )
+
+# Compiler options
+
+option('enable-werror',
+  type: 'boolean',
+  value: true,
+  description: 'Treat compiler warnings as errors (default: yes)'
+)
+
+option('enable-hardening',
+  type: 'boolean',
+  value: true,
+  description: 'Attempt to harden the resulting executables (default: yes)'
+)
+
+option('enable-suppress-external-warnings',
+  type: 'boolean',
+  value: true,
+  description: 'Suppress warnings from external headers (default: yes)'
+)
+
+# Sanitizers
+
+option('enable-tsan',
+  type: 'boolean',
+  value: false,
+  description: 'Enable ThreadSanitizer (default: no)'
+)
+
+option('enable-ubsan',
+  type: 'boolean',
+  value: false,
+  description: 'Enable UndefinedBehaviorSanitizer (default: no)'
+)
+
+# Code coverage
+
+option('enable-lcov',
+  type: 'boolean',
+  value: false,
+  description: 'Enable lcov code coverage testing (default: no)'
+)
+
+option('enable-lcov-branch-coverage',
+  type: 'boolean',
+  value: false,
+  description: 'Enable lcov branch coverage (default: no)'
+)

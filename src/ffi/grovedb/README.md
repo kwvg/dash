@@ -17,7 +17,6 @@ First, build [`grovedb_cxx`](../../../rust/grovedb_cxx):
 cd rust/grovedb_cxx
 meson setup build
 meson compile -C build
-cd ../../src/ffi/grovedb
 ```
 
 Then build `libgrovedb`:
@@ -37,7 +36,6 @@ First, build [`librustdeps`](../../../rust):
 cd rust
 meson setup build -Dwith_grovedb_cxx=true
 meson compile -C build
-cd ../src/ffi/grovedb
 ```
 
 Then build libgrovedb:
@@ -54,6 +52,20 @@ meson compile -C build
 meson setup build -Dbuild_tests=true
 meson test -C build
 ```
+
+## Build Options
+
+- `-Dbuild_tests=true`: Build and run tests (default: `true`)
+- `-Duse_rustdeps=true`: Link against librustdeps instead of libgrovedb_cxx directly (default: `false`)
+- `-Dgrovedb_cxx_build_dir=<path>`: Path to grovedb_cxx build directory (auto-detected if empty)
+- `-Drustdeps_build_dir=<path>`: Path to rustdeps build directory (auto-detected if empty)
+- `-Denable-werror=true`: Treat compiler warnings as errors (default: `true`)
+- `-Denable-hardening=true`: Enable security hardening flags (default: `true`)
+- `-Denable-suppress-external-warnings=true`: Suppress warnings from external headers (default: `true`)
+- `-Denable-tsan=true`: Enable ThreadSanitizer (default: `false`)
+- `-Denable-ubsan=true`: Enable UndefinedBehaviorSanitizer (default: `false`)
+- `-Denable-lcov=true`: Enable code coverage with lcov (default: `false`)
+- `-Denable-lcov-branch-coverage=true`: Enable lcov branch coverage (default: `false`)
 
 ## License
 

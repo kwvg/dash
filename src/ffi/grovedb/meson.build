@@ -24,6 +24,213 @@ rustdeps_build_dir = get_option('rustdeps_build_dir')
 # C++ compiler
 cxx = meson.get_compiler('cpp')
 
+# Configure compiler flags (warnings, hardening, sanitizers, coverage)
+# Based on Dash Core configure.ac
+
+# Get options
+enable_werror = get_option('enable-werror')
+enable_hardening = get_option('enable-hardening')
+enable_suppress_external = get_option('enable-suppress-external-warnings')
+enable_tsan = get_option('enable-tsan')
+enable_ubsan = get_option('enable-ubsan')
+enable_lcov = get_option('enable-lcov')
+enable_lcov_branch = get_option('enable-lcov-branch-coverage')
+
+# Initialize flag arrays
+warn_flags = []
+error_flags = []
+nowarn_flags = []
+hardening_compile_flags = []
+hardening_link_flags = []
+sanitizer_flags = []
+coverage_flags = []
+
+# Check if werror is supported
+werror_flag = []
+if cxx.has_argument('-Werror')
+  werror_flag = ['-Werror']
+endif
+
+# Warning flags (from Dash Core configure.ac)
+# Note: Some flags require combined checking
+if cxx.has_argument('-Wall')
+  warn_flags += '-Wall'
+endif
+if cxx.has_argument('-Wextra')
+  warn_flags += '-Wextra'
+endif
+if cxx.has_argument('-Wgnu')
+  warn_flags += '-Wgnu'
+endif
+# -Wformat and -Wformat-security must be combined
+if cxx.has_multi_arguments(['-Wformat', '-Wformat-security'])
+  warn_flags += ['-Wformat', '-Wformat-security']
+endif
+if cxx.has_argument('-Wreorder')
+  warn_flags += '-Wreorder'
+endif
+if cxx.has_argument('-Wvla')
+  warn_flags += '-Wvla'
+endif
+if cxx.has_argument('-Wshadow-field')
+  warn_flags += '-Wshadow-field'
+endif
+if cxx.has_argument('-Wthread-safety')
+  warn_flags += '-Wthread-safety'
+endif
+if cxx.has_argument('-Wloop-analysis')
+  warn_flags += '-Wloop-analysis'
+endif
+if cxx.has_argument('-Wredundant-decls')
+  warn_flags += '-Wredundant-decls'
+endif
+if cxx.has_argument('-Wunused-member-function')
+  warn_flags += '-Wunused-member-function'
+endif
+if cxx.has_argument('-Wdate-time')
+  warn_flags += '-Wdate-time'
+endif
+if cxx.has_argument('-Wconditional-uninitialized')
+  warn_flags += '-Wconditional-uninitialized'
+endif
+if cxx.has_argument('-Wduplicated-branches')
+  warn_flags += '-Wduplicated-branches'
+endif
+if cxx.has_argument('-Wduplicated-cond')
+  warn_flags += '-Wduplicated-cond'
+endif
+
+# Conditional no-warn flags
+if enable_werror
+  if cxx.get_id() == 'clang' and cxx.has_argument('-Wdeprecated-literal-operator')
+    nowarn_flags += '-Wno-error=deprecated-literal-operator'
+  endif
+
+  if cxx.get_id() == 'gcc'
+    gcc_version = cxx.version().split('.')
+    if gcc_version[0].to_int() < 14 and cxx.has_argument('-Wattributes')
+      nowarn_flags += '-Wno-error=attributes'
+    endif
+    if gcc_version[0].to_int() < 12 and cxx.has_argument('-Wcpp')
+      nowarn_flags += '-Wno-error=cpp'
+    endif
+  endif
+endif
+
+# Suppress problematic GCC warnings entirely
+if cxx.get_id() == 'gcc'
+  foreach flag : ['-Warray-bounds', '-Wstringop-overread', '-Wstringop-overflow']
+    if cxx.has_argument(flag)
+      nowarn_flags += '-Wno' + flag.substring(2)
+    endif
+  endforeach
+endif
+
+# Error flags
+if enable_werror and werror_flag.length() > 0
+  error_flags = werror_flag
+endif
+
+# Hardening flags
+if enable_hardening
+  if cxx.has_argument('-Wstack-protector')
+    hardening_compile_flags += '-Wstack-protector'
+  endif
+  if cxx.has_argument('-fstack-protector-all')
+    hardening_compile_flags += '-fstack-protector-all'
+  endif
+  if cxx.has_argument('-fcf-protection=full')
+    hardening_compile_flags += '-fcf-protection=full'
+  endif
+
+  if host_machine.system() != 'windows'
+    if cxx.has_argument('-fstack-clash-protection')
+      hardening_compile_flags += '-fstack-clash-protection'
+    endif
+  endif
+
+  if host_machine.cpu_family() == 'aarch64'
+    if cxx.has_argument('-mbranch-protection=bti')
+      hardening_compile_flags += '-mbranch-protection=bti'
+    endif
+  endif
+
+  if get_option('buildtype') != 'debug'
+    hardening_compile_flags += ['-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=3']
+  endif
+
+  if cxx.has_link_argument('-fPIE')
+    hardening_compile_flags += '-fPIE'
+    if cxx.has_link_argument('-pie')
+      hardening_link_flags += '-pie'
+    endif
+  endif
+
+  if host_machine.system() == 'windows'
+    foreach flag : ['--enable-reloc-section', '--dynamicbase', '--nxcompat', '--high-entropy-va']
+      link_flag = '-Wl,' + flag
+      if cxx.has_link_argument(link_flag)
+        hardening_link_flags += link_flag
+      endif
+    endforeach
+  elif host_machine.system() == 'darwin'
+    foreach flag : ['-Wl,-fixup_chains']
+      if cxx.has_link_argument(flag)
+        hardening_link_flags += flag
+      endif
+    endforeach
+  else
+    foreach flag : ['-Wl,-z,relro', '-Wl,-z,now', '-Wl,-z,separate-code']
+      if cxx.has_link_argument(flag)
+        hardening_link_flags += flag
+      endif
+    endforeach
+  endif
+endif
+
+# Sanitizer flags
+sanitizer_list = []
+if enable_tsan
+  sanitizer_list += 'thread'
+endif
+if enable_ubsan
+  sanitizer_list += 'undefined'
+endif
+
+if sanitizer_list.length() > 0
+  sanitizers = ','.join(sanitizer_list)
+  sanitizer_flag = '-fsanitize=' + sanitizers
+
+  if cxx.has_argument(sanitizer_flag)
+    if cxx.has_link_argument(sanitizer_flag)
+      sanitizer_flags = [sanitizer_flag]
+    else
+      error('Sanitizer flags supported by compiler but linker failed. Missing sanitizer libraries?')
+    endif
+  else
+    error('Requested sanitizer flags not supported by compiler')
+  endif
+endif
+
+# Coverage flags
+if enable_lcov
+  lcov = find_program('lcov', required: true)
+  genhtml = find_program('genhtml', required: true)
+
+  if cxx.has_argument('--coverage')
+    coverage_flags = ['--coverage']
+  else
+    error('lcov requested but --coverage flag not supported')
+  endif
+endif
+
+# Apply all flags
+compile_flags = warn_flags + nowarn_flags + error_flags + hardening_compile_flags + sanitizer_flags + coverage_flags
+link_flags = hardening_link_flags + sanitizer_flags + coverage_flags
+
+add_project_arguments(compile_flags, language: 'cpp')
+add_project_link_arguments(link_flags, language: 'cpp')
+
 # Check for threading support
 thread_dep = dependency('threads', required: true)
 
@@ -221,11 +428,19 @@ pkg.generate(
 
 # Tests
 if build_tests
-  boost_dep = dependency('boost',
+  boost_dep_raw = dependency('boost',
     modules: ['unit_test_framework'],
     version: '>=1.73.0',
-    required: false
+    required: false,
+    include_type: enable_suppress_external ? 'system' : 'preserve'
   )
+
+  # Wrap boost dependency to ensure system includes when suppressing external warnings
+  if boost_dep_raw.found()
+    boost_dep = boost_dep_raw
+  else
+    boost_dep = boost_dep_raw
+  endif
 
   if boost_dep.found()
     test_sources = files(
