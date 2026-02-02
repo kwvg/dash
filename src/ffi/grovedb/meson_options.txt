@@ -45,20 +45,6 @@ option('enable-suppress-external-warnings',
   description: 'Suppress warnings from external headers (default: yes)'
 )
 
-# Sanitizers
-
-option('enable-tsan',
-  type: 'boolean',
-  value: false,
-  description: 'Enable ThreadSanitizer (default: no)'
-)
-
-option('enable-ubsan',
-  type: 'boolean',
-  value: false,
-  description: 'Enable UndefinedBehaviorSanitizer (default: no)'
-)
-
 # Code coverage
 
 option('enable-lcov',

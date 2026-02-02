@@ -9,7 +9,8 @@ project('libgrovedb',
   default_options: [
     'cpp_std=c++20',
     'warning_level=3',
-    'werror=false',
+    'werror=true',  # Default to werror=true to match enable-werror default
+    'b_lundef=false',  # Disable linker undefined checks (incompatible with sanitizers)
   ]
 )
 
@@ -31,8 +32,6 @@ cxx = meson.get_compiler('cpp')
 enable_werror = get_option('enable-werror')
 enable_hardening = get_option('enable-hardening')
 enable_suppress_external = get_option('enable-suppress-external-warnings')
-enable_tsan = get_option('enable-tsan')
-enable_ubsan = get_option('enable-ubsan')
 enable_lcov = get_option('enable-lcov')
 enable_lcov_branch = get_option('enable-lcov-branch-coverage')
 
@@ -52,13 +51,7 @@ if cxx.has_argument('-Werror')
 endif
 
 # Warning flags (from Dash Core configure.ac)
-# Note: Some flags require combined checking
-if cxx.has_argument('-Wall')
-  warn_flags += '-Wall'
-endif
-if cxx.has_argument('-Wextra')
-  warn_flags += '-Wextra'
-endif
+# Note: -Wall and -Wextra are handled by warning_level=3, skip them to avoid Meson warnings
 if cxx.has_argument('-Wgnu')
   warn_flags += '-Wgnu'
 endif
@@ -126,9 +119,14 @@ if cxx.get_id() == 'gcc'
   endforeach
 endif
 
-# Error flags
-if enable_werror and werror_flag.length() > 0
-  error_flags = werror_flag
+# Error flags - use Meson's built-in werror option instead of manual -Werror
+# The enable-werror option is kept for configure.ac compatibility but maps to b_werror
+if enable_werror
+  # Meson's b_werror is set via default_options or command line -Dwerror=true
+  # We just validate it's consistent here
+  if not get_option('werror')
+    warning('enable-werror=true but werror=false. Setting werror=true is recommended.')
+  endif
 endif
 
 # Hardening flags
@@ -188,30 +186,6 @@ if enable_hardening
   endif
 endif
 
-# Sanitizer flags
-sanitizer_list = []
-if enable_tsan
-  sanitizer_list += 'thread'
-endif
-if enable_ubsan
-  sanitizer_list += 'undefined'
-endif
-
-if sanitizer_list.length() > 0
-  sanitizers = ','.join(sanitizer_list)
-  sanitizer_flag = '-fsanitize=' + sanitizers
-
-  if cxx.has_argument(sanitizer_flag)
-    if cxx.has_link_argument(sanitizer_flag)
-      sanitizer_flags = [sanitizer_flag]
-    else
-      error('Sanitizer flags supported by compiler but linker failed. Missing sanitizer libraries?')
-    endif
-  else
-    error('Requested sanitizer flags not supported by compiler')
-  endif
-endif
-
 # Coverage flags
 if enable_lcov
   lcov = find_program('lcov', required: true)
@@ -225,8 +199,8 @@ if enable_lcov
 endif
 
 # Apply all flags
-compile_flags = warn_flags + nowarn_flags + error_flags + hardening_compile_flags + sanitizer_flags + coverage_flags
-link_flags = hardening_link_flags + sanitizer_flags + coverage_flags
+compile_flags = warn_flags + nowarn_flags + error_flags + hardening_compile_flags + coverage_flags
+link_flags = hardening_link_flags + coverage_flags
 
 add_project_arguments(compile_flags, language: 'cpp')
 add_project_link_arguments(link_flags, language: 'cpp')

@@ -62,8 +62,7 @@ meson test -C build
 - `-Denable-werror=true`: Treat compiler warnings as errors (default: `true`)
 - `-Denable-hardening=true`: Enable security hardening flags (default: `true`)
 - `-Denable-suppress-external-warnings=true`: Suppress warnings from external headers (default: `true`)
-- `-Denable-tsan=true`: Enable ThreadSanitizer (default: `false`)
-- `-Denable-ubsan=true`: Enable UndefinedBehaviorSanitizer (default: `false`)
+- `-Db_sanitize=thread|address|undefined`: Enable sanitizers (Meson built-in, default: `none`)
 - `-Denable-lcov=true`: Enable code coverage with lcov (default: `false`)
 - `-Denable-lcov-branch-coverage=true`: Enable lcov branch coverage (default: `false`)
 
