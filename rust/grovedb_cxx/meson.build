@@ -4,20 +4,18 @@
 # Crate for GroveDB FFI using CXX
 # Hybrid approach: Cargo for grovedb dependencies, native Meson for integration
 
-_is_standalone = meson.project_source_root() == meson.current_source_dir()
+project('grovedb_cxx',
+  'rust',
+  version: '4.0.0',
+  license: 'MIT',
+  meson_version: '>=1.9.0',
+  default_options: [
+    'warning_level=3',
+    'rust_std=2018',
+  ]
+)
 
-if _is_standalone
-  project('grovedb_cxx',
-    'rust',
-    version: '4.0.0',
-    license: 'MIT',
-    meson_version: '>=1.9.0',
-    default_options: [
-      'warning_level=3',
-      'rust_std=2018',
-    ]
-  )
-else
+if meson.is_subproject()
   message('Including grovedb_cxx in librustdeps')
 endif
 
@@ -132,12 +130,24 @@ foreach line : rust_host
   endif
 endforeach
 
-cargo_manifest = meson.current_source_dir() / 'Cargo.toml'
+# Use realpath to resolve symlinks (important for subproject builds)
+# When built as a Meson subproject via symlink, we need the real source path for Cargo
+realpath = find_program('realpath', required: false)
+if realpath.found()
+  grovedb_cxx_real_source = run_command(realpath, meson.current_source_dir(), check: true).stdout().strip()
+else
+  # Fallback for systems without realpath (use Python)
+  grovedb_cxx_real_source = run_command('python3', '-c',
+    'import os; print(os.path.realpath("' + meson.current_source_dir() + '"))',
+    check: true).stdout().strip()
+endif
+
+cargo_manifest = grovedb_cxx_real_source / 'Cargo.toml'
 cargo_release_flag = cargo_profile == 'release' ? ' --release' : ''
 cargo_build_cmd = cargo.full_path() + ' build --manifest-path ' + cargo_manifest + cargo_release_flag
 
 # Cargo outputs to target/<rust-target>/<profile>/
-cargo_output_path = meson.current_source_dir() / 'target' / rust_target / cargo_profile / 'libgrovedb_cxx.a'
+cargo_output_path = grovedb_cxx_real_source / 'target' / rust_target / cargo_profile / 'libgrovedb_cxx.a'
 
 grovedb_cxx_lib = custom_target('grovedb_cxx_staticlib',
   output: 'libgrovedb_cxx.a',

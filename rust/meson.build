@@ -24,12 +24,15 @@ rust_compile_args = []
 # Conditionally include grovedb_cxx
 if with_grovedb_cxx
   message('Building with grovedb_cxx support')
-  subdir('grovedb_cxx')
-  rust_libs += [grovedb_cxx_lib]
+  grovedb_cxx_subproj = subproject('grovedb_cxx', default_options: ['cargo_profile=' + get_option('cargo_profile')])
+  grovedb_cxx_dep = grovedb_cxx_subproj.get_variable('grovedb_cxx_dep')
+
+  # Extract components from dependency
+  rust_libs += [grovedb_cxx_subproj.get_variable('grovedb_cxx_lib')]
   rust_lib_names += ['grovedb_cxx']
   # Track sources and compile args for aggregated dependency
-  rust_sources += [grovedb_cxx_header, grovedb_cxx_source]
-  rust_compile_args += ['-I' + meson.current_build_dir() / 'grovedb_cxx' / 'gen']
+  rust_sources += [grovedb_cxx_subproj.get_variable('grovedb_cxx_header'), grovedb_cxx_subproj.get_variable('grovedb_cxx_source')]
+  rust_compile_args += ['-I' + meson.current_build_dir() / 'subprojects' / 'grovedb_cxx' / 'gen']
 endif
 
 # Future Rust crates can be added here

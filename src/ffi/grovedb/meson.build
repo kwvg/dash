@@ -246,15 +246,22 @@ if build_tests
       'src/test/wire_tests.cpp',
     )
 
+    # Build test executable
+    # Note: -static doesn't work on macOS, so only use it on Linux
+    test_link_args = []
+    if host_machine.system() == 'linux'
+      test_link_args = ['-static']
+    endif
+
     test_exe = executable('test_grovedb',
       test_sources,
       include_directories: libgrovedb_inc,
       dependencies: [libgrovedb_dep, boost_dep],
-      link_args: ['-static'],
+      link_args: test_link_args,
       build_by_default: true,
     )
 
-    test('grovedb_tests', test_exe, protocol: 'boost')
+    test('grovedb_tests', test_exe)
   else
     warning('Boost not found. Tests will not be built.')
   endif
