@@ -475,6 +475,7 @@ if build_fuzz
     'fuzz_batch',
     'fuzz_proof',
     'fuzz_db',
+    'fuzz_tree_state',
   ]
 
   foreach target : fuzz_targets
