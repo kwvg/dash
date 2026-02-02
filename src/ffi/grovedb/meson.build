@@ -471,6 +471,7 @@ if build_fuzz
     'fuzz_subtree',
     'fuzz_sum_tree',
     'fuzz_query',
+    'fuzz_transaction',
   ]
 
   foreach target : fuzz_targets
