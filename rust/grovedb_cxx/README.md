@@ -2,6 +2,16 @@
 
 Rust crate used for [`grovedb`](../grovedb)'s C++ foreign function interface bindings using [`cxx`](https://crates.io/crates/cxx) for a limited subset of the public API meant to consumption using [`libgrovedb`](../../src/ffi/grovedb).
 
+## Building
+
+Requires Meson 1.9.0+ and Rust 1.88+. Autotools build files are meant for use with Dash Core only and are not expected to work otherwise.
+
+```bash
+# From this directory
+meson setup build
+meson compile -C build
+```
+
 ## Notes
 
 * Requires Rust 1.88+
