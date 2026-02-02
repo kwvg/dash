@@ -12,6 +12,8 @@
 
 #include <types/transaction.h>
 
+#include <util/assert.h>
+
 namespace grovedb {
 
 // ---------------------------------------------------------------------------
@@ -20,6 +22,7 @@ namespace grovedb {
 
 Status Db::Get(const Path& path, const Bytes& key, Element& element, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -36,6 +39,7 @@ Status Db::Get(const Path& path, const Bytes& key, Element& element, OperationCo
 
 Status Db::Get(const Path& path, const Bytes& key, const Transaction& txn, Element& element, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -53,6 +57,7 @@ Status Db::Get(const Path& path, const Bytes& key, const Transaction& txn, Eleme
 
 Status Db::GetDirect(const Path& path, const Bytes& key, Element& element, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -69,6 +74,7 @@ Status Db::GetDirect(const Path& path, const Bytes& key, Element& element, Opera
 
 Status Db::GetDirect(const Path& path, const Bytes& key, const Transaction& txn, Element& element, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -86,6 +92,7 @@ Status Db::GetDirect(const Path& path, const Bytes& key, const Transaction& txn,
 
 Status Db::GetOptional(const Path& path, const Bytes& key, std::optional<Element>& element, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -108,6 +115,7 @@ Status Db::GetOptional(const Path& path, const Bytes& key, std::optional<Element
 
 Status Db::GetOptional(const Path& path, const Bytes& key, const Transaction& txn, std::optional<Element>& element, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -131,6 +139,7 @@ Status Db::GetOptional(const Path& path, const Bytes& key, const Transaction& tx
 
 Status Db::KeyExists(const Path& path, const Bytes& key, bool& result, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -147,6 +156,7 @@ Status Db::KeyExists(const Path& path, const Bytes& key, bool& result, Operation
 
 Status Db::KeyExists(const Path& path, const Bytes& key, const Transaction& txn, bool& result, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -164,6 +174,7 @@ Status Db::KeyExists(const Path& path, const Bytes& key, const Transaction& txn,
 
 Status Db::SubtreeExists(const Path& path, bool& result, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -180,6 +191,7 @@ Status Db::SubtreeExists(const Path& path, bool& result, OperationCost& cost)
 
 Status Db::SubtreeExists(const Path& path, const Transaction& txn, bool& result, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -200,6 +212,7 @@ Status Db::SubtreeExists(const Path& path, const Transaction& txn, bool& result,
 
 Status Db::IsEmptyTree(const Path& path, bool& empty, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -215,6 +228,7 @@ Status Db::IsEmptyTree(const Path& path, bool& empty, OperationCost& cost)
 
 Status Db::IsEmptyTree(const Path& path, const Transaction& txn, bool& empty, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};

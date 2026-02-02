@@ -12,6 +12,8 @@
 
 #include <types/query.h>
 
+#include <util/assert.h>
+
 #include <span>
 #include <vector>
 
@@ -29,6 +31,8 @@ Status Db::Prove(const PathQuery& query, Bytes& proof, OperationCost& cost)
 Status Db::Prove(const PathQuery& query, const ProveOptions& options,
                  Bytes& proof, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
     try {
         auto result = grovedb_cxx::grovedb_prove_query(
             *m_impl->m_db, *query.m_impl->m_query,
@@ -82,6 +86,7 @@ Status Db::VerifyQuery(
     const Bytes& proof, const PathQuery& query,
     Hash& root_hash, std::vector<ProofResultEntry>& entries)
 {
+    Assert(query.m_impl, "called with uninitialized query");
     try {
         rust::Slice<const uint8_t> proof_slice{proof.data(), proof.size()};
         auto result = grovedb_cxx::grovedb_verify_query(
@@ -100,6 +105,7 @@ Status Db::VerifyQuery(
     const VerifyOptions& options,
     Hash& root_hash, std::vector<ProofResultEntry>& entries)
 {
+    Assert(query.m_impl, "called with uninitialized query");
     try {
         rust::Slice<const uint8_t> proof_slice{proof.data(), proof.size()};
         auto result = grovedb_cxx::grovedb_verify_query_with_options(
@@ -120,6 +126,7 @@ Status Db::VerifySubsetQuery(
     const Bytes& proof, const PathQuery& query,
     Hash& root_hash, std::vector<ProofResultEntry>& entries)
 {
+    Assert(query.m_impl, "called with uninitialized query");
     try {
         rust::Slice<const uint8_t> proof_slice{proof.data(), proof.size()};
         auto result = grovedb_cxx::grovedb_verify_subset_query(
@@ -137,6 +144,7 @@ Status Db::VerifyQueryWithAbsenceProof(
     const Bytes& proof, const PathQuery& query,
     Hash& root_hash, std::vector<ProofResultEntry>& entries)
 {
+    Assert(query.m_impl, "called with uninitialized query");
     try {
         rust::Slice<const uint8_t> proof_slice{proof.data(), proof.size()};
         auto result = grovedb_cxx::grovedb_verify_query_with_absence_proof(
@@ -154,6 +162,7 @@ Status Db::VerifySubsetQueryWithAbsenceProof(
     const Bytes& proof, const PathQuery& query,
     Hash& root_hash, std::vector<ProofResultEntry>& entries)
 {
+    Assert(query.m_impl, "called with uninitialized query");
     try {
         rust::Slice<const uint8_t> proof_slice{proof.data(), proof.size()};
         auto result = grovedb_cxx::grovedb_verify_subset_query_with_absence_proof(
@@ -223,10 +232,16 @@ Status Db::VerifyChainedQueries(
     Hash& root_hash,
     std::vector<std::vector<ProofResultEntry>>& all_results)
 {
+    Assert(first_query.m_impl, "called with uninitialized query");
     try {
         // Build the PathQueryVec accumulator.
         auto vec = grovedb_cxx::grovedb_path_query_vec_new();
         for (const auto* q : chained_queries) {
+            Assert(q != nullptr, "chained_queries must not contain null pointers");
+            Assert(q->m_impl != nullptr, "called with uninitialized query");
+            if (!q || !q->m_impl) {
+                return Status::InvalidArgument("chained_queries contains invalid query");
+            }
             grovedb_cxx::grovedb_path_query_vec_push(*vec, *q->m_impl->m_query);
         }
 

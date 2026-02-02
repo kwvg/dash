@@ -19,6 +19,7 @@ namespace std23 {
 
 #if defined(__cpp_lib_byteswap) && __cpp_lib_byteswap >= 202110L
 
+#include <bit>
 using std::byteswap;
 
 #else

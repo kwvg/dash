@@ -10,7 +10,14 @@
 
 #include <grovedb/wire.h>
 
+#include <util/assumptions.h>
+
 #include <types/transaction.h>
+
+#include <util/assert.h>
+
+#include <limits>
+#include <stdexcept>
 
 namespace grovedb {
 
@@ -73,6 +80,11 @@ BatchOperation BatchOperation::DeleteTree(Path path, Bytes key, TreeType tree_ty
 
 Bytes Db::EncodeBatchOps(const std::vector<BatchOperation>& ops)
 {
+    Assert(ops.size() <= std::numeric_limits<uint32_t>::max(),
+           "batch operation count exceeds wire protocol limit");
+    if (ops.size() > std::numeric_limits<uint32_t>::max()) {
+        throw std::overflow_error("batch operation count exceeds wire protocol limit");
+    }
     wire::Writer w;
     w.U32(static_cast<uint32_t>(ops.size()));
     for (const auto& op : ops) {
@@ -109,6 +121,7 @@ Status Db::ApplyBatch(const std::vector<BatchOperation>& ops,
                       const BatchApplyOptions& options,
                       OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto buf = EncodeBatchOps(ops);
         rust::Slice<const uint8_t> ops_slice{buf.data(), buf.size()};
@@ -141,6 +154,8 @@ Status Db::ApplyBatch(const std::vector<BatchOperation>& ops,
                       const Transaction& txn,
                       OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(txn.m_impl, "called with uninitialized transaction");
     try {
         auto buf = EncodeBatchOps(ops);
         rust::Slice<const uint8_t> ops_slice{buf.data(), buf.size()};

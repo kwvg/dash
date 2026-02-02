@@ -8,6 +8,8 @@
 
 #include "db_internal.h"
 
+#include <util/assert.h>
+
 namespace grovedb {
 
 // ---------------------------------------------------------------------------
@@ -16,6 +18,7 @@ namespace grovedb {
 
 Status Db::CreateCheckpoint(const std::string& path)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         grovedb_cxx::grovedb_create_checkpoint(*m_impl->m_db, path);
         return Status::Ok();

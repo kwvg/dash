@@ -11,9 +11,16 @@
 #include <grovedb/query.h>
 #include <grovedb/wire.h>
 
+#include <util/assumptions.h>
+
 #include <rust/grovedb_cxx/lib.h>
 #include <types/query.h>
 #include <types/transaction.h>
+
+#include <util/assert.h>
+
+#include <limits>
+#include <stdexcept>
 
 namespace grovedb {
 
@@ -43,6 +50,9 @@ void QueryItem::Encode(wire::Writer& w) const
     case 7: // RangeAfter
         w.Bytes(m_a);
         break;
+    default:
+        Assert(false, "invalid QueryItem kind");
+        throw std::invalid_argument("invalid QueryItem kind");
     }
 }
 
@@ -186,6 +196,8 @@ Status PathQuery::NewWithSubquery(
 
 Status Db::QueryValues(const PathQuery& query, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
     try {
         auto result = grovedb_cxx::grovedb_query_item_value(
             *m_impl->m_db, *query.m_impl->m_query);
@@ -202,6 +214,9 @@ Status Db::QueryValues(const PathQuery& query, std::vector<Bytes>& values, uint1
 
 Status Db::QueryValues(const PathQuery& query, const Transaction& txn, std::vector<Bytes>& values, uint16_t& skipped, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
+    Assert(txn.m_impl, "called with uninitialized transaction");
     try {
         auto result = grovedb_cxx::grovedb_query_item_value_with_tx(
             *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx);
@@ -287,6 +302,8 @@ Status Db::DecodeItemsOrSums(std::span<const uint8_t> data, std::vector<QueryIte
 
 Status Db::QueryItemsOrSums(const PathQuery& query, std::vector<QueryItemOrSum>& results, uint16_t& skipped, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
     try {
         auto result = grovedb_cxx::grovedb_query_item_value_or_sum(
             *m_impl->m_db, *query.m_impl->m_query);
@@ -303,6 +320,9 @@ Status Db::QueryItemsOrSums(const PathQuery& query, std::vector<QueryItemOrSum>&
 
 Status Db::QueryItemsOrSums(const PathQuery& query, const Transaction& txn, std::vector<QueryItemOrSum>& results, uint16_t& skipped, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
+    Assert(txn.m_impl, "called with uninitialized transaction");
     try {
         auto result = grovedb_cxx::grovedb_query_item_value_or_sum_with_tx(
             *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx);
@@ -339,6 +359,8 @@ Status Db::DecodeSums(std::span<const uint8_t> data, std::vector<int64_t>& sums)
 
 Status Db::QuerySums(const PathQuery& query, std::vector<int64_t>& sums, uint16_t& skipped, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
     try {
         auto result = grovedb_cxx::grovedb_query_sums(
             *m_impl->m_db, *query.m_impl->m_query);
@@ -355,6 +377,9 @@ Status Db::QuerySums(const PathQuery& query, std::vector<int64_t>& sums, uint16_
 
 Status Db::QuerySums(const PathQuery& query, const Transaction& txn, std::vector<int64_t>& sums, uint16_t& skipped, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
+    Assert(txn.m_impl, "called with uninitialized transaction");
     try {
         auto result = grovedb_cxx::grovedb_query_sums_with_tx(
             *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx);
@@ -422,6 +447,8 @@ Status Db::DecodeQueryResultElements(std::span<const uint8_t> data, std::vector<
 
 Status Db::QueryRaw(const PathQuery& query, uint8_t result_type, std::vector<QueryResultElement>& elements, uint16_t& skipped, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
     try {
         auto result = grovedb_cxx::grovedb_query_raw(
             *m_impl->m_db, *query.m_impl->m_query, result_type);
@@ -438,6 +465,9 @@ Status Db::QueryRaw(const PathQuery& query, uint8_t result_type, std::vector<Que
 
 Status Db::QueryRaw(const PathQuery& query, uint8_t result_type, const Transaction& txn, std::vector<QueryResultElement>& elements, uint16_t& skipped, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
+    Assert(txn.m_impl, "called with uninitialized transaction");
     try {
         auto result = grovedb_cxx::grovedb_query_raw_with_tx(
             *m_impl->m_db, *query.m_impl->m_query, result_type, *txn.m_impl->m_tx);
@@ -454,6 +484,11 @@ Status Db::QueryRaw(const PathQuery& query, uint8_t result_type, const Transacti
 
 Bytes Db::EncodeManyQueries(const std::vector<RawQuerySpec>& queries)
 {
+    Assert(queries.size() <= std::numeric_limits<uint32_t>::max(),
+           "query count exceeds wire protocol limit");
+    if (queries.size() > std::numeric_limits<uint32_t>::max()) {
+        throw std::overflow_error("query count exceeds wire protocol limit");
+    }
     wire::Writer w;
     w.U32(static_cast<uint32_t>(queries.size()));
     for (const auto& q : queries) {
@@ -470,6 +505,7 @@ Bytes Db::EncodeManyQueries(const std::vector<RawQuerySpec>& queries)
 
 Status Db::QueryManyRaw(const std::vector<RawQuerySpec>& queries, uint8_t result_type, std::vector<QueryResultElement>& elements, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto encoded = EncodeManyQueries(queries);
         rust::Slice<const uint8_t> encoded_slice{encoded.data(), encoded.size()};
@@ -519,6 +555,8 @@ Status Db::DecodePathKeyElements(std::span<const uint8_t> data, std::vector<Path
 
 Status Db::QueryKeysOptional(const PathQuery& query, std::vector<PathKeyElement>& results, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
     try {
         auto result = grovedb_cxx::grovedb_query_keys_optional(
             *m_impl->m_db, *query.m_impl->m_query);
@@ -534,6 +572,9 @@ Status Db::QueryKeysOptional(const PathQuery& query, std::vector<PathKeyElement>
 
 Status Db::QueryKeysOptional(const PathQuery& query, const Transaction& txn, std::vector<PathKeyElement>& results, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
+    Assert(txn.m_impl, "called with uninitialized transaction");
     try {
         auto result = grovedb_cxx::grovedb_query_keys_optional_with_tx(
             *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx);
@@ -549,6 +590,8 @@ Status Db::QueryKeysOptional(const PathQuery& query, const Transaction& txn, std
 
 Status Db::QueryRawKeysOptional(const PathQuery& query, std::vector<PathKeyElement>& results, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
     try {
         auto result = grovedb_cxx::grovedb_query_raw_keys_optional(
             *m_impl->m_db, *query.m_impl->m_query);
@@ -564,6 +607,9 @@ Status Db::QueryRawKeysOptional(const PathQuery& query, std::vector<PathKeyEleme
 
 Status Db::QueryRawKeysOptional(const PathQuery& query, const Transaction& txn, std::vector<PathKeyElement>& results, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(query.m_impl, "called with uninitialized query");
+    Assert(txn.m_impl, "called with uninitialized transaction");
     try {
         auto result = grovedb_cxx::grovedb_query_raw_keys_optional_with_tx(
             *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx);

@@ -8,13 +8,18 @@
 
 #include <util/wire_write.h>
 
+#include <util/assumptions.h>
 #include <util/polyfill/std23.hpp>
 
 #include <array>
 #include <bit>
+#include <util/assert.h>
+
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <span>
+#include <stdexcept>
 #include <vector>
 
 namespace grovedb {
@@ -64,6 +69,11 @@ void Writer::Raw(std::span<const uint8_t> data)
 
 void Writer::Bytes(std::span<const uint8_t> data)
 {
+    Assert(data.size() <= std::numeric_limits<uint32_t>::max(),
+           "data size exceeds wire protocol u32 limit");
+    if (data.size() > std::numeric_limits<uint32_t>::max()) {
+        throw std::overflow_error("data size exceeds wire protocol limit");
+    }
     U32(static_cast<uint32_t>(data.size()));
     m_buf.insert(m_buf.end(), data.begin(), data.end());
 }

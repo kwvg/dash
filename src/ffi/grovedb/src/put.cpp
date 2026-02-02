@@ -12,6 +12,8 @@
 
 #include <types/transaction.h>
 
+#include <util/assert.h>
+
 namespace grovedb {
 
 // ---------------------------------------------------------------------------
@@ -20,6 +22,7 @@ namespace grovedb {
 
 Status Db::Put(const Path& path, const Bytes& key, const Element& element, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -36,6 +39,7 @@ Status Db::Put(const Path& path, const Bytes& key, const Element& element, Opera
 
 Status Db::Put(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -53,6 +57,7 @@ Status Db::Put(const Path& path, const Bytes& key, const Element& element, const
 
 Status Db::PutIfAbsent(const Path& path, const Bytes& key, const Element& element, bool& inserted, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -71,6 +76,7 @@ Status Db::PutIfAbsent(const Path& path, const Bytes& key, const Element& elemen
 
 Status Db::PutIfAbsent(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, bool& inserted, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -89,6 +95,7 @@ Status Db::PutIfAbsent(const Path& path, const Bytes& key, const Element& elemen
 
 Status Db::PutIfAbsentAndGet(const Path& path, const Bytes& key, const Element& element, std::optional<Element>& existing, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -113,6 +120,7 @@ Status Db::PutIfAbsentAndGet(const Path& path, const Bytes& key, const Element& 
 
 Status Db::PutIfAbsentAndGet(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, std::optional<Element>& existing, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -137,6 +145,7 @@ Status Db::PutIfAbsentAndGet(const Path& path, const Bytes& key, const Element& 
 
 Status Db::PutIfChanged(const Path& path, const Bytes& key, const Element& element, bool& changed, std::optional<Element>& previous, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -162,6 +171,7 @@ Status Db::PutIfChanged(const Path& path, const Bytes& key, const Element& eleme
 
 Status Db::PutIfChanged(const Path& path, const Bytes& key, const Element& element, const Transaction& txn, bool& changed, std::optional<Element>& previous, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};

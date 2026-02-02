@@ -20,6 +20,16 @@ namespace grovedb {
 namespace wire {
 
 // ---------------------------------------------------------------------------
+// Wire protocol limits
+// ---------------------------------------------------------------------------
+
+/** Maximum number of segments in a wire-encoded path. */
+inline constexpr uint32_t MAX_PATH_SEGMENTS = 256;
+
+/** Maximum number of elements in a wire-encoded vector. */
+inline constexpr uint32_t MAX_VECTOR_SIZE = 1000000;
+
+// ---------------------------------------------------------------------------
 // Concepts
 // ---------------------------------------------------------------------------
 
@@ -95,6 +105,9 @@ inline Status WireRead(Reader& r, Path& path)
 {
     uint32_t count{0};
     if (auto s = r.U32(count); !s.ok()) return s;
+    if (count > MAX_PATH_SEGMENTS) {
+        return Status::InvalidArgument("path segment count exceeds maximum");
+    }
     path.clear();
     path.reserve(count);
     for (uint32_t i{0}; i < count; ++i) {
@@ -163,6 +176,9 @@ Status WireRead(Reader& r, std::vector<T>& v)
 {
     uint32_t count{0};
     if (auto s = r.U32(count); !s.ok()) return s;
+    if (count > MAX_VECTOR_SIZE) {
+        return Status::InvalidArgument("vector size exceeds maximum");
+    }
     v.clear();
     v.reserve(count);
     for (uint32_t i{0}; i < count; ++i) {

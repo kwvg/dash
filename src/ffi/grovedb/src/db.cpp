@@ -10,8 +10,17 @@
 
 #include <types/transaction.h>
 
+#include <util/assert.h>
+
 #include <format>
 #include <string>
+
+#ifndef PACKAGE_NAME
+#define PACKAGE_NAME "libgrovedb"
+#endif
+#ifndef PACKAGE_VERSION
+#define PACKAGE_VERSION "unknown"
+#endif
 
 namespace grovedb {
 
@@ -33,6 +42,7 @@ Status Db::Open(const std::string& path, Db& db)
 
 Status Db::Flush()
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         grovedb_cxx::grovedb_flush(*m_impl->m_db);
         return Status::Ok();
@@ -43,6 +53,7 @@ Status Db::Flush()
 
 Status Db::Destroy()
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         grovedb_cxx::grovedb_wipe(*m_impl->m_db);
         return Status::Ok();
@@ -53,6 +64,7 @@ Status Db::Destroy()
 
 Status Db::GetRootHash(Hash& hash, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto result = grovedb_cxx::grovedb_root_hash(*m_impl->m_db);
 
@@ -75,6 +87,7 @@ Status Db::GetRootHash(Hash& hash, OperationCost& cost)
 
 Status Db::VerifyIntegrity(bool& result)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         result = grovedb_cxx::grovedb_verify(*m_impl->m_db);
         return Status::Ok();
@@ -85,6 +98,7 @@ Status Db::VerifyIntegrity(bool& result)
 
 Status Db::BeginTransaction(Transaction& txn)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto tx = grovedb_cxx::grovedb_start_transaction(*m_impl->m_db);
         txn.m_impl = std::make_unique<Transaction::Impl>(*m_impl->m_db, std::move(tx));
@@ -96,6 +110,8 @@ Status Db::BeginTransaction(Transaction& txn)
 
 Status Db::Commit(Transaction& txn, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
+    Assert(txn.m_impl, "called with uninitialized transaction");
     try {
         // Mark committed before the call -- the Rust side consumes the
         // Box regardless of success or failure.
@@ -120,6 +136,7 @@ Status Db::Commit(Transaction& txn, OperationCost& cost)
 
 Status Db::Rollback(Transaction& txn)
 {
+    Assert(txn.m_impl, "called with uninitialized transaction");
     try {
         grovedb_cxx::grovedb_rollback_transaction(txn.m_impl->m_db, *txn.m_impl->m_tx);
         txn.m_impl->m_rolled_back = true;

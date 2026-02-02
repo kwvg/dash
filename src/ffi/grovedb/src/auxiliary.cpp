@@ -12,6 +12,8 @@
 
 #include <types/transaction.h>
 
+#include <util/assert.h>
+
 namespace grovedb {
 
 // ---------------------------------------------------------------------------
@@ -20,6 +22,7 @@ namespace grovedb {
 
 Status Db::PutAux(const Bytes& key, const Bytes& value, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
         rust::Slice<const uint8_t> value_slice{value.data(), value.size()};
@@ -34,6 +37,7 @@ Status Db::PutAux(const Bytes& key, const Bytes& value, OperationCost& cost)
 
 Status Db::PutAux(const Bytes& key, const Bytes& value, const Transaction& txn, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
         rust::Slice<const uint8_t> value_slice{value.data(), value.size()};
@@ -49,6 +53,7 @@ Status Db::PutAux(const Bytes& key, const Bytes& value, const Transaction& txn, 
 
 Status Db::GetAux(const Bytes& key, std::optional<Bytes>& value, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -67,6 +72,7 @@ Status Db::GetAux(const Bytes& key, std::optional<Bytes>& value, OperationCost& 
 
 Status Db::GetAux(const Bytes& key, const Transaction& txn, std::optional<Bytes>& value, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -86,6 +92,7 @@ Status Db::GetAux(const Bytes& key, const Transaction& txn, std::optional<Bytes>
 
 Status Db::DeleteAux(const Bytes& key, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -99,6 +106,7 @@ Status Db::DeleteAux(const Bytes& key, OperationCost& cost)
 
 Status Db::DeleteAux(const Bytes& key, const Transaction& txn, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
 
@@ -135,6 +143,7 @@ Status Db::DecodePaths(
 
 Status Db::FindSubtrees(const Path& path, std::vector<Path>& subtrees, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -151,6 +160,7 @@ Status Db::FindSubtrees(const Path& path, std::vector<Path>& subtrees, Operation
 
 Status Db::FindSubtrees(const Path& path, const Transaction& txn, std::vector<Path>& subtrees, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};

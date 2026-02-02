@@ -8,6 +8,7 @@
 
 #include <util/wire_read.h>
 
+#include <util/assumptions.h>
 #include <util/polyfill/std23.hpp>
 
 #include <algorithm>
@@ -91,7 +92,8 @@ Status Reader::Bytes(grovedb::Bytes& out)
 {
     uint32_t len{0};
     if (auto s = U32(len); !s.ok()) return s;
-    if (m_pos + len > m_data.size()) {
+    // Safe overflow check: avoid m_pos + len which can wrap on 32-bit.
+    if (len > m_data.size() || m_pos > m_data.size() - len) {
         return Status::Corruption("wire: buffer underflow reading bytes");
     }
     out.assign(m_data.data() + m_pos, m_data.data() + m_pos + len);

@@ -12,6 +12,8 @@
 
 #include <types/transaction.h>
 
+#include <util/assert.h>
+
 namespace grovedb {
 
 // ---------------------------------------------------------------------------
@@ -20,6 +22,7 @@ namespace grovedb {
 
 Status Db::Delete(const Path& path, const Bytes& key, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -35,6 +38,7 @@ Status Db::Delete(const Path& path, const Bytes& key, OperationCost& cost)
 
 Status Db::Delete(const Path& path, const Bytes& key, const Transaction& txn, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -51,6 +55,7 @@ Status Db::Delete(const Path& path, const Bytes& key, const Transaction& txn, Op
 
 Status Db::DeleteIfEmpty(const Path& path, const Bytes& key, bool& deleted, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -67,6 +72,7 @@ Status Db::DeleteIfEmpty(const Path& path, const Bytes& key, bool& deleted, Oper
 
 Status Db::DeleteIfEmpty(const Path& path, const Bytes& key, const Transaction& txn, bool& deleted, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -84,6 +90,7 @@ Status Db::DeleteIfEmpty(const Path& path, const Bytes& key, const Transaction& 
 
 Status Db::PruneEmptyAncestors(const Path& path, const Bytes& key, uint32_t& removed_count, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -101,6 +108,7 @@ Status Db::PruneEmptyAncestors(const Path& path, const Bytes& key, uint32_t& rem
 
 Status Db::PruneEmptyAncestors(const Path& path, const Bytes& key, const Transaction& txn, uint32_t& removed_count, OperationCost& cost)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -118,6 +126,7 @@ Status Db::PruneEmptyAncestors(const Path& path, const Bytes& key, const Transac
 
 Status Db::Clear(const Path& path, bool& result)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
@@ -131,6 +140,7 @@ Status Db::Clear(const Path& path, bool& result)
 
 Status Db::Clear(const Path& path, const Transaction& txn, bool& result)
 {
+    Assert(m_impl, "called on uninitialized database");
     try {
         auto path_buf = wire::Encode(path);
         rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
