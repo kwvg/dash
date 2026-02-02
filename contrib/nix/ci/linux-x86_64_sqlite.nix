@@ -1,9 +1,9 @@
-# linux-x86_64_sqlite - GCC 13 with SQLite wallet (no BDB)
+# linux-x86_64_sqlite - GCC 11 with SQLite wallet (no BDB)
 { pkgs, helpers, testEnvShellHook }:
 
 helpers.mkCIEnv {
   name = "dash-ci-linux-x86_64-sqlite";
-  compiler = pkgs.gcc13;
+  compiler = pkgs.gcc11;
   inherit testEnvShellHook;
   extraShellHook = ''
     export CI_TARGET="linux-x86_64_sqlite"
@@ -11,7 +11,7 @@ helpers.mkCIEnv {
     export CONFIGURE_FLAGS="--enable-reduce-exports --with-boost-process --with-sqlite --without-bdb"
     echo "CI Target: linux-x86_64_sqlite"
     echo "  Host: x86_64-pc-linux-gnu"
-    echo "  Compiler: GCC 13"
+    echo "  Compiler: GCC 11"
     echo "  Features: SQLite wallet only (no BDB)"
     echo ""
     echo "Build commands:"
