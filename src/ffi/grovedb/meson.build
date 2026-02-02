@@ -467,6 +467,7 @@ if build_fuzz
 
   fuzz_targets = [
     'fuzz_element',
+    'fuzz_put_get',
   ]
 
   foreach target : fuzz_targets
