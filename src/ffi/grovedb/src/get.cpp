@@ -194,4 +194,39 @@ Status Db::SubtreeExists(const Path& path, const Transaction& txn, bool& result,
     }
 }
 
+// ---------------------------------------------------------------------------
+// IsEmptyTree
+// ---------------------------------------------------------------------------
+
+Status Db::IsEmptyTree(const Path& path, bool& empty, OperationCost& cost)
+{
+    try {
+        auto path_buf = wire::Encode(path);
+        rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
+
+        auto ffi_result = grovedb_cxx::grovedb_is_empty_tree(*m_impl->m_db, path_slice);
+        empty = ffi_result.value;
+        cost = convert_cost(ffi_result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
+Status Db::IsEmptyTree(const Path& path, const Transaction& txn, bool& empty, OperationCost& cost)
+{
+    try {
+        auto path_buf = wire::Encode(path);
+        rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
+
+        auto ffi_result = grovedb_cxx::grovedb_is_empty_tree_with_tx(
+            *m_impl->m_db, path_slice, *txn.m_impl->m_tx);
+        empty = ffi_result.value;
+        cost = convert_cost(ffi_result.cost);
+        return Status::Ok();
+    } catch (const std::exception& e) {
+        return Status::IOError(e.what());
+    }
+}
+
 } // namespace grovedb

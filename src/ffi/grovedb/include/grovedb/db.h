@@ -156,6 +156,17 @@ public:
     Status SubtreeExists(const Path& path, bool& result, OperationCost& cost);
     Status SubtreeExists(const Path& path, const Transaction& txn, bool& result, OperationCost& cost);
 
+    /**
+     * Check whether a subtree at the given path is empty.
+     *
+     * @param[in]  path   The path to the subtree.
+     * @param[out] empty  Set to true if the subtree is empty.
+     * @param[out] cost   Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status IsEmptyTree(const Path& path, bool& empty, OperationCost& cost);
+    Status IsEmptyTree(const Path& path, const Transaction& txn, bool& empty, OperationCost& cost);
+
     // -- Put operations ---------------------------------------------------
 
     /**

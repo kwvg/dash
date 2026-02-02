@@ -122,4 +122,87 @@ BOOST_AUTO_TEST_CASE(test_get_with_transaction)
     BOOST_CHECK(db.Rollback(txn).ok());
 }
 
+BOOST_AUTO_TEST_CASE(test_is_empty_tree_empty)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_is_empty_tree_empty"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+
+    // Create a subtree at root.
+    grovedb::Element tree;
+    BOOST_REQUIRE(grovedb::Element::EmptyTree(tree).ok());
+    grovedb::Bytes key{'s'};
+    BOOST_REQUIRE(db.Put(grovedb::Path{}, key, tree, cost).ok());
+
+    // The subtree should be empty.
+    bool empty{false};
+    BOOST_REQUIRE(db.IsEmptyTree(grovedb::Path{key}, empty, cost).ok());
+    BOOST_CHECK(empty);
+}
+
+BOOST_AUTO_TEST_CASE(test_is_empty_tree_not_empty)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_is_empty_tree_not_empty"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+
+    // Create a subtree and put an item in it.
+    grovedb::Element tree;
+    BOOST_REQUIRE(grovedb::Element::EmptyTree(tree).ok());
+    grovedb::Bytes subtree_key{'s'};
+    BOOST_REQUIRE(db.Put(grovedb::Path{}, subtree_key, tree, cost).ok());
+
+    grovedb::Element item;
+    BOOST_REQUIRE(grovedb::Element::Item(grovedb::Bytes{'v'}, item).ok());
+    BOOST_REQUIRE(db.Put(grovedb::Path{subtree_key}, grovedb::Bytes{'k'}, item, cost).ok());
+
+    // The subtree should not be empty.
+    bool empty{true};
+    BOOST_REQUIRE(db.IsEmptyTree(grovedb::Path{subtree_key}, empty, cost).ok());
+    BOOST_CHECK(!empty);
+}
+
+BOOST_AUTO_TEST_CASE(test_is_empty_tree_nonexistent)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_is_empty_tree_nonexistent"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+
+    // Non-existent path should return error.
+    bool empty{false};
+    auto status = db.IsEmptyTree(grovedb::Path{{'n', 'o', 'p', 'e'}}, empty, cost);
+    BOOST_CHECK(!status.ok());
+}
+
+BOOST_AUTO_TEST_CASE(test_is_empty_tree_with_transaction)
+{
+    grovedb::test::TempDir tmp{"grovedb_test_is_empty_tree_tx"};
+    grovedb::Db db;
+    BOOST_REQUIRE(grovedb::Db::Open(tmp.PathToString(), db).ok());
+
+    grovedb::OperationCost cost{};
+
+    // Create a subtree in a transaction.
+    grovedb::Element tree;
+    BOOST_REQUIRE(grovedb::Element::EmptyTree(tree).ok());
+    grovedb::Bytes key{'s'};
+
+    grovedb::Transaction txn;
+    BOOST_REQUIRE(db.BeginTransaction(txn).ok());
+    BOOST_REQUIRE(db.Put(grovedb::Path{}, key, tree, txn, cost).ok());
+
+    // Check within the transaction — should be empty.
+    bool empty{false};
+    BOOST_REQUIRE(db.IsEmptyTree(grovedb::Path{key}, txn, empty, cost).ok());
+    BOOST_CHECK(empty);
+
+    BOOST_REQUIRE(db.Commit(txn, cost).ok());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
