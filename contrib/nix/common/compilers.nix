@@ -10,9 +10,10 @@ final: prev:
     };
   in {
     # GCC versions
-    gcc11 = prev.gcc11;          # From stable (oldest supported for depends)
+    gcc11 = prev.gcc11;          # From stable (lower bound testing)
+    gcc13 = prev.gcc13;          # From stable (default for most CI)
     gcc14 = prev.gcc14 or unstable.gcc14;  # Fallback to unstable if not in stable
-    gcc15 = unstable.gcc15;      # Latest from unstable
+    gcc15 = unstable.gcc15;      # Latest from unstable (upper bound testing)
 
     # Clang/LLVM 19 (for sanitizers, multiprocess, fuzz)
     clang_19 = unstable.clang_19;

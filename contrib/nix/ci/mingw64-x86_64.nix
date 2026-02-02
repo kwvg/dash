@@ -1,10 +1,10 @@
-# ci_mingw64-x86_64 - GCC 15 Windows cross-compilation with Wine
+# ci_mingw64-x86_64 - GCC 13 Windows cross-compilation with Wine
 # Only available on x86_64-linux (mingw requires x86)
 { pkgs, helpers, testEnvShellHook }:
 
 helpers.mkCIEnv {
   name = "dash-ci-mingw64-x86_64";
-  compiler = pkgs.gcc15;
+  compiler = pkgs.gcc13;
   extraBuildInputs = [ pkgs.pkgsCross.mingwW64.stdenv.cc pkgs.wine ];
   inherit testEnvShellHook;
   extraShellHook = ''
@@ -13,7 +13,7 @@ helpers.mkCIEnv {
     export CONFIGURE_FLAGS="--enable-reduce-exports"
     echo "CI Target: mingw64-x86_64"
     echo "  Host: x86_64-w64-mingw32"
-    echo "  Compiler: GCC 15 (mingw-w64 cross-compile)"
+    echo "  Compiler: GCC 13 (mingw-w64 cross-compile)"
     echo "  Features: Windows cross-compilation + Wine for testing"
     echo ""
     echo "Build commands:"

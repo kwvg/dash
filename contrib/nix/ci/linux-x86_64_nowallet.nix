@@ -4,7 +4,7 @@
 
 helpers.mkCIEnv {
   name = "dash-ci-linux-x86_64-nowallet";
-  compiler = pkgs.gcc15;
+  compiler = pkgs.gcc13;
   inherit testEnvShellHook;
   extraShellHook = ''
     export CI_TARGET="linux-x86_64_nowallet"
@@ -13,7 +13,7 @@ helpers.mkCIEnv {
     export MAKE_FLAGS="NO_WALLET=1"
     echo "CI Target: linux-x86_64_nowallet"
     echo "  Host: x86_64-pc-linux-gnu"
-    echo "  Compiler: GCC 15"
+    echo "  Compiler: GCC 13"
     echo "  Features: NO wallet, NO GUI"
     echo ""
     echo "Build commands:"

@@ -1,10 +1,10 @@
-# ci_linux-aarch64 - GCC 15 ARM64 cross-compilation
+# ci_linux-aarch64 - GCC 13 ARM64 cross-compilation
 # Targets: aarch64-linux-gnu
 { pkgs, helpers, testEnvShellHook }:
 
 helpers.mkCIEnv {
   name = "dash-ci-linux-aarch64";
-  compiler = pkgs.gcc15;
+  compiler = pkgs.gcc13;
   extraBuildInputs = [ pkgs.pkgsCross.aarch64-multiplatform.stdenv.cc ];
   inherit testEnvShellHook;
   extraShellHook = ''
@@ -13,7 +13,7 @@ helpers.mkCIEnv {
     export CONFIGURE_FLAGS="--enable-reduce-exports --enable-glibc-back-compat"
     echo "CI Target: linux-aarch64"
     echo "  Host: aarch64-linux-gnu"
-    echo "  Compiler: GCC 15 (cross-compile)"
+    echo "  Compiler: GCC 13 (cross-compile)"
     echo "  Features: ARM 64-bit cross-compilation"
     echo ""
     echo "Build commands:"

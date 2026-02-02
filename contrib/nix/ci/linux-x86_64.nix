@@ -1,10 +1,10 @@
-# linux-x86_64 - GCC 15, full build with wallet and GUI
+# linux-x86_64 - GCC 13, full build with wallet and GUI
 # Targets: linux-x86_64 in ci.Dockerfile
 { pkgs, helpers, testEnvShellHook }:
 
 helpers.mkCIEnv {
-  name = "dash-ci-linux-x86_64;
-  compiler = pkgs.gcc15;
+  name = "dash-ci-linux-x86_64";
+  compiler = pkgs.gcc13;
   inherit testEnvShellHook;
   extraShellHook = ''
     export CI_TARGET="linux-x86_64"
@@ -12,7 +12,7 @@ helpers.mkCIEnv {
     export CONFIGURE_FLAGS="--enable-reduce-exports --with-boost-process"
     echo "CI Target: linux-x86_64"
     echo "  Host: x86_64-pc-linux-gnu"
-    echo "  Compiler: GCC 15"
+    echo "  Compiler: GCC 13"
     echo "  Features: Wallet (BDB + SQLite), GUI"
     echo ""
     echo "Build commands:"
