@@ -473,6 +473,7 @@ if build_fuzz
     'fuzz_query',
     'fuzz_transaction',
     'fuzz_batch',
+    'fuzz_proof',
   ]
 
   foreach target : fuzz_targets
