@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 The Dash Core developers
+# SPDX-License-Identifier: MIT
+
+option('cargo_profile',
+  type: 'combo',
+  choices: ['debug', 'release'],
+  value: 'debug',
+  description: 'Cargo build profile (debug or release)'
+)
