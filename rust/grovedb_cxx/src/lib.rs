@@ -75,6 +75,9 @@ use auxiliary::{
     grovedb_put_aux_with_tx,
 };
 
+mod checkpoint;
+use checkpoint::{grovedb_create_checkpoint, grovedb_delete_checkpoint, grovedb_open_checkpoint};
+
 mod batch;
 use batch::{grovedb_apply_batch, grovedb_apply_batch_with_tx};
 
@@ -411,6 +414,11 @@ pub(crate) mod ffi {
     fn grovedb_delete_aux_with_tx(db: &BoxedGroveDb, key: &[u8], tx: &BoxedTransaction) -> Result<FfiOperationCost>;
     fn grovedb_find_subtrees(db: &BoxedGroveDb, path: &[u8]) -> Result<FfiFindSubtreesResult>;
     fn grovedb_find_subtrees_with_tx(db: &BoxedGroveDb, path: &[u8], tx: &BoxedTransaction) -> Result<FfiFindSubtreesResult>;
+
+    // -- Checkpoints --
+    fn grovedb_create_checkpoint(db: &BoxedGroveDb, path: &str) -> Result<()>;
+    fn grovedb_open_checkpoint(path: &str) -> Result<Box<BoxedGroveDb>>;
+    fn grovedb_delete_checkpoint(path: &str) -> Result<()>;
 
     // -- Batch --
     fn grovedb_apply_batch(db: &BoxedGroveDb, ops: &[u8], options: &FfiBatchApplyOptions) -> Result<FfiOperationCost>;
