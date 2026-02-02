@@ -1,6 +1,10 @@
 # linux-x86_64_nowallet - GCC 15, no wallet, no GUI
 # Targets: linux-x86_64_nowallet in ci.Dockerfile
-{ pkgs, helpers, testEnvShellHook }:
+{
+  pkgs,
+  helpers,
+  testEnvShellHook,
+}:
 
 helpers.mkCIEnv {
   name = "dash-ci-linux-x86_64-nowallet";

@@ -1,7 +1,12 @@
 # Test environment (Layer 1)
 # Minimal environment with Python 3.10 and linters only
 # Matches contrib/containers/ci/ci-slim.Dockerfile
-{ pkgs, python, pythonHashes, helpers }:
+{
+  pkgs,
+  python,
+  pythonHashes,
+  helpers,
+}:
 
 pkgs.mkShell {
   name = "dash-test-env";

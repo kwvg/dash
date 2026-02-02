@@ -21,7 +21,7 @@
     m4
     parallel
     pkg-config
-    python310  # For build scripts
+    python310 # For build scripts
     unzip
     which
     zip
@@ -30,10 +30,10 @@
   # Development tools (for develop environments)
   devTools = with pkgs; [
     # Clang tools for code quality
-    llvmPackages_19.clang-tools  # clang-tidy, clang-format, etc.
+    llvmPackages_19.clang-tools # clang-tidy, clang-format, etc.
 
     # Build system generators
-    bear  # Generate compile_commands.json
+    bear # Generate compile_commands.json
 
     # Code analysis
     cppcheck

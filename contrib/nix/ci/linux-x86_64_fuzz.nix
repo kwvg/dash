@@ -1,6 +1,10 @@
 # linux-x86_64_fuzz - Clang 19, fuzzing with libFuzzer
 # Targets: linux-x86_64_fuzz in ci.Dockerfile
-{ pkgs, helpers, testEnvShellHook }:
+{
+  pkgs,
+  helpers,
+  testEnvShellHook,
+}:
 
 helpers.mkCIEnv {
   name = "dash-ci-linux-x86_64-fuzz";

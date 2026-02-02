@@ -1,10 +1,17 @@
 # ci_darwin-x86_64 - Clang 19 macOS cross-compilation
-{ pkgs, helpers, testEnvShellHook }:
+{
+  pkgs,
+  helpers,
+  testEnvShellHook,
+}:
 
 helpers.mkCIEnv {
   name = "dash-ci-darwin-x86_64";
   compiler = pkgs.clang_19;
-  extraBuildInputs = [ pkgs.llvm_19 pkgs.lld_19 ];
+  extraBuildInputs = [
+    pkgs.llvm_19
+    pkgs.lld_19
+  ];
   inherit testEnvShellHook;
   extraShellHook = ''
     export CI_TARGET="darwin-x86_64"

@@ -1,5 +1,9 @@
 # linux-x86_64_tsan - Clang 19 with ThreadSanitizer
-{ pkgs, helpers, testEnvShellHook }:
+{
+  pkgs,
+  helpers,
+  testEnvShellHook,
+}:
 
 helpers.mkCIEnv {
   name = "dash-ci-linux-x86_64-tsan";

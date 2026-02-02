@@ -1,5 +1,9 @@
 # linux-x86_64_sqlite - GCC 11 with SQLite wallet (no BDB)
-{ pkgs, helpers, testEnvShellHook }:
+{
+  pkgs,
+  helpers,
+  testEnvShellHook,
+}:
 
 helpers.mkCIEnv {
   name = "dash-ci-linux-x86_64-sqlite";

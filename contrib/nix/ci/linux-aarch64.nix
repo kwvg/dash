@@ -1,6 +1,10 @@
 # ci_linux-aarch64 - GCC 13 ARM64 cross-compilation
 # Targets: aarch64-linux-gnu
-{ pkgs, helpers, testEnvShellHook }:
+{
+  pkgs,
+  helpers,
+  testEnvShellHook,
+}:
 
 helpers.mkCIEnv {
   name = "dash-ci-linux-aarch64";

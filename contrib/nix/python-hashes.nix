@@ -47,10 +47,10 @@
   };
 
   # Use nixpkgs versions (source doesn't compile with modern GCC)
-  pyzmq = {};  # nixpkgs has ~26.x
-  lief = {};   # nixpkgs has ~0.14.x
+  pyzmq = { }; # nixpkgs has ~26.x
+  lief = { }; # nixpkgs has ~0.14.x
 
   # Unpinned in Docker
-  jinja2 = {};
-  multiprocess = {};
+  jinja2 = { };
+  multiprocess = { };
 }

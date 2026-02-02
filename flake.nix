@@ -6,10 +6,19 @@
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable }:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      nixpkgs-unstable,
+    }:
     let
       # Supported systems
-      systems = [ "aarch64-linux" "x86_64-linux" "aarch64-darwin" ];
+      systems = [
+        "aarch64-linux"
+        "x86_64-linux"
+        "aarch64-darwin"
+      ];
 
       # Helper to generate attributes for each system
       forAllSystems = nixpkgs.lib.genAttrs systems;
@@ -20,19 +29,23 @@
       };
 
       # Helper to get pkgs for a system with compiler overlay
-      pkgsFor = system: import nixpkgs {
-        inherit system;
-        overlays = [ compilerOverlay ];
-        config = {
-          allowUnfree = false;
+      pkgsFor =
+        system:
+        import nixpkgs {
+          inherit system;
+          overlays = [ compilerOverlay ];
+          config = {
+            allowUnfree = false;
+          };
         };
-      };
 
-    in {
-      devShells = forAllSystems (system:
+    in
+    {
+      devShells = forAllSystems (
+        system:
         let
           pkgs = pkgsFor system;
-          python = pkgs.python310;  # 3.10.x from nixpkgs-24.11
+          python = pkgs.python310; # 3.10.x from nixpkgs-24.11
 
           # Import pinned package hashes
           pythonHashes = import ./contrib/nix/python-hashes.nix;
@@ -42,12 +55,22 @@
 
           # Import helper functions
           helpers = import ./contrib/nix/common/helpers.nix {
-            inherit pkgs python pythonHashes packageLists;
+            inherit
+              pkgs
+              python
+              pythonHashes
+              packageLists
+              ;
           };
 
           # Test environment
           testEnv = import ./contrib/nix/test/default.nix {
-            inherit pkgs python pythonHashes helpers;
+            inherit
+              pkgs
+              python
+              pythonHashes
+              helpers
+              ;
           };
 
           # CI environments
@@ -61,7 +84,8 @@
             inherit system helpers;
           };
 
-        in {
+        in
+        {
           # Default shell
           default = pkgs.mkShell {
             name = "dash-core-default";
@@ -81,7 +105,12 @@
               echo "  nix develop .#ci_linux-x86_64_multiprocess - CI: Clang 19, multiprocess"
               echo "  nix develop .#ci_linux-aarch64 - CI: GCC 13, ARM64 cross"
               echo "  nix develop .#ci_darwin-x86_64 - CI: Clang 19, macOS cross"
-              ${if system == "x86_64-linux" then ''echo "  nix develop .#ci_mingw64-x86_64 - CI: GCC 13, Windows cross + Wine"'' else ""}
+              ${
+                if system == "x86_64-linux" then
+                  ''echo "  nix develop .#ci_mingw64-x86_64 - CI: GCC 13, Windows cross + Wine"''
+                else
+                  ""
+              }
               echo ""
               echo "Development environments (all tools):"
               echo "  nix develop .#develop - All compilers, all tools"
@@ -104,17 +133,25 @@
           ci_linux-x86_64_multiprocess = ciEnvs.ci_linux-x86_64_multiprocess;
           ci_linux-aarch64 = ciEnvs.ci_linux-aarch64;
           ci_darwin-x86_64 = ciEnvs.ci_darwin-x86_64;
-        } // (if system == "x86_64-linux" then {
-          # mingw64 only on x86_64-linux (mingw requires x86)
-          ci_mingw64-x86_64 = ciEnvs.ci_mingw64-x86_64;
-        } else {}));
+        }
+        // (
+          if system == "x86_64-linux" then
+            {
+              # mingw64 only on x86_64-linux (mingw requires x86)
+              ci_mingw64-x86_64 = ciEnvs.ci_mingw64-x86_64;
+            }
+          else
+            { }
+        )
+      );
 
       # Formatter for 'nix fmt'
-      formatter = forAllSystems (system:
+      formatter = forAllSystems (
+        system:
         let
           pkgs = pkgsFor system;
         in
-          pkgs.nixfmt-classic
+        pkgs.nixfmt-rfc-style
       );
     };
 }

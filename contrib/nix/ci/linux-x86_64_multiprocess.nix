@@ -1,5 +1,9 @@
 # linux-x86_64_multiprocess - Clang 19 with multiprocess
-{ pkgs, helpers, testEnvShellHook }:
+{
+  pkgs,
+  helpers,
+  testEnvShellHook,
+}:
 
 helpers.mkCIEnv {
   name = "dash-ci-linux-x86_64-multiprocess";

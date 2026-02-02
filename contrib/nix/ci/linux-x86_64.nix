@@ -1,6 +1,10 @@
 # linux-x86_64 - GCC 11, full build with wallet and GUI
 # Targets: linux-x86_64 in ci.Dockerfile (native_qt5)
-{ pkgs, helpers, testEnvShellHook }:
+{
+  pkgs,
+  helpers,
+  testEnvShellHook,
+}:
 
 helpers.mkCIEnv {
   name = "dash-ci-linux-x86_64";

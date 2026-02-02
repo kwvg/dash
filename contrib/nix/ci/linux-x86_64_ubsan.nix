@@ -1,5 +1,9 @@
 # linux-x86_64_ubsan - Clang 19 with UndefinedBehaviorSanitizer
-{ pkgs, helpers, testEnvShellHook }:
+{
+  pkgs,
+  helpers,
+  testEnvShellHook,
+}:
 
 helpers.mkCIEnv {
   name = "dash-ci-linux-x86_64-ubsan";

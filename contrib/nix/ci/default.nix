@@ -1,6 +1,11 @@
 # CI Environments (Layer 2)
 # Each environment builds on test + adds compilers and build tools
-{ system, pkgs, helpers, testEnvShellHook }:
+{
+  system,
+  pkgs,
+  helpers,
+  testEnvShellHook,
+}:
 
 let
   # Common arguments for all CI environments
