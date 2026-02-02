@@ -10,33 +10,30 @@ Check for formatting issues in Nix files using nix fmt or nixfmt.
 
 import subprocess
 import sys
-import os
+import shutil
 
 
 def check_formatter():
-    """Check if nix fmt or nixfmt is available and return the command to use."""
-    shell_prefix = ['bash', '-c', 'source ~/.zshrc 2>/dev/null || source ~/.bashrc 2>/dev/null || true; ']
-
+    """Check if nix fmt or nixfmt is available and return the formatter type."""
     # First, try 'nix fmt'
-    try:
-        cmd = shell_prefix + ['nix fmt -- --version 2>/dev/null || nix fmt -- --help 2>/dev/null']
-        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
-        if result.returncode == 0:
-            return ('nix-fmt', shell_prefix)
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
+    if shutil.which('nix'):
+        try:
+            result = subprocess.run(['nix', 'fmt', '--', '--version'],
+                                  stdout=subprocess.DEVNULL,
+                                  stderr=subprocess.DEVNULL,
+                                  timeout=5)
+            if result.returncode == 0:
+                return 'nix-fmt'
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
 
     # Then try 'nixfmt'
-    try:
-        cmd = shell_prefix + ['nixfmt --version 2>/dev/null || nixfmt --help 2>/dev/null']
-        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
-        if result.returncode == 0:
-            return ('nixfmt', shell_prefix)
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
+    if shutil.which('nixfmt'):
+        return 'nixfmt'
 
-    print('Skipping Nix linting since neither "nix fmt" nor "nixfmt" is available.')
-    sys.exit(0)
+    print('Error: Neither "nix fmt" nor "nixfmt" is available.')
+    print('Install nixfmt to lint Nix files.')
+    sys.exit(1)
 
 
 def get_nix_files():
@@ -61,7 +58,7 @@ def get_nix_files():
 
 
 def main():
-    formatter, shell_prefix = check_formatter()
+    formatter = check_formatter()
 
     files = get_nix_files()
 
@@ -72,17 +69,15 @@ def main():
     # Build the check command based on which formatter we're using
     if formatter == 'nix-fmt':
         # nix fmt expects files as arguments and uses -- to separate formatter args
-        check_cmd = f'nix fmt -- --check {" ".join(files)}'
-        fix_cmd = f'nix fmt'
+        check_cmd = ['nix', 'fmt', '--', '--check'] + files
+        fix_cmd = 'nix fmt'
     else:  # nixfmt
-        check_cmd = f'nixfmt --check {" ".join(files)}'
+        check_cmd = ['nixfmt', '--check'] + files
         fix_cmd = f'nixfmt {" ".join(files)}'
 
     # Run formatter in check mode
-    full_cmd = shell_prefix + [check_cmd]
-
     try:
-        subprocess.check_call(full_cmd)
+        subprocess.check_call(check_cmd)
     except subprocess.CalledProcessError:
         print()
         print('Nix formatting issues detected.')

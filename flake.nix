@@ -108,5 +108,13 @@
           # mingw64 only on x86_64-linux (mingw requires x86)
           ci_mingw64-x86_64 = ciEnvs.ci_mingw64-x86_64;
         } else {}));
+
+      # Formatter for 'nix fmt'
+      formatter = forAllSystems (system:
+        let
+          pkgs = pkgsFor system;
+        in
+          pkgs.nixfmt-classic
+      );
     };
 }
