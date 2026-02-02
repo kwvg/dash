@@ -1061,6 +1061,7 @@ dependencies = [
  "cxx",
  "grovedb",
  "grovedb-costs",
+ "grovedb-path",
  "grovedb-version",
 ]
 

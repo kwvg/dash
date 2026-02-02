@@ -67,6 +67,13 @@ use query::{
     grovedb_query_sums, grovedb_query_sums_with_tx,
 };
 
+mod auxiliary;
+use auxiliary::{
+    grovedb_delete_aux, grovedb_delete_aux_with_tx, grovedb_find_subtrees,
+    grovedb_find_subtrees_with_tx, grovedb_get_aux, grovedb_get_aux_with_tx, grovedb_put_aux,
+    grovedb_put_aux_with_tx,
+};
+
 mod batch;
 use batch::{grovedb_apply_batch, grovedb_apply_batch_with_tx};
 
@@ -252,6 +259,20 @@ pub(crate) mod ffi {
     base_root_storage_is_free: bool,
   }
 
+  /// Result of get_aux: optional raw bytes plus operation costs.
+  struct FfiOptionalBytesResult {
+    has_value: bool,
+    value: Vec<u8>,
+    cost: FfiOperationCost,
+  }
+
+  /// Result of find_subtrees: wire-encoded paths plus operation costs.
+  struct FfiFindSubtreesResult {
+    /// Wire-encoded: `[u32 count][path₁][path₂]…`
+    paths: Vec<u8>,
+    cost: FfiOperationCost,
+  }
+
   extern "Rust" {
     type BoxedGroveDb;
     type BoxedTransaction;
@@ -375,6 +396,16 @@ pub(crate) mod ffi {
 
     // -- Chained proof verification --
     fn grovedb_verify_chained_queries(proof: &[u8], first_query: &BoxedPathQuery, chained: &BoxedPathQueryVec) -> Result<FfiChainedVerifyResult>;
+
+    // -- Auxiliary data --
+    fn grovedb_put_aux(db: &BoxedGroveDb, key: &[u8], value: &[u8]) -> Result<FfiOperationCost>;
+    fn grovedb_put_aux_with_tx(db: &BoxedGroveDb, key: &[u8], value: &[u8], tx: &BoxedTransaction) -> Result<FfiOperationCost>;
+    fn grovedb_get_aux(db: &BoxedGroveDb, key: &[u8]) -> Result<FfiOptionalBytesResult>;
+    fn grovedb_get_aux_with_tx(db: &BoxedGroveDb, key: &[u8], tx: &BoxedTransaction) -> Result<FfiOptionalBytesResult>;
+    fn grovedb_delete_aux(db: &BoxedGroveDb, key: &[u8]) -> Result<FfiOperationCost>;
+    fn grovedb_delete_aux_with_tx(db: &BoxedGroveDb, key: &[u8], tx: &BoxedTransaction) -> Result<FfiOperationCost>;
+    fn grovedb_find_subtrees(db: &BoxedGroveDb, path: &[u8]) -> Result<FfiFindSubtreesResult>;
+    fn grovedb_find_subtrees_with_tx(db: &BoxedGroveDb, path: &[u8], tx: &BoxedTransaction) -> Result<FfiFindSubtreesResult>;
 
     // -- Batch --
     fn grovedb_apply_batch(db: &BoxedGroveDb, ops: &[u8], options: &FfiBatchApplyOptions) -> Result<FfiOperationCost>;
