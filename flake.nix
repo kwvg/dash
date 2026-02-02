@@ -15,27 +15,9 @@
       forAllSystems = nixpkgs.lib.genAttrs systems;
 
       # Compiler overlay - pins specific compiler versions
-      # NO patchelf needed - binaries built with correct --dynamic-linker
-      compilerOverlay = final: prev:
-        let
-          unstable = import nixpkgs-unstable {
-            inherit (final) system;
-            config.allowUnfree = false;
-          };
-        in {
-          # GCC versions
-          gcc11 = prev.gcc11;          # From stable (oldest supported for depends)
-          gcc14 = prev.gcc14 or unstable.gcc14;  # Fallback to unstable if not in stable
-          gcc15 = unstable.gcc15;      # Latest from unstable
-
-          # Clang/LLVM 19 (for sanitizers, multiprocess, fuzz)
-          clang_19 = unstable.clang_19;
-          llvm_19 = unstable.llvm_19;
-          llvmPackages_19 = unstable.llvmPackages_19;
-
-          # LLD linker (for macOS cross-compilation)
-          lld_19 = unstable.lld_19;
-        };
+      compilerOverlay = import ./contrib/nix/common/compilers.nix {
+        inherit nixpkgs nixpkgs-unstable;
+      };
 
       # Helper to get pkgs for a system with compiler overlay
       pkgsFor = system: import nixpkgs {
@@ -46,81 +28,7 @@
         };
       };
 
-      # Helper to get unstable pkgs for a system
-      pkgsUnstableFor = system: import nixpkgs-unstable {
-        inherit system;
-        config = {
-          allowUnfree = false;
-        };
-      };
-
-      # Build packages for CI environments
-      # Matches contrib/containers/ci/ci.Dockerfile
-      buildPackagesList = pkgs: with pkgs; [
-        autoconf
-        automake
-        bc
-        bear
-        bison
-        ccache
-        cmake
-        file
-        gawk
-        gettext
-        gmp
-        gmpxx
-        libtool
-        m4
-        parallel
-        pkg-config
-        python310  # For build scripts
-        unzip
-        which
-        zip
-      ];
-
-      # Development tools (for develop environments)
-      devToolsList = pkgs: with pkgs; [
-        # Clang tools for code quality
-        pkgs.llvmPackages_19.clang-tools  # clang-tidy, clang-format, etc.
-
-        # Build system generators
-        bear  # Generate compile_commands.json
-
-        # Code analysis
-        cppcheck
-        shellcheck
-
-        # Performance tools
-        ccache
-
-        # Documentation
-        doxygen
-
-        # Version control
-        git
-      ];
-
-      # Cross-compilation toolchains
-      crossToolchains = pkgs: with pkgs; [
-        # ARM Linux (for ci-arm-linux)
-        pkgsCross.armv7l-hf-multiplatform.stdenv.cc
-
-        # Windows (for ci-win64)
-        pkgsCross.mingwW64.stdenv.cc
-        wine
-      ];
-
     in {
-      # Development shells will be added in later commits
-      # Structure will be:
-      #   devShells.<system>.test.<variant>
-      #   devShells.<system>.ci.<target>.<host>
-      #   devShells.<system>.develop.<variant>
-      #
-      # Using contrib/nix/libexec/build.py instead of patchelf
-      # Binaries built with correct --dynamic-linker from the start
-
       devShells = forAllSystems (system:
         let
           pkgs = pkgsFor system;
@@ -129,193 +37,28 @@
           # Import pinned package hashes
           pythonHashes = import ./contrib/nix/python-hashes.nix;
 
-          # Helper: Get package (pinned version or nixpkgs fallback)
-          getPythonPkg = name: info:
-            if info == {} || !(info ? version) then
-              python.pkgs.${name}  # Use nixpkgs version
-            else
-              python.pkgs.buildPythonPackage {
-                pname = name;
-                version = info.version;
-                format = "setuptools";
-                src = pkgs.fetchurl {
-                  url = if info ? url then info.url
-                        else "https://files.pythonhosted.org/packages/source/${builtins.substring 0 1 name}/${name}/${name}-${info.version}.tar.gz";
-                  inherit (info) hash;
-                };
-                doCheck = false;
-                nativeBuildInputs = with python.pkgs; [ setuptools ];
-                propagatedBuildInputs = with python.pkgs; [
-                ] ++ (if name == "mypy" then [ typing-extensions mypy-extensions ] else [])
-                  ++ (if name == "flake8" then [ pyflakes pycodestyle mccabe ] else []);
-              };
+          # Import package lists
+          packageLists = import ./contrib/nix/common/packages.nix { inherit pkgs; };
 
-          # Layer 1: Test environment (minimal - Python + linters only)
-          # Matches contrib/containers/ci/ci-slim.Dockerfile
-          testEnv = pkgs.mkShell {
-            name = "dash-test-env";
-
-            buildInputs = [
-              # Python 3.10 with test packages
-              (python.withPackages (ps: [
-                (getPythonPkg "pyzmq" pythonHashes.pyzmq)
-                (getPythonPkg "jinja2" pythonHashes.jinja2)
-                (getPythonPkg "dash_hash" pythonHashes.dash_hash)
-                (getPythonPkg "multiprocess" pythonHashes.multiprocess)
-                # lief not needed for tests, only for CI builds
-              ]))
-
-              # Linters - pinned versions
-              (getPythonPkg "codespell" pythonHashes.codespell)
-              (getPythonPkg "flake8" pythonHashes.flake8)
-              (getPythonPkg "mypy" pythonHashes.mypy)
-              (getPythonPkg "vulture" pythonHashes.vulture)
-
-              # Static analysis tools
-              pkgs.cppcheck    # 2.16.0 in nixpkgs (close to 2.13.0)
-              pkgs.shellcheck  # 0.10.0 in nixpkgs (vs 0.8.0 in Docker)
-            ];
-
-            shellHook = ''
-              echo "Dash Core Test Environment (Layer 1)"
-              echo "Python $(python3 --version | cut -d' ' -f2) + linters - NO build tools"
-              echo ""
-              echo "Package versions:"
-              echo "  codespell==${pythonHashes.codespell.version} (pinned)"
-              echo "  flake8==${pythonHashes.flake8.version} (pinned)"
-              echo "  mypy==${pythonHashes.mypy.version} (pinned)"
-              echo "  vulture==${pythonHashes.vulture.version} (pinned)"
-              echo "  dash_hash==${pythonHashes.dash_hash.version} (pinned)"
-              echo "  pyzmq=nixpkgs (Docker: 24.0.1, source doesn't compile)"
-              echo "  jinja2=nixpkgs (not pinned in Docker)"
-              echo "  multiprocess=nixpkgs (not pinned in Docker)"
-            '';
+          # Import helper functions
+          helpers = import ./contrib/nix/common/helpers.nix {
+            inherit pkgs python pythonHashes packageLists;
           };
 
-          # Layer 2: CI environment builder
-          # Adds build tools + compilers to test environment
-          # Matches contrib/containers/ci/ci.Dockerfile
-          mkCIEnv = { name, compiler, extraBuildInputs ? [], extraShellHook ? "" }: pkgs.mkShellNoCC {
-            inherit name;
-
-            # Use mkShellNoCC to avoid default stdenv compiler (GCC 13)
-            # Then explicitly add our desired compiler
-            buildInputs = [ compiler ]
-              ++ (buildPackagesList pkgs)
-              ++ [
-                # Python 3.10 with test packages (from testEnv)
-                (python.withPackages (ps: [
-                  (getPythonPkg "pyzmq" pythonHashes.pyzmq)
-                  (getPythonPkg "jinja2" pythonHashes.jinja2)
-                  (getPythonPkg "dash_hash" pythonHashes.dash_hash)
-                  (getPythonPkg "multiprocess" pythonHashes.multiprocess)
-                ]))
-                # Linters (from testEnv)
-                (getPythonPkg "codespell" pythonHashes.codespell)
-                (getPythonPkg "flake8" pythonHashes.flake8)
-                (getPythonPkg "mypy" pythonHashes.mypy)
-                (getPythonPkg "vulture" pythonHashes.vulture)
-                # Static analysis (from testEnv)
-                pkgs.cppcheck
-                pkgs.shellcheck
-              ]
-              ++ extraBuildInputs;
-
-            shellHook = ''
-              ${testEnv.shellHook}
-              echo ""
-              echo "=== CI Environment: ${name} ==="
-              echo "Compiler: ${compiler.name}"
-              echo "Build tools available: autoconf, automake, cmake, libtool, pkg-config"
-              echo ""
-              echo "Build scripts:"
-              echo "  contrib/nix/libexec/env_setup.py - Environment configuration"
-              echo "  contrib/nix/libexec/build.py - Build orchestration"
-              echo ""
-              ${extraShellHook}
-            '';
+          # Test environment
+          testEnv = import ./contrib/nix/test/default.nix {
+            inherit pkgs python pythonHashes helpers;
           };
 
-          # Layer 3: Develop environment builder
-          # Kitchen sink - all compilers, all tools, everything for local development
-          # Matches contrib/containers/develop/Dockerfile
-          mkDevelopEnv = { name }: pkgs.mkShellNoCC {
-            inherit name;
+          # CI environments
+          ciEnvs = import ./contrib/nix/ci/default.nix {
+            inherit system pkgs helpers;
+            testEnvShellHook = testEnv.shellHook;
+          };
 
-            # All compilers available
-            # Note: Only one GCC can be default - we choose GCC 15
-            buildInputs = [
-              # GCC 15 as default
-              pkgs.gcc15
-
-              # Clang/LLVM 19 suite
-              pkgs.clang_19
-              pkgs.llvm_19
-              pkgs.lld_19
-            ]
-            ++ (buildPackagesList pkgs)
-            ++ (devToolsList pkgs)
-            ++ [
-              # Python 3.10 with all packages
-              (python.withPackages (ps: [
-                (getPythonPkg "pyzmq" pythonHashes.pyzmq)
-                (getPythonPkg "jinja2" pythonHashes.jinja2)
-                (getPythonPkg "dash_hash" pythonHashes.dash_hash)
-                (getPythonPkg "multiprocess" pythonHashes.multiprocess)
-              ]))
-              # All linters
-              (getPythonPkg "codespell" pythonHashes.codespell)
-              (getPythonPkg "flake8" pythonHashes.flake8)
-              (getPythonPkg "mypy" pythonHashes.mypy)
-              (getPythonPkg "vulture" pythonHashes.vulture)
-            ]
-            ++ (if system == "x86_64-linux" then [ pkgs.wine ] else []);
-
-            shellHook = ''
-              echo "Dash Core Development Environment (Layer 3)"
-              echo "Full-featured environment for local development"
-              echo ""
-              echo "=== Available Compilers ==="
-              echo "  GCC 15: $(gcc --version 2>&1 | head -1) [default]"
-              echo "  Clang 19: $(clang --version 2>&1 | head -1)"
-              echo ""
-              echo "=== Development Tools ==="
-              echo "  Code quality: clang-tidy, clang-format, cppcheck"
-              echo "  Build tools: bear (compile_commands.json), ccache"
-              echo "  Analysis: shellcheck, mypy, flake8, vulture, codespell"
-              echo "  Documentation: doxygen"
-              ${if system == "x86_64-linux" then ''echo "  Windows: wine"'' else ""}
-              echo ""
-              echo "=== Quick Start ==="
-              echo "  1. Build depends:"
-              echo "     make -C depends HOST=x86_64-pc-linux-gnu -j\$(nproc)"
-              echo ""
-              echo "  2. Configure (GCC 15):"
-              echo "     ./autogen.sh"
-              echo "     ./configure --prefix=\$(pwd)/depends/x86_64-pc-linux-gnu"
-              echo ""
-              echo "  3. Build Dash Core:"
-              echo "     make -j\$(nproc)"
-              echo ""
-              echo "  4. Run tests:"
-              echo "     ./src/test/test_dash"
-              echo "     test/functional/test_runner.py"
-              echo ""
-              echo "=== Alternative Compilers ==="
-              echo "  With Clang 19:"
-              echo "    CC=clang CXX=clang++ ./configure ..."
-              echo ""
-              echo "=== Code Quality ==="
-              echo "  Linting:"
-              echo "    test/lint/all-lint.py"
-              echo ""
-              echo "  Generate compile_commands.json:"
-              echo "    bear -- make -j\$(nproc)"
-              echo ""
-              echo "  Run clang-tidy:"
-              echo "    clang-tidy -p . src/*.cpp"
-              echo ""
-            '';
+          # Develop environment
+          developEnv = import ./contrib/nix/develop/default.nix {
+            inherit system helpers;
           };
 
         in {
@@ -348,247 +91,22 @@
           # Test environment (Layer 1)
           test = testEnv;
 
-          # Develop environment (Layer 3) - All compilers and tools
-          develop = mkDevelopEnv {
-            name = "dash-develop";
-          };
+          # Develop environment (Layer 3)
+          develop = developEnv;
 
           # CI environments (Layer 2)
-          # Each environment builds on test + adds compilers and build tools
-
-          # linux64_nowallet - GCC 15, no wallet, no GUI
-          # Matches CI_TARGET=linux64_nowallet in ci.Dockerfile
-          ci-linux64-nowallet = mkCIEnv {
-            name = "dash-ci-linux64-nowallet";
-            compiler = pkgs.gcc15;
-            extraShellHook = ''
-              export CI_TARGET="linux64_nowallet"
-              export HOST="x86_64-pc-linux-gnu"
-              export CONFIGURE_FLAGS="--disable-wallet --without-gui --without-bdb --without-sqlite --enable-reduce-exports"
-              export MAKE_FLAGS="NO_WALLET=1"
-              echo "CI Target: linux64_nowallet"
-              echo "  Host: x86_64-pc-linux-gnu"
-              echo "  Compiler: GCC 15"
-              echo "  Features: NO wallet, NO GUI"
-              echo ""
-              echo "Build commands:"
-              echo "  ./autogen.sh"
-              echo "  make -C depends HOST=\$HOST \$MAKE_FLAGS -j\$(nproc)"
-              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
-              echo "  make -j\$(nproc)"
-            '';
-          };
-
-          # linux64 - GCC 15, full build with wallet and GUI
-          # Matches CI_TARGET=linux64 in ci.Dockerfile
-          ci-linux64 = mkCIEnv {
-            name = "dash-ci-linux64";
-            compiler = pkgs.gcc15;
-            extraShellHook = ''
-              export CI_TARGET="linux64"
-              export HOST="x86_64-pc-linux-gnu"
-              export CONFIGURE_FLAGS="--enable-reduce-exports --with-boost-process"
-              echo "CI Target: linux64"
-              echo "  Host: x86_64-pc-linux-gnu"
-              echo "  Compiler: GCC 15"
-              echo "  Features: Wallet (BDB + SQLite), GUI"
-              echo ""
-              echo "Build commands:"
-              echo "  ./autogen.sh"
-              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
-              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
-              echo "  make -j\$(nproc)"
-            '';
-          };
-
-          # linux64_fuzz - Clang 19, fuzzing with libFuzzer
-          # Matches CI_TARGET=linux64_fuzz in ci.Dockerfile
-          ci-linux64-fuzz = mkCIEnv {
-            name = "dash-ci-linux64-fuzz";
-            compiler = pkgs.clang_19;
-            extraBuildInputs = [ pkgs.llvm_19 ];
-            extraShellHook = ''
-              export CI_TARGET="linux64_fuzz"
-              export HOST="x86_64-pc-linux-gnu"
-              export CONFIGURE_FLAGS="--enable-fuzz --with-sanitizers=fuzzer,address,undefined --disable-wallet --without-gui --without-bdb --without-sqlite CC=clang CXX=clang++"
-              export MAKE_FLAGS="NO_WALLET=1"
-              echo "CI Target: linux64_fuzz"
-              echo "  Host: x86_64-pc-linux-gnu"
-              echo "  Compiler: Clang 19"
-              echo "  Features: Fuzz testing (libFuzzer + ASan + UBSan)"
-              echo ""
-              echo "Build commands:"
-              echo "  ./autogen.sh"
-              echo "  make -C depends HOST=\$HOST \$MAKE_FLAGS -j\$(nproc)"
-              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
-              echo "  make -j\$(nproc)"
-            '';
-          };
-
-          # linux64_tsan - Clang 19 with ThreadSanitizer
-          # Matches CI_TARGET=linux64_tsan in ci.Dockerfile
-          ci-linux64-tsan = mkCIEnv {
-            name = "dash-ci-linux64-tsan";
-            compiler = pkgs.clang_19;
-            extraBuildInputs = [ pkgs.llvm_19 ];
-            extraShellHook = ''
-              export CI_TARGET="linux64_tsan"
-              export HOST="x86_64-pc-linux-gnu"
-              export CONFIGURE_FLAGS="--enable-reduce-exports --with-sanitizers=thread --with-boost-process CC=clang CXX=clang++"
-              echo "CI Target: linux64_tsan"
-              echo "  Host: x86_64-pc-linux-gnu"
-              echo "  Compiler: Clang 19"
-              echo "  Features: ThreadSanitizer (TSan) for race detection"
-              echo ""
-              echo "Build commands:"
-              echo "  ./autogen.sh"
-              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
-              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
-              echo "  make -j\$(nproc)"
-            '';
-          };
-
-          # linux64_ubsan - Clang 19 with UndefinedBehaviorSanitizer
-          # Matches CI_TARGET=linux64_ubsan in ci.Dockerfile
-          ci-linux64-ubsan = mkCIEnv {
-            name = "dash-ci-linux64-ubsan";
-            compiler = pkgs.clang_19;
-            extraBuildInputs = [ pkgs.llvm_19 ];
-            extraShellHook = ''
-              export CI_TARGET="linux64_ubsan"
-              export HOST="x86_64-pc-linux-gnu"
-              export CONFIGURE_FLAGS="--enable-reduce-exports --with-sanitizers=undefined --with-boost-process CC=clang CXX=clang++"
-              echo "CI Target: linux64_ubsan"
-              echo "  Host: x86_64-pc-linux-gnu"
-              echo "  Compiler: Clang 19"
-              echo "  Features: UndefinedBehaviorSanitizer (UBSan)"
-              echo ""
-              echo "Build commands:"
-              echo "  ./autogen.sh"
-              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
-              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
-              echo "  make -j\$(nproc)"
-            '';
-          };
-
-          # linux64_sqlite - GCC 15 with SQLite wallet (no BDB)
-          # Matches CI_TARGET=linux64_sqlite in ci.Dockerfile
-          ci-linux64-sqlite = mkCIEnv {
-            name = "dash-ci-linux64-sqlite";
-            compiler = pkgs.gcc15;
-            extraShellHook = ''
-              export CI_TARGET="linux64_sqlite"
-              export HOST="x86_64-pc-linux-gnu"
-              export CONFIGURE_FLAGS="--enable-reduce-exports --with-boost-process --with-sqlite --without-bdb"
-              echo "CI Target: linux64_sqlite"
-              echo "  Host: x86_64-pc-linux-gnu"
-              echo "  Compiler: GCC 15"
-              echo "  Features: SQLite wallet only (no BDB)"
-              echo ""
-              echo "Build commands:"
-              echo "  ./autogen.sh"
-              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
-              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
-              echo "  make -j\$(nproc)"
-            '';
-          };
-
-          # linux64_multiprocess - Clang 19 with multiprocess
-          # Matches CI_TARGET=linux64_multiprocess in ci.Dockerfile
-          ci-linux64-multiprocess = mkCIEnv {
-            name = "dash-ci-linux64-multiprocess";
-            compiler = pkgs.clang_19;
-            extraBuildInputs = [ pkgs.llvm_19 ];
-            extraShellHook = ''
-              export CI_TARGET="linux64_multiprocess"
-              export HOST="x86_64-pc-linux-gnu"
-              export CONFIGURE_FLAGS="--enable-reduce-exports --with-boost-process --enable-multiprocess CC=clang CXX=clang++"
-              echo "CI Target: linux64_multiprocess"
-              echo "  Host: x86_64-pc-linux-gnu"
-              echo "  Compiler: Clang 19"
-              echo "  Features: Multiprocess node/wallet separation"
-              echo ""
-              echo "Build commands:"
-              echo "  ./autogen.sh"
-              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
-              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
-              echo "  make -j\$(nproc)"
-            '';
-          };
-
-          # arm-linux - GCC 11 ARM cross-compilation
-          # Matches CI_TARGET=arm-linux in ci.Dockerfile
-          ci-arm-linux = mkCIEnv {
-            name = "dash-ci-arm-linux";
-            compiler = pkgs.gcc11;
-            extraBuildInputs = [ pkgs.pkgsCross.armv7l-hf-multiplatform.stdenv.cc ];
-            extraShellHook = ''
-              export CI_TARGET="arm-linux"
-              export HOST="arm-linux-gnueabihf"
-              export CONFIGURE_FLAGS="--enable-reduce-exports --enable-glibc-back-compat"
-              echo "CI Target: arm-linux"
-              echo "  Host: arm-linux-gnueabihf"
-              echo "  Compiler: GCC 11 (cross-compile)"
-              echo "  Features: ARM 32-bit cross-compilation"
-              echo ""
-              echo "Build commands:"
-              echo "  ./autogen.sh"
-              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
-              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
-              echo "  make -j\$(nproc)"
-            '';
-          };
-
-          # mac - Clang 19 macOS cross-compilation
-          # Matches CI_TARGET=mac in ci.Dockerfile
-          ci-mac = mkCIEnv {
-            name = "dash-ci-mac";
-            compiler = pkgs.clang_19;
-            extraBuildInputs = [ pkgs.llvm_19 pkgs.lld_19 ];
-            extraShellHook = ''
-              export CI_TARGET="mac"
-              export HOST="x86_64-apple-darwin"
-              export CONFIGURE_FLAGS="--enable-reduce-exports --enable-werror"
-              echo "CI Target: mac"
-              echo "  Host: x86_64-apple-darwin"
-              echo "  Compiler: Clang 19 (cross-compile)"
-              echo "  Features: macOS cross-compilation with LLD linker"
-              echo ""
-              echo "Build commands:"
-              echo "  ./autogen.sh"
-              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
-              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
-              echo "  make -j\$(nproc)"
-            '';
-          };
-
+          ci-linux64-nowallet = ciEnvs.ci-linux64-nowallet;
+          ci-linux64 = ciEnvs.ci-linux64;
+          ci-linux64-fuzz = ciEnvs.ci-linux64-fuzz;
+          ci-linux64-tsan = ciEnvs.ci-linux64-tsan;
+          ci-linux64-ubsan = ciEnvs.ci-linux64-ubsan;
+          ci-linux64-sqlite = ciEnvs.ci-linux64-sqlite;
+          ci-linux64-multiprocess = ciEnvs.ci-linux64-multiprocess;
+          ci-arm-linux = ciEnvs.ci-arm-linux;
+          ci-mac = ciEnvs.ci-mac;
         } // (if system == "x86_64-linux" then {
-          # win64 - GCC 15 Windows cross-compilation with Wine
-          # Matches CI_TARGET=win64 in ci.Dockerfile
-          # Only available on x86_64-linux (mingw cross-compilation requires x86)
-          ci-win64 = mkCIEnv {
-            name = "dash-ci-win64";
-            compiler = pkgs.gcc15;
-            extraBuildInputs = [ pkgs.pkgsCross.mingwW64.stdenv.cc pkgs.wine ];
-            extraShellHook = ''
-              export CI_TARGET="win64"
-              export HOST="x86_64-w64-mingw32"
-              export CONFIGURE_FLAGS="--enable-reduce-exports"
-              echo "CI Target: win64"
-              echo "  Host: x86_64-w64-mingw32"
-              echo "  Compiler: GCC 15 (mingw-w64 cross-compile)"
-              echo "  Features: Windows cross-compilation + Wine for testing"
-              echo ""
-              echo "Build commands:"
-              echo "  ./autogen.sh"
-              echo "  make -C depends HOST=\$HOST -j\$(nproc)"
-              echo "  ./configure --prefix=\$(pwd)/depends/\$HOST \$CONFIGURE_FLAGS"
-              echo "  make -j\$(nproc)"
-              echo ""
-              echo "Run Windows binaries with Wine:"
-              echo "  wine ./src/test/test_dash.exe"
-            '';
-          };
+          # win64 only on x86_64-linux (mingw requires x86)
+          ci-win64 = ciEnvs.ci-win64;
         } else {}));
     };
 }
