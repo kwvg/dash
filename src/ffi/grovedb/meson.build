@@ -463,6 +463,56 @@ if build_fuzz
     'src/fuzz/utils/tempdir.cpp',
   )
 
+  # Automatically enable -fsanitize=fuzzer if the toolchain supports it.
+  # This provides both the libFuzzer runtime and main().
+  _fuzz_link_code = '''extern "C" int LLVMFuzzerTestOneInput(const unsigned char *d, long unsigned s) { return 0; }'''
+  fuzz_compile_args = []
+  fuzz_link_args = []
+  _fuzz_found = false
+
+  if cxx.links(_fuzz_link_code, name: 'libFuzzer main() (implicit)')
+    # Already present in CXXFLAGS/LDFLAGS — nothing to add.
+    _fuzz_found = true
+  elif cxx.links(_fuzz_link_code, args: '-fsanitize=fuzzer', name: 'libFuzzer main() (-fsanitize=fuzzer)')
+    fuzz_compile_args = ['-fsanitize=fuzzer']
+    fuzz_link_args = ['-fsanitize=fuzzer']
+    _fuzz_found = true
+  elif host_machine.system() == 'darwin'
+    # Homebrew LLVM on macOS: the fuzzer runtime is linked against the
+    # compiler's own libc++ which may be newer than the system copy.
+    # Ask the compiler where it's installed and derive the lib/c++ path.
+    _search_dirs = run_command(cxx.cmd_array(), '-print-search-dirs', check: false)
+    _libcpp = ''
+    if _search_dirs.returncode() == 0
+      foreach _line : _search_dirs.stdout().strip().split('\n')
+        if _line.startswith('programs: =')
+          _cxx_bindir = _line.replace('programs: =', '')
+          _libcpp_check = run_command('test', '-d', _cxx_bindir / '..' / 'lib' / 'c++', check: false)
+          if _libcpp_check.returncode() == 0
+            _libcpp = run_command('sh', '-c', 'cd "$1" && pwd', '_', _cxx_bindir / '..' / 'lib' / 'c++', check: true).stdout().strip()
+          endif
+        endif
+      endforeach
+    endif
+    if _libcpp != ''
+      _extra_link = ['-L' + _libcpp, '-Wl,-rpath,' + _libcpp]
+      if cxx.links(_fuzz_link_code,
+          args: ['-fsanitize=fuzzer'] + _extra_link,
+          name: 'libFuzzer main() (-fsanitize=fuzzer + llvm libc++)')
+        fuzz_compile_args = ['-fsanitize=fuzzer']
+        fuzz_link_args = ['-fsanitize=fuzzer'] + _extra_link
+        _fuzz_found = true
+      endif
+    endif
+  endif
+
+  if not _fuzz_found
+    error('build_fuzz=true but the toolchain cannot link with -fsanitize=fuzzer. ' +
+          'Apple Xcode clang ships without the fuzzer runtime; install LLVM ' +
+          'from Homebrew (brew install llvm) or use a toolchain that includes ' +
+          'libclang_rt.fuzzer.')
+  endif
+
   fuzz_inc = include_directories('src/fuzz', 'src/fuzz/utils')
 
   fuzz_targets = [
@@ -485,6 +535,9 @@ if build_fuzz
       fuzz_util_sources,
       include_directories: [libgrovedb_inc, fuzz_inc],
       dependencies: [libgrovedb_dep],
+      c_args: fuzz_compile_args,
+      cpp_args: fuzz_compile_args,
+      link_args: fuzz_link_args,
       build_by_default: true,
     )
   endforeach
