@@ -10,19 +10,19 @@ let
 in
 {
   # Linux x86_64 environments
-  ci-linux64-nowallet = import ./linux64-nowallet.nix ciArgs;
-  ci-linux64 = import ./linux64.nix ciArgs;
-  ci-linux64-fuzz = import ./linux64-fuzz.nix ciArgs;
-  ci-linux64-tsan = import ./linux64-tsan.nix ciArgs;
-  ci-linux64-ubsan = import ./linux64-ubsan.nix ciArgs;
-  ci-linux64-sqlite = import ./linux64-sqlite.nix ciArgs;
-  ci-linux64-multiprocess = import ./linux64-multiprocess.nix ciArgs;
+  ci_linux-x86_64_nowallet = import ./linux-x86_64_nowallet.nix ciArgs;
+  ci_linux-x86_64 = import ./linux-x86_64.nix ciArgs;
+  ci_linux-x86_64_fuzz = import ./linux-x86_64_fuzz.nix ciArgs;
+  ci_linux-x86_64_tsan = import ./linux-x86_64_tsan.nix ciArgs;
+  ci_linux-x86_64_ubsan = import ./linux-x86_64_ubsan.nix ciArgs;
+  ci_linux-x86_64_sqlite = import ./linux-x86_64_sqlite.nix ciArgs;
+  ci_linux-x86_64_multiprocess = import ./linux-x86_64_multiprocess.nix ciArgs;
 
   # Cross-compilation environments
-  ci-arm-linux = import ./arm-linux.nix ciArgs;
-  ci-mac = import ./mac.nix ciArgs;
+  ci_linux-aarch64 = import ./linux-aarch64.nix ciArgs;
+  ci_darwin-x86_64 = import ./darwin-x86_64.nix ciArgs;
 
   # Windows cross-compilation (x86_64-linux only)
   # Conditionally included in main flake.nix
-  ci-win64 = import ./win64.nix ciArgs;
+  ci_mingw64-x86_64 = import ./mingw64-x86_64.nix ciArgs;
 }

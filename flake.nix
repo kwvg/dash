@@ -72,16 +72,16 @@
               echo ""
               echo "Available environments:"
               echo "  nix develop .#test - Test environment (Python + linters)"
-              echo "  nix develop .#ci-linux64-nowallet - CI: GCC 15, no wallet"
-              echo "  nix develop .#ci-linux64 - CI: GCC 15, full build"
-              echo "  nix develop .#ci-linux64-fuzz - CI: Clang 19, fuzzing"
-              echo "  nix develop .#ci-linux64-tsan - CI: Clang 19, TSan"
-              echo "  nix develop .#ci-linux64-ubsan - CI: Clang 19, UBSan"
-              echo "  nix develop .#ci-linux64-sqlite - CI: GCC 15, SQLite"
-              echo "  nix develop .#ci-linux64-multiprocess - CI: Clang 19, multiprocess"
-              echo "  nix develop .#ci-arm-linux - CI: GCC 11, ARM cross"
-              echo "  nix develop .#ci-mac - CI: Clang 19, macOS cross"
-              ${if system == "x86_64-linux" then ''echo "  nix develop .#ci-win64 - CI: GCC 15, Windows cross + Wine"'' else ""}
+              echo "  nix develop .#ci_linux-x86_64_nowallet - CI: GCC 15, no wallet"
+              echo "  nix develop .#ci_linux-x86_64 - CI: GCC 15, full build"
+              echo "  nix develop .#ci_linux-x86_64_fuzz - CI: Clang 19, fuzzing"
+              echo "  nix develop .#ci_linux-x86_64_tsan - CI: Clang 19, TSan"
+              echo "  nix develop .#ci_linux-x86_64_ubsan - CI: Clang 19, UBSan"
+              echo "  nix develop .#ci_linux-x86_64_sqlite - CI: GCC 15, SQLite"
+              echo "  nix develop .#ci_linux-x86_64_multiprocess - CI: Clang 19, multiprocess"
+              echo "  nix develop .#ci_linux-aarch64 - CI: GCC 15, ARM64 cross"
+              echo "  nix develop .#ci_darwin-x86_64 - CI: Clang 19, macOS cross"
+              ${if system == "x86_64-linux" then ''echo "  nix develop .#ci_mingw64-x86_64 - CI: GCC 15, Windows cross + Wine"'' else ""}
               echo ""
               echo "Development environments (all tools):"
               echo "  nix develop .#develop - All compilers, all tools"
@@ -95,18 +95,18 @@
           develop = developEnv;
 
           # CI environments (Layer 2)
-          ci-linux64-nowallet = ciEnvs.ci-linux64-nowallet;
-          ci-linux64 = ciEnvs.ci-linux64;
-          ci-linux64-fuzz = ciEnvs.ci-linux64-fuzz;
-          ci-linux64-tsan = ciEnvs.ci-linux64-tsan;
-          ci-linux64-ubsan = ciEnvs.ci-linux64-ubsan;
-          ci-linux64-sqlite = ciEnvs.ci-linux64-sqlite;
-          ci-linux64-multiprocess = ciEnvs.ci-linux64-multiprocess;
-          ci-arm-linux = ciEnvs.ci-arm-linux;
-          ci-mac = ciEnvs.ci-mac;
+          ci_linux-x86_64_nowallet = ciEnvs.ci_linux-x86_64_nowallet;
+          ci_linux-x86_64 = ciEnvs.ci_linux-x86_64;
+          ci_linux-x86_64_fuzz = ciEnvs.ci_linux-x86_64_fuzz;
+          ci_linux-x86_64_tsan = ciEnvs.ci_linux-x86_64_tsan;
+          ci_linux-x86_64_ubsan = ciEnvs.ci_linux-x86_64_ubsan;
+          ci_linux-x86_64_sqlite = ciEnvs.ci_linux-x86_64_sqlite;
+          ci_linux-x86_64_multiprocess = ciEnvs.ci_linux-x86_64_multiprocess;
+          ci_linux-aarch64 = ciEnvs.ci_linux-aarch64;
+          ci_darwin-x86_64 = ciEnvs.ci_darwin-x86_64;
         } // (if system == "x86_64-linux" then {
-          # win64 only on x86_64-linux (mingw requires x86)
-          ci-win64 = ciEnvs.ci-win64;
+          # mingw64 only on x86_64-linux (mingw requires x86)
+          ci_mingw64-x86_64 = ciEnvs.ci_mingw64-x86_64;
         } else {}));
     };
 }
