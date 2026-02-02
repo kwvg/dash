@@ -34,12 +34,15 @@ indent_size = 2
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[contrib/nix/**/*.nix]
+# Nix files - RFC 166 (nixfmt-rfc-style) compliant
+[*.nix]
 charset = utf-8
 end_of_line = lf
 indent_style = space
 indent_size = 2
 insert_final_newline = true
+trim_trailing_whitespace = true
+max_line_length = 100
 
 [contrib/nix/**/Makefile]
 charset = utf-8
