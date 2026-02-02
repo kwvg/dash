@@ -472,6 +472,7 @@ if build_fuzz
     'fuzz_sum_tree',
     'fuzz_query',
     'fuzz_transaction',
+    'fuzz_batch',
   ]
 
   foreach target : fuzz_targets
