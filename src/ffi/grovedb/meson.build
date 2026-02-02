@@ -476,6 +476,7 @@ if build_fuzz
     'fuzz_proof',
     'fuzz_db',
     'fuzz_tree_state',
+    'fuzz_wire',
   ]
 
   foreach target : fuzz_targets
