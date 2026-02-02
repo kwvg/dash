@@ -16,6 +16,7 @@ include_grove_HEADERS = \
 	include/grovedb/wire.h
 
 libgrovedb_la_SOURCES = \
+	src/auxiliary.cpp \
 	src/batch.cpp \
 	src/db.cpp \
 	src/delete.cpp \

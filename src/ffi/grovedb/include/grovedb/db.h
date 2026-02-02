@@ -318,6 +318,13 @@ public:
     Status QueryRaw(const PathQuery& query, uint8_t result_type, std::vector<QueryResultElement>& elements, uint16_t& skipped, OperationCost& cost);
     Status QueryRaw(const PathQuery& query, uint8_t result_type, const Transaction& txn, std::vector<QueryResultElement>& elements, uint16_t& skipped, OperationCost& cost);
 
+    struct RawQuerySpec {
+        const Path& path;
+        const std::vector<QueryItem>& items;
+        uint32_t limit{0};
+        uint32_t offset{0};
+    };
+
     /**
      * Execute multiple raw queries atomically with merged results.
      *
@@ -331,12 +338,6 @@ public:
      * @param[out] cost         Receives the operation resource counters.
      * @return Status::Ok() on success; an error Status otherwise.
      */
-    struct RawQuerySpec {
-        const Path& path;
-        const std::vector<QueryItem>& items;
-        uint32_t limit{0};
-        uint32_t offset{0};
-    };
     Status QueryManyRaw(const std::vector<RawQuerySpec>& queries, uint8_t result_type, std::vector<QueryResultElement>& elements, OperationCost& cost);
 
     /**
@@ -457,6 +458,56 @@ public:
         Hash& root_hash,
         std::vector<std::vector<ProofResultEntry>>& all_results);
 
+    // -- Auxiliary data operations ----------------------------------------
+
+    /**
+     * Store auxiliary key-value data outside the Merkle tree structure.
+     *
+     * Auxiliary data is not part of the tree's cryptographic commitment
+     * but shares the same transactional guarantees.
+     *
+     * @param[in]  key   The auxiliary key.
+     * @param[in]  value The value to store.
+     * @param[out] cost  Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status PutAux(const Bytes& key, const Bytes& value, OperationCost& cost);
+    Status PutAux(const Bytes& key, const Bytes& value, const Transaction& txn, OperationCost& cost);
+
+    /**
+     * Retrieve auxiliary data by key.
+     *
+     * @param[in]  key    The auxiliary key.
+     * @param[out] value  Receives the value, or std::nullopt if not found.
+     * @param[out] cost   Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status GetAux(const Bytes& key, std::optional<Bytes>& value, OperationCost& cost);
+    Status GetAux(const Bytes& key, const Transaction& txn, std::optional<Bytes>& value, OperationCost& cost);
+
+    /**
+     * Delete auxiliary data by key.
+     *
+     * @param[in]  key   The auxiliary key to delete.
+     * @param[out] cost  Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status DeleteAux(const Bytes& key, OperationCost& cost);
+    Status DeleteAux(const Bytes& key, const Transaction& txn, OperationCost& cost);
+
+    /**
+     * Find all subtrees under a given path.
+     *
+     * Returns the full paths of all subtrees found recursively.
+     *
+     * @param[in]  path      The path to search under.
+     * @param[out] subtrees  Receives the list of subtree paths.
+     * @param[out] cost      Receives the operation resource counters.
+     * @return Status::Ok() on success; an error Status otherwise.
+     */
+    Status FindSubtrees(const Path& path, std::vector<Path>& subtrees, OperationCost& cost);
+    Status FindSubtrees(const Path& path, const Transaction& txn, std::vector<Path>& subtrees, OperationCost& cost);
+
     // -- Batch operations -------------------------------------------------
 
     /**
@@ -513,6 +564,11 @@ private:
     static Status DecodePathKeyElements(
         std::span<const uint8_t> data,
         std::vector<PathKeyElement>& results);
+
+    /** Decode wire-encoded find_subtrees result into a vector of paths. */
+    static Status DecodePaths(
+        std::span<const uint8_t> data,
+        std::vector<Path>& paths);
 
     /** Decode wire-encoded chained verification result sets. */
     static Status DecodeChainedVerifyResult(
