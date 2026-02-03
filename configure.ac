@@ -149,7 +149,7 @@ fi
 
 AC_ARG_VAR([RUSTFLAGS], [Flags for Rust compiler])
 if test "${RUSTFLAGS+set}" != "set"; then
-  RUSTFLAGS="-C embed-bitcode=yes -C relocation-model=pic"
+  RUSTFLAGS="-C embed-bitcode=yes -C relocation-model=pic -A unexpected_cfgs"
 fi
 
 AC_ARG_ENABLE([online-rust],
