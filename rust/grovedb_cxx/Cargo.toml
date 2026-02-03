@@ -1,0 +1,31 @@
+[package]
+name = "grovedb_cxx"
+version = "4.0.0"
+edition = "2021"
+
+[lib]
+crate-type = ["staticlib"]
+
+[build-dependencies]
+built = "0.8.0"
+
+[dependencies]
+cxx = "=1.0.192"
+grovedb = { path = "../grovedb/grovedb", features = ["full"] }
+
+[lints.clippy]
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+unwrap_used = "deny"
+
+[lints.rust]
+keyword_idents = "deny"
+missing_debug_implementations = "warn"
+non_ascii_idents = "deny"
+rust_2021_incompatible_closure_captures = "deny"
+rust_2021_incompatible_or_patterns = "deny"
+unsafe_code = "deny"
+unused_must_use = "warn"

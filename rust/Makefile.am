@@ -64,13 +64,14 @@ endif # ENABLE_ONLINE_RUST
 include $(top_srcdir)/rust/Makefile.libs.include
 
 EXTRA_DIST = \
-	$(LIBRUST_CHIRP_FILES)
+	$(LIBRUST_CHIRP_FILES) \
+	$(LIBRUST_GROVEDB_FILES)
 
-all-local: $(CARGO_CONFIGURED) cargo-build-chirp cxxbridge-chirp
+all-local: $(CARGO_CONFIGURED) cargo-build-chirp cargo-build-grovedb cxxbridge-chirp cxxbridge-grovedb
 
-cargo-build: $(CARGO_CONFIGURED) cargo-build-chirp
+cargo-build: $(CARGO_CONFIGURED) cargo-build-chirp cargo-build-grovedb
 
-cargo-clean: cargo-clean-chirp
+cargo-clean: cargo-clean-chirp cargo-clean-grovedb
 
 cargo-clean-config:
 	$(AM_V_at)rm -f $(top_srcdir)/.cargo/.configured-for-online
@@ -78,12 +79,16 @@ cargo-clean-config:
 	$(AM_V_at)rm -f $(top_srcdir)/.cargo/config.toml
 	$(AM_V_at)rm -f $(top_srcdir)/.cargo/config
 
-clean-local: cargo-clean-chirp cxxbridge-clean-chirp clean-librustdeps-la cargo-clean-config
+clean-local: cargo-clean-chirp cargo-clean-grovedb cxxbridge-clean-chirp cxxbridge-clean-grovedb clean-librustdeps-la cargo-clean-config
 
-dist-hook: cxxbridge-chirp
+dist-hook: cxxbridge-chirp cxxbridge-grovedb
 	$(MKDIR_P) $(distdir)/chirp/gen/src
 	$(MKDIR_P) $(distdir)/chirp/gen/include/rust/chirp
 	cp $(LIBRUST_CHIRP_CPP) $(distdir)/chirp/gen/src/
 	cp $(LIBRUST_CHIRP_H) $(distdir)/chirp/gen/include/rust/chirp/
+	$(MKDIR_P) $(distdir)/grovedb_cxx/gen/src
+	$(MKDIR_P) $(distdir)/grovedb_cxx/gen/include/rust/grovedb_cxx
+	cp $(LIBRUST_GROVEDB_CPP) $(distdir)/grovedb_cxx/gen/src/
+	cp $(LIBRUST_GROVEDB_H) $(distdir)/grovedb_cxx/gen/include/rust/grovedb_cxx/
 
 .PHONY: cargo-build cargo-clean cargo-clean-config

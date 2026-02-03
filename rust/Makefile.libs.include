@@ -10,18 +10,23 @@ CARGO_PROFILE=release
 endif
 
 include $(top_srcdir)/rust/Makefile.chirp.include
+include $(top_srcdir)/rust/Makefile.grovedb.include
 
 LIBRUSTDEPS_A = \
-	$(LIBRUST_CHIRP)
+	$(LIBRUST_CHIRP) \
+	$(LIBRUST_GROVEDB)
 
 LIBRUSTDEPS_INCLUDES = \
-	$(LIBRUST_CHIRP_INCLUDES)
+	$(LIBRUST_CHIRP_INCLUDES) \
+	$(LIBRUST_GROVEDB_INCLUDES)
 
 LIBRUSTDEPS_CPP = \
-	$(LIBRUST_CHIRP_CPP)
+	$(LIBRUST_CHIRP_CPP) \
+	$(LIBRUST_GROVEDB_CPP)
 
 LIBRUSTDEPS_H = \
-	$(LIBRUST_CHIRP_H)
+	$(LIBRUST_CHIRP_H) \
+	$(LIBRUST_GROVEDB_H)
 
 # Libtool wrapper
 LIBRUSTDEPS = $(abs_top_builddir)/rust/librustdeps.la

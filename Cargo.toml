@@ -16,6 +16,7 @@ members = [
   "rust/grovedb/path",
   "rust/grovedb/storage",
   "rust/grovedb/visualize",
+  "rust/grovedb_cxx",
 ]
 
 [profile.release]
