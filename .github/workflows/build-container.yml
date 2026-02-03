@@ -15,25 +15,26 @@ on:
         description: "Container name"
         required: true
         type: string
+      arch:
+        description: "Architectures to build"
+        required: false
+        type: string
+        default: '["amd64", "arm64"]'
     outputs:
       path:
         description: "Path to built container"
-        value: ghcr.io/${{ jobs.build-amd64.outputs.repo }}/${{ inputs.name }}:${{ jobs.build-amd64.outputs.tag }}
+        value: ghcr.io/${{ jobs.prepare.outputs.repo }}/${{ inputs.name }}:${{ jobs.prepare.outputs.tag }}
 
 jobs:
-  build-amd64:
-    name: Build container (amd64)
+  prepare:
+    name: Prepare variables
     runs-on: ubuntu-24.04
     outputs:
       tag: ${{ steps.prepare.outputs.tag }}
       repo: ${{ steps.prepare.outputs.repo }}
-      digest: ${{ steps.build.outputs.digest }}
+      build_amd64: ${{ contains(fromJson(inputs.arch), 'amd64') }}
+      build_arm64: ${{ contains(fromJson(inputs.arch), 'arm64') }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-
       - name: Prepare variables
         id: prepare
         run: |
@@ -41,6 +42,19 @@ jobs:
           REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "tag=${BRANCH_NAME}" >> "$GITHUB_OUTPUT"
           echo "repo=${REPO_NAME}" >> "$GITHUB_OUTPUT"
+
+  build-amd64:
+    name: Build container (amd64)
+    needs: prepare
+    if: contains(fromJson(inputs.arch), 'amd64')
+    runs-on: ubuntu-24.04
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -61,14 +75,16 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ghcr.io/${{ steps.prepare.outputs.repo }}/${{ inputs.name }}:${{ hashFiles(inputs.file) }}-amd64
+            ghcr.io/${{ needs.prepare.outputs.repo }}/${{ inputs.name }}:${{ hashFiles(inputs.file) }}-amd64
           cache-from: |
-            type=registry,ref=ghcr.io/${{ steps.prepare.outputs.repo }}/${{ inputs.name }}:${{ hashFiles(inputs.file) }}-amd64
-            type=registry,ref=ghcr.io/${{ steps.prepare.outputs.repo }}/${{ inputs.name }}:${{ steps.prepare.outputs.tag }}
+            type=registry,ref=ghcr.io/${{ needs.prepare.outputs.repo }}/${{ inputs.name }}:${{ hashFiles(inputs.file) }}-amd64
+            type=registry,ref=ghcr.io/${{ needs.prepare.outputs.repo }}/${{ inputs.name }}:${{ needs.prepare.outputs.tag }}
           cache-to: type=inline
 
   build-arm64:
     name: Build container (arm64)
+    needs: prepare
+    if: contains(fromJson(inputs.arch), 'arm64')
     runs-on: ubuntu-24.04-arm
     outputs:
       digest: ${{ steps.build.outputs.digest }}
@@ -77,14 +93,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Prepare variables
-        id: prepare
-        run: |
-          BRANCH_NAME=$(echo "${GITHUB_REF##*/}" | tr '[:upper:]' '[:lower:]')
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          echo "tag=${BRANCH_NAME}" >> "$GITHUB_OUTPUT"
-          echo "repo=${REPO_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -105,16 +113,17 @@ jobs:
           push: true
           platforms: linux/arm64
           tags: |
-            ghcr.io/${{ steps.prepare.outputs.repo }}/${{ inputs.name }}:${{ hashFiles(inputs.file) }}-arm64
+            ghcr.io/${{ needs.prepare.outputs.repo }}/${{ inputs.name }}:${{ hashFiles(inputs.file) }}-arm64
           cache-from: |
-            type=registry,ref=ghcr.io/${{ steps.prepare.outputs.repo }}/${{ inputs.name }}:${{ hashFiles(inputs.file) }}-arm64
-            type=registry,ref=ghcr.io/${{ steps.prepare.outputs.repo }}/${{ inputs.name }}:${{ steps.prepare.outputs.tag }}
+            type=registry,ref=ghcr.io/${{ needs.prepare.outputs.repo }}/${{ inputs.name }}:${{ hashFiles(inputs.file) }}-arm64
+            type=registry,ref=ghcr.io/${{ needs.prepare.outputs.repo }}/${{ inputs.name }}:${{ needs.prepare.outputs.tag }}
           cache-to: type=inline
 
   create-manifest:
     name: Create multi-arch manifest
-    runs-on: ubuntu-24.04-arm
-    needs: [build-amd64, build-arm64]
+    runs-on: ubuntu-24.04
+    needs: [prepare, build-amd64, build-arm64]
+    if: always() && (needs.build-amd64.result == 'success' || needs.build-arm64.result == 'success')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -131,21 +140,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create and push multi-arch manifest
+      - name: Create and push manifest
         run: |
-          REPO="ghcr.io/${{ needs.build-amd64.outputs.repo }}/${{ inputs.name }}"
-          TAG="${{ needs.build-amd64.outputs.tag }}"
+          REPO="ghcr.io/${{ needs.prepare.outputs.repo }}/${{ inputs.name }}"
+          TAG="${{ needs.prepare.outputs.tag }}"
           HASH_TAG="${{ hashFiles(inputs.file) }}"
 
-          # Create manifest from arch-specific images
-          docker buildx imagetools create -t "${REPO}:${HASH_TAG}" \
-            "${REPO}:${HASH_TAG}-amd64" \
-            "${REPO}:${HASH_TAG}-arm64"
+          # Build list of arch-specific images
+          IMAGES=""
+          if [[ "${{ needs.build-amd64.result }}" == "success" ]]; then
+            IMAGES="${IMAGES} ${REPO}:${HASH_TAG}-amd64"
+          fi
+          if [[ "${{ needs.build-arm64.result }}" == "success" ]]; then
+            IMAGES="${IMAGES} ${REPO}:${HASH_TAG}-arm64"
+          fi
 
-          docker buildx imagetools create -t "${REPO}:${TAG}" \
-            "${REPO}:${HASH_TAG}-amd64" \
-            "${REPO}:${HASH_TAG}-arm64"
-
-          docker buildx imagetools create -t "${REPO}:latest" \
-            "${REPO}:${HASH_TAG}-amd64" \
-            "${REPO}:${HASH_TAG}-arm64"
+          # Create manifest from available arch-specific images
+          docker buildx imagetools create -t "${REPO}:${HASH_TAG}" ${IMAGES}
+          docker buildx imagetools create -t "${REPO}:${TAG}" ${IMAGES}
+          docker buildx imagetools create -t "${REPO}:latest" ${IMAGES}
