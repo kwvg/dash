@@ -1,0 +1,190 @@
+name: Build Rust components and FFIs
+
+on:
+  push:
+    paths:
+      - Cargo.lock
+      - rust-toolchain.toml
+      - rust/**
+      - src/ffi/**
+      - src/Makefile.grovedb.include
+  pull_request_target:
+    paths:
+      - Cargo.lock
+      - rust-toolchain.toml
+      - rust/**
+      - src/ffi/**
+      - src/Makefile.grovedb.include
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+  group: |
+    ${{ github.workflow }}-${{
+      (github.event_name == 'pull_request_target' && github.event.pull_request.number) ||
+      (github.event_name == 'push' && github.ref)
+    }}
+
+env:
+  RUST_VERSION: '1.88.0'
+  SCCACHE_DIR: /cache/sccache
+
+jobs:
+  container:
+    name: Build container
+    uses: ./.github/workflows/build-container.yml
+    with:
+      context: ./contrib/containers/meson
+      file: ./contrib/containers/meson/Dockerfile
+      name: dashcore-meson-ci
+      arch: '["arm64"]'
+
+  build-librustdeps:
+    name: Build with librustdeps
+    needs: container
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ${{ needs.container.outputs.path }}
+      options: --user root
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 50
+
+      - name: Restore Cargo cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            /usr/local/cargo/registry
+            /usr/local/cargo/git
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ env.RUST_VERSION }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-cargo-${{ env.RUST_VERSION }}-
+
+      - name: Fetch crates
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo fetch --manifest-path Cargo.toml
+
+      - name: Restore sccache cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-${{ runner.arch }}-librustdeps-${{ github.sha }}
+          restore-keys: |
+            sccache-${{ runner.arch }}-librustdeps-
+
+      - name: Build librustdeps
+        env:
+          RUSTC_WRAPPER: sccache
+        run: |
+          SCCACHE_NO_DAEMON=1 SCCACHE_START_SERVER=1 sccache 2>&1 &
+          cd rust
+          meson setup builddir -Dwith_grovedb_cxx=true
+          meson compile -C builddir
+          sccache --show-stats
+
+      - name: Build libgrovedb
+        run: |
+          cd src/ffi/grovedb
+          meson setup builddir -Duse_rustdeps=true -Drustdeps_build_dir="$GITHUB_WORKSPACE/rust/builddir"
+          meson compile -C builddir
+
+      - name: Save caches
+        if: github.event_name == 'push' &&
+            github.ref_name == github.event.repository.default_branch
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            /usr/local/cargo/registry
+            /usr/local/cargo/git
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ env.RUST_VERSION }}-${{ hashFiles('Cargo.lock') }}
+
+      - name: Save sccache cache
+        if: github.event_name == 'push' &&
+            github.ref_name == github.event.repository.default_branch
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-${{ runner.arch }}-librustdeps-${{ github.sha }}
+
+  build-grovedb-cxx:
+    name: Build with grovedb_cxx and test
+    needs: container
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ${{ needs.container.outputs.path }}
+      options: --user root
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 50
+
+      - name: Restore Cargo cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            /usr/local/cargo/registry
+            /usr/local/cargo/git
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ env.RUST_VERSION }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-cargo-${{ env.RUST_VERSION }}-
+
+      - name: Fetch crates
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo fetch --manifest-path Cargo.toml
+
+      - name: Restore sccache cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-${{ runner.arch }}-grovedb-cxx-${{ github.sha }}
+          restore-keys: |
+            sccache-${{ runner.arch }}-grovedb-cxx-
+
+      - name: Build grovedb_cxx
+        env:
+          RUSTC_WRAPPER: sccache
+        run: |
+          SCCACHE_NO_DAEMON=1 SCCACHE_START_SERVER=1 sccache 2>&1 &
+          cd rust/grovedb_cxx
+          meson setup builddir
+          meson compile -C builddir
+          sccache --show-stats
+
+      - name: Build libgrovedb
+        run: |
+          cd src/ffi/grovedb
+          meson setup builddir -Dgrovedb_cxx_build_dir="$GITHUB_WORKSPACE/rust/grovedb_cxx/builddir"
+          meson compile -C builddir
+
+      - name: Run tests
+        run: |
+          cd src/ffi/grovedb
+          meson test -C builddir --print-errorlogs
+
+      - name: Save caches
+        if: github.event_name == 'push' &&
+            github.ref_name == github.event.repository.default_branch
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            /usr/local/cargo/registry
+            /usr/local/cargo/git
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ env.RUST_VERSION }}-${{ hashFiles('Cargo.lock') }}
+
+      - name: Save sccache cache
+        if: github.event_name == 'push' &&
+            github.ref_name == github.event.repository.default_branch
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-${{ runner.arch }}-grovedb-cxx-${{ github.sha }}
