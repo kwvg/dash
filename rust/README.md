@@ -17,7 +17,6 @@ meson compile -C builddir
 ### Build options
 
 - `-Dcargo_profile=release`: Build Rust components in release mode (default: `debug`)
-- `-Dwith_chirp=true`: Include [`chirp`](./chirp) crate in librustdeps (default: `true`)
 - `-Dwith_grovedb_cxx=true`: Include [`grovedb_cxx`](./grovedb_cxx) crate in librustdeps (default: `true`)
 
 ## License
