@@ -22,6 +22,12 @@ option('shared_library',
   description: 'Build shared library with pkg-config definitions (implicit with build_tests)'
 )
 
+option('suppress_external_warnings',
+  type: 'boolean',
+  value: true,
+  description: 'Suppress warnings from external headers'
+)
+
 option('use_rustdeps',
   type: 'boolean',
   value: false,
