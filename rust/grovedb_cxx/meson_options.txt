@@ -1,0 +1,6 @@
+option('cargo_profile',
+  type: 'combo',
+  choices: ['debug', 'release'],
+  value: 'debug',
+  description: 'Cargo build profile (debug or release)'
+)
