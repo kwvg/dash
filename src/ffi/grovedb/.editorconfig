@@ -5,5 +5,8 @@ indent_size = 2
 [*.mk]
 indent_style = tab
 
+[src/fuzz/vendor/**]
+# Equivalent to ignore
+
 [include/grovedb/vendor/**]
 # Equivalent to ignore
