@@ -198,3 +198,12 @@ target
 
 # FFI bridge
 gen
+
+# Build directories
+build/
+builddir/
+meson-build/
+
+# Subprojects
+subprojects/*/
+!subprojects/*.wrap

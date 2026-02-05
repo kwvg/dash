@@ -24,3 +24,7 @@ indent_style = tab
 # Autoconf scripts
 [configure.ac]
 indent_size = 2
+
+# Build scripts
+[{meson.build,meson_options.txt}]
+indent_size = 2
