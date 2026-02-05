@@ -1,0 +1,6 @@
+# Source code
+[*.{h,cpp}]
+indent_size = 2
+
+[*.mk]
+indent_style = tab

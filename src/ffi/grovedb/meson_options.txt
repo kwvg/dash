@@ -1,0 +1,29 @@
+option('build_tests',
+  type: 'boolean',
+  value: true,
+  description: 'Build unit tests'
+)
+
+option('grovedb_cxx_build_dir',
+  type: 'string',
+  value: '',
+  description: 'Path to grovedb_cxx build directory (auto-detected if empty, ignored if use_rustdeps=true)'
+)
+
+option('rustdeps_build_dir',
+  type: 'string',
+  value: '',
+  description: 'Path to rustdeps build directory (auto-detected if empty)'
+)
+
+option('shared_library',
+  type: 'boolean',
+  value: true,
+  description: 'Build shared library with pkg-config definitions (implicit with build_tests)'
+)
+
+option('use_rustdeps',
+  type: 'boolean',
+  value: false,
+  description: 'Link against librustdeps instead of libgrovedb_cxx'
+)
