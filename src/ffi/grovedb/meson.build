@@ -28,6 +28,56 @@ libgrovedb_headers = files(
 
 libgrovedb_includes = include_directories('include', 'src')
 
+cxx_flag_error = '-Werror'
+if host_machine.system() == 'darwin'
+  cxx_lflag_error = '-Wl,-fatal_warnings'
+else
+  cxx_lflag_error = '-Wl,--fatal_warnings'
+endif
+
+cxx_core_flags_list = [
+  '-fno-extended-identifiers',
+  '-fstack-reuse=none', # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90348
+]
+
+cxx_warn_flags_list = [
+  '-Wconditional-uninitialized',
+  '-Wdate-time',
+  '-Wdocumentation',
+  '-Wduplicated-branches',
+  '-Wduplicated-cond',
+  '-Wgnu',
+  '-Wimplicit-fallthrough',
+  '-Wlogical-op',
+  '-Wloop-analysis',
+  '-Woverloaded-virtual',
+  '-Wredundant-decls',
+  '-Wreorder',
+  '-Wself-assign',
+  '-Wshadow-field',
+  '-Wsuggest-override',
+  '-Wthread-safety',
+  '-Wunreachable-code',
+  '-Wunused-member-function',
+  '-Wvla',
+]
+
+# Check compiler support for flags and apply them
+cxx_flags = []
+
+foreach flag : cxx_core_flags_list + cxx_warn_flags_list
+  if cxx.has_multi_arguments([cxx_flag_error, flag])
+    cxx_flags += flag
+  endif
+endforeach
+
+# -Wformat and -Wformat-security must defined together
+if cxx.has_multi_arguments([cxx_flag_error, '-Wformat', '-Wformat-security'])
+  cxx_flags += ['-Wformat', '-Wformat-security']
+endif
+
+add_project_arguments(cxx_flags, language: 'cpp')
+
 rustdeps_build_dir = get_option('rustdeps_build_dir')
 grovedb_cxx_build_dir = get_option('grovedb_cxx_build_dir')
 use_rustdeps = get_option('use_rustdeps')
@@ -188,10 +238,12 @@ if needs_pkgconfig
 endif
 
 # Unit tests
+suppress_external_warns = get_option('suppress_external_warnings')
 if build_tests
   boost_dep = dependency('boost',
     modules: ['unit_test_framework'],
     version: '>=1.73.0',
+    include_type: suppress_external_warns ? 'system' : 'preserve',
   )
 
   test_sources = files(
@@ -214,6 +266,7 @@ install_headers(libgrovedb_headers, subdir: 'grovedb')
 
 summary({
   'C++ compiler': cxx.get_id(),
+  'C++ flags': ' '.join(cxx_flags),
   'C++ standard': get_option('cpp_std'),
 }, section: 'Compiler')
 
