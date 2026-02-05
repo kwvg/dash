@@ -33,6 +33,12 @@ cxx_core_flags_list = [
   '-fstack-reuse=none', # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90348
 ]
 
+cxx_harden_flags_list = [
+  '-fcf-protection=full',
+  '-fstack-protector-all',
+  '-Wstack-protector',
+]
+
 cxx_warn_flags_list = [
   '-Wconditional-uninitialized',
   '-Wdate-time',
@@ -55,8 +61,33 @@ cxx_warn_flags_list = [
   '-Wvla',
 ]
 
+# C++ linker flags
+cxx_harden_lflags_darwin_list = [
+  '-fixup_chains',
+]
+
+cxx_harden_lflags_linux_list = [
+  '-z,now',
+  '-z,relro',
+  '-z,separate-code',
+]
+
+cxx_harden_lflags_win64_list = [
+  '--dynamicbase',
+  '--enable-reloc-section',
+  '--high-entropy-va',
+  '--nxcompat',
+]
+
+# C++ preprocessor flags
+cxx_harden_release_preproc = [
+  '-D_FORTIFY_SOURCE=3',
+  '-U_FORTIFY_SOURCE',
+]
+
 # Check compiler support for flags and apply them
 cxx_flags = []
+
 foreach flag : cxx_core_flags_list + cxx_warn_flags_list
   if cxx.has_multi_arguments(['-Werror', flag])
     cxx_flags += flag
@@ -68,7 +99,59 @@ if cxx.has_multi_arguments(['-Werror', '-Wformat', '-Wformat-security'])
   cxx_flags += ['-Wformat', '-Wformat-security']
 endif
 
-add_project_arguments(cxx_flags, language: 'cpp')
+harden_build = get_option('harden_build')
+if harden_build
+  foreach flag : cxx_harden_flags_list
+    if cxx.has_multi_arguments(['-Werror', flag])
+      cxx_flags += flag
+    endif
+  endforeach
+
+  if host_machine.cpu_family() == 'aarch64'
+    if cxx.has_multi_arguments('-Werror', '-mbranch-protection=bti')
+      cxx_flags += '-mbranch-protection=bti'
+    endif
+  endif
+
+  # -fstack-clash-protection is a no-op on windows, see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90458
+  if host_machine.system() != 'windows'
+    if cxx.has_multi_arguments('-Werror', '-fstack-clash-protection')
+      cxx_flags += '-fstack-clash-protection'
+    endif
+  endif
+endif
+
+cxx_lflags = []
+
+if harden_build
+  cxx_harden_lflags = []
+  if host_machine.system() == 'darwin'
+    cxx_harden_lflags = cxx_harden_lflags_darwin_list
+  elif host_machine.system() == 'windows'
+    cxx_harden_lflags = cxx_harden_lflags_win64_list
+  else
+    cxx_harden_lflags = cxx_harden_lflags_linux_list
+  endif
+  foreach flag : cxx_harden_lflags
+    flag = '-Wl,' + flag
+    if cxx.has_multi_link_arguments(['-Werror', flag])
+      cxx_lflags += flag
+    endif
+  endforeach
+endif
+
+cxx_preproc = []
+
+if harden_build
+  if get_option('buildtype') != 'debug'
+    foreach flag : cxx_harden_release_preproc
+      cxx_preproc += flag
+    endforeach
+  endif
+endif
+
+add_project_arguments(cxx_flags + cxx_preproc, language: 'cpp')
+add_project_link_arguments(cxx_lflags, language: 'cpp')
 
 rustdeps_build_dir = get_option('rustdeps_build_dir')
 grovedb_cxx_build_dir = get_option('grovedb_cxx_build_dir')
@@ -259,6 +342,7 @@ install_headers(libgrovedb_headers, subdir: 'grovedb')
 summary({
   'C++ compiler': cxx.get_id(),
   'C++ flags': ' '.join(cxx_flags),
+  'C++ linker flags': ' '.join(cxx_lflags),
   'C++ standard': get_option('cpp_std'),
 }, section: 'Compiler')
 
