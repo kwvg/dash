@@ -6,13 +6,20 @@
 
 GROVEDB_INCLUDE_DIR_INT = %reldir%/include
 
-GROVEDB_DIST_HEADERS_INT = \
+GROVEDB_DIST_HEADERS_INT = %reldir%/include/grovedb/vendor/tl/expected.hpp
+GROVEDB_DIST_HEADERS_INT += \
 	%reldir%/include/grovedb/grovedb.h \
-	%reldir%/include/grovedb/misc.h
+	%reldir%/include/grovedb/misc.h \
+	%reldir%/include/grovedb/result.h \
+	%reldir%/include/grovedb/types.h \
+	%reldir%/include/grovedb/wire.h
 
 GROVEDB_LIB_SOURCES_INT = \
-	%reldir%/src/misc.cpp
+	%reldir%/src/misc.cpp \
+	%reldir%/src/wire_read.cpp \
+	%reldir%/src/wire_write.cpp
 
 GROVEDB_TEST_SOURCES_INT = \
 	%reldir%/src/test/main.cpp \
-	%reldir%/src/test/misc_tests.cpp
+	%reldir%/src/test/misc_tests.cpp \
+	%reldir%/src/test/wire_tests.cpp

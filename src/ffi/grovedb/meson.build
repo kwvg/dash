@@ -19,11 +19,20 @@ thread_dep = dependency('threads', required: true)
 
 libgrovedb_sources = files(
   'src/misc.cpp',
+  'src/wire_read.cpp',
+  'src/wire_write.cpp',
+)
+
+libgrovedb_vendor_headers = files(
+  'include/grovedb/vendor/tl/expected.hpp',
 )
 
 libgrovedb_headers = files(
   'include/grovedb/grovedb.h',
   'include/grovedb/misc.h',
+  'include/grovedb/result.h',
+  'include/grovedb/types.h',
+  'include/grovedb/wire.h',
 )
 
 libgrovedb_includes = include_directories('include', 'src')
@@ -324,6 +333,7 @@ if build_tests
   test_sources = files(
     'src/test/main.cpp',
     'src/test/misc_tests.cpp',
+    'src/test/wire_tests.cpp',
   )
 
   # Build test executable
@@ -338,6 +348,7 @@ if build_tests
 endif
 
 install_headers(libgrovedb_headers, subdir: 'grovedb')
+install_headers(libgrovedb_vendor_headers, subdir: 'grovedb/vendor/tl')
 
 summary({
   'C++ compiler': cxx.get_id(),

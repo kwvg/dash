@@ -6,5 +6,8 @@
 #define LIBGROVEDB_GROVEDB_H
 
 #include <grovedb/misc.h>
+#include <grovedb/result.h>
+#include <grovedb/types.h>
+#include <grovedb/wire.h>
 
 #endif // LIBGROVEDB_GROVEDB_H

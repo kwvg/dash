@@ -4,3 +4,6 @@ indent_size = 2
 
 [*.mk]
 indent_style = tab
+
+[include/grovedb/vendor/**]
+# Equivalent to ignore
