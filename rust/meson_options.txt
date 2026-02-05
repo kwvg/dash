@@ -1,0 +1,18 @@
+option('cargo_profile',
+  type: 'combo',
+  choices: ['debug', 'release'],
+  value: 'debug',
+  description: 'Cargo build profile (debug or release)'
+)
+
+option('with_chirp',
+  type: 'boolean',
+  value: false,
+  description: 'Include chirp in librustdeps'
+)
+
+option('with_grovedb_cxx',
+  type: 'boolean',
+  value: true,
+  description: 'Include grovedb_cxx in librustdeps'
+)
