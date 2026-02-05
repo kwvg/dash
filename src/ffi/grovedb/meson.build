@@ -17,6 +17,11 @@ fs = import('fs')
 cxx = meson.get_compiler('cpp')
 thread_dep = dependency('threads', required: true)
 
+build_fuzz = get_option('build_fuzz')
+if build_fuzz
+  subdir('build-aux/fuzz')
+endif
+
 libgrovedb_sources = files(
   'src/misc.cpp',
   'src/wire_read.cpp',
@@ -172,127 +177,19 @@ endif
 add_project_arguments(cxx_flags + cxx_preproc, language: 'cpp')
 add_project_link_arguments(cxx_lflags, language: 'cpp')
 
-rustdeps_build_dir = get_option('rustdeps_build_dir')
-grovedb_cxx_build_dir = get_option('grovedb_cxx_build_dir')
-use_rustdeps = get_option('use_rustdeps')
+subdir('build-aux/ffi')
 
-project_root = meson.project_source_root()
-repo_root = fs.parent(fs.parent(fs.parent(project_root)))
-rust_dir = repo_root / 'rust'
-
-if use_rustdeps
-  if rustdeps_build_dir != ''
-    rust_build_dir = rustdeps_build_dir
-  else
-    rust_build_dir = rust_dir / 'builddir'
-  endif
-
-  message('Using librustdeps from:', rust_build_dir)
-
-  if not fs.is_dir(rust_build_dir)
-    error('librustdeps not built yet at: @0@\n'.format(rust_build_dir) +
-          'Please build it first:\n' +
-          '  cd @0@\n'.format(rust_dir) +
-          '  meson setup builddir -Dwith_grovedb_cxx=true\n' +
-          '  meson compile -C builddir')
-  endif
-
-  grovedb_cxx_subdir = rust_build_dir / 'subprojects' / 'grovedb_cxx'
-  grovedb_cxx_include = grovedb_cxx_subdir / 'gen'
-  grovedb_cxx_bridge_source = grovedb_cxx_subdir / 'gen' / 'rust' / 'grovedb_cxx' / 'lib.cpp'
-  grovedb_cxx_bridge_header = grovedb_cxx_subdir / 'gen' / 'rust' / 'grovedb_cxx' / 'lib.h'
-
-  if not fs.is_file(grovedb_cxx_bridge_source)
-    error('CXX bridge source not found at: @0@\n'.format(grovedb_cxx_bridge_source) +
-          'librustdeps may not have been built with -Dwith_grovedb_cxx=true')
-  endif
-
-  grovedb_cxx_lib = declare_dependency(
-    compile_args: ['-I' + grovedb_cxx_include],
-    dependencies: cxx.find_library('grovedb_cxx', dirs: [grovedb_cxx_subdir]),
-  )
-
-  cxx_bridge_lib = static_library('cxxbridge_grovedb',
-    grovedb_cxx_bridge_source,
-    cpp_args: ['-I' + grovedb_cxx_include],
-  )
-elif grovedb_cxx_build_dir != ''
-  message('Using grovedb_cxx from:', grovedb_cxx_build_dir)
-
-  if not fs.is_absolute(grovedb_cxx_build_dir)
-    grovedb_cxx_build_dir = meson.current_source_dir() / grovedb_cxx_build_dir
-  endif
-
-  grovedb_cxx_include = grovedb_cxx_build_dir / 'gen'
-  grovedb_cxx_bridge_source = grovedb_cxx_build_dir / 'gen' / 'rust' / 'grovedb_cxx' / 'lib.cpp'
-  grovedb_cxx_bridge_header = grovedb_cxx_build_dir / 'gen' / 'rust' / 'grovedb_cxx' / 'lib.h'
-
-  if not fs.is_file(grovedb_cxx_bridge_source)
-    error('CXX bridge source not found at: @0@\n'.format(grovedb_cxx_bridge_source) +
-          'Please ensure grovedb_cxx is built at the specified path')
-  endif
-
-  grovedb_cxx_lib = declare_dependency(
-    compile_args: ['-I' + grovedb_cxx_include],
-    dependencies: cxx.find_library('grovedb_cxx', dirs: [grovedb_cxx_build_dir]),
-  )
-
-  cxx_bridge_lib = static_library('cxxbridge_grovedb',
-    grovedb_cxx_bridge_source,
-    cpp_args: ['-I' + grovedb_cxx_include],
-  )
-else
-  grovedb_cxx_source_dir = rust_dir / 'grovedb_cxx'
-  grovedb_cxx_build_dir = rust_dir / 'builddir' / 'grovedb_cxx'
-
-  grovedb_cxx_meson_build = grovedb_cxx_source_dir / 'meson.build'
-  if not fs.is_file(grovedb_cxx_meson_build)
-    error('Cannot find grovedb_cxx source at: @0@\n'.format(grovedb_cxx_source_dir) +
-          'Please either:\n' +
-          '1. Build grovedb_cxx and specify -Dgrovedb_cxx_build_dir=<path>\n' +
-          '2. Ensure grovedb_cxx exists at @0@'.format(grovedb_cxx_source_dir))
-  else
-    message('Found grovedb_cxx source, looking for built artifacts')
-  endif
-
-  rust_build_dir = rust_dir / 'builddir'
-  if not fs.is_dir(rust_build_dir)
-    error('grovedb_cxx not built yet. Build directory not found at: @0@\n'.format(rust_build_dir) +
-          'Please build it first:\n' +
-          '  cd @0@\n'.format(rust_dir) +
-          '  meson setup builddir\n' +
-          '  meson compile -C builddir')
-  endif
-
-  grovedb_cxx_include = rust_build_dir / 'grovedb_cxx' / 'gen'
-  grovedb_cxx_bridge_source = rust_build_dir / 'grovedb_cxx' / 'gen' / 'rust' / 'grovedb_cxx' / 'lib.cpp'
-  grovedb_cxx_bridge_header = rust_build_dir / 'grovedb_cxx' / 'gen' / 'rust' / 'grovedb_cxx' / 'lib.h'
-
-  if not fs.is_file(grovedb_cxx_bridge_source)
-    error('CXX bridge source not found at: @0@\n'.format(grovedb_cxx_bridge_source) +
-          'grovedb_cxx appears not to be built. Please run:\n' +
-          '  cd @0@\n'.format(rust_dir) +
-          '  meson compile -C builddir')
-  endif
-
-  grovedb_cxx_lib = declare_dependency(
-    compile_args: ['-I' + grovedb_cxx_include],
-    dependencies: cxx.find_library('grovedb_cxx', dirs: [rust_build_dir / 'grovedb_cxx']),
-  )
-
-  cxx_bridge_lib = static_library('cxxbridge_grovedb',
-    grovedb_cxx_bridge_source,
-    cpp_args: ['-I' + grovedb_cxx_include],
-  )
-endif
-
-shared_library = get_option('shared_library')
 build_tests = get_option('build_tests')
-if build_tests and not shared_library
-  warn('Tests enabled, building shared library')
+shared_library = get_option('shared_library')
+if not shared_library
+  if build_fuzz
+    warn('Fuzzing enabled, building shared library')
+  elif build_tests
+    warn('Tests enabled, building shared library')
+  endif
 endif
 
-needs_pkgconfig = (shared_library or build_tests)
+needs_pkgconfig = (shared_library or build_fuzz or build_tests)
 lib_type = needs_pkgconfig ? 'shared' : 'static'
 if needs_pkgconfig
   libgrovedb = shared_library('grovedb',
@@ -360,6 +257,11 @@ endif
 install_headers(libgrovedb_headers, subdir: 'grovedb')
 install_headers(libgrovedb_vendor_headers, subdir: 'grovedb/vendor/tl')
 
+# Fuzz targets
+if build_fuzz
+  subdir('src/fuzz')
+endif
+
 summary({
   'C++ compiler': cxx.get_id(),
   'C++ flags': ' '.join(cxx_flags),
@@ -368,6 +270,7 @@ summary({
 }, section: 'Compiler')
 
 summary({
+  'Build fuzz targets': build_fuzz,
   'Build tests': build_tests,
   'Library type': lib_type,
   'prefix': get_option('prefix'),

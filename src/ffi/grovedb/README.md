@@ -48,11 +48,12 @@ meson compile -C builddir
 
 ## Build Options
 
+- `-Dbuild_fuzz=[true|false]`: Build fuzz targets (default: `false`, requires libFuzzer-capable compiler)
 - `-Dbuild_tests=[true|false]`: Build unit tests (default: `true`)
 - `-Dgrovedb_cxx_build_dir=<path>`: Path to `grovedb_cxx` build directory (auto-detected if empty, ignored if `use_rustdeps=true`)
 - `-Dharden_build=[true|false]`:  Set hardening compiler, linker and preprocessor flags (default: `true`)
 - `-Drustdeps_build_dir=<path>`: Path to `librustdeps` build directory (auto-detected if empty)
-- `-Dshared_library=[true|false]`: Build shared library with pkg-config definitions (default: `true`, implicit with `build_tests`)
+- `-Dshared_library=[true|false]`: Build shared library with pkg-config definitions (default: `true`, implicit with `build_fuzz` or `build_tests`)
 - `-Dsuppress_external_warnings=[true|false]`: Suppress compiler warnings on external sources (default: `true`)
 - `-Duse_rustdeps=[true|false]`: Link against `librustdeps` instead of `libgrovedb_cxx` (default: `false`)
 
