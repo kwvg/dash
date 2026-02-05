@@ -13,17 +13,6 @@ rust_lib_names = []
 rust_sources = []
 rust_compile_args = []
 
-with_chirp = get_option('with_chirp')
-if with_chirp
-  message('Building with chirp')
-  chirp_subproj = subproject('chirp', default_options: ['cargo_profile=' + get_option('cargo_profile')])
-  chirp_dep = chirp_subproj.get_variable('chirp_dep')
-  rust_libs += [chirp_subproj.get_variable('chirp_lib')]
-  rust_lib_names += ['chirp']
-  rust_sources += [chirp_subproj.get_variable('chirp_header'), chirp_subproj.get_variable('chirp_source')]
-  rust_compile_args += ['-I' + meson.current_build_dir() / 'subprojects' / 'chirp' / 'gen']
-endif
-
 with_grovedb_cxx = get_option('with_grovedb_cxx')
 if with_grovedb_cxx
   message('Building with grovedb_cxx')

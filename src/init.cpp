@@ -114,8 +114,6 @@
 
 #include <grovedb/grovedb.h>
 
-#include <rust/chirp/lib.h>
-
 #include <algorithm>
 #include <condition_variable>
 #include <cstdint>
@@ -1510,7 +1508,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         return false;
     }
 
-    LogPrintf("%s\n", std::string(chirp::chirp()));
     LogPrintf("%s\n", grovedb::GetWhoami());
 
     LogPrintf("Using at most %i automatic connections (%i file descriptors available)\n", nMaxConnections, nFD);
