@@ -1,0 +1,6 @@
+include ffi/grovedb/sources.mk
+
+LIBGROVEDB = libgrovedb.la
+noinst_LTLIBRARIES += $(LIBGROVEDB)
+libgrovedb_la_SOURCES = $(GROVEDB_LIB_SOURCES_INT) $(GROVEDB_DIST_HEADERS_INT)
+libgrovedb_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/$(GROVEDB_INCLUDE_DIR_INT) $(LIBRUSTDEPS_INCLUDES)

@@ -46,6 +46,7 @@ endif # ENABLE_CRASH_HOOKS
 endif # ENABLE_STACKTRACES
 
 BITCOIN_INCLUDES=-I$(builddir) -I$(srcdir)/$(MINISKETCH_INCLUDE_DIR_INT) -I$(srcdir)/secp256k1/include -I$(srcdir)/$(UNIVALUE_INCLUDE_DIR_INT) $(LEVELDB_CPPFLAGS)
+BITCOIN_INCLUDES+=-I$(srcdir)/$(GROVEDB_INCLUDE_DIR_INT)
 BITCOIN_INCLUDES+=-isystem$(srcdir)/dashbls/include -isystem$(srcdir)/dashbls/depends/relic/include -isystem$(srcdir)/dashbls/depends/minialloc/include
 BITCOIN_INCLUDES+=-isystem$(srcdir)/immer
 BITCOIN_INCLUDES+=$(LIBRUSTDEPS_INCLUDES)
@@ -1064,6 +1065,7 @@ bitcoin_bin_ldadd = \
   $(LIBMEMENV) \
   $(LIBSECP256K1) \
   $(LIBCXXBRIDGE) \
+  $(LIBGROVEDB) \
   $(LIBRUSTDEPS)
 
 bitcoin_bin_ldadd += $(BACKTRACE_LIBS) $(BDB_LIBS) $(MINIUPNPC_LIBS) $(NATPMP_LIBS) $(SQLITE_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS) $(GMP_LIBS) $(RUST_LIBS)
@@ -1343,4 +1345,5 @@ if ENABLE_QT_TESTS
 include Makefile.qttest.include
 endif
 
+include Makefile.grovedb.include
 include Makefile.univalue.include
