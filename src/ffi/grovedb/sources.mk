@@ -38,6 +38,7 @@ GROVEDB_TEST_SOURCES_INT = \
 	%reldir%/src/test/get_tests.cpp \
 	%reldir%/src/test/insert_tests.cpp \
 	%reldir%/src/test/lifecycle_tests.cpp \
+	%reldir%/src/test/query_tests.cpp \
 	%reldir%/src/test/transaction_tests.cpp \
 	%reldir%/src/test/util/tempdir.cpp \
 	%reldir%/src/test/wire_tests.cpp

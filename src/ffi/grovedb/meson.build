@@ -262,6 +262,7 @@ if build_tests
     'src/test/get_tests.cpp',
     'src/test/insert_tests.cpp',
     'src/test/lifecycle_tests.cpp',
+    'src/test/query_tests.cpp',
     'src/test/transaction_tests.cpp',
     'src/test/util/tempdir.cpp',
     'src/test/wire_tests.cpp',
