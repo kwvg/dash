@@ -3,6 +3,7 @@ fuzz_targets = [
   'fuzz_put_get',
   'fuzz_subtree',
   'fuzz_transaction',
+  'fuzz_tree_state',
   'fuzz_wire',
 ]
 
