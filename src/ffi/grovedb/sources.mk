@@ -8,6 +8,7 @@ GROVEDB_INCLUDE_DIR_INT = %reldir%/include
 
 GROVEDB_DIST_HEADERS_INT = %reldir%/include/grovedb/vendor/tl/expected.hpp
 GROVEDB_DIST_HEADERS_INT += \
+	%reldir%/include/grovedb/batch.h \
 	%reldir%/include/grovedb/cost.h \
 	%reldir%/include/grovedb/costed.h \
 	%reldir%/include/grovedb/db.h \
@@ -20,6 +21,7 @@ GROVEDB_DIST_HEADERS_INT += \
 	%reldir%/include/grovedb/wire.h
 
 GROVEDB_LIB_SOURCES_INT = \
+	%reldir%/src/batch.cpp \
 	%reldir%/src/db.cpp \
 	%reldir%/src/delete.cpp \
 	%reldir%/src/element.cpp \

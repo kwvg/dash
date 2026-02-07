@@ -29,6 +29,10 @@ struct PathKeyElement;
 template <typename T>
 struct QueryData;
 
+// Forward declarations for batch types (defined in grovedb/batch.h).
+class BatchOperation;
+struct BatchApplyOptions;
+
 /**
  * Primary handle to a GroveDB database instance.
  *
@@ -461,6 +465,35 @@ public:
       const Bytes& proof,
       const PathQuery& first_query,
       const std::vector<PathQuery*>& chained_queries
+  );
+
+  // -- Batch operations -----------------------------------------------------
+
+  /**
+   * Apply a batch of operations atomically.
+   *
+   * All operations within the batch are validated and applied in a single
+   * atomic step. If any operation fails, none are applied.
+   *
+   * @param[in] ops      The batch operations to apply.
+   * @param[in] options  Options controlling validation behavior.
+   * @return Operation costs, or an error.
+   */
+  [[nodiscard]] Result<OperationCost, Error>
+  ApplyBatch(const std::vector<BatchOperation>& ops, const BatchApplyOptions& options);
+
+  /**
+   * Apply a batch of operations atomically within a transaction.
+   *
+   * @param[in] ops      The batch operations to apply.
+   * @param[in] options  Options controlling validation behavior.
+   * @param[in] txn      The transaction.
+   * @return Operation costs, or an error.
+   */
+  [[nodiscard]] Result<OperationCost, Error> ApplyBatch(
+      const std::vector<BatchOperation>& ops,
+      const BatchApplyOptions& options,
+      const Transaction& txn
   );
 
 private:

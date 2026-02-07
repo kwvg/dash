@@ -25,6 +25,7 @@ if build_fuzz
 endif
 
 libgrovedb_sources = files(
+  'src/batch.cpp',
   'src/db.cpp',
   'src/delete.cpp',
   'src/element.cpp',
@@ -43,6 +44,7 @@ libgrovedb_vendor_headers = files(
 )
 
 libgrovedb_headers = files(
+  'include/grovedb/batch.h',
   'include/grovedb/cost.h',
   'include/grovedb/costed.h',
   'include/grovedb/db.h',
