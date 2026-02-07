@@ -219,6 +219,51 @@ public:
   [[nodiscard]] Result<Costed<ChangedValue>, Error>
   PutIfChanged(const Path& path, const Bytes& key, const Element& element, const Transaction& txn);
 
+  // -- Delete operations ----------------------------------------------------
+
+  /**
+   * Delete the element at the given path and key.
+   *
+   * @param[in] path  The tree path.
+   * @param[in] key   The key to delete.
+   * @return Operation costs, or an error.
+   */
+  [[nodiscard]] Result<OperationCost, Error> Delete(const Path& path, const Bytes& key);
+  [[nodiscard]] Result<OperationCost, Error>
+  Delete(const Path& path, const Bytes& key, const Transaction& txn);
+
+  /**
+   * Delete the element only if it is an empty subtree.
+   *
+   * @param[in] path  The tree path.
+   * @param[in] key   The key to conditionally delete.
+   * @return True if deleted, with operation costs.
+   */
+  [[nodiscard]] Result<Costed<bool>, Error> DeleteIfEmpty(const Path& path, const Bytes& key);
+  [[nodiscard]] Result<Costed<bool>, Error>
+  DeleteIfEmpty(const Path& path, const Bytes& key, const Transaction& txn);
+
+  /**
+   * Delete the element and recursively remove empty parent subtrees.
+   *
+   * @param[in] path  The tree path.
+   * @param[in] key   The key to delete.
+   * @return Number of levels removed, with operation costs.
+   */
+  [[nodiscard]] Result<Costed<uint32_t>, Error>
+  PruneEmptyAncestors(const Path& path, const Bytes& key);
+  [[nodiscard]] Result<Costed<uint32_t>, Error>
+  PruneEmptyAncestors(const Path& path, const Bytes& key, const Transaction& txn);
+
+  /**
+   * Remove all elements within the subtree at the given path.
+   *
+   * @param[in] path  The subtree path to clear.
+   * @return True if the subtree was cleared, or an error.
+   */
+  [[nodiscard]] Result<bool, Error> Clear(const Path& path);
+  [[nodiscard]] Result<bool, Error> Clear(const Path& path, const Transaction& txn);
+
 private:
   struct Impl;
   std::unique_ptr<Impl> m_impl;

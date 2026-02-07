@@ -26,6 +26,7 @@ endif
 
 libgrovedb_sources = files(
   'src/db.cpp',
+  'src/delete.cpp',
   'src/element.cpp',
   'src/get.cpp',
   'src/put.cpp',

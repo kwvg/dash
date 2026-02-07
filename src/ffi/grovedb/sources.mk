@@ -20,6 +20,7 @@ GROVEDB_DIST_HEADERS_INT += \
 
 GROVEDB_LIB_SOURCES_INT = \
 	%reldir%/src/db.cpp \
+	%reldir%/src/delete.cpp \
 	%reldir%/src/element.cpp \
 	%reldir%/src/get.cpp \
 	%reldir%/src/put.cpp \
