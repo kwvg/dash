@@ -255,6 +255,7 @@ if build_tests
 
   test_sources = files(
     'src/test/main.cpp',
+    'src/test/delete_tests.cpp',
     'src/test/element_tests.cpp',
     'src/test/get_tests.cpp',
     'src/test/insert_tests.cpp',
