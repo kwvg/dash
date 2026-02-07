@@ -25,8 +25,10 @@ if build_fuzz
 endif
 
 libgrovedb_sources = files(
+  'src/db.cpp',
   'src/element.cpp',
-  'src/misc.cpp',
+  'src/get.cpp',
+  'src/put.cpp',
   'src/transaction.cpp',
   'src/types.cpp',
   'src/wire_read.cpp',
@@ -253,7 +255,10 @@ if build_tests
   test_sources = files(
     'src/test/main.cpp',
     'src/test/element_tests.cpp',
-    'src/test/misc_tests.cpp',
+    'src/test/get_tests.cpp',
+    'src/test/insert_tests.cpp',
+    'src/test/lifecycle_tests.cpp',
+    'src/test/transaction_tests.cpp',
     'src/test/util/tempdir.cpp',
     'src/test/wire_tests.cpp',
   )

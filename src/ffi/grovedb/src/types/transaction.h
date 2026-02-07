@@ -13,11 +13,17 @@
 
 namespace grovedb {
 /// Owns the opaque CXX bridge types that back a grovedb::Transaction.
-///
-/// Populated in Phase 1 when transaction operations are implemented.
-/// For now, this is a forward declaration of the pimpl struct.
 struct Transaction::Impl {
-  // Phase 1 will add: BoxedGroveDb& m_db, Box<BoxedTransaction> m_tx, flags
+  grovedb_cxx::BoxedGroveDb& m_db;
+  rust::Box<grovedb_cxx::BoxedTransaction> m_tx;
+  bool m_committed{false};
+  bool m_rolled_back{false};
+
+  Impl(grovedb_cxx::BoxedGroveDb& db, rust::Box<grovedb_cxx::BoxedTransaction> tx)
+      : m_db(db)
+      , m_tx(std::move(tx))
+  {
+  }
 };
 } // namespace grovedb
 

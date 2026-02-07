@@ -19,8 +19,10 @@ GROVEDB_DIST_HEADERS_INT += \
 	%reldir%/include/grovedb/wire.h
 
 GROVEDB_LIB_SOURCES_INT = \
+	%reldir%/src/db.cpp \
 	%reldir%/src/element.cpp \
-	%reldir%/src/misc.cpp \
+	%reldir%/src/get.cpp \
+	%reldir%/src/put.cpp \
 	%reldir%/src/transaction.cpp \
 	%reldir%/src/types.cpp \
 	%reldir%/src/wire_read.cpp \
@@ -29,6 +31,9 @@ GROVEDB_LIB_SOURCES_INT = \
 GROVEDB_TEST_SOURCES_INT = \
 	%reldir%/src/test/main.cpp \
 	%reldir%/src/test/element_tests.cpp \
-	%reldir%/src/test/misc_tests.cpp \
+	%reldir%/src/test/get_tests.cpp \
+	%reldir%/src/test/insert_tests.cpp \
+	%reldir%/src/test/lifecycle_tests.cpp \
+	%reldir%/src/test/transaction_tests.cpp \
 	%reldir%/src/test/util/tempdir.cpp \
 	%reldir%/src/test/wire_tests.cpp
