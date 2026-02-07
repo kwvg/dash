@@ -1,4 +1,5 @@
 fuzz_targets = [
+  'fuzz_element',
   'fuzz_wire',
 ]
 
