@@ -29,6 +29,7 @@ libgrovedb_sources = files(
   'src/delete.cpp',
   'src/element.cpp',
   'src/get.cpp',
+  'src/proof.cpp',
   'src/put.cpp',
   'src/query.cpp',
   'src/transaction.cpp',

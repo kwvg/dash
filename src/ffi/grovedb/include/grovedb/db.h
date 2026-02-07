@@ -363,6 +363,106 @@ public:
   [[nodiscard]] Result<Costed<std::vector<PathKeyElement>>, Error>
   QueryRawKeysOptional(const PathQuery& query, const Transaction& txn);
 
+  // -- Proof operations -----------------------------------------------------
+
+  /** Result of a proof verification. */
+  struct ProofVerifyResult {
+    Hash m_root_hash; /**< 32-byte Merkle root. */
+    std::vector<PathKeyElement> m_entries; /**< Path-key-optional-element triples. */
+  };
+
+  /** Result of chained proof verification. */
+  struct ChainedVerifyResult {
+    Hash m_root_hash; /**< Final 32-byte Merkle root. */
+    std::vector<std::vector<PathKeyElement>> m_query_results; /**< One result set per query. */
+  };
+
+  /**
+   * Generate a proof for a path query.
+   *
+   * @param[in] query                    The path query to prove.
+   * @param[in] decrease_limit_on_empty  ProveOptions flag (default true).
+   * @return Serialized proof bytes with operation costs, or an error.
+   */
+  [[nodiscard]] Result<Costed<Bytes>, Error>
+  Prove(const PathQuery& query, bool decrease_limit_on_empty = true);
+
+  /**
+   * Verify a proof with strict succinctness.
+   *
+   * @param[in] proof  Serialized proof bytes.
+   * @param[in] query  The path query that was proved.
+   * @return Verification result with root hash and entries.
+   */
+  [[nodiscard]] Result<Costed<ProofVerifyResult>, Error>
+  VerifyQuery(const Bytes& proof, const PathQuery& query);
+
+  /**
+   * Verify a proof with custom options.
+   *
+   * @param[in] proof                Serialized proof bytes.
+   * @param[in] query                The path query that was proved.
+   * @param[in] absence_proofs       Enable absence proofs for non-existing keys.
+   * @param[in] verify_succinctness  Verify proof succinctness.
+   * @param[in] include_empty_trees  Include empty trees in results.
+   * @return Verification result.
+   */
+  [[nodiscard]] Result<Costed<ProofVerifyResult>, Error> VerifyQueryWithOptions(
+      const Bytes& proof,
+      const PathQuery& query,
+      bool absence_proofs,
+      bool verify_succinctness,
+      bool include_empty_trees
+  );
+
+  /**
+   * Verify a subset query proof (non-strict succinctness).
+   *
+   * @param[in] proof  Serialized proof bytes.
+   * @param[in] query  The path query.
+   * @return Verification result.
+   */
+  [[nodiscard]] Result<Costed<ProofVerifyResult>, Error>
+  VerifySubsetQuery(const Bytes& proof, const PathQuery& query);
+
+  /**
+   * Verify a proof with absence proofs for non-existing searched keys.
+   *
+   * @param[in] proof  Serialized proof bytes.
+   * @param[in] query  The path query (must have a limit set).
+   * @return Verification result.
+   */
+  [[nodiscard]] Result<Costed<ProofVerifyResult>, Error>
+  VerifyQueryWithAbsenceProof(const Bytes& proof, const PathQuery& query);
+
+  /**
+   * Verify a subset query proof with absence proofs.
+   *
+   * @param[in] proof  Serialized proof bytes.
+   * @param[in] query  The path query.
+   * @return Verification result.
+   */
+  [[nodiscard]] Result<Costed<ProofVerifyResult>, Error>
+  VerifySubsetQueryWithAbsenceProof(const Bytes& proof, const PathQuery& query);
+
+  /**
+   * Verify a proof against a sequence of chained queries.
+   *
+   * The first query is verified against the proof.  For each subsequent
+   * query, the first result key of the previous query is appended to
+   * the chained query's path before verification.
+   *
+   * @param[in] proof            Serialized proof bytes.
+   * @param[in] first_query      The initial path query.
+   * @param[in] chained_queries  Pointers to subsequent queries.
+   * @return Chained verification result with per-query result sets.
+   */
+  [[nodiscard]] Result<Costed<ChainedVerifyResult>, Error> VerifyChainedQueries(
+      const Bytes& proof,
+      const PathQuery& first_query,
+      const std::vector<PathQuery*>& chained_queries
+  );
+
 private:
   struct Impl;
   std::unique_ptr<Impl> m_impl;

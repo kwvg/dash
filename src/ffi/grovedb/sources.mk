@@ -24,6 +24,7 @@ GROVEDB_LIB_SOURCES_INT = \
 	%reldir%/src/delete.cpp \
 	%reldir%/src/element.cpp \
 	%reldir%/src/get.cpp \
+	%reldir%/src/proof.cpp \
 	%reldir%/src/put.cpp \
 	%reldir%/src/query.cpp \
 	%reldir%/src/transaction.cpp \
