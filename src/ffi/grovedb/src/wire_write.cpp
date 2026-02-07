@@ -15,7 +15,6 @@
 #include <cstdint>
 #include <limits>
 #include <span>
-#include <stdexcept>
 #include <vector>
 
 namespace grovedb {
@@ -68,9 +67,6 @@ void Writer::Bytes(std::span<const uint8_t> data)
       data.size() <= std::numeric_limits<uint32_t>::max(),
       "data size exceeds wire protocol u32 limit"
   );
-  if (data.size() > std::numeric_limits<uint32_t>::max()) {
-    throw std::overflow_error("data size exceeds wire protocol limit");
-  }
   U32(static_cast<uint32_t>(data.size()));
   m_buf.insert(m_buf.end(), data.begin(), data.end());
 }

@@ -23,7 +23,10 @@ if build_fuzz
 endif
 
 libgrovedb_sources = files(
+  'src/element.cpp',
   'src/misc.cpp',
+  'src/transaction.cpp',
+  'src/types.cpp',
   'src/wire_read.cpp',
   'src/wire_write.cpp',
 )
@@ -33,9 +36,13 @@ libgrovedb_vendor_headers = files(
 )
 
 libgrovedb_headers = files(
-  'include/grovedb/grovedb.h',
-  'include/grovedb/misc.h',
+  'include/grovedb/cost.h',
+  'include/grovedb/costed.h',
+  'include/grovedb/db.h',
+  'include/grovedb/element.h',
+  'include/grovedb/error.h',
   'include/grovedb/result.h',
+  'include/grovedb/transaction.h',
   'include/grovedb/types.h',
   'include/grovedb/wire.h',
 )

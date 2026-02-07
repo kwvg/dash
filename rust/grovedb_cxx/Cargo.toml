@@ -10,8 +10,12 @@ crate-type = ["staticlib"]
 built = "0.8.0"
 
 [dependencies]
+binrw = "0.14"
 cxx = "=1.0.192"
 grovedb = { path = "../grovedb/grovedb", features = ["full"] }
+grovedb-costs = { path = "../grovedb/costs" }
+grovedb-path = { path = "../grovedb/path" }
+grovedb-version = { path = "../grovedb/grovedb-version" }
 
 [lints.clippy]
 expect_used = "deny"

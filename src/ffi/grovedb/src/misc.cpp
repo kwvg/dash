@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE.MIT or https://opensource.org/license/mit
 
-#include <grovedb/grovedb.h>
+#include <grovedb/db.h>
 
 #include <rust/grovedb_cxx/lib.h>
 

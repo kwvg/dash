@@ -7,7 +7,6 @@
 
 #include <grovedb/result.h>
 #include <grovedb/types.h>
-#include <grovedb/wire.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -31,22 +30,6 @@ enum class Error {
   /** Invalid argument or constraint violation. */
   InvalidArgument,
 };
-
-constexpr std::string_view ToString(const Error err)
-{
-  switch (err) {
-  case Error::Corruption:
-    return "Corruption";
-  case Error::InvalidArgument:
-    return "InvalidArgument";
-  } // no default case, so the compiler can warn about missing cases
-  assert(false);
-}
-
-inline std::ostream& operator<<(std::ostream& os, Error err)
-{
-  return os << ToString(err);
-}
 
 /**
  * Sequential reader for little-endian wire format.
@@ -208,13 +191,17 @@ private:
   std::vector<uint8_t> m_buf;
 };
 
+// =========================================================================
+// ADL free functions for wire encoding/decoding
+// =========================================================================
+
 /**
  * Encode a byte vector as length-prefixed bytes.
  *
  * @param[in] w  Writer to append to.
  * @param[in] v  Byte vector to encode.
  */
-inline void Write(Writer& w, const Bytes& v)
+inline void Write(Writer& w, const grovedb::Bytes& v)
 {
   w.Bytes(v);
 }
@@ -226,10 +213,111 @@ inline void Write(Writer& w, const Bytes& v)
  * @return The decoded byte vector on success; an error otherwise.
  */
 template <typename T>
-  requires std::same_as<T, Bytes>
+  requires std::same_as<T, grovedb::Bytes>
 Result<T, Error> Read(Reader& r)
 {
   return r.Bytes();
+}
+
+/**
+ * Encode a Path (vector of byte vectors) to wire format.
+ *
+ * Wire layout: `[u32 count][Bytes₁][Bytes₂]…`
+ *
+ * @param[in] w     Writer to append to.
+ * @param[in] path  Path to encode.
+ */
+inline void Write(Writer& w, const Path& path)
+{
+  w.U32(static_cast<uint32_t>(path.size()));
+  for (const auto& segment : path) {
+    w.Bytes(segment);
+  }
+}
+
+/**
+ * Decode a Path from wire format.
+ *
+ * Wire layout: `[u32 count][Bytes₁][Bytes₂]…`
+ *
+ * @param[in] r  Reader to consume from.
+ * @return The decoded path on success; an error otherwise.
+ */
+template <typename T>
+  requires std::same_as<T, Path>
+Result<T, Error> Read(Reader& r)
+{
+  auto count_result = r.U32();
+  if (!count_result) {
+    return Err(count_result.error());
+  }
+  uint32_t count = *count_result;
+
+  if (count > MAX_PATH_SEGMENTS) {
+    return Err(Error::InvalidArgument);
+  }
+
+  Path path;
+  path.reserve(count);
+  for (uint32_t i{0}; i < count; ++i) {
+    auto segment_result = r.Bytes();
+    if (!segment_result) {
+      return Err(segment_result.error());
+    }
+    path.push_back(std::move(*segment_result));
+  }
+  return path;
+}
+
+/**
+ * Encode a vector of T using the ADL Write overload for T.
+ *
+ * Wire layout: `[u32 count][T₁][T₂]…`
+ *
+ * @param[in] w  Writer to append to.
+ * @param[in] v  Vector to encode.
+ */
+template <typename T>
+void Write(Writer& w, const std::vector<T>& v)
+{
+  w.U32(static_cast<uint32_t>(v.size()));
+  for (const auto& item : v) {
+    Write(w, item);
+  }
+}
+
+/**
+ * Decode a vector of T using the ADL Read overload for T.
+ *
+ * Wire layout: `[u32 count][T₁][T₂]…`
+ *
+ * @param[in] r  Reader to consume from.
+ * @return The decoded vector on success; an error otherwise.
+ */
+template <typename T>
+  requires(!std::same_as<T, grovedb::Bytes> && !std::same_as<T, Path>)
+Result<std::vector<T>, Error> Read(Reader& r)
+{
+  auto count_result = r.U32();
+  if (!count_result) {
+    return Err(count_result.error());
+  }
+  uint32_t count = *count_result;
+
+  if (count > MAX_VECTOR_SIZE) {
+    return Err(Error::InvalidArgument);
+  }
+
+  std::vector<T> vec;
+  vec.reserve(count);
+  for (uint32_t i{0}; i < count; ++i) {
+    auto item_result = Read<T>(r);
+    if (!item_result) {
+      return Err(item_result.error());
+    }
+    vec.push_back(std::move(*item_result));
+  }
+  return vec;
 }
 
 /**
@@ -257,6 +345,23 @@ Result<T, Error> Decode(std::span<const uint8_t> data)
 {
   Reader r{data};
   return Read<T>(r);
+}
+/** @return String representation of the wire error. */
+constexpr std::string_view ToString(Error err)
+{
+  switch (err) {
+  case Error::Corruption:
+    return "Corruption";
+  case Error::InvalidArgument:
+    return "InvalidArgument";
+  } // no default case, so the compiler can warn about missing cases
+  return "Unknown";
+}
+
+/** @brief Stream insertion for wire::Error. */
+inline std::ostream& operator<<(std::ostream& os, Error err)
+{
+  return os << ToString(err);
 }
 } // namespace wire
 } // namespace grovedb

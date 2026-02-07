@@ -2,13 +2,11 @@
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE.MIT or https://opensource.org/license/mit
 
-#ifndef LIBGROVEDB_MISC_H
-#define LIBGROVEDB_MISC_H
-
-#include <string>
+#include <types/transaction.h>
 
 namespace grovedb {
-std::string GetWhoami();
+Transaction::Transaction() = default;
+Transaction::~Transaction() = default;
+Transaction::Transaction(Transaction&&) = default;
+Transaction& Transaction::operator=(Transaction&&) = default;
 } // namespace grovedb
-
-#endif // LIBGROVEDB_MISC_H
