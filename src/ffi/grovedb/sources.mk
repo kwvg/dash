@@ -38,7 +38,9 @@ GROVEDB_LIB_SOURCES_INT = \
 
 GROVEDB_TEST_SOURCES_INT = \
 	%reldir%/src/test/main.cpp \
+	%reldir%/src/test/auxiliary_tests.cpp \
 	%reldir%/src/test/batch_tests.cpp \
+	%reldir%/src/test/checkpoint_tests.cpp \
 	%reldir%/src/test/delete_tests.cpp \
 	%reldir%/src/test/element_tests.cpp \
 	%reldir%/src/test/get_tests.cpp \
