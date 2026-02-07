@@ -1,4 +1,5 @@
 fuzz_targets = [
+  'fuzz_batch',
   'fuzz_element',
   'fuzz_proof',
   'fuzz_put_get',
