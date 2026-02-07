@@ -1,5 +1,6 @@
 fuzz_targets = [
   'fuzz_element',
+  'fuzz_proof',
   'fuzz_put_get',
   'fuzz_query',
   'fuzz_subtree',
