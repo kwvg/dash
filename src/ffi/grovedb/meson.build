@@ -25,7 +25,9 @@ if build_fuzz
 endif
 
 libgrovedb_sources = files(
+  'src/auxiliary.cpp',
   'src/batch.cpp',
+  'src/checkpoint.cpp',
   'src/db.cpp',
   'src/delete.cpp',
   'src/element.cpp',

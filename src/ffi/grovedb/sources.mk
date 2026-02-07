@@ -21,7 +21,9 @@ GROVEDB_DIST_HEADERS_INT += \
 	%reldir%/include/grovedb/wire.h
 
 GROVEDB_LIB_SOURCES_INT = \
+	%reldir%/src/auxiliary.cpp \
 	%reldir%/src/batch.cpp \
+	%reldir%/src/checkpoint.cpp \
 	%reldir%/src/db.cpp \
 	%reldir%/src/delete.cpp \
 	%reldir%/src/element.cpp \

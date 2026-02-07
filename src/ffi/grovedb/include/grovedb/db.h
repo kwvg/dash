@@ -17,6 +17,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace grovedb {
@@ -57,7 +58,7 @@ public:
    * @param[in] path  Directory where the database files are stored.
    * @return The opened database handle, or an error.
    */
-  [[nodiscard]] static Result<Db, Error> Open(const std::string& path);
+  [[nodiscard]] static Result<Db, Error> Open(std::string_view path);
 
   /** Flush the in-memory write buffer to persistent storage. */
   [[nodiscard]] Result<void, Error> Flush();
@@ -495,6 +496,76 @@ public:
       const BatchApplyOptions& options,
       const Transaction& txn
   );
+
+  // -- Auxiliary operations --------------------------------------------------
+
+  /**
+   * Store an auxiliary key-value pair in a side storage area.
+   *
+   * @param[in] key    The auxiliary key.
+   * @param[in] value  The auxiliary value.
+   * @return Operation costs, or an error.
+   */
+  [[nodiscard]] Result<OperationCost, Error> PutAux(const Bytes& key, const Bytes& value);
+  [[nodiscard]] Result<OperationCost, Error>
+  PutAux(const Bytes& key, const Bytes& value, const Transaction& txn);
+
+  /**
+   * Retrieve an auxiliary value by key.
+   *
+   * @param[in] key  The auxiliary key.
+   * @return The optional value with operation costs, or an error.
+   */
+  [[nodiscard]] Result<Costed<std::optional<Bytes>>, Error> GetAux(const Bytes& key);
+  [[nodiscard]] Result<Costed<std::optional<Bytes>>, Error>
+  GetAux(const Bytes& key, const Transaction& txn);
+
+  /**
+   * Delete an auxiliary key-value pair.
+   *
+   * @param[in] key  The auxiliary key.
+   * @return Operation costs, or an error.
+   */
+  [[nodiscard]] Result<OperationCost, Error> DeleteAux(const Bytes& key);
+  [[nodiscard]] Result<OperationCost, Error> DeleteAux(const Bytes& key, const Transaction& txn);
+
+  /**
+   * Find all subtree paths under the given root path.
+   *
+   * @param[in] path  Starting path for recursive search.
+   * @return Vector of all found subtree paths, with operation costs.
+   */
+  [[nodiscard]] Result<Costed<std::vector<Path>>, Error> FindSubtrees(const Path& path);
+  [[nodiscard]] Result<Costed<std::vector<Path>>, Error>
+  FindSubtrees(const Path& path, const Transaction& txn);
+
+  // -- Checkpoint operations ------------------------------------------------
+
+  /**
+   * Create a checkpoint of the database at the given filesystem path.
+   *
+   * @param[in] path  Directory where the checkpoint is stored.
+   * @return Void on success, or an error.
+   */
+  [[nodiscard]] Result<void, Error> CreateCheckpoint(std::string_view path);
+
+  /**
+   * Open an existing checkpoint as a read-only database handle.
+   *
+   * @param[in] path  Directory of the checkpoint.
+   * @return The opened database handle, or an error.
+   */
+  [[nodiscard]] static Result<Db, Error> OpenCheckpoint(std::string_view path);
+
+  /**
+   * Delete a checkpoint directory.
+   *
+   * Verifies the path is a valid checkpoint before deletion.
+   *
+   * @param[in] path  Directory of the checkpoint to delete.
+   * @return Void on success, or an error.
+   */
+  [[nodiscard]] static Result<void, Error> DeleteCheckpoint(std::string_view path);
 
 private:
   struct Impl;
