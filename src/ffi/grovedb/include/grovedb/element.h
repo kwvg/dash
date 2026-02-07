@@ -42,12 +42,6 @@ constexpr std::string_view ToString(ElementType type)
   return "Unknown";
 }
 
-/** @brief Stream insertion for ElementType. */
-inline std::ostream& operator<<(std::ostream& os, ElementType type)
-{
-  return os << ToString(type);
-}
-
 /**
  * Opaque container for a GroveDB element in its serialized (bincode) form.
  *
@@ -106,10 +100,36 @@ public:
     return m_data.empty();
   }
 
+  /** Equality based on the raw serialized representation. */
+  [[nodiscard]] bool operator==(const Element& rhs) const
+  {
+    return m_data == rhs.m_data;
+  }
+
+  /**
+   * Construct an Element directly from raw serialized (bincode) bytes.
+   *
+   * This is used internally to reconstitute elements from FFI results.
+   *
+   * @param[in] data  The raw bincode bytes.
+   * @return The constructed element.
+   */
+  [[nodiscard]] static Element FromData(Bytes data)
+  {
+    Element e;
+    e.m_data = std::move(data);
+    return e;
+  }
+
 private:
   friend class Db;
   Bytes m_data;
 };
+/** @brief Stream insertion for ElementType. */
+inline std::ostream& operator<<(std::ostream& os, ElementType type)
+{
+  return os << ToString(type);
+}
 } // namespace grovedb
 
 #endif // LIBGROVEDB_ELEMENT_H

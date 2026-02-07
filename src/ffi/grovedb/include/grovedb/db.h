@@ -17,8 +17,18 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace grovedb {
+// Forward declarations for query types (defined in grovedb/query.h).
+class PathQuery;
+class QueryItem;
+struct QueryItemOrSum;
+struct QueryResultElement;
+struct PathKeyElement;
+template <typename T>
+struct QueryData;
+
 /**
  * Primary handle to a GroveDB database instance.
  *
@@ -263,6 +273,95 @@ public:
    */
   [[nodiscard]] Result<bool, Error> Clear(const Path& path);
   [[nodiscard]] Result<bool, Error> Clear(const Path& path, const Transaction& txn);
+
+  // -- Query operations -----------------------------------------------------
+
+  /**
+   * Execute a query returning raw item values.
+   *
+   * @param[in] query  The path query to execute.
+   * @return Values with skip count and operation costs, or an error.
+   */
+  [[nodiscard]] Result<Costed<QueryData<std::vector<Bytes>>>, Error>
+  QueryValues(const PathQuery& query);
+  [[nodiscard]] Result<Costed<QueryData<std::vector<Bytes>>>, Error>
+  QueryValues(const PathQuery& query, const Transaction& txn);
+
+  /**
+   * Execute a query returning tagged item-or-sum union entries.
+   *
+   * @param[in] query  The path query to execute.
+   * @return Items/sums with skip count and operation costs, or an error.
+   */
+  [[nodiscard]] Result<Costed<QueryData<std::vector<QueryItemOrSum>>>, Error>
+  QueryItemsOrSums(const PathQuery& query);
+  [[nodiscard]] Result<Costed<QueryData<std::vector<QueryItemOrSum>>>, Error>
+  QueryItemsOrSums(const PathQuery& query, const Transaction& txn);
+
+  /**
+   * Execute a query returning i64 sum values only.
+   *
+   * @param[in] query  The path query to execute.
+   * @return Sums with skip count and operation costs, or an error.
+   */
+  [[nodiscard]] Result<Costed<QueryData<std::vector<int64_t>>>, Error>
+  QuerySums(const PathQuery& query);
+  [[nodiscard]] Result<Costed<QueryData<std::vector<int64_t>>>, Error>
+  QuerySums(const PathQuery& query, const Transaction& txn);
+
+  /**
+   * Execute a raw query returning full Element structures.
+   *
+   * @param[in] query        The path query to execute.
+   * @param[in] result_type  0=Element, 1=KeyElementPair, 2=PathKeyElementTrio.
+   * @return Result elements with skip count and operation costs, or an error.
+   */
+  [[nodiscard]] Result<Costed<QueryData<std::vector<QueryResultElement>>>, Error>
+  QueryRaw(const PathQuery& query, uint8_t result_type);
+  [[nodiscard]] Result<Costed<QueryData<std::vector<QueryResultElement>>>, Error>
+  QueryRaw(const PathQuery& query, uint8_t result_type, const Transaction& txn);
+
+  /** Specification for a single query within QueryManyRaw. */
+  struct RawQuerySpec {
+    const Path& path;
+    const std::vector<QueryItem>& items;
+    uint32_t limit{0};
+    uint32_t offset{0};
+  };
+
+  /**
+   * Execute multiple raw queries atomically.
+   *
+   * @param[in] queries      Vector of query specifications.
+   * @param[in] result_type  0=Element, 1=KeyElementPair, 2=PathKeyElementTrio.
+   * @return Merged result elements with operation costs, or an error.
+   */
+  [[nodiscard]] Result<Costed<std::vector<QueryResultElement>>, Error>
+  QueryManyRaw(const std::vector<RawQuerySpec>& queries, uint8_t result_type);
+
+  /**
+   * Execute a query returning path-key-element triples with optional elements.
+   *
+   * Follows references to resolve element values.
+   *
+   * @param[in] query  The path query to execute.
+   * @return Path-key-element triples with operation costs, or an error.
+   */
+  [[nodiscard]] Result<Costed<std::vector<PathKeyElement>>, Error>
+  QueryKeysOptional(const PathQuery& query);
+  [[nodiscard]] Result<Costed<std::vector<PathKeyElement>>, Error>
+  QueryKeysOptional(const PathQuery& query, const Transaction& txn);
+
+  /**
+   * Execute a raw query returning path-key-element triples (no reference following).
+   *
+   * @param[in] query  The path query to execute.
+   * @return Path-key-element triples with operation costs, or an error.
+   */
+  [[nodiscard]] Result<Costed<std::vector<PathKeyElement>>, Error>
+  QueryRawKeysOptional(const PathQuery& query);
+  [[nodiscard]] Result<Costed<std::vector<PathKeyElement>>, Error>
+  QueryRawKeysOptional(const PathQuery& query, const Transaction& txn);
 
 private:
   struct Impl;
