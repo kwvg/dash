@@ -246,7 +246,9 @@ if build_tests
 
   test_sources = files(
     'src/test/main.cpp',
+    'src/test/element_tests.cpp',
     'src/test/misc_tests.cpp',
+    'src/test/util/tempdir.cpp',
     'src/test/wire_tests.cpp',
   )
 
