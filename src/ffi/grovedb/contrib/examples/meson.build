@@ -7,6 +7,7 @@ examples = [
   'error_handling',
   'conditional_insert',
   'transaction_lifecycle',
+  'operation_costs',
 ]
 
 foreach name : examples
