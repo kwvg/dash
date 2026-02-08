@@ -2,12 +2,13 @@ example_util_sources = files(
   '../../src/test/util/tempdir.cpp',
 )
 
-examples = {
-}
+examples = [
+  'element_types',
+]
 
-foreach name, source : examples
+foreach name : examples
   executable(name,
-    source,
+    '@0@.cpp'.format(name),
     example_util_sources,
     include_directories: libgrovedb_includes,
     dependencies: [libgrovedb_dep],
