@@ -15,6 +15,7 @@ examples = [
   'multi_query',
   'hierarchical_query',
   'proof_generation',
+  'absence_proofs',
 ]
 
 foreach name : examples
