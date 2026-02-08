@@ -9,6 +9,7 @@ examples = [
   'transaction_lifecycle',
   'operation_costs',
   'basic_crud',
+  'tree_state',
 ]
 
 foreach name : examples
