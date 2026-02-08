@@ -10,6 +10,7 @@ examples = [
   'operation_costs',
   'basic_crud',
   'tree_state',
+  'range_queries',
 ]
 
 foreach name : examples
