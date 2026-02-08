@@ -20,6 +20,7 @@ examples = [
   'batch_operations',
   'batch_in_transaction',
   'auxiliary_storage',
+  'checkpoint_snapshot',
 ]
 
 foreach name : examples
