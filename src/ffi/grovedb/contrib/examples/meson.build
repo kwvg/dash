@@ -6,6 +6,7 @@ examples = [
   'element_types',
   'error_handling',
   'conditional_insert',
+  'transaction_lifecycle',
 ]
 
 foreach name : examples
