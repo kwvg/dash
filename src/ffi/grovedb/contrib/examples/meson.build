@@ -8,6 +8,7 @@ examples = [
   'conditional_insert',
   'transaction_lifecycle',
   'operation_costs',
+  'basic_crud',
 ]
 
 foreach name : examples
