@@ -14,6 +14,7 @@ examples = [
   'sum_trees',
   'multi_query',
   'hierarchical_query',
+  'proof_generation',
 ]
 
 foreach name : examples
