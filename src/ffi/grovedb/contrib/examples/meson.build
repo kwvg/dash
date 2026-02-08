@@ -11,6 +11,7 @@ examples = [
   'basic_crud',
   'tree_state',
   'range_queries',
+  'sum_trees',
 ]
 
 foreach name : examples
