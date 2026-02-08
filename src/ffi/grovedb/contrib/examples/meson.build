@@ -19,6 +19,7 @@ examples = [
   'chained_queries',
   'batch_operations',
   'batch_in_transaction',
+  'auxiliary_storage',
 ]
 
 foreach name : examples
