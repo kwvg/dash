@@ -194,4 +194,34 @@ BOOST_AUTO_TEST_CASE(delete_within_transaction)
   BOOST_CHECK(!exists->value());
 }
 
+BOOST_AUTO_TEST_CASE(deep_nested_prune)
+{
+  grovedb::test::TempDir dir("del_deep_prune");
+  auto db = grovedb::Db::Open(dir.PathToString());
+  BOOST_REQUIRE(db.has_value());
+
+  // Create a chain of 10 nested empty subtrees.
+  static constexpr int DEPTH = 10;
+  grovedb::Path path{};
+  for (int i = 0; i < DEPTH; ++i) {
+    grovedb::Bytes key{'l', static_cast<uint8_t>(i)};
+    auto tree = grovedb::Element::EmptyTree();
+    BOOST_REQUIRE(tree.has_value());
+    BOOST_REQUIRE(db->Put(path, key, *tree).has_value());
+    path.push_back(key);
+  }
+
+  // Insert a single Item at the bottom.
+  grovedb::Bytes leaf_key{'i'};
+  auto elem = grovedb::Element::Item(grovedb::Bytes{'v'});
+  BOOST_REQUIRE(elem.has_value());
+  BOOST_REQUIRE(db->Put(path, leaf_key, *elem).has_value());
+
+  // Prune the item and its empty ancestors.
+  auto result = db->PruneEmptyAncestors(path, leaf_key);
+  BOOST_REQUIRE(result.has_value());
+  // Should have removed at least DEPTH levels.
+  BOOST_CHECK(result->value() >= static_cast<uint32_t>(DEPTH));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
