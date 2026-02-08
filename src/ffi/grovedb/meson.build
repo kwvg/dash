@@ -17,6 +17,7 @@ fs = import('fs')
 cxx = meson.get_compiler('cpp')
 thread_dep = dependency('threads', required: true)
 
+build_bench = get_option('build_bench')
 build_fuzz = get_option('build_fuzz')
 if build_fuzz
   subdir('build-aux/fuzz')
@@ -189,14 +190,16 @@ subdir('build-aux/ffi')
 build_tests = get_option('build_tests')
 shared_library = get_option('shared_library')
 if not shared_library
-  if build_fuzz
+  if build_bench
+    warn('Benchmarks enabled, building shared library')
+  elif build_fuzz
     warn('Fuzzing enabled, building shared library')
   elif build_tests
     warn('Tests enabled, building shared library')
   endif
 endif
 
-needs_pkgconfig = (shared_library or build_fuzz or build_tests)
+needs_pkgconfig = (shared_library or build_bench or build_fuzz or build_tests)
 lib_type = needs_pkgconfig ? 'shared' : 'static'
 if needs_pkgconfig
   libgrovedb = shared_library('grovedb',
@@ -266,6 +269,11 @@ endif
 install_headers(libgrovedb_headers, subdir: 'grovedb')
 install_headers(libgrovedb_vendor_headers, subdir: 'grovedb/vendor/tl')
 
+# Benchmarks
+if build_bench
+  subdir('src/bench')
+endif
+
 # Fuzz targets
 if build_fuzz
   subdir('src/fuzz')
@@ -279,6 +287,7 @@ summary({
 }, section: 'Compiler')
 
 summary({
+  'Build benchmarks': build_bench,
   'Build fuzz targets': build_fuzz,
   'Build tests': build_tests,
   'Library type': lib_type,

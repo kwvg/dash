@@ -48,6 +48,7 @@ meson compile -C builddir
 
 ## Build Options
 
+- `-Dbuild_bench=[true|false]`: Build benchmark executable (default: `false`)
 - `-Dbuild_fuzz=[true|false]`: Build fuzz targets (default: `false`, requires libFuzzer-capable compiler)
 - `-Dbuild_tests=[true|false]`: Build unit tests (default: `true`)
 - `-Dgrovedb_cxx_build_dir=<path>`: Path to `grovedb_cxx` build directory (auto-detected if empty, ignored if `use_rustdeps=true`)

@@ -1,3 +1,9 @@
+option('build_bench',
+  type: 'boolean',
+  value: false,
+  description: 'Build benchmark executable'
+)
+
 option('build_fuzz',
   type: 'boolean',
   value: false,
