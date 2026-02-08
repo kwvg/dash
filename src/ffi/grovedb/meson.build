@@ -18,6 +18,7 @@ cxx = meson.get_compiler('cpp')
 thread_dep = dependency('threads', required: true)
 
 build_bench = get_option('build_bench')
+build_examples = get_option('build_examples')
 build_fuzz = get_option('build_fuzz')
 if build_fuzz
   subdir('build-aux/fuzz')
@@ -192,6 +193,8 @@ shared_library = get_option('shared_library')
 if not shared_library
   if build_bench
     warn('Benchmarks enabled, building shared library')
+  elif build_examples
+    warn('Examples enabled, building shared library')
   elif build_fuzz
     warn('Fuzzing enabled, building shared library')
   elif build_tests
@@ -199,7 +202,7 @@ if not shared_library
   endif
 endif
 
-needs_pkgconfig = (shared_library or build_bench or build_fuzz or build_tests)
+needs_pkgconfig = (shared_library or build_bench or build_examples or build_fuzz or build_tests)
 lib_type = needs_pkgconfig ? 'shared' : 'static'
 if needs_pkgconfig
   libgrovedb = shared_library('grovedb',
@@ -274,6 +277,11 @@ if build_bench
   subdir('src/bench')
 endif
 
+# Examples
+if build_examples
+  subdir('contrib/examples')
+endif
+
 # Fuzz targets
 if build_fuzz
   subdir('src/fuzz')
@@ -288,6 +296,7 @@ summary({
 
 summary({
   'Build benchmarks': build_bench,
+  'Build examples': build_examples,
   'Build fuzz targets': build_fuzz,
   'Build tests': build_tests,
   'Library type': lib_type,

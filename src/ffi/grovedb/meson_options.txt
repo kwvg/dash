@@ -4,6 +4,12 @@ option('build_bench',
   description: 'Build benchmark executable'
 )
 
+option('build_examples',
+  type: 'boolean',
+  value: false,
+  description: 'Build example programs'
+)
+
 option('build_fuzz',
   type: 'boolean',
   value: false,
