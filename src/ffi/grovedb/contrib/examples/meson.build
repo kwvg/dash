@@ -5,6 +5,7 @@ example_util_sources = files(
 examples = [
   'element_types',
   'error_handling',
+  'conditional_insert',
 ]
 
 foreach name : examples
