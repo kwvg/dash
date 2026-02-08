@@ -13,6 +13,7 @@ examples = [
   'range_queries',
   'sum_trees',
   'multi_query',
+  'hierarchical_query',
 ]
 
 foreach name : examples
