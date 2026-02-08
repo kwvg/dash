@@ -12,6 +12,7 @@ examples = [
   'tree_state',
   'range_queries',
   'sum_trees',
+  'multi_query',
 ]
 
 foreach name : examples
