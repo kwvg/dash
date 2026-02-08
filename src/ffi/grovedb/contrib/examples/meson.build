@@ -21,6 +21,7 @@ examples = [
   'batch_in_transaction',
   'auxiliary_storage',
   'checkpoint_snapshot',
+  'subtree_hierarchy',
 ]
 
 foreach name : examples
