@@ -36,19 +36,27 @@ inline OperationCost convert_cost(const grovedb_cxx::FfiOperationCost& ffi)
   };
 }
 
-/** Classify an exception message into the most appropriate Error type. */
+/** Parse a "TAG:message" string from the Rust FFI into a structured Error.
+ *
+ * The Rust side tags every error string with a prefix (NOTFOUND, CORRUPTION,
+ * INVALIDARG, NOTSUPPORTED, ABORTED, IOERROR) so that we can reconstruct
+ * the correct Error variant without fragile substring matching.
+ */
 inline Error StringToError(const char* what)
 {
   std::string_view msg{what};
-  if (msg.find("not found") != std::string_view::npos) {
-    return Error::NotFound(std::string(msg));
+  // Parse "TAG:message" prefix from Rust FFI.
+  if (auto pos = msg.find(':'); pos != std::string_view::npos && pos <= 12) {
+    auto tag = msg.substr(0, pos);
+    auto detail = std::string(msg.substr(pos + 1));
+    if (tag == "NOTFOUND") return Error::NotFound(detail);
+    if (tag == "CORRUPTION") return Error::Corruption(detail);
+    if (tag == "INVALIDARG") return Error::InvalidArgument(detail);
+    if (tag == "NOTSUPPORTED") return Error::NotSupported(detail);
+    if (tag == "ABORTED") return Error::Aborted(detail);
+    if (tag == "IOERROR") return Error::IOError(detail);
   }
-  if (msg.find("corrupt") != std::string_view::npos) {
-    return Error::Corruption(std::string(msg));
-  }
-  if (msg.find("invalid") != std::string_view::npos) {
-    return Error::InvalidArgument(std::string(msg));
-  }
+  // Fallback for untagged errors (defensive).
   return Error::IOError(std::string(msg));
 }
 

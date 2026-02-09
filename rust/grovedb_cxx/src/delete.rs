@@ -29,7 +29,7 @@ pub fn grovedb_delete(
     .db
     .delete(segments.as_slice(), key, None, None, version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  ctx.value.map_err(|e| e.to_string())?;
+  ctx.value.map_err(crate::ffi_error)?;
   Ok(cost)
 }
 
@@ -46,7 +46,7 @@ pub fn grovedb_delete_with_tx(
     .db
     .delete(segments.as_slice(), key, None, Some(&tx.tx), version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  ctx.value.map_err(|e| e.to_string())?;
+  ctx.value.map_err(crate::ffi_error)?;
   Ok(cost)
 }
 
@@ -69,7 +69,7 @@ pub fn grovedb_delete_if_empty_tree(
     .db
     .delete_if_empty_tree(segments.as_slice(), key, None, version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let deleted = ctx.value.map_err(|e| e.to_string())?;
+  let deleted = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiBoolResult {
     value: deleted,
     cost,
@@ -92,7 +92,7 @@ pub fn grovedb_delete_if_empty_tree_with_tx(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let deleted = ctx.value.map_err(|e| e.to_string())?;
+  let deleted = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiBoolResult {
     value: deleted,
     cost,
@@ -125,7 +125,7 @@ pub fn grovedb_delete_up_tree_while_empty(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let count = ctx.value.map_err(|e| e.to_string())?;
+  let count = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiU32Result {
     value: u32::from(count),
     cost,
@@ -154,7 +154,7 @@ pub fn grovedb_delete_up_tree_while_empty_with_tx(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let count = ctx.value.map_err(|e| e.to_string())?;
+  let count = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiU32Result {
     value: u32::from(count),
     cost,
@@ -174,7 +174,7 @@ pub fn grovedb_clear_subtree(
   let segments = decode_path(path)?;
   db.db
     .clear_subtree(segments.as_slice(), None, None, version)
-    .map_err(|e| e.to_string())
+    .map_err(crate::ffi_error)
 }
 
 /// Remove all elements within the subtree, within a transaction.
@@ -187,5 +187,5 @@ pub fn grovedb_clear_subtree_with_tx(
   let segments = decode_path(path)?;
   db.db
     .clear_subtree(segments.as_slice(), None, Some(&tx.tx), version)
-    .map_err(|e| e.to_string())
+    .map_err(crate::ffi_error)
 }

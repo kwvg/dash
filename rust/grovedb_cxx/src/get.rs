@@ -28,7 +28,7 @@ pub fn grovedb_get(
   let segments = decode_path(path)?;
   let ctx = db.db.get(segments.as_slice(), key, None, version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let element = ctx.value.map_err(|e| e.to_string())?;
+  let element = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiElementResult {
     element: serialize_element(&element, version)?,
     cost,
@@ -48,7 +48,7 @@ pub fn grovedb_get_with_tx(
     .db
     .get(segments.as_slice(), key, Some(&tx.tx), version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let element = ctx.value.map_err(|e| e.to_string())?;
+  let element = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiElementResult {
     element: serialize_element(&element, version)?,
     cost,
@@ -71,7 +71,7 @@ pub fn grovedb_get_raw(
     .db
     .get_raw(segments.as_slice().into(), key, None, version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let element = ctx.value.map_err(|e| e.to_string())?;
+  let element = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiElementResult {
     element: serialize_element(&element, version)?,
     cost,
@@ -91,7 +91,7 @@ pub fn grovedb_get_raw_with_tx(
     .db
     .get_raw(segments.as_slice().into(), key, Some(&tx.tx), version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let element = ctx.value.map_err(|e| e.to_string())?;
+  let element = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiElementResult {
     element: serialize_element(&element, version)?,
     cost,
@@ -115,7 +115,7 @@ pub fn grovedb_get_raw_optional(
     .db
     .get_raw_optional(segments.as_slice().into(), key, None, version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let maybe = ctx.value.map_err(|e| e.to_string())?;
+  let maybe = ctx.value.map_err(crate::ffi_error)?;
   match maybe {
     Some(element) => Ok(FfiOptionalElementResult {
       has_element: true,
@@ -143,7 +143,7 @@ pub fn grovedb_get_raw_optional_with_tx(
     .db
     .get_raw_optional(segments.as_slice().into(), key, Some(&tx.tx), version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let maybe = ctx.value.map_err(|e| e.to_string())?;
+  let maybe = ctx.value.map_err(crate::ffi_error)?;
   match maybe {
     Some(element) => Ok(FfiOptionalElementResult {
       has_element: true,
@@ -172,7 +172,7 @@ pub fn grovedb_has_raw(
   let segments = decode_path(path)?;
   let ctx = db.db.has_raw(segments.as_slice(), key, None, version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let exists = ctx.value.map_err(|e| e.to_string())?;
+  let exists = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiBoolResult {
     value: exists,
     cost,
@@ -192,7 +192,7 @@ pub fn grovedb_has_raw_with_tx(
     .db
     .has_raw(segments.as_slice(), key, Some(&tx.tx), version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let exists = ctx.value.map_err(|e| e.to_string())?;
+  let exists = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiBoolResult {
     value: exists,
     cost,
@@ -257,7 +257,7 @@ pub fn grovedb_is_empty_tree(
   let subtree_path: SubtreePath<Vec<u8>> = segments.as_slice().into();
   let ctx = db.db.is_empty_tree(subtree_path, None, version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let empty = ctx.value.map_err(|e| e.to_string())?;
+  let empty = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiBoolResult {
     value: empty,
     cost,
@@ -275,7 +275,7 @@ pub fn grovedb_is_empty_tree_with_tx(
   let subtree_path: SubtreePath<Vec<u8>> = segments.as_slice().into();
   let ctx = db.db.is_empty_tree(subtree_path, Some(&tx.tx), version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let empty = ctx.value.map_err(|e| e.to_string())?;
+  let empty = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiBoolResult {
     value: empty,
     cost,

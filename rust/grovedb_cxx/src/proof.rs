@@ -35,7 +35,7 @@ pub fn grovedb_prove_query(
 
   let cost_result = db.db.prove_query(&query.query, Some(opts), version);
   let cost = operation_cost_to_ffi(&cost_result.cost);
-  let proof = cost_result.value.map_err(|e| e.to_string())?;
+  let proof = cost_result.value.map_err(crate::ffi_error)?;
 
   Ok(FfiProofResult { proof, cost })
 }
@@ -64,7 +64,7 @@ fn verify_impl(
 ) -> Result<FfiVerifyResult, String> {
   let version = GroveVersion::latest();
   let (root_hash, results) = GroveDb::verify_query_with_options(proof, &query.query, options, version)
-    .map_err(|e| e.to_string())?;
+    .map_err(crate::ffi_error)?;
 
   let encoded = encode_path_key_element_triples(results)?;
 
@@ -197,7 +197,7 @@ pub fn grovedb_verify_chained_queries(
   // Verify the first query.
   let (root_hash, first_results) =
     GroveDb::verify_query_with_options(proof, &first_query.query, verify_options, version)
-      .map_err(|e| e.to_string())?;
+      .map_err(crate::ffi_error)?;
 
   let mut all_results: Vec<Vec<u8>> = Vec::with_capacity(1 + chained_queries.queries.len());
   all_results.push(encode_path_key_element_triples(first_results.clone())?);
@@ -224,7 +224,7 @@ pub fn grovedb_verify_chained_queries(
 
     let (_, results) =
       GroveDb::verify_query_with_options(proof, &chained_pq, verify_options, version)
-        .map_err(|e| e.to_string())?;
+        .map_err(crate::ffi_error)?;
 
     // Update the key for the next chain link.
     last_first_key = results.first().map(|(_, key, _)| key.clone());
@@ -238,7 +238,7 @@ pub fn grovedb_verify_chained_queries(
   let mut buf = Vec::with_capacity(total_size);
   buf.extend_from_slice(
     &u32::try_from(query_count)
-      .map_err(|_| "too many chained queries".to_string())?
+      .map_err(|e| crate::ffi_error_generic(e))?
       .to_le_bytes(),
   );
   for result_bytes in &all_results {

@@ -25,7 +25,7 @@ pub fn grovedb_put_aux(
 ) -> Result<FfiOperationCost, String> {
   let ctx = db.db.put_aux(key, value, None, None);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  ctx.value.map_err(|e| e.to_string())?;
+  ctx.value.map_err(crate::ffi_error)?;
   Ok(cost)
 }
 
@@ -38,7 +38,7 @@ pub fn grovedb_put_aux_with_tx(
 ) -> Result<FfiOperationCost, String> {
   let ctx = db.db.put_aux(key, value, None, Some(&tx.tx));
   let cost = operation_cost_to_ffi(&ctx.cost);
-  ctx.value.map_err(|e| e.to_string())?;
+  ctx.value.map_err(crate::ffi_error)?;
   Ok(cost)
 }
 
@@ -55,7 +55,7 @@ pub fn grovedb_get_aux(
 ) -> Result<FfiOptionalBytesResult, String> {
   let ctx = db.db.get_aux(key, None);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let maybe = ctx.value.map_err(|e| e.to_string())?;
+  let maybe = ctx.value.map_err(crate::ffi_error)?;
   match maybe {
     Some(v) => Ok(FfiOptionalBytesResult {
       has_value: true,
@@ -78,7 +78,7 @@ pub fn grovedb_get_aux_with_tx(
 ) -> Result<FfiOptionalBytesResult, String> {
   let ctx = db.db.get_aux(key, Some(&tx.tx));
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let maybe = ctx.value.map_err(|e| e.to_string())?;
+  let maybe = ctx.value.map_err(crate::ffi_error)?;
   match maybe {
     Some(v) => Ok(FfiOptionalBytesResult {
       has_value: true,
@@ -104,7 +104,7 @@ pub fn grovedb_delete_aux(
 ) -> Result<FfiOperationCost, String> {
   let ctx = db.db.delete_aux(key, None, None);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  ctx.value.map_err(|e| e.to_string())?;
+  ctx.value.map_err(crate::ffi_error)?;
   Ok(cost)
 }
 
@@ -116,7 +116,7 @@ pub fn grovedb_delete_aux_with_tx(
 ) -> Result<FfiOperationCost, String> {
   let ctx = db.db.delete_aux(key, None, Some(&tx.tx));
   let cost = operation_cost_to_ffi(&ctx.cost);
-  ctx.value.map_err(|e| e.to_string())?;
+  ctx.value.map_err(crate::ffi_error)?;
   Ok(cost)
 }
 
@@ -153,7 +153,7 @@ pub fn grovedb_find_subtrees(
   let subtree_path: SubtreePath<Vec<u8>> = segments.as_slice().into();
   let ctx = db.db.find_subtrees(&subtree_path, None, version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let paths = ctx.value.map_err(|e| e.to_string())?;
+  let paths = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiOptionalBytesResult {
     has_value: true,
     value: encode_paths(&paths),
@@ -174,7 +174,7 @@ pub fn grovedb_find_subtrees_with_tx(
     .db
     .find_subtrees(&subtree_path, Some(&tx.tx), version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let paths = ctx.value.map_err(|e| e.to_string())?;
+  let paths = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiOptionalBytesResult {
     has_value: true,
     value: encode_paths(&paths),

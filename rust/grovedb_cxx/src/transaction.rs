@@ -54,7 +54,7 @@ pub fn grovedb_commit_transaction(
   let real_tx: grovedb::Transaction<'_> = unsafe { std::mem::transmute(inner.tx) };
   let cost_result = db.db.commit_transaction(real_tx);
   let cost = operation_cost_to_ffi(&cost_result.cost);
-  cost_result.value.map_err(|e| e.to_string())?;
+  cost_result.value.map_err(crate::ffi_error)?;
   Ok(cost)
 }
 
@@ -68,5 +68,5 @@ pub fn grovedb_rollback_transaction(
 ) -> Result<(), String> {
   db.db
     .rollback_transaction(&tx.tx)
-    .map_err(|e| e.to_string())
+    .map_err(crate::ffi_error)
 }

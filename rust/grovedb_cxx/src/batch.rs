@@ -98,7 +98,7 @@ struct WireBatchOpList {
 /// Decode a wire-encoded batch operation list into `QualifiedGroveDbOp` values.
 fn decode_batch_ops(encoded: &[u8]) -> Result<Vec<QualifiedGroveDbOp>, String> {
   let mut cursor = Cursor::new(encoded);
-  let list = WireBatchOpList::read_le(&mut cursor).map_err(|e| e.to_string())?;
+  let list = WireBatchOpList::read_le(&mut cursor).map_err(crate::ffi_error_generic)?;
   let version = GroveVersion::latest();
 
   let mut ops = Vec::with_capacity(list.ops.len());
@@ -115,31 +115,31 @@ fn decode_batch_ops(encoded: &[u8]) -> Result<Vec<QualifiedGroveDbOp>, String> {
       OP_INSERT_ONLY => {
         let elem_bytes = wire_op
           .element
-          .ok_or_else(|| "missing element for InsertOnly".to_string())?;
+          .ok_or_else(|| "INVALIDARG:missing element for InsertOnly".to_string())?;
         let elem = deserialize_element(&elem_bytes.data, version)?;
         QualifiedGroveDbOp::insert_only_op(path, key, elem)
       }
       OP_INSERT_OR_REPLACE => {
         let elem_bytes = wire_op
           .element
-          .ok_or_else(|| "missing element for InsertOrReplace".to_string())?;
+          .ok_or_else(|| "INVALIDARG:missing element for InsertOrReplace".to_string())?;
         let elem = deserialize_element(&elem_bytes.data, version)?;
         QualifiedGroveDbOp::insert_or_replace_op(path, key, elem)
       }
       OP_REPLACE => {
         let elem_bytes = wire_op
           .element
-          .ok_or_else(|| "missing element for Replace".to_string())?;
+          .ok_or_else(|| "INVALIDARG:missing element for Replace".to_string())?;
         let elem = deserialize_element(&elem_bytes.data, version)?;
         QualifiedGroveDbOp::replace_op(path, key, elem)
       }
       OP_DELETE => QualifiedGroveDbOp::delete_op(path, key),
       OP_DELETE_TREE => {
         let tt = wire_op.tree_type.unwrap_or(0);
-        let tree_type = TreeType::try_from(tt).map_err(|e| e.to_string())?;
+        let tree_type = TreeType::try_from(tt).map_err(crate::ffi_error_generic)?;
         QualifiedGroveDbOp::delete_tree_op(path, key, tree_type)
       }
-      other => return Err(format!("unknown batch op discriminant: {other}")),
+      other => return Err(format!("INVALIDARG:unknown batch op discriminant: {other}")),
     };
     ops.push(op);
   }
@@ -179,7 +179,7 @@ pub fn grovedb_apply_batch(
   let opts = convert_options(options);
   let ctx = db.db.apply_batch(ops, Some(opts), None, version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  ctx.value.map_err(|e| e.to_string())?;
+  ctx.value.map_err(crate::ffi_error)?;
   Ok(cost)
 }
 
@@ -197,6 +197,6 @@ pub fn grovedb_apply_batch_with_tx(
     .db
     .apply_batch(ops, Some(opts), Some(&tx.tx), version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  ctx.value.map_err(|e| e.to_string())?;
+  ctx.value.map_err(crate::ffi_error)?;
   Ok(cost)
 }

@@ -10,6 +10,58 @@ pub(crate) mod built_info {
   include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
 
+/// Classify a `grovedb::Error` into a tagged prefix string for FFI.
+///
+/// The C++ side parses the `"TAG:message"` prefix to reconstruct a
+/// structured `Error` type without fragile substring matching.
+pub(crate) fn ffi_error(e: grovedb::Error) -> String {
+  use grovedb::Error;
+  let tag = match &e {
+    Error::PathKeyNotFound(_)
+    | Error::PathNotFound(_)
+    | Error::PathParentLayerNotFound(_)
+    | Error::MissingReference(_)
+    | Error::PathNotFoundInCacheForEstimatedCosts(_) => "NOTFOUND",
+
+    Error::CorruptedData(_)
+    | Error::CorruptedStorage(_)
+    | Error::CorruptedPath(_)
+    | Error::CorruptedCodeExecution(_)
+    | Error::CorruptedReferencePathKeyNotFound(_)
+    | Error::CorruptedReferencePathNotFound(_)
+    | Error::CorruptedReferencePathParentLayerNotFound(_)
+    | Error::MerkError(_)
+    | Error::ElementError(_) => "CORRUPTION",
+
+    Error::InvalidInput(_)
+    | Error::InvalidPath(_)
+    | Error::InvalidQuery(_)
+    | Error::InvalidParameter(_)
+    | Error::InvalidParentLayerPath(_)
+    | Error::InvalidBatchOperation(_)
+    | Error::InvalidProof(_, _)
+    | Error::InvalidCodeExecution(_)
+    | Error::CyclicReference
+    | Error::ReferenceLimit
+    | Error::CyclicError(_)
+    | Error::MissingParameter(_)
+    | Error::OverrideNotAllowed(_)
+    | Error::DeleteUpTreeStopHeightMoreThanInitialPathSize(_)
+    | Error::DeletingNonEmptyTree(_)
+    | Error::ClearingTreeWithSubtreesNotAllowed(_) => "INVALIDARG",
+
+    Error::NotSupported(_) | Error::VersionError(_) => "NOTSUPPORTED",
+
+    _ => "IOERROR",
+  };
+  format!("{tag}:{e}")
+}
+
+/// Tag a non-`grovedb::Error` (binrw, std::num, etc.) as a generic IO error.
+pub(crate) fn ffi_error_generic(e: impl std::fmt::Display) -> String {
+  format!("IOERROR:{e}")
+}
+
 mod lifecycle;
 use lifecycle::{BoxedGroveDb, whoami, grovedb_flush, grovedb_open, grovedb_root_hash, grovedb_verify, grovedb_wipe};
 

@@ -50,18 +50,18 @@ pub(crate) fn operation_cost_to_ffi(cost: &grovedb_costs::OperationCost) -> FfiO
 
 /// Open or create a GroveDB instance at the given filesystem path.
 pub fn grovedb_open(path: &str) -> Result<Box<BoxedGroveDb>, String> {
-  let db = GroveDb::open(Path::new(path)).map_err(|e| e.to_string())?;
+  let db = GroveDb::open(Path::new(path)).map_err(crate::ffi_error)?;
   Ok(Box::new(BoxedGroveDb { db }))
 }
 
 /// Flush the in-memory write buffer to persistent storage.
 pub fn grovedb_flush(db: &BoxedGroveDb) -> Result<(), String> {
-  db.db.flush().map_err(|e| e.to_string())
+  db.db.flush().map_err(crate::ffi_error)
 }
 
 /// Delete all GroveDB key-value pairs from the underlying storage.
 pub fn grovedb_wipe(db: &BoxedGroveDb) -> Result<(), String> {
-  db.db.wipe().map_err(|e| e.to_string())
+  db.db.wipe().map_err(crate::ffi_error)
 }
 
 /// Return the 32-byte Merkle root hash together with operation costs.
@@ -69,7 +69,7 @@ pub fn grovedb_root_hash(db: &BoxedGroveDb) -> Result<FfiRootHashResult, String>
   let version = GroveVersion::latest();
   let cost_result = db.db.root_hash(None, version);
   let cost = operation_cost_to_ffi(&cost_result.cost);
-  let hash = cost_result.value.map_err(|e| e.to_string())?;
+  let hash = cost_result.value.map_err(crate::ffi_error)?;
 
   Ok(FfiRootHashResult {
     root_hash: hash.to_vec(),
@@ -85,7 +85,7 @@ pub fn grovedb_verify(db: &BoxedGroveDb) -> Result<bool, String> {
   let issues = db
     .db
     .verify_grovedb(None, true, false, version)
-    .map_err(|e| e.to_string())?;
+    .map_err(crate::ffi_error)?;
   Ok(issues.is_empty())
 }
 

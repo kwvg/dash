@@ -11,7 +11,9 @@ pub(crate) fn serialize_element(
   element: &grovedb::Element,
   version: &GroveVersion,
 ) -> Result<Vec<u8>, String> {
-  element.serialize(version).map_err(|e| e.to_string())
+  element
+    .serialize(version)
+    .map_err(|e| crate::ffi_error(grovedb::Error::from(e)))
 }
 
 /// Deserialize an Element from its bincode wire format.
@@ -19,7 +21,8 @@ pub(crate) fn deserialize_element(
   bytes: &[u8],
   version: &GroveVersion,
 ) -> Result<grovedb::Element, String> {
-  grovedb::Element::deserialize(bytes, version).map_err(|e| e.to_string())
+  grovedb::Element::deserialize(bytes, version)
+    .map_err(|e| crate::ffi_error(grovedb::Error::from(e)))
 }
 
 // ---------------------------------------------------------------------------

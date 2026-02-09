@@ -68,21 +68,21 @@ impl std::fmt::Debug for BoxedPathQueryVec {
 
 /// Convert a `usize` to `u32` for wire encoding, returning an error on overflow.
 fn to_wire_u32(len: usize) -> Result<u32, String> {
-  u32::try_from(len).map_err(|_| format!("wire encoding: length {len} exceeds u32::MAX"))
+  u32::try_from(len).map_err(|_| format!("INVALIDARG:wire encoding: length {len} exceeds u32::MAX"))
 }
 
 /// Read a u32 from the buffer at the given offset.
 fn read_u32(buf: &[u8], offset: &mut usize) -> Result<u32, String> {
   if *offset + 4 > buf.len() {
     return Err(format!(
-      "query descriptor truncated at offset {}: need 4 bytes for u32",
+      "INVALIDARG:query descriptor truncated at offset {}: need 4 bytes for u32",
       *offset
     ));
   }
   let val = u32::from_le_bytes(
     buf[*offset..*offset + 4]
       .try_into()
-      .map_err(|_| "failed to read u32".to_string())?,
+      .map_err(|_| "INVALIDARG:failed to read u32".to_string())?,
   );
   *offset += 4;
   Ok(val)
@@ -93,7 +93,7 @@ fn read_bytes(buf: &[u8], offset: &mut usize) -> Result<Vec<u8>, String> {
   let len = read_u32(buf, offset)? as usize;
   if *offset + len > buf.len() {
     return Err(format!(
-      "query descriptor truncated at offset {}: need {} bytes",
+      "INVALIDARG:query descriptor truncated at offset {}: need {} bytes",
       *offset, len
     ));
   }
@@ -111,7 +111,7 @@ fn decode_query_items(encoded: &[u8]) -> Result<Vec<QueryItem>, String> {
   for i in 0..count {
     if offset >= encoded.len() {
       return Err(format!(
-        "query descriptor truncated at item {i}: missing kind byte"
+        "INVALIDARG:query descriptor truncated at item {i}: missing kind byte"
       ));
     }
     let kind = encoded[offset];
@@ -171,7 +171,7 @@ fn decode_query_items(encoded: &[u8]) -> Result<Vec<QueryItem>, String> {
         let to = read_bytes(encoded, &mut offset)?;
         QueryItem::RangeAfterToInclusive(after..=to)
       }
-      _ => return Err(format!("unknown query item kind {kind} at item {i}")),
+      _ => return Err(format!("INVALIDARG:unknown query item kind {kind} at item {i}")),
     };
     items.push(item);
   }
@@ -238,14 +238,14 @@ pub fn grovedb_path_query_new(
   let limit = if limit == 0 {
     None
   } else if limit > u16::MAX as u32 {
-    return Err(format!("limit {limit} exceeds u16::MAX ({})", u16::MAX));
+    return Err(format!("INVALIDARG:limit {limit} exceeds u16::MAX ({})", u16::MAX));
   } else {
     Some(limit as u16)
   };
   let offset = if offset == 0 {
     None
   } else if offset > u16::MAX as u32 {
-    return Err(format!("offset {offset} exceeds u16::MAX ({})", u16::MAX));
+    return Err(format!("INVALIDARG:offset {offset} exceeds u16::MAX ({})", u16::MAX));
   } else {
     Some(offset as u16)
   };
@@ -311,14 +311,14 @@ pub fn grovedb_path_query_new_with_subquery(
   let limit = if limit == 0 {
     None
   } else if limit > u16::MAX as u32 {
-    return Err(format!("limit {limit} exceeds u16::MAX ({})", u16::MAX));
+    return Err(format!("INVALIDARG:limit {limit} exceeds u16::MAX ({})", u16::MAX));
   } else {
     Some(limit as u16)
   };
   let offset = if offset == 0 {
     None
   } else if offset > u16::MAX as u32 {
-    return Err(format!("offset {offset} exceeds u16::MAX ({})", u16::MAX));
+    return Err(format!("INVALIDARG:offset {offset} exceeds u16::MAX ({})", u16::MAX));
   } else {
     Some(offset as u16)
   };
@@ -348,7 +348,7 @@ pub fn grovedb_query_item_value(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let (values, skipped) = ctx.value.map_err(|e| e.to_string())?;
+  let (values, skipped) = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQueryResult {
     values: encode_values(&values)?,
     skipped,
@@ -372,7 +372,7 @@ pub fn grovedb_query_item_value_with_tx(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let (values, skipped) = ctx.value.map_err(|e| e.to_string())?;
+  let (values, skipped) = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQueryResult {
     values: encode_values(&values)?,
     skipped,
@@ -451,7 +451,7 @@ pub fn grovedb_query_item_value_or_sum(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let (items, skipped) = ctx.value.map_err(|e| e.to_string())?;
+  let (items, skipped) = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQueryItemOrSumResult {
     values: encode_item_or_sum_results(&items)?,
     skipped,
@@ -475,7 +475,7 @@ pub fn grovedb_query_item_value_or_sum_with_tx(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let (items, skipped) = ctx.value.map_err(|e| e.to_string())?;
+  let (items, skipped) = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQueryItemOrSumResult {
     values: encode_item_or_sum_results(&items)?,
     skipped,
@@ -514,7 +514,7 @@ pub fn grovedb_query_sums(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let (sums, skipped) = ctx.value.map_err(|e| e.to_string())?;
+  let (sums, skipped) = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQuerySumsResult {
     values: encode_sums(&sums)?,
     skipped,
@@ -538,7 +538,7 @@ pub fn grovedb_query_sums_with_tx(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let (sums, skipped) = ctx.value.map_err(|e| e.to_string())?;
+  let (sums, skipped) = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQuerySumsResult {
     values: encode_sums(&sums)?,
     skipped,
@@ -612,7 +612,7 @@ pub fn grovedb_query_raw(
     0 => QueryResultType::QueryElementResultType,
     1 => QueryResultType::QueryKeyElementPairResultType,
     2 => QueryResultType::QueryPathKeyElementTrioResultType,
-    _ => return Err(format!("unknown query result type: {result_type}")),
+    _ => return Err(format!("INVALIDARG:unknown query result type: {result_type}")),
   };
   let ctx = db.db.query_raw(
     &query.query,
@@ -624,7 +624,7 @@ pub fn grovedb_query_raw(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let (elements, skipped) = ctx.value.map_err(|e| e.to_string())?;
+  let (elements, skipped) = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQueryRawResult {
     values: encode_query_result_elements(&elements)?,
     skipped,
@@ -644,7 +644,7 @@ pub fn grovedb_query_raw_with_tx(
     0 => QueryResultType::QueryElementResultType,
     1 => QueryResultType::QueryKeyElementPairResultType,
     2 => QueryResultType::QueryPathKeyElementTrioResultType,
-    _ => return Err(format!("unknown query result type: {result_type}")),
+    _ => return Err(format!("INVALIDARG:unknown query result type: {result_type}")),
   };
   let ctx = db.db.query_raw(
     &query.query,
@@ -656,7 +656,7 @@ pub fn grovedb_query_raw_with_tx(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let (elements, skipped) = ctx.value.map_err(|e| e.to_string())?;
+  let (elements, skipped) = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQueryRawResult {
     values: encode_query_result_elements(&elements)?,
     skipped,
@@ -682,7 +682,7 @@ pub fn grovedb_query_many_raw(
     0 => QueryResultType::QueryElementResultType,
     1 => QueryResultType::QueryKeyElementPairResultType,
     2 => QueryResultType::QueryPathKeyElementTrioResultType,
-    _ => return Err(format!("unknown query result type: {result_type}")),
+    _ => return Err(format!("INVALIDARG:unknown query result type: {result_type}")),
   };
 
   // Decode the queries from the wire format.
@@ -699,7 +699,7 @@ pub fn grovedb_query_many_raw(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let elements = ctx.value.map_err(|e| e.to_string())?;
+  let elements = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQueryRawResult {
     values: encode_query_result_elements(&elements)?,
     skipped: 0,
@@ -735,7 +735,7 @@ fn decode_path_queries(encoded: &[u8]) -> Result<Vec<PathQuery>, String> {
     for j in 0..item_count {
       if offset >= encoded.len() {
         return Err(format!(
-          "query {i}: item {j}: truncated, missing kind byte"
+          "INVALIDARG:query {i}: item {j}: truncated, missing kind byte"
         ));
       }
       let kind = encoded[offset];
@@ -770,7 +770,7 @@ fn decode_path_queries(encoded: &[u8]) -> Result<Vec<PathQuery>, String> {
         }
         _ => {
           return Err(format!(
-            "query {i}: item {j}: unknown kind {kind}"
+            "INVALIDARG:query {i}: item {j}: unknown kind {kind}"
           ))
         }
       };
@@ -784,7 +784,7 @@ fn decode_path_queries(encoded: &[u8]) -> Result<Vec<PathQuery>, String> {
       None
     } else if limit > u16::MAX as u32 {
       return Err(format!(
-        "query {i}: limit {limit} exceeds u16::MAX ({})",
+        "INVALIDARG:query {i}: limit {limit} exceeds u16::MAX ({})",
         u16::MAX
       ));
     } else {
@@ -794,7 +794,7 @@ fn decode_path_queries(encoded: &[u8]) -> Result<Vec<PathQuery>, String> {
       None
     } else if offset_val > u16::MAX as u32 {
       return Err(format!(
-        "query {i}: offset {offset_val} exceeds u16::MAX ({})",
+        "INVALIDARG:query {i}: offset {offset_val} exceeds u16::MAX ({})",
         u16::MAX
       ));
     } else {
@@ -870,7 +870,7 @@ pub fn grovedb_query_keys_optional(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let entries = ctx.value.map_err(|e| e.to_string())?;
+  let entries = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQueryKeysOptionalResult {
     values: encode_path_key_element_triples(entries)?,
     cost,
@@ -893,7 +893,7 @@ pub fn grovedb_query_keys_optional_with_tx(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let entries = ctx.value.map_err(|e| e.to_string())?;
+  let entries = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQueryKeysOptionalResult {
     values: encode_path_key_element_triples(entries)?,
     cost,
@@ -915,7 +915,7 @@ pub fn grovedb_query_raw_keys_optional(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let entries = ctx.value.map_err(|e| e.to_string())?;
+  let entries = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQueryKeysOptionalResult {
     values: encode_path_key_element_triples(entries)?,
     cost,
@@ -938,7 +938,7 @@ pub fn grovedb_query_raw_keys_optional_with_tx(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let entries = ctx.value.map_err(|e| e.to_string())?;
+  let entries = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiQueryKeysOptionalResult {
     values: encode_path_key_element_triples(entries)?,
     cost,

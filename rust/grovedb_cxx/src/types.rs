@@ -45,7 +45,7 @@ struct WirePath {
 /// ```
 pub(crate) fn decode_path(encoded: &[u8]) -> Result<Vec<Vec<u8>>, String> {
   let mut cursor = Cursor::new(encoded);
-  let wire_path = WirePath::read_le(&mut cursor).map_err(|e| e.to_string())?;
+  let wire_path = WirePath::read_le(&mut cursor).map_err(crate::ffi_error_generic)?;
   Ok(
     wire_path
       .segments

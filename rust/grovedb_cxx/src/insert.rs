@@ -31,7 +31,7 @@ pub fn grovedb_insert(
     .db
     .insert(segments.as_slice(), key, elem, None, None, version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  ctx.value.map_err(|e| e.to_string())?;
+  ctx.value.map_err(crate::ffi_error)?;
   Ok(cost)
 }
 
@@ -55,7 +55,7 @@ pub fn grovedb_insert_with_tx(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  ctx.value.map_err(|e| e.to_string())?;
+  ctx.value.map_err(crate::ffi_error)?;
   Ok(cost)
 }
 
@@ -80,7 +80,7 @@ pub fn grovedb_insert_if_not_exists(
     .db
     .insert_if_not_exists(segments.as_slice(), key, elem, None, version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let inserted = ctx.value.map_err(|e| e.to_string())?;
+  let inserted = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiBoolResult {
     value: inserted,
     cost,
@@ -106,7 +106,7 @@ pub fn grovedb_insert_if_not_exists_with_tx(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let inserted = ctx.value.map_err(|e| e.to_string())?;
+  let inserted = ctx.value.map_err(crate::ffi_error)?;
   Ok(FfiBoolResult {
     value: inserted,
     cost,
@@ -140,7 +140,7 @@ pub fn grovedb_insert_if_not_exists_return_existing(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let maybe = ctx.value.map_err(|e| e.to_string())?;
+  let maybe = ctx.value.map_err(crate::ffi_error)?;
   match maybe {
     Some(existing) => Ok(FfiOptionalElementResult {
       has_element: true,
@@ -174,7 +174,7 @@ pub fn grovedb_insert_if_not_exists_return_existing_with_tx(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let maybe = ctx.value.map_err(|e| e.to_string())?;
+  let maybe = ctx.value.map_err(crate::ffi_error)?;
   match maybe {
     Some(existing) => Ok(FfiOptionalElementResult {
       has_element: true,
@@ -211,7 +211,7 @@ pub fn grovedb_insert_if_changed_value(
     .db
     .insert_if_changed_value(segments.as_slice(), key, elem, None, version);
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let (changed, maybe_prev) = ctx.value.map_err(|e| e.to_string())?;
+  let (changed, maybe_prev) = ctx.value.map_err(crate::ffi_error)?;
   match maybe_prev {
     Some(prev) => Ok(FfiChangedValueResult {
       changed,
@@ -247,7 +247,7 @@ pub fn grovedb_insert_if_changed_value_with_tx(
     version,
   );
   let cost = operation_cost_to_ffi(&ctx.cost);
-  let (changed, maybe_prev) = ctx.value.map_err(|e| e.to_string())?;
+  let (changed, maybe_prev) = ctx.value.map_err(crate::ffi_error)?;
   match maybe_prev {
     Some(prev) => Ok(FfiChangedValueResult {
       changed,
