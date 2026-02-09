@@ -6,6 +6,7 @@
 #include <decode_internal.h>
 #include <types/query.h>
 #include <types/transaction.h>
+#include <util/ffi.h>
 
 #include <grovedb/query.h>
 #include <grovedb/wire.h>
@@ -149,19 +150,16 @@ Result<PathQuery, Error> PathQuery::New(
     const Path& path, const std::vector<QueryItem>& items, uint32_t limit, uint32_t offset
 )
 {
-  try {
+  return CallFFI([&]() -> Result<PathQuery, Error> {
     auto path_buf = wire::Encode(path);
     auto items_buf = wire::Encode(items);
-    rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
-    rust::Slice<const uint8_t> items_slice{items_buf.data(), items_buf.size()};
 
-    auto boxed = grovedb_cxx::grovedb_path_query_new(path_slice, items_slice, limit, offset);
+    auto boxed =
+        grovedb_cxx::grovedb_path_query_new(ToSlice(path_buf), ToSlice(items_buf), limit, offset);
     PathQuery query;
     query.m_impl = std::make_unique<Impl>(std::move(boxed));
     return query;
-  } catch (const std::exception& e) {
-    return Err(Error::InvalidArgument(e.what()));
-  }
+  });
 }
 
 Result<PathQuery, Error> PathQuery::NewWithSubquery(
@@ -173,26 +171,24 @@ Result<PathQuery, Error> PathQuery::NewWithSubquery(
     const std::vector<QueryItem>& subquery_items
 )
 {
-  try {
+  return CallFFI([&]() -> Result<PathQuery, Error> {
     auto path_buf = wire::Encode(path);
     auto items_buf = wire::Encode(items);
     auto sq_path_buf = wire::Encode(subquery_path);
     auto sq_items_buf = wire::Encode(subquery_items);
 
-    rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
-    rust::Slice<const uint8_t> items_slice{items_buf.data(), items_buf.size()};
-    rust::Slice<const uint8_t> sq_path_slice{sq_path_buf.data(), sq_path_buf.size()};
-    rust::Slice<const uint8_t> sq_items_slice{sq_items_buf.data(), sq_items_buf.size()};
-
     auto boxed = grovedb_cxx::grovedb_path_query_new_with_subquery(
-        path_slice, items_slice, limit, offset, sq_path_slice, sq_items_slice
+        ToSlice(path_buf),
+        ToSlice(items_buf),
+        limit,
+        offset,
+        ToSlice(sq_path_buf),
+        ToSlice(sq_items_buf)
     );
     PathQuery query;
     query.m_impl = std::make_unique<Impl>(std::move(boxed));
     return query;
-  } catch (const std::exception& e) {
-    return Err(Error::InvalidArgument(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -426,7 +422,7 @@ Bytes EncodeManyQueries(const std::vector<Db::RawQuerySpec>& queries)
 
 Result<Costed<QueryData<std::vector<Bytes>>>, Error> Db::QueryValues(const PathQuery& query)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<QueryData<std::vector<Bytes>>>, Error> {
     auto result = grovedb_cxx::grovedb_query_item_value(*m_impl->m_db, *query.m_impl->m_query);
     return DecodeValues({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
@@ -437,15 +433,13 @@ Result<Costed<QueryData<std::vector<Bytes>>>, Error> Db::QueryValues(const PathQ
               {std::move(values), result.skipped}, convert_cost(result.cost)
           };
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<Costed<QueryData<std::vector<Bytes>>>, Error>
 Db::QueryValues(const PathQuery& query, const Transaction& txn)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<QueryData<std::vector<Bytes>>>, Error> {
     auto result = grovedb_cxx::grovedb_query_item_value_with_tx(
         *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
     );
@@ -458,9 +452,7 @@ Db::QueryValues(const PathQuery& query, const Transaction& txn)
               {std::move(values), result.skipped}, convert_cost(result.cost)
           };
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -470,7 +462,7 @@ Db::QueryValues(const PathQuery& query, const Transaction& txn)
 Result<Costed<QueryData<std::vector<QueryItemOrSum>>>, Error>
 Db::QueryItemsOrSums(const PathQuery& query)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<QueryData<std::vector<QueryItemOrSum>>>, Error> {
     auto result =
         grovedb_cxx::grovedb_query_item_value_or_sum(*m_impl->m_db, *query.m_impl->m_query);
     return DecodeItemsOrSums({result.values.data(), result.values.size()})
@@ -482,15 +474,13 @@ Db::QueryItemsOrSums(const PathQuery& query)
               {std::move(items), result.skipped}, convert_cost(result.cost)
           };
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<Costed<QueryData<std::vector<QueryItemOrSum>>>, Error>
 Db::QueryItemsOrSums(const PathQuery& query, const Transaction& txn)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<QueryData<std::vector<QueryItemOrSum>>>, Error> {
     auto result = grovedb_cxx::grovedb_query_item_value_or_sum_with_tx(
         *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
     );
@@ -503,9 +493,7 @@ Db::QueryItemsOrSums(const PathQuery& query, const Transaction& txn)
               {std::move(items), result.skipped}, convert_cost(result.cost)
           };
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -514,7 +502,7 @@ Db::QueryItemsOrSums(const PathQuery& query, const Transaction& txn)
 
 Result<Costed<QueryData<std::vector<int64_t>>>, Error> Db::QuerySums(const PathQuery& query)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<QueryData<std::vector<int64_t>>>, Error> {
     auto result = grovedb_cxx::grovedb_query_sums(*m_impl->m_db, *query.m_impl->m_query);
     return DecodeSums({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) { return Error::Corruption("failed to decode sums"); })
@@ -523,15 +511,13 @@ Result<Costed<QueryData<std::vector<int64_t>>>, Error> Db::QuerySums(const PathQ
               {std::move(sums), result.skipped}, convert_cost(result.cost)
           };
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<Costed<QueryData<std::vector<int64_t>>>, Error>
 Db::QuerySums(const PathQuery& query, const Transaction& txn)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<QueryData<std::vector<int64_t>>>, Error> {
     auto result = grovedb_cxx::grovedb_query_sums_with_tx(
         *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
     );
@@ -542,9 +528,7 @@ Db::QuerySums(const PathQuery& query, const Transaction& txn)
               {std::move(sums), result.skipped}, convert_cost(result.cost)
           };
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -554,7 +538,7 @@ Db::QuerySums(const PathQuery& query, const Transaction& txn)
 Result<Costed<QueryData<std::vector<QueryResultElement>>>, Error>
 Db::QueryRaw(const PathQuery& query, uint8_t result_type)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<QueryData<std::vector<QueryResultElement>>>, Error> {
     auto result =
         grovedb_cxx::grovedb_query_raw(*m_impl->m_db, *query.m_impl->m_query, result_type);
     return DecodeQueryResultElements({result.values.data(), result.values.size()})
@@ -566,15 +550,13 @@ Db::QueryRaw(const PathQuery& query, uint8_t result_type)
               {std::move(elems), result.skipped}, convert_cost(result.cost)
           };
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<Costed<QueryData<std::vector<QueryResultElement>>>, Error>
 Db::QueryRaw(const PathQuery& query, uint8_t result_type, const Transaction& txn)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<QueryData<std::vector<QueryResultElement>>>, Error> {
     auto result = grovedb_cxx::grovedb_query_raw_with_tx(
         *m_impl->m_db, *query.m_impl->m_query, result_type, *txn.m_impl->m_tx
     );
@@ -587,9 +569,7 @@ Db::QueryRaw(const PathQuery& query, uint8_t result_type, const Transaction& txn
               {std::move(elems), result.skipped}, convert_cost(result.cost)
           };
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -599,10 +579,9 @@ Db::QueryRaw(const PathQuery& query, uint8_t result_type, const Transaction& txn
 Result<Costed<std::vector<QueryResultElement>>, Error>
 Db::QueryManyRaw(const std::vector<RawQuerySpec>& queries, uint8_t result_type)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<std::vector<QueryResultElement>>, Error> {
     auto encoded = EncodeManyQueries(queries);
-    rust::Slice<const uint8_t> encoded_slice{encoded.data(), encoded.size()};
-    auto result = grovedb_cxx::grovedb_query_many_raw(*m_impl->m_db, encoded_slice, result_type);
+    auto result = grovedb_cxx::grovedb_query_many_raw(*m_impl->m_db, ToSlice(encoded), result_type);
     return DecodeQueryResultElements({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
           return Error::Corruption("failed to decode many-raw query results");
@@ -612,9 +591,7 @@ Db::QueryManyRaw(const std::vector<RawQuerySpec>& queries, uint8_t result_type)
               std::move(elems), convert_cost(result.cost)
           };
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -623,7 +600,7 @@ Db::QueryManyRaw(const std::vector<RawQuerySpec>& queries, uint8_t result_type)
 
 Result<Costed<std::vector<PathKeyElement>>, Error> Db::QueryKeysOptional(const PathQuery& query)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<std::vector<PathKeyElement>>, Error> {
     auto result = grovedb_cxx::grovedb_query_keys_optional(*m_impl->m_db, *query.m_impl->m_query);
     return DecodePathKeyElements({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
@@ -632,15 +609,13 @@ Result<Costed<std::vector<PathKeyElement>>, Error> Db::QueryKeysOptional(const P
         .transform([&](std::vector<PathKeyElement> entries) {
           return Costed<std::vector<PathKeyElement>>{std::move(entries), convert_cost(result.cost)};
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<Costed<std::vector<PathKeyElement>>, Error>
 Db::QueryKeysOptional(const PathQuery& query, const Transaction& txn)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<std::vector<PathKeyElement>>, Error> {
     auto result = grovedb_cxx::grovedb_query_keys_optional_with_tx(
         *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
     );
@@ -651,14 +626,12 @@ Db::QueryKeysOptional(const PathQuery& query, const Transaction& txn)
         .transform([&](std::vector<PathKeyElement> entries) {
           return Costed<std::vector<PathKeyElement>>{std::move(entries), convert_cost(result.cost)};
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<Costed<std::vector<PathKeyElement>>, Error> Db::QueryRawKeysOptional(const PathQuery& query)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<std::vector<PathKeyElement>>, Error> {
     auto result =
         grovedb_cxx::grovedb_query_raw_keys_optional(*m_impl->m_db, *query.m_impl->m_query);
     return DecodePathKeyElements({result.values.data(), result.values.size()})
@@ -668,15 +641,13 @@ Result<Costed<std::vector<PathKeyElement>>, Error> Db::QueryRawKeysOptional(cons
         .transform([&](std::vector<PathKeyElement> entries) {
           return Costed<std::vector<PathKeyElement>>{std::move(entries), convert_cost(result.cost)};
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<Costed<std::vector<PathKeyElement>>, Error>
 Db::QueryRawKeysOptional(const PathQuery& query, const Transaction& txn)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<std::vector<PathKeyElement>>, Error> {
     auto result = grovedb_cxx::grovedb_query_raw_keys_optional_with_tx(
         *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
     );
@@ -687,8 +658,6 @@ Db::QueryRawKeysOptional(const PathQuery& query, const Transaction& txn)
         .transform([&](std::vector<PathKeyElement> entries) {
           return Costed<std::vector<PathKeyElement>>{std::move(entries), convert_cost(result.cost)};
         });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 } // namespace grovedb

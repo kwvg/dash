@@ -4,6 +4,7 @@
 
 #include <db_internal.h>
 #include <types/transaction.h>
+#include <util/ffi.h>
 
 #include <format>
 #include <string>
@@ -18,14 +19,12 @@ Db& Db::operator=(Db&&) = default;
 
 Result<Db, Error> Db::Open(std::string_view path)
 {
-  try {
+  return CallFFI([&]() -> Result<Db, Error> {
     Db db;
     db.m_impl =
         std::make_unique<Impl>(grovedb_cxx::grovedb_open(rust::Str(path.data(), path.size())));
     return db;
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<void, Error> Db::Flush()
@@ -33,12 +32,10 @@ Result<void, Error> Db::Flush()
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<void, Error> {
     grovedb_cxx::grovedb_flush(*m_impl->m_db);
     return {};
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<void, Error> Db::Destroy()
@@ -46,12 +43,10 @@ Result<void, Error> Db::Destroy()
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<void, Error> {
     grovedb_cxx::grovedb_wipe(*m_impl->m_db);
     return {};
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<Costed<Hash>, Error> Db::GetRootHash()
@@ -59,24 +54,14 @@ Result<Costed<Hash>, Error> Db::GetRootHash()
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<Costed<Hash>, Error> {
     auto result = grovedb_cxx::grovedb_root_hash(*m_impl->m_db);
-    if (result.root_hash.size() != 32) {
-      return Err(
-          Error::Corruption(
-              "root hash: expected 32 bytes, got " + std::to_string(result.root_hash.size())
-          )
-      );
+    auto hash = HashFromSlice(result.root_hash);
+    if (!hash) {
+      return Err(std::move(hash).error());
     }
-    Hash hash{};
-    std::copy(result.root_hash.begin(), result.root_hash.end(), hash.begin());
-    return Costed<Hash>{
-        .m_value = hash,
-        .m_cost = convert_cost(result.cost),
-    };
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+    return Costed<Hash>{*hash, convert_cost(result.cost)};
+  });
 }
 
 Result<bool, Error> Db::VerifyIntegrity()
@@ -84,11 +69,9 @@ Result<bool, Error> Db::VerifyIntegrity()
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<bool, Error> {
     return grovedb_cxx::grovedb_verify(*m_impl->m_db);
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<Transaction, Error> Db::BeginTransaction()
@@ -96,14 +79,12 @@ Result<Transaction, Error> Db::BeginTransaction()
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<Transaction, Error> {
     auto tx = grovedb_cxx::grovedb_start_transaction(*m_impl->m_db);
     Transaction txn;
     txn.m_impl = std::make_unique<Transaction::Impl>(*m_impl->m_db, std::move(tx));
     return txn;
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<OperationCost, Error> Db::Commit(Transaction& txn)
@@ -117,16 +98,14 @@ Result<OperationCost, Error> Db::Commit(Transaction& txn)
   if (txn.m_impl->m_committed || txn.m_impl->m_rolled_back) {
     return Err(Error::InvalidArgument("transaction already finalized"));
   }
-  try {
+  return CallFFI([&]() -> Result<OperationCost, Error> {
     // Mark committed before the call -- the Rust side consumes the
     // Box regardless of success or failure.
     txn.m_impl->m_committed = true;
     auto result =
         grovedb_cxx::grovedb_commit_transaction(txn.m_impl->m_db, std::move(txn.m_impl->m_tx));
     return convert_cost(result);
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<void, Error> Db::Rollback(Transaction& txn)
@@ -137,13 +116,11 @@ Result<void, Error> Db::Rollback(Transaction& txn)
   if (txn.m_impl->m_committed || txn.m_impl->m_rolled_back) {
     return Err(Error::InvalidArgument("transaction already finalized"));
   }
-  try {
+  return CallFFI([&]() -> Result<void, Error> {
     grovedb_cxx::grovedb_rollback_transaction(txn.m_impl->m_db, *txn.m_impl->m_tx);
     txn.m_impl->m_rolled_back = true;
     return {};
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 std::string GetWhoami()

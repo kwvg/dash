@@ -3,6 +3,7 @@
 // file LICENSE.MIT or https://opensource.org/license/mit
 
 #include <db_internal.h>
+#include <util/ffi.h>
 
 #include <rust/grovedb_cxx/lib.h>
 
@@ -19,12 +20,10 @@ Result<void, Error> Db::CreateCheckpoint(std::string_view path)
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<void, Error> {
     grovedb_cxx::grovedb_create_checkpoint(*m_impl->m_db, rust::Str(path.data(), path.size()));
     return {};
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -33,14 +32,12 @@ Result<void, Error> Db::CreateCheckpoint(std::string_view path)
 
 Result<Db, Error> Db::OpenCheckpoint(std::string_view path)
 {
-  try {
+  return CallFFI([&]() -> Result<Db, Error> {
     auto boxed = grovedb_cxx::grovedb_open_checkpoint(rust::Str(path.data(), path.size()));
     Db db;
     db.m_impl = std::make_unique<Impl>(std::move(boxed));
     return db;
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -49,11 +46,9 @@ Result<Db, Error> Db::OpenCheckpoint(std::string_view path)
 
 Result<void, Error> Db::DeleteCheckpoint(std::string_view path)
 {
-  try {
+  return CallFFI([&]() -> Result<void, Error> {
     grovedb_cxx::grovedb_delete_checkpoint(rust::Str(path.data(), path.size()));
     return {};
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 } // namespace grovedb

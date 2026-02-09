@@ -4,6 +4,7 @@
 
 #include <db_internal.h>
 #include <types/transaction.h>
+#include <util/ffi.h>
 
 #include <grovedb/batch.h>
 #include <grovedb/wire.h>
@@ -137,16 +138,12 @@ Db::ApplyBatch(const std::vector<BatchOperation>& ops, const BatchApplyOptions& 
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<OperationCost, Error> {
     auto encoded = EncodeBatchOps(ops);
-    rust::Slice<const uint8_t> ops_slice{encoded.data(), encoded.size()};
     auto ffi_opts = ConvertOptions(options);
-
-    auto result = grovedb_cxx::grovedb_apply_batch(*m_impl->m_db, ops_slice, ffi_opts);
+    auto result = grovedb_cxx::grovedb_apply_batch(*m_impl->m_db, ToSlice(encoded), ffi_opts);
     return convert_cost(result);
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<OperationCost, Error> Db::ApplyBatch(
@@ -156,17 +153,13 @@ Result<OperationCost, Error> Db::ApplyBatch(
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<OperationCost, Error> {
     auto encoded = EncodeBatchOps(ops);
-    rust::Slice<const uint8_t> ops_slice{encoded.data(), encoded.size()};
     auto ffi_opts = ConvertOptions(options);
-
     auto result = grovedb_cxx::grovedb_apply_batch_with_tx(
-        *m_impl->m_db, ops_slice, ffi_opts, *txn.m_impl->m_tx
+        *m_impl->m_db, ToSlice(encoded), ffi_opts, *txn.m_impl->m_tx
     );
     return convert_cost(result);
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 } // namespace grovedb

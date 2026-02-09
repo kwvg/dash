@@ -4,6 +4,7 @@
 
 #include <db_internal.h>
 #include <types/transaction.h>
+#include <util/ffi.h>
 
 #include <grovedb/wire.h>
 
@@ -24,15 +25,10 @@ Result<OperationCost, Error> Db::PutAux(const Bytes& key, const Bytes& value)
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
-    rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
-    rust::Slice<const uint8_t> val_slice{value.data(), value.size()};
-
-    auto result = grovedb_cxx::grovedb_put_aux(*m_impl->m_db, key_slice, val_slice);
+  return CallFFI([&]() -> Result<OperationCost, Error> {
+    auto result = grovedb_cxx::grovedb_put_aux(*m_impl->m_db, ToSlice(key), ToSlice(value));
     return convert_cost(result);
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<OperationCost, Error>
@@ -41,17 +37,12 @@ Db::PutAux(const Bytes& key, const Bytes& value, const Transaction& txn)
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
-    rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
-    rust::Slice<const uint8_t> val_slice{value.data(), value.size()};
-
+  return CallFFI([&]() -> Result<OperationCost, Error> {
     auto result = grovedb_cxx::grovedb_put_aux_with_tx(
-        *m_impl->m_db, key_slice, val_slice, *txn.m_impl->m_tx
+        *m_impl->m_db, ToSlice(key), ToSlice(value), *txn.m_impl->m_tx
     );
     return convert_cost(result);
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -63,19 +54,10 @@ Result<Costed<std::optional<Bytes>>, Error> Db::GetAux(const Bytes& key)
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
-    rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
-
-    auto result = grovedb_cxx::grovedb_get_aux(*m_impl->m_db, key_slice);
-    auto cost = convert_cost(result.cost);
-    if (result.has_value) {
-      Bytes val{result.value.begin(), result.value.end()};
-      return Costed<std::optional<Bytes>>{std::move(val), cost};
-    }
-    return Costed<std::optional<Bytes>>{std::nullopt, cost};
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  return CallFFI([&]() -> Result<Costed<std::optional<Bytes>>, Error> {
+    auto result = grovedb_cxx::grovedb_get_aux(*m_impl->m_db, ToSlice(key));
+    return ConvertOptionalBytes(result);
+  });
 }
 
 Result<Costed<std::optional<Bytes>>, Error> Db::GetAux(const Bytes& key, const Transaction& txn)
@@ -83,19 +65,11 @@ Result<Costed<std::optional<Bytes>>, Error> Db::GetAux(const Bytes& key, const T
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
-    rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
-
-    auto result = grovedb_cxx::grovedb_get_aux_with_tx(*m_impl->m_db, key_slice, *txn.m_impl->m_tx);
-    auto cost = convert_cost(result.cost);
-    if (result.has_value) {
-      Bytes val{result.value.begin(), result.value.end()};
-      return Costed<std::optional<Bytes>>{std::move(val), cost};
-    }
-    return Costed<std::optional<Bytes>>{std::nullopt, cost};
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  return CallFFI([&]() -> Result<Costed<std::optional<Bytes>>, Error> {
+    auto result =
+        grovedb_cxx::grovedb_get_aux_with_tx(*m_impl->m_db, ToSlice(key), *txn.m_impl->m_tx);
+    return ConvertOptionalBytes(result);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -107,14 +81,10 @@ Result<OperationCost, Error> Db::DeleteAux(const Bytes& key)
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
-    rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
-
-    auto result = grovedb_cxx::grovedb_delete_aux(*m_impl->m_db, key_slice);
+  return CallFFI([&]() -> Result<OperationCost, Error> {
+    auto result = grovedb_cxx::grovedb_delete_aux(*m_impl->m_db, ToSlice(key));
     return convert_cost(result);
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<OperationCost, Error> Db::DeleteAux(const Bytes& key, const Transaction& txn)
@@ -122,15 +92,11 @@ Result<OperationCost, Error> Db::DeleteAux(const Bytes& key, const Transaction& 
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
-    rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
-
+  return CallFFI([&]() -> Result<OperationCost, Error> {
     auto result =
-        grovedb_cxx::grovedb_delete_aux_with_tx(*m_impl->m_db, key_slice, *txn.m_impl->m_tx);
+        grovedb_cxx::grovedb_delete_aux_with_tx(*m_impl->m_db, ToSlice(key), *txn.m_impl->m_tx);
     return convert_cost(result);
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -142,11 +108,9 @@ Result<Costed<std::vector<Path>>, Error> Db::FindSubtrees(const Path& path)
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<Costed<std::vector<Path>>, Error> {
     auto path_buf = wire::Encode(path);
-    rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
-
-    auto result = grovedb_cxx::grovedb_find_subtrees(*m_impl->m_db, path_slice);
+    auto result = grovedb_cxx::grovedb_find_subtrees(*m_impl->m_db, ToSlice(path_buf));
     auto cost = convert_cost(result.cost);
 
     // Decode wire-encoded paths: [u32 count][path₁]…
@@ -169,9 +133,7 @@ Result<Costed<std::vector<Path>>, Error> Db::FindSubtrees(const Path& path)
       paths.push_back(std::move(*p));
     }
     return Costed<std::vector<Path>>{std::move(paths), cost};
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<Costed<std::vector<Path>>, Error> Db::FindSubtrees(const Path& path, const Transaction& txn)
@@ -179,12 +141,11 @@ Result<Costed<std::vector<Path>>, Error> Db::FindSubtrees(const Path& path, cons
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<Costed<std::vector<Path>>, Error> {
     auto path_buf = wire::Encode(path);
-    rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
-
-    auto result =
-        grovedb_cxx::grovedb_find_subtrees_with_tx(*m_impl->m_db, path_slice, *txn.m_impl->m_tx);
+    auto result = grovedb_cxx::grovedb_find_subtrees_with_tx(
+        *m_impl->m_db, ToSlice(path_buf), *txn.m_impl->m_tx
+    );
     auto cost = convert_cost(result.cost);
 
     wire::Reader r{{result.value.data(), result.value.size()}};
@@ -206,8 +167,6 @@ Result<Costed<std::vector<Path>>, Error> Db::FindSubtrees(const Path& path, cons
       paths.push_back(std::move(*p));
     }
     return Costed<std::vector<Path>>{std::move(paths), cost};
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 } // namespace grovedb

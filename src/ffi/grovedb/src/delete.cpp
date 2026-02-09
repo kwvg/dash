@@ -4,6 +4,7 @@
 
 #include <db_internal.h>
 #include <types/transaction.h>
+#include <util/ffi.h>
 
 #include <grovedb/wire.h>
 
@@ -17,16 +18,11 @@ Result<OperationCost, Error> Db::Delete(const Path& path, const Bytes& key)
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<OperationCost, Error> {
     auto path_buf = wire::Encode(path);
-    rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
-    rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
-
-    auto result = grovedb_cxx::grovedb_delete(*m_impl->m_db, path_slice, key_slice);
+    auto result = grovedb_cxx::grovedb_delete(*m_impl->m_db, ToSlice(path_buf), ToSlice(key));
     return convert_cost(result);
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<OperationCost, Error> Db::Delete(const Path& path, const Bytes& key, const Transaction& txn)
@@ -34,18 +30,13 @@ Result<OperationCost, Error> Db::Delete(const Path& path, const Bytes& key, cons
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<OperationCost, Error> {
     auto path_buf = wire::Encode(path);
-    rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
-    rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
-
     auto result = grovedb_cxx::grovedb_delete_with_tx(
-        *m_impl->m_db, path_slice, key_slice, *txn.m_impl->m_tx
+        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
     );
     return convert_cost(result);
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -57,19 +48,12 @@ Result<Costed<bool>, Error> Db::DeleteIfEmpty(const Path& path, const Bytes& key
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<Costed<bool>, Error> {
     auto path_buf = wire::Encode(path);
-    rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
-    rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
-
-    auto result = grovedb_cxx::grovedb_delete_if_empty_tree(*m_impl->m_db, path_slice, key_slice);
-    return Costed<bool>{
-        .m_value = result.value,
-        .m_cost = convert_cost(result.cost),
-    };
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+    auto result =
+        grovedb_cxx::grovedb_delete_if_empty_tree(*m_impl->m_db, ToSlice(path_buf), ToSlice(key));
+    return ConvertBool(result);
+  });
 }
 
 Result<Costed<bool>, Error>
@@ -78,21 +62,13 @@ Db::DeleteIfEmpty(const Path& path, const Bytes& key, const Transaction& txn)
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<Costed<bool>, Error> {
     auto path_buf = wire::Encode(path);
-    rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
-    rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
-
     auto result = grovedb_cxx::grovedb_delete_if_empty_tree_with_tx(
-        *m_impl->m_db, path_slice, key_slice, *txn.m_impl->m_tx
+        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
     );
-    return Costed<bool>{
-        .m_value = result.value,
-        .m_cost = convert_cost(result.cost),
-    };
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+    return ConvertBool(result);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -104,20 +80,13 @@ Result<Costed<uint32_t>, Error> Db::PruneEmptyAncestors(const Path& path, const 
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<Costed<uint32_t>, Error> {
     auto path_buf = wire::Encode(path);
-    rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
-    rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
-
-    auto result =
-        grovedb_cxx::grovedb_delete_up_tree_while_empty(*m_impl->m_db, path_slice, key_slice);
-    return Costed<uint32_t>{
-        .m_value = result.value,
-        .m_cost = convert_cost(result.cost),
-    };
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+    auto result = grovedb_cxx::grovedb_delete_up_tree_while_empty(
+        *m_impl->m_db, ToSlice(path_buf), ToSlice(key)
+    );
+    return ConvertU32(result);
+  });
 }
 
 Result<Costed<uint32_t>, Error>
@@ -126,21 +95,13 @@ Db::PruneEmptyAncestors(const Path& path, const Bytes& key, const Transaction& t
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<Costed<uint32_t>, Error> {
     auto path_buf = wire::Encode(path);
-    rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
-    rust::Slice<const uint8_t> key_slice{key.data(), key.size()};
-
     auto result = grovedb_cxx::grovedb_delete_up_tree_while_empty_with_tx(
-        *m_impl->m_db, path_slice, key_slice, *txn.m_impl->m_tx
+        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
     );
-    return Costed<uint32_t>{
-        .m_value = result.value,
-        .m_cost = convert_cost(result.cost),
-    };
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+    return ConvertU32(result);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -152,14 +113,10 @@ Result<bool, Error> Db::Clear(const Path& path)
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<bool, Error> {
     auto path_buf = wire::Encode(path);
-    rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
-
-    return grovedb_cxx::grovedb_clear_subtree(*m_impl->m_db, path_slice);
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+    return grovedb_cxx::grovedb_clear_subtree(*m_impl->m_db, ToSlice(path_buf));
+  });
 }
 
 Result<bool, Error> Db::Clear(const Path& path, const Transaction& txn)
@@ -167,13 +124,11 @@ Result<bool, Error> Db::Clear(const Path& path, const Transaction& txn)
   if (!m_impl) {
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
-  try {
+  return CallFFI([&]() -> Result<bool, Error> {
     auto path_buf = wire::Encode(path);
-    rust::Slice<const uint8_t> path_slice{path_buf.data(), path_buf.size()};
-
-    return grovedb_cxx::grovedb_clear_subtree_with_tx(*m_impl->m_db, path_slice, *txn.m_impl->m_tx);
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+    return grovedb_cxx::grovedb_clear_subtree_with_tx(
+        *m_impl->m_db, ToSlice(path_buf), *txn.m_impl->m_tx
+    );
+  });
 }
 } // namespace grovedb
