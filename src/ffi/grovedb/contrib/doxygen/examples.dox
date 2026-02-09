@@ -1,0 +1,21 @@
+/**
+@example basic_crud.cpp
+@example element_types.cpp
+@example error_handling.cpp
+@example subtree_hierarchy.cpp
+@example tree_state.cpp
+@example sum_trees.cpp
+@example auxiliary_storage.cpp
+@example conditional_insert.cpp
+@example batch_operations.cpp
+@example batch_in_transaction.cpp
+@example range_queries.cpp
+@example multi_query.cpp
+@example chained_queries.cpp
+@example hierarchical_query.cpp
+@example transaction_lifecycle.cpp
+@example checkpoint_snapshot.cpp
+@example operation_costs.cpp
+@example proof_generation.cpp
+@example absence_proofs.cpp
+*/

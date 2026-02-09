@@ -13,7 +13,7 @@ trim_trailing_whitespace = true
 trim_trailing_whitespace = false
 
 # Build scripts
-[*.mk]
+[{*.mk,Makefile}]
 indent_style = tab
 
 # Nix files - RFC 166 (nixfmt-rfc-style) compliant

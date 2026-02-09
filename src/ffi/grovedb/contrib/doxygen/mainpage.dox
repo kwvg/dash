@@ -1,0 +1,62 @@
+/**
+@mainpage Introduction
+
+@section modules API Modules
+
+| Module | Header | Description |
+|--------|--------|-------------|
+| @ref database | grovedb/db.h | Opening, closing, and operating on a database |
+| @ref elements | grovedb/element.h | Typed values stored in the tree |
+| @ref types | grovedb/types.h | Bytes, Path, and Hash primitives |
+| @ref queries | grovedb/query.h | Range queries and path queries |
+| @ref batch | grovedb/batch.h | Atomic multi-operation batches |
+| @ref wire | grovedb/wire.h | Binary serialization protocol |
+| @ref transactions | grovedb/transaction.h | RAII transaction handles |
+| @ref errors | grovedb/error.h, grovedb/result.h | Error codes and Result\<T,E\> type |
+| @ref cost | grovedb/cost.h, grovedb/costed.h | I/O cost tracking |
+**/
+
+/**
+@defgroup database Database
+@brief Opening, closing, and operating on a GroveDB instance.
+*/
+
+/**
+@defgroup elements Elements
+@brief Typed values (items, trees, sum items) stored in the tree.
+*/
+
+/**
+@defgroup types Core Types
+@brief Byte vectors, paths, and hashes.
+*/
+
+/**
+@defgroup queries Queries
+@brief Range predicates, path queries, and result types.
+*/
+
+/**
+@defgroup batch Batch Operations
+@brief Atomic multi-operation batches with validation options.
+*/
+
+/**
+@defgroup wire Wire Protocol
+@brief Little-endian binary serialization for on-disk and network encoding.
+*/
+
+/**
+@defgroup transactions Transactions
+@brief RAII transaction handles for atomic read-write sessions.
+*/
+
+/**
+@defgroup errors Error Handling
+@brief Error codes, error objects, and the Result\<T,E\> type alias.
+*/
+
+/**
+@defgroup cost Cost Tracking
+@brief I/O cost counters and the Costed\<T\> wrapper.
+*/

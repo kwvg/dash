@@ -1,0 +1,73 @@
+PROJECT_NAME           = "GroveDb"
+PROJECT_BRIEF          = "C++20 bindings for GroveDb"
+PROJECT_NUMBER         = cdc9b8d951
+OUTPUT_DIRECTORY       = output
+CREATE_SUBDIRS         = NO
+
+# Input
+EXAMPLE_PATH           = ../examples
+EXCLUDE_PATTERNS       = \
+  */bench/*              \
+  */build/*              \
+  */builddir/*           \
+  */fuzz/*               \
+  */target/cxxbridge/*   \
+  */test/*               \
+  */types/*              \
+  */util/*               \
+  */vendor/*
+EXAMPLE_RECURSIVE      = NO
+EXCLUDE_SYMBOLS        = detail::* internal::* *::Impl
+FILE_PATTERNS          = *.h *.hpp *.cpp
+INPUT                  = ../../include ../../src examples.dox mainpage.dox
+STRIP_FROM_PATH        = ../../
+STRIP_FROM_INC_PATH    = ../../include
+RECURSIVE              = YES
+
+# Parsing
+BUILTIN_STL_SUPPORT    = YES
+CPP_CLI_SUPPORT        = NO
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+HIDE_UNDOC_CLASSES     = YES
+HIDE_UNDOC_MEMBERS     = YES
+JAVADOC_AUTOBRIEF      = YES
+
+# Browsing
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+SOURCE_BROWSER         = YES
+STRIP_CODE_COMMENTS    = NO
+
+# Output
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_MAN           = NO
+GENERATE_TREEVIEW      = YES
+GENERATE_XML           = NO
+HTML_COLORSTYLE        = LIGHT
+HTML_EXTRA_STYLESHEET  = \
+  theme/doxygen-awesome.css               \
+  theme/doxygen-awesome-sidebar-only.css
+SHOW_FILES             = YES
+SHOW_NAMESPACES        = YES
+
+# Diagrams
+HAVE_DOT               = YES
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+COLLABORATION_GRAPH    = YES
+DOT_GRAPH_MAX_NODES    = 100
+DOT_IMAGE_FORMAT       = svg
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+INTERACTIVE_SVG        = YES
+
+# Warnings
+WARN_AS_ERROR          = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_NO_PARAMDOC       = YES

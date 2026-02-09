@@ -1,0 +1,3 @@
+[submodule "src/ffi/grovedb/contrib/doxygen/theme"]
+	path = src/ffi/grovedb/contrib/doxygen/theme
+	url = https://github.com/jothepro/doxygen-awesome-css.git
