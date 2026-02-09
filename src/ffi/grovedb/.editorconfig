@@ -16,6 +16,10 @@ trim_trailing_whitespace = false
 [*.mk]
 indent_style = tab
 
+# Nix files - RFC 166 (nixfmt-rfc-style) compliant
+[*.nix]
+max_line_length = 100
+
 [include/grovedb/vendor/**]
 # Equivalent to ignore
 
