@@ -1,0 +1,567 @@
+/* GroveDB Doxygen Theme Overlay
+ *
+ * Custom CSS overriding doxygen-awesome-css variables to match
+ * the GroveDB design language from https://www.grovedb.org/
+ *
+ * Colors extracted from grovedb.org:
+ *   Brand blue:  #0289DD
+ *   Dark blue:   #008DE4
+ *   Hover blue:  #70bdec
+ *   Dark bg:     #141414
+ *   Dark card:   #182E3C
+ *
+ * Inter font loaded via <link> tags in header.html
+ */
+
+/* ---------- Light Mode ---------- */
+
+html {
+    /* Primary brand colors */
+    --primary-color: #0289DD;
+    --primary-dark-color: #0270B8;
+    --primary-light-color: #70bdec;
+    --primary-lighter-color: #b8dff5;
+    --primary-lightest-color: #e6f3fb;
+
+    /* Page */
+    --page-background-color: #ffffff;
+    --page-foreground-color: #2c3e50;
+    --page-secondary-foreground-color: #67727e;
+
+    /* Sidebar - brand blue background */
+    --side-nav-background: #0289DD;
+    --side-nav-foreground: #ffffff;
+    --header-background: #0289DD;
+    --header-foreground: #ffffff;
+
+    /* Search bar in sidebar - white text on translucent white bg */
+    --searchbar-background: rgba(255, 255, 255, 0.15);
+    --searchbar-foreground: #ffffff;
+    --searchbar-border-radius: 10px;
+
+    /* Table of contents */
+    --toc-background: #e6f3fb;
+    --toc-foreground: var(--page-foreground-color);
+
+    /* Alternating row stripe */
+    --odd-color: rgba(2, 137, 221, 0.04);
+
+    /* Code fragments */
+    --fragment-background: #f5f5f5;
+    --fragment-foreground: var(--page-foreground-color);
+    --fragment-link-color: var(--primary-color);
+    --fragment-linenumber-color: #a0a0a0;
+    --code-background: #f5f5f5;
+
+    /* Typography - Inter */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                   Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+    --font-family-monospace: ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
+                             Consolas, 'Liberation Mono', monospace;
+
+    /* Spacing - roomier feel */
+    --spacing-small: 8px;
+    --spacing-medium: 14px;
+    --spacing-large: 20px;
+    --spacing-xlarge: 28px;
+
+    /* Sidebar top area - must fit logo + padding + search bar */
+    --top-height: 135px;
+
+    /* Footer height - must match actual rendered height for sidebar-only layout */
+    --footer-height: 35px;
+
+    /* Borders */
+    --border-radius-large: 12px;
+    --border-radius-small: 6px;
+    --border-radius-medium: 8px;
+
+    /* Separator */
+    --separator-color: #e0e0e0;
+
+    /* Table rows */
+    --table-line-height: 2.2;
+
+    /* Admonition / note colors */
+    --note-color: #0289DD;
+    --note-color-dark: #0270B8;
+    --note-color-darker: #005c96;
+    --warning-color: #f0ad4e;
+    --warning-color-dark: #ec971f;
+    --warning-color-darker: #d58512;
+    --todo-color: #70bdec;
+    --todo-color-dark: #0289DD;
+    --todo-color-darker: #0270B8;
+}
+
+/* ---------- Dark Mode ---------- */
+
+html.dark-mode {
+    color-scheme: dark;
+
+    /* Primary colors - lighter for readability on dark bg */
+    --primary-color: #70bdec;
+    --primary-dark-color: #a0d4f3;
+    --primary-light-color: #2a7ab5;
+    --primary-lighter-color: #1a3d55;
+    --primary-lightest-color: #0f2233;
+
+    /* Page - matches grovedb.org body.night */
+    --page-background-color: #141414;
+    --page-foreground-color: #e0e0e0;
+    --page-secondary-foreground-color: #a0a8b0;
+
+    /* Sidebar - dark card gradient from grovedb.org */
+    --side-nav-background: #182E3C;
+    --side-nav-foreground: #ffffff;
+    --header-background: #182E3C;
+    --header-foreground: #ffffff;
+
+    /* Search bar in sidebar */
+    --searchbar-background: rgba(255, 255, 255, 0.1);
+    --searchbar-foreground: #ffffff;
+
+    /* Table of contents */
+    --toc-background: #1c2a35;
+    --toc-foreground: var(--page-foreground-color);
+
+    /* Alternating row stripe */
+    --odd-color: rgba(255, 255, 255, 0.04);
+
+    /* Code fragments */
+    --fragment-background: #1c1c1c;
+    --fragment-foreground: #d4d4d4;
+    --fragment-link-color: var(--primary-color);
+    --fragment-linenumber-color: #606060;
+    --code-background: #1c1c1c;
+
+    /* Separator */
+    --separator-color: #2a2a2a;
+
+    /* Admonition / note colors */
+    --note-color: #70bdec;
+    --note-color-dark: #0289DD;
+    --note-color-darker: #70bdec;
+    --todo-color: #70bdec;
+    --todo-color-dark: #0289DD;
+    --todo-color-darker: #70bdec;
+}
+
+/* Also handle prefers-color-scheme for users without the toggle */
+@media (prefers-color-scheme: dark) {
+    html:not(.light-mode) {
+        color-scheme: dark;
+
+        --primary-color: #70bdec;
+        --primary-dark-color: #a0d4f3;
+        --primary-light-color: #2a7ab5;
+        --primary-lighter-color: #1a3d55;
+        --primary-lightest-color: #0f2233;
+
+        --page-background-color: #141414;
+        --page-foreground-color: #e0e0e0;
+        --page-secondary-foreground-color: #a0a8b0;
+
+        --side-nav-background: #182E3C;
+        --side-nav-foreground: #ffffff;
+        --header-background: #182E3C;
+        --header-foreground: #ffffff;
+
+        --searchbar-background: rgba(255, 255, 255, 0.1);
+        --searchbar-foreground: #ffffff;
+
+        --toc-background: #1c2a35;
+        --toc-foreground: var(--page-foreground-color);
+
+        --odd-color: rgba(255, 255, 255, 0.04);
+
+        --fragment-background: #1c1c1c;
+        --fragment-foreground: #d4d4d4;
+        --fragment-link-color: var(--primary-color);
+        --fragment-linenumber-color: #606060;
+        --code-background: #1c1c1c;
+
+        --separator-color: #2a2a2a;
+
+        --note-color: #70bdec;
+        --note-color-dark: #0289DD;
+        --note-color-darker: #70bdec;
+        --todo-color: #70bdec;
+        --todo-color-dark: #0289DD;
+        --todo-color-darker: #70bdec;
+    }
+}
+
+/* ---------- Title area layout ---------- */
+
+/* Logo sizing - prominent in the sidebar */
+#projectlogo img {
+    max-height: 36px;
+    width: auto;
+    padding-left: 10%;
+}
+
+/* Hide the project brief text */
+#projectbrief {
+    display: none;
+}
+
+/* Title area: roomy, blends with sidebar */
+#titlearea {
+    border-bottom: none;
+    padding: var(--spacing-xlarge) var(--spacing-medium);
+}
+
+/* ---------- Force Inter everywhere ---------- */
+
+/* doxygen.css hardcodes font-family on .title, #nav-path ul, etc.
+   Override all of them to use Inter from our CSS variable. */
+body,
+.title,
+#nav-path ul,
+.navpath li,
+.navpath li.footer,
+table.directory,
+.memberdecls,
+#projectnumber,
+#projectbrief,
+.memItemLeft,
+.memItemRight,
+.memTemplParams {
+    font-family: var(--font-family) !important;
+}
+
+code, div.fragment, pre.fragment, span.tt {
+    font-family: var(--font-family-monospace) !important;
+}
+
+/* ---------- Sidebar-only layout overrides ---------- */
+
+/* The sidebar-only theme hardcodes #doc-content height to calc(100vh - 31px)
+   assuming a 30px+1px footer. Our footer uses height:auto, so override to
+   match our actual --footer-height. */
+@media screen and (min-width: 768px) {
+    #doc-content {
+        height: calc(100vh - var(--footer-height)) !important;
+        padding-bottom: calc(3 * var(--spacing-large));
+    }
+
+    /* Re-assert searchbar colors inside the sidebar media query, since
+       doxygen-awesome-sidebar-only.css overrides them here. */
+    html {
+        --searchbar-background: rgba(255, 255, 255, 0.15);
+        --searchbar-foreground: #ffffff;
+    }
+
+    html.dark-mode {
+        --searchbar-background: rgba(255, 255, 255, 0.1);
+        --searchbar-foreground: #ffffff;
+    }
+}
+
+@media screen and (min-width: 768px) and (prefers-color-scheme: dark) {
+    html:not(.light-mode) {
+        --searchbar-background: rgba(255, 255, 255, 0.1);
+        --searchbar-foreground: #ffffff;
+    }
+}
+
+/* ---------- Search bar ---------- */
+
+/* Ensure search text is always readable (white on blue sidebar) */
+#MSearchField {
+    color: var(--searchbar-foreground) !important;
+}
+
+#MSearchField::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Search border: subtle white instead of separator-color on blue bg */
+#MSearchBox {
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Search icon: override hardcoded #909090 from search.css */
+.search-icon::before {
+    border-color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.search-icon::after {
+    border-color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.search-icon-dropdown {
+    border-top-color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* ---------- Sidebar nav tree ---------- */
+
+/* Roomier sidebar overall */
+#nav-tree-contents {
+    padding: var(--spacing-small) 0;
+}
+
+/* Resize handle */
+#side-nav .ui-resizable-e {
+    background-color: var(--separator-color);
+}
+
+/* Selected item: white text on blue sidebar, override --primary-color */
+#nav-tree .selected a {
+    color: #ffffff !important;
+}
+
+#nav-tree .selected::after {
+    background-color: #ffffff;
+}
+
+/* Hovered items in the nav tree */
+#nav-tree .item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Nav tree item spacing */
+#nav-tree .item {
+    margin: 2px 0;
+    padding: 2px 0;
+}
+
+/* Nav tree labels */
+#nav-tree .label {
+    padding: 2px var(--spacing-small);
+}
+
+/* ---------- Content area refinements ---------- */
+
+/* Extra padding on content */
+div.contents {
+    padding: var(--spacing-large) var(--spacing-xlarge);
+}
+
+div.header .title {
+    padding: var(--spacing-large) var(--spacing-xlarge);
+}
+
+div.header .summary {
+    padding: 0 var(--spacing-xlarge);
+}
+
+/* Links within content */
+.contents a:not(.el) {
+    color: var(--primary-color);
+}
+
+.contents a:not(.el):hover {
+    color: var(--primary-dark-color);
+    text-decoration: underline;
+}
+
+/* Table styling matching grovedb.org feel */
+.markdownTable,
+.fieldtable {
+    border-radius: var(--border-radius-medium);
+}
+
+/* Directory table (class list, namespace list etc) - extra row padding */
+table.directory td.entry,
+table.directory td.desc {
+    padding: var(--spacing-small) var(--spacing-medium);
+}
+
+/* Member declaration tables - more room */
+.memberdecls td.memItemLeft,
+.memberdecls td.memItemRight {
+    padding: var(--spacing-small) var(--spacing-medium);
+}
+
+/* Note/warning blocks - left border accent like grovedb.org .notes class */
+dl.note,
+dl.warning,
+dl.todo,
+dl.bug,
+dl.deprecated {
+    border-left-width: 3px;
+    padding: var(--spacing-medium) var(--spacing-large);
+}
+
+/* ---------- Dark mode: override doxygen.css hardcoded colors ---------- */
+
+/* doxygen.css uses hardcoded white/light backgrounds that don't respect
+   CSS variables. Override them explicitly for dark mode. */
+
+html.dark-mode .directory tr.even,
+html.dark-mode .classindex dl.even {
+    background-color: var(--odd-color);
+}
+
+html.dark-mode .directory tr.odd,
+html.dark-mode .classindex dl.odd {
+    background-color: transparent;
+}
+
+html.dark-mode div.header {
+    background-color: transparent;
+}
+
+html.dark-mode .memItemLeft,
+html.dark-mode .memItemRight,
+html.dark-mode .memTemplParams {
+    background-color: var(--page-background-color);
+}
+
+html.dark-mode blockquote {
+    background-color: var(--code-background);
+}
+
+html.dark-mode .folder-icon {
+    background-color: var(--primary-light-color);
+    border-color: var(--primary-color);
+}
+
+html.dark-mode .folder-icon::before {
+    background-color: var(--primary-light-color);
+    border-color: var(--primary-color);
+}
+
+html.dark-mode .folder-icon::after {
+    background-color: var(--primary-lighter-color);
+    border-color: var(--primary-color);
+}
+
+html.dark-mode .doc-icon {
+    background-color: var(--primary-color);
+}
+
+html.dark-mode .doc-icon::before {
+    background-color: var(--page-background-color);
+}
+
+html.dark-mode .doc-icon::after {
+    border-color: var(--primary-color);
+}
+
+/* Same overrides via prefers-color-scheme for users without the toggle */
+@media (prefers-color-scheme: dark) {
+    html:not(.light-mode) .directory tr.even,
+    html:not(.light-mode) .classindex dl.even {
+        background-color: var(--odd-color);
+    }
+
+    html:not(.light-mode) .directory tr.odd,
+    html:not(.light-mode) .classindex dl.odd {
+        background-color: transparent;
+    }
+
+    html:not(.light-mode) div.header {
+        background-color: transparent;
+    }
+
+    html:not(.light-mode) .memItemLeft,
+    html:not(.light-mode) .memItemRight,
+    html:not(.light-mode) .memTemplParams {
+        background-color: var(--page-background-color);
+    }
+
+    html:not(.light-mode) blockquote {
+        background-color: var(--code-background);
+    }
+
+    html:not(.light-mode) .folder-icon {
+        background-color: var(--primary-light-color);
+        border-color: var(--primary-color);
+    }
+
+    html:not(.light-mode) .folder-icon::before {
+        background-color: var(--primary-light-color);
+        border-color: var(--primary-color);
+    }
+
+    html:not(.light-mode) .folder-icon::after {
+        background-color: var(--primary-lighter-color);
+        border-color: var(--primary-color);
+    }
+
+    html:not(.light-mode) .doc-icon {
+        background-color: var(--primary-color);
+    }
+
+    html:not(.light-mode) .doc-icon::before {
+        background-color: var(--page-background-color);
+    }
+
+    html:not(.light-mode) .doc-icon::after {
+        border-color: var(--primary-color);
+    }
+}
+
+/* ---------- Footer ---------- */
+
+#nav-path {
+    background: #ededed;
+}
+
+#nav-path ul {
+    background: #ededed;
+    border-top: 1px solid var(--separator-color);
+    min-height: var(--footer-height);
+    height: auto;
+    box-sizing: border-box;
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: var(--spacing-small) var(--spacing-medium);
+    margin: 0;
+}
+
+#nav-path .navpath li.footer {
+    color: #67727e;
+    float: none !important;
+    list-style-type: none;
+}
+
+#nav-path .navpath li.footer a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+#nav-path .navpath li.footer a:hover {
+    color: var(--primary-color);
+}
+
+html.dark-mode #nav-path .navpath li.footer a:hover {
+    color: #a0a8b0;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not(.light-mode) #nav-path .navpath li.footer a:hover {
+        color: #a0a8b0;
+    }
+}
+
+html.dark-mode #nav-path,
+html.dark-mode #nav-path ul {
+    background: #1c1c1c;
+}
+
+html.dark-mode .navpath li.footer {
+    color: #808890;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not(.light-mode) #nav-path,
+    html:not(.light-mode) #nav-path ul {
+        background: #1c1c1c;
+    }
+
+    html:not(.light-mode) .navpath li.footer {
+        color: #808890;
+    }
+}
+
+/* ---------- Dark mode toggle button color ---------- */
+
+doxygen-awesome-dark-mode-toggle {
+    color: var(--header-foreground);
+}
