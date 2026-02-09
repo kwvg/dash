@@ -65,8 +65,8 @@ html {
     --spacing-large: 20px;
     --spacing-xlarge: 28px;
 
-    /* Sidebar top area - must fit logo + padding + search bar */
-    --top-height: 135px;
+    /* Sidebar top area - logo + padding + search bar + gap before HR */
+    --top-height: 148px;
 
     /* Footer height - must match actual rendered height for sidebar-only layout */
     --footer-height: 35px;
@@ -212,6 +212,13 @@ html.dark-mode {
     padding: var(--spacing-xlarge) var(--spacing-medium);
 }
 
+/* Horizontal ruler below search bar — matches gcovr sidebar header */
+@media screen and (min-width: 768px) {
+    #top {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+    }
+}
+
 /* ---------- Force Inter everywhere ---------- */
 
 /* doxygen.css hardcodes font-family on .title, #nav-path ul, etc.
@@ -302,9 +309,12 @@ code, div.fragment, pre.fragment, span.tt {
     padding: var(--spacing-small) 0;
 }
 
-/* Resize handle */
-#side-nav .ui-resizable-e {
-    background-color: var(--separator-color);
+/* Resize handle and sync button — remove entirely */
+.ui-resizable-handle,
+.ui-resizable-e,
+#nav-sync {
+    display: none !important;
+    width: 0 !important;
 }
 
 /* Selected item: white text on blue sidebar, override --primary-color */
@@ -495,30 +505,45 @@ html.dark-mode .doc-icon::after {
     }
 }
 
-/* ---------- Footer ---------- */
+/* ---------- Footer (matches gcovr coverage theme) ---------- */
 
 #nav-path {
     background: #ededed;
 }
 
 #nav-path ul {
-    background: #ededed;
+    background: #ededed !important;
+    background-image: none !important;
     border-top: 1px solid var(--separator-color);
-    min-height: var(--footer-height);
-    height: auto;
+    border-bottom: none !important;
+    min-height: 35px;
+    height: 35px !important;
+    line-height: normal !important;
     box-sizing: border-box;
     overflow: visible;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    padding: var(--spacing-small) var(--spacing-medium);
+    padding: 8px 14px !important;
     margin: 0;
+    font-size: 13px !important;
 }
+
+#nav-path .navpath li.footer,
+#nav-path .navpath li.footer a,
+.navpath li.footer,
+.navpath li.footer a {
+    font-size: 13px !important;
+    line-height: normal !important;
+    font-family: var(--font-family) !important;
+}
+
 
 #nav-path .navpath li.footer {
     color: #67727e;
     float: none !important;
     list-style-type: none;
+    font-size: 13px !important;
 }
 
 #nav-path .navpath li.footer a {
@@ -542,8 +567,9 @@ html.dark-mode #nav-path .navpath li.footer a:hover {
 
 html.dark-mode #nav-path,
 html.dark-mode #nav-path ul {
-    background: #1c1c1c;
+    background: #1c1c1c !important;
 }
+
 
 html.dark-mode .navpath li.footer {
     color: #808890;
@@ -552,7 +578,7 @@ html.dark-mode .navpath li.footer {
 @media (prefers-color-scheme: dark) {
     html:not(.light-mode) #nav-path,
     html:not(.light-mode) #nav-path ul {
-        background: #1c1c1c;
+        background: #1c1c1c !important;
     }
 
     html:not(.light-mode) .navpath li.footer {
@@ -560,8 +586,61 @@ html.dark-mode .navpath li.footer {
     }
 }
 
-/* ---------- Dark mode toggle button color ---------- */
 
+/* ---------- Dark mode toggle — sidebar footer (matches gcovr) ---------- */
+
+/* Override theme defaults: match gcovr #dark-mode-toggle */
 doxygen-awesome-dark-mode-toggle {
-    color: var(--header-foreground);
+    margin: 0 !important;
+    width: fit-content !important;
+    height: auto !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 6px !important;
+    background: none !important;
+    color: rgba(255, 255, 255, 0.85);
+    padding: 6px 8px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+doxygen-awesome-dark-mode-toggle > svg {
+    width: 20px;
+    height: 20px;
+}
+
+doxygen-awesome-dark-mode-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Fixed footer container at bottom of sidebar */
+#sidebar-toggle-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: var(--side-nav-fixed-width);
+    padding: 12px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--side-nav-background);
+    box-sizing: border-box;
+    z-index: 101;
+}
+
+html.dark-mode #sidebar-toggle-footer {
+    background: #182E3C;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not(.light-mode) #sidebar-toggle-footer {
+        background: #182E3C;
+    }
+}
+
+@media (max-width: 767px) {
+    #sidebar-toggle-footer {
+        display: none;
+    }
 }

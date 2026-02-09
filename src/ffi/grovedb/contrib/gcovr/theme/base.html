@@ -1,0 +1,186 @@
+{# -*- engine: jinja -*- #}
+<!DOCTYPE html>
+<html class="theme-{{theme}}"{% if (theme == 'dark-blue' or theme == 'dark-green') %} data-color-mode="dark" data-dark-theme="dark"{% endif %}>
+
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset={{info.encoding}}"/>
+    <title>{% block html_title %}{{info.head}}{% endblock %}{% if info.diff_report %} - Diff mode{% endif %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="icon" type="image/x-icon" href="https://www.grovedb.org/img/favicon.ico"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+    {% if css_link is defined %}
+    <link rel="stylesheet" href="{{css_link}}"/>
+    {% else %}
+    <style type="text/css">
+{{ css | safe }}
+    </style>
+    {% endif %}
+    <script>
+    /* Dark mode — apply immediately before paint */
+    (function() {
+      var KEY = 'grovedb-dark-mode';
+      var stored = localStorage.getItem(KEY);
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var isDark = stored !== null ? stored === 'true' : prefersDark;
+      var html = document.documentElement;
+      if (isDark) {
+        html.classList.add('dark-mode');
+        html.classList.remove('light-mode');
+      } else {
+        html.classList.add('light-mode');
+        html.classList.remove('dark-mode');
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+        if (localStorage.getItem(KEY) === null) {
+          html.classList.toggle('dark-mode', e.matches);
+          html.classList.toggle('light-mode', !e.matches);
+          updateToggleIcon();
+        }
+      });
+      window.__toggleDarkMode = function() {
+        var isDark = html.classList.toggle('dark-mode');
+        html.classList.toggle('light-mode', !isDark);
+        localStorage.setItem(KEY, isDark);
+        updateToggleIcon();
+      };
+      function updateToggleIcon() {
+        var btn = document.getElementById('dark-mode-toggle');
+        if (btn) {
+          btn.innerHTML = html.classList.contains('dark-mode')
+            ? '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0a.996.996 0 000-1.41l-1.06-1.06zm1.06-10.96a.996.996 0 000-1.41.996.996 0 00-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36a.996.996 0 000-1.41.996.996 0 00-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>'
+            : '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M9.37 5.51A7.35 7.35 0 009.1 7.5c0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 17.19 14.93 19 12 19c-3.86 0-7-3.14-7-7 0-3.93 2.81-6.45 5.37-6.49z"/></svg>';
+        }
+      }
+      window.__updateToggleIcon = updateToggleIcon;
+    })();
+    </script>
+    {% if not info.static_report %}
+    {% if javascript_link is defined %}
+    <script src="{{javascript_link}}"></script>
+    {% else %}
+    <script>
+{{ javascript | safe }}
+    </script>
+    {% endif %}
+    {% endif %}
+  </head>
+
+  <body{% if info.single_page and not info.static_report %} class="js-disabled"{% endif %}>
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <a href="index.html" id="sidebar-logo">
+          <svg width="144" height="32" viewBox="0 0 144 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M17.2767 0.0305416C18.0575 0.00160196 19.4927 -0.0635122 20.1772 0.173537C20.6258 0.328024 20.9717 0.668916 21.0697 1.1494C21.1987 1.78181 21.1104 2.54829 21.1104 3.24497C21.1104 4.59492 21.1588 6.14744 21.1308 7.45568C21.1164 8.12385 21.1928 8.87883 21.0697 9.49039C20.9704 9.98407 20.7145 10.2752 20.3394 10.4871C19.9201 10.7233 19.4507 10.725 18.8791 10.7305C17.8267 10.7412 16.5141 10.6701 15.5525 10.7514C13.6152 10.9152 12.166 11.9749 11.3737 13.4164C10.7312 14.5859 10.5254 16.1984 11.0088 17.6067C11.4149 18.7902 12.2806 19.7878 13.3415 20.4147C14.0647 20.8411 14.8892 21.1526 16.0193 21.1471C17.1859 21.1403 17.9875 20.8015 18.6767 20.3742C20.0898 19.4967 21.0082 18.1233 21.1516 15.9805C21.2191 14.9715 21.1389 13.845 21.1516 12.644C21.1626 11.56 21.5679 10.8186 22.6322 10.6905C23.6333 10.571 24.8996 10.6705 26.0195 10.6705C27.0393 10.6705 28.1817 10.6505 29.3461 10.6497C29.8715 10.6497 30.5182 10.619 30.9282 10.7718C31.3759 10.9399 31.737 11.3327 31.821 11.8907C31.9076 12.4669 31.8618 13.1542 31.8618 13.8441C31.8618 15.1357 31.8614 16.5397 31.8618 17.9131C31.8618 18.6319 31.9076 19.326 31.8414 19.947C31.7451 20.8488 31.1251 21.2603 30.1372 21.2893C28.4876 21.3382 26.4354 21.1165 25.066 21.4931C24.3827 21.6799 23.7856 22.0153 23.3014 22.3885C22.2749 23.1788 21.5564 24.1692 21.3133 25.7242C21.1953 26.4797 21.2123 27.3959 21.1915 28.2671C21.1707 29.1434 21.3608 30.4167 21.029 31.0947C20.7955 31.5718 20.3292 31.8795 19.6498 31.9492C18.9835 32.0182 18.2489 32.0084 17.4995 31.9701C16.021 31.8944 14.6163 31.8629 13.3818 31.6441C10.912 31.207 8.84578 30.2452 7.05283 29.0808C5.33711 27.9671 3.74615 26.3792 2.61055 24.6262C1.89464 23.5206 1.21438 22.2855 0.764547 20.9032C0.674157 20.6249 0.646573 20.3198 0.5617 20.0078C0.40723 19.4401 0.241726 18.806 0.156004 18.1974C-0.245023 15.3579 0.165765 12.5495 0.947025 10.4062C1.72956 8.25918 2.98569 6.42535 4.39501 4.95411C5.86332 3.42286 7.6393 2.23463 9.69027 1.35283C10.7414 0.900858 11.8639 0.543369 13.0979 0.315256C14.3668 0.0811859 15.7918 0.0862929 17.2767 0.0305416Z" fill="white"/>
+            <path d="M52.4496 9.92C47.3496 9.92 43.7096 13.02 43.7096 17.3C43.7096 21.58 47.2696 24.72 52.2896 24.72C54.5496 24.72 56.5296 23.96 57.3296 23V24.5H60.4296V16.54H51.1496V19.24H57.2096C56.9096 20.78 54.7696 21.86 52.3096 21.86C49.3296 21.86 47.1296 20.06 47.1296 17.34C47.1296 14.58 49.3896 12.8 52.3696 12.8C54.8296 12.8 56.4296 13.92 57.1496 15.7L60.2096 14.4C59.1096 11.62 56.2696 9.92 52.4496 9.92ZM70.5178 14.02C70.1978 13.96 69.8378 13.9 69.3578 13.9C67.6378 13.9 66.3778 14.44 65.4578 15.78V13.96H62.2578V24.5H65.4578V20.22C65.4578 17.86 67.0178 16.98 69.2378 16.98C69.7978 16.98 70.0378 17.04 70.5178 17.12V14.02ZM77.2161 13.74C73.6761 13.74 70.9361 15.92 70.9361 19.24C70.9361 22.56 73.6761 24.72 77.2161 24.72C80.7561 24.72 83.5161 22.56 83.5161 19.24C83.5161 15.92 80.7561 13.74 77.2161 13.74ZM77.2161 22.12C75.4761 22.12 74.0561 21.08 74.0561 19.24C74.0561 17.42 75.4761 16.36 77.2161 16.36C78.9761 16.36 80.3961 17.42 80.3961 19.24C80.3961 21.08 78.9761 22.12 77.2161 22.12ZM91.5528 24.5L96.7128 13.96H93.2928L89.9728 21.1L86.6328 13.96H83.0728L88.2328 24.5H91.5528ZM102.608 22.18C100.968 22.18 99.7481 21.4 99.3881 20.06H108.588V19.18C108.588 16.18 106.388 13.74 102.608 13.74C98.8881 13.74 96.2681 16.1 96.2681 19.22C96.2681 22.5 98.8881 24.72 102.628 24.72C105.388 24.72 107.648 23.4 108.408 21.54L105.588 20.52C105.128 21.54 104.008 22.18 102.608 22.18ZM102.508 16.22C104.188 16.22 105.228 17.22 105.368 18.1H99.4681C99.9081 16.86 101.108 16.22 102.508 16.22ZM110.152 24.5H117.592C122.692 24.5 125.892 21.7 125.892 17.32C125.892 12.94 122.692 10.14 117.592 10.14H110.152V24.5ZM113.432 21.68V12.96H117.572C120.712 12.96 122.532 14.68 122.532 17.32C122.532 19.96 120.712 21.68 117.592 21.68H113.432ZM127.457 24.5H137.437C140.517 24.5 142.417 23 142.417 20.46C142.417 18.74 141.337 17.54 139.957 17.04C140.897 16.64 141.997 15.66 141.997 14C141.997 11.5 140.217 10.14 137.077 10.14H127.457V24.5ZM130.657 15.9V12.88H136.737C138.077 12.88 138.837 13.38 138.837 14.38C138.837 15.38 138.077 15.9 136.737 15.9H130.657ZM130.657 18.5H137.157C138.437 18.5 139.197 19.16 139.197 20.12C139.197 21.08 138.437 21.74 137.157 21.74H130.657V18.5Z" fill="white"/>
+          </svg>
+        </a>
+      </div>
+
+      <nav id="sidebar-nav">
+        <ul>
+          <li><a href="index.html" class="nav-link" id="nav-coverage">Coverage</a></li>
+          <li>
+            <a href="index.html" class="nav-header" id="nav-files-header">Files</a>
+            <ul class="nav-subtree" id="nav-files"></ul>
+          </li>
+          {% if info.link_function_list %}
+          <li><a href="index.functions.html" class="nav-link" id="nav-functions">Functions</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+
+      <div id="sidebar-footer">
+        <button id="dark-mode-toggle" onclick="__toggleDarkMode()" title="Toggle Light/Dark Mode"></button>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div id="main-content">
+      <div class="content-wrapper">
+        <header>
+          {% block summary %}
+          {% endblock %}
+        </header>
+        {% if not info.single_page %}
+        <hr class="content-separator"/>
+        {% endif %}
+        <nav class="page-nav">
+          {% block navigation %}
+          {% endblock %}
+        </nav>
+        <main>
+          {% block content %}
+          {% endblock %}
+        </main>
+      </div>
+      <div id="content-footer">
+        <span>Generated by <a href="http://gcovr.com/en/{{ 'main' if info.version.endswith('+main') else info.version }}">gcovr {{ info.version }}</a> with GroveDb theme. Based on libgrovedb build unknown.</span>
+      </div>
+    </div>
+
+    <script>
+    /* Sidebar navigation — populate file list and highlight active page */
+    (function() {
+      var pathname = window.location.pathname;
+      var filename = pathname.split('/').pop() || 'index.html';
+      var isIndex = filename === 'index.html' || filename === '';
+      var isFunctions = filename === 'index.functions.html';
+      var filesEl = document.getElementById('nav-files');
+
+      /* Highlight active nav item */
+      if (isIndex) {
+        var el = document.getElementById('nav-coverage');
+        if (el) el.classList.add('active');
+      } else if (isFunctions) {
+        var el = document.getElementById('nav-functions');
+        if (el) el.classList.add('active');
+      }
+
+      /* Populate file list from directory page file table */
+      var fileLinks = document.querySelectorAll('.filelist .Box-row a[href]');
+      if (fileLinks.length > 0) {
+        fileLinks.forEach(function(a) {
+          var li = document.createElement('li');
+          var link = document.createElement('a');
+          link.href = a.getAttribute('href');
+          link.textContent = a.textContent.trim();
+          link.className = 'nav-file-link';
+          li.appendChild(link);
+          filesEl.appendChild(li);
+        });
+      } else if (!isIndex && !isFunctions) {
+        /* On source pages, show current file from page title */
+        var sourceFile = document.title.split(' - ')[0].trim();
+        var li = document.createElement('li');
+        var link = document.createElement('a');
+        link.href = '#';
+        link.textContent = sourceFile;
+        link.className = 'nav-file-link active';
+        li.appendChild(link);
+        filesEl.appendChild(li);
+        document.getElementById('nav-files-header').classList.add('expanded');
+      }
+
+      /* Toggle files subtree — collapse/expand when files present, navigate otherwise */
+      var header = document.getElementById('nav-files-header');
+      if (header) {
+        if (filesEl.children.length > 0) {
+          header.classList.add('expanded');
+          header.addEventListener('click', function(e) {
+            e.preventDefault();
+            this.classList.toggle('expanded');
+          });
+        }
+        /* No files: let the <a href="index.html"> navigate naturally */
+      }
+
+      /* Initialize dark mode toggle icon */
+      if (window.__updateToggleIcon) window.__updateToggleIcon();
+    })();
+    </script>
+  </body>
+
+</html>

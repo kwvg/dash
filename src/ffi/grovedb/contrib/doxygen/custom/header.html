@@ -36,8 +36,22 @@
     DoxygenAwesomeFragmentCopyButton.init()
     DoxygenAwesomeParagraphLink.init()
     DoxygenAwesomeInteractiveToc.init()
+    /* Place toggle at bottom of sidebar (matching gcovr theme) instead
+       of next to the search box. We skip .init() and do it manually. */
     $(window).on('load', function() {
-        DoxygenAwesomeDarkModeToggle.init()
+        var toggle = document.createElement('doxygen-awesome-dark-mode-toggle');
+        toggle.title = DoxygenAwesomeDarkModeToggle.title;
+        toggle.updateIcon();
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+            toggle.updateIcon();
+        });
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') toggle.updateIcon();
+        });
+        var footer = document.createElement('div');
+        footer.id = 'sidebar-toggle-footer';
+        footer.appendChild(toggle);
+        document.body.appendChild(footer);
     })
 </script>
 $treeview
