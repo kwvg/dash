@@ -508,6 +508,11 @@ html.dark-mode .doc-icon::after {
 /* ---------- Footer (matches gcovr coverage theme) ---------- */
 
 #nav-path {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
     background: #ededed;
 }
 
@@ -517,13 +522,14 @@ html.dark-mode .doc-icon::after {
     border-top: 1px solid var(--separator-color);
     border-bottom: none !important;
     min-height: 35px;
-    height: 35px !important;
+    height: auto !important;
     line-height: normal !important;
     box-sizing: border-box;
     overflow: visible;
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    flex-wrap: wrap;
     padding: 8px 14px !important;
     margin: 0;
     font-size: 13px !important;
