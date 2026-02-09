@@ -5,6 +5,7 @@
 #include <db_internal.h>
 #include <decode_internal.h>
 #include <types/query.h>
+#include <util/ffi.h>
 
 #include <grovedb/query.h>
 
@@ -30,6 +31,30 @@ Result<std::vector<PathKeyElement>, Error> DecodeVerifyResults(std::span<const u
     return Error::Corruption("failed to decode proof verify results");
   });
 }
+
+/**
+ * Common implementation for the five Verify* methods.
+ *
+ * Each differs only in the FFI function called; the hash validation,
+ * result decoding, and cost conversion are identical.
+ */
+template <typename FfiCall>
+Result<Costed<Db::ProofVerifyResult>, Error> VerifyImpl(const Bytes& proof, FfiCall&& ffi_call)
+{
+  return CallFFI([&]() -> Result<Costed<Db::ProofVerifyResult>, Error> {
+    auto result = ffi_call(ToSlice(proof));
+    auto root_hash = HashFromSlice(result.root_hash);
+    if (!root_hash) {
+      return Err(std::move(root_hash).error());
+    }
+    return DecodeVerifyResults({result.results.data(), result.results.size()})
+        .transform([&](std::vector<PathKeyElement> entries) {
+          return Costed<Db::ProofVerifyResult>{
+              Db::ProofVerifyResult{*root_hash, std::move(entries)}, convert_cost(result.cost)
+          };
+        });
+  });
+}
 } // anonymous namespace
 
 // Type aliases for brevity (nested structs require full qualification
@@ -43,15 +68,13 @@ using CVR = Db::ChainedVerifyResult;
 
 Result<Costed<Bytes>, Error> Db::Prove(const PathQuery& query, bool decrease_limit_on_empty)
 {
-  try {
+  return CallFFI([&]() -> Result<Costed<Bytes>, Error> {
     auto result = grovedb_cxx::grovedb_prove_query(
         *m_impl->m_db, *query.m_impl->m_query, decrease_limit_on_empty
     );
     Bytes proof{result.proof.begin(), result.proof.end()};
     return Costed<Bytes>{std::move(proof), convert_cost(result.cost)};
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -60,25 +83,9 @@ Result<Costed<Bytes>, Error> Db::Prove(const PathQuery& query, bool decrease_lim
 
 Result<Costed<PVR>, Error> Db::VerifyQuery(const Bytes& proof, const PathQuery& query)
 {
-  try {
-    rust::Slice<const uint8_t> proof_slice{proof.data(), proof.size()};
-    auto result = grovedb_cxx::grovedb_verify_query(proof_slice, *query.m_impl->m_query);
-    if (result.root_hash.size() != 32) {
-      return Err(
-          Error::Corruption(
-              "root hash: expected 32 bytes, got " + std::to_string(result.root_hash.size())
-          )
-      );
-    }
-    Hash root_hash{};
-    std::copy(result.root_hash.begin(), result.root_hash.end(), root_hash.begin());
-    return DecodeVerifyResults({result.results.data(), result.results.size()})
-        .transform([&](std::vector<PathKeyElement> entries) {
-          return Costed<PVR>{PVR{root_hash, std::move(entries)}, convert_cost(result.cost)};
-        });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  return VerifyImpl(proof, [&](auto proof_slice) {
+    return grovedb_cxx::grovedb_verify_query(proof_slice, *query.m_impl->m_query);
+  });
 }
 
 Result<Costed<PVR>, Error> Db::VerifyQueryWithOptions(
@@ -89,105 +96,42 @@ Result<Costed<PVR>, Error> Db::VerifyQueryWithOptions(
     bool include_empty_trees
 )
 {
-  try {
-    rust::Slice<const uint8_t> proof_slice{proof.data(), proof.size()};
-    auto result = grovedb_cxx::grovedb_verify_query_with_options(
+  return VerifyImpl(proof, [&](auto proof_slice) {
+    return grovedb_cxx::grovedb_verify_query_with_options(
         proof_slice,
         *query.m_impl->m_query,
         absence_proofs,
         verify_succinctness,
         include_empty_trees
     );
-    if (result.root_hash.size() != 32) {
-      return Err(
-          Error::Corruption(
-              "root hash: expected 32 bytes, got " + std::to_string(result.root_hash.size())
-          )
-      );
-    }
-    Hash root_hash{};
-    std::copy(result.root_hash.begin(), result.root_hash.end(), root_hash.begin());
-    return DecodeVerifyResults({result.results.data(), result.results.size()})
-        .transform([&](std::vector<PathKeyElement> entries) {
-          return Costed<PVR>{PVR{root_hash, std::move(entries)}, convert_cost(result.cost)};
-        });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 Result<Costed<PVR>, Error> Db::VerifySubsetQuery(const Bytes& proof, const PathQuery& query)
 {
-  try {
-    rust::Slice<const uint8_t> proof_slice{proof.data(), proof.size()};
-    auto result = grovedb_cxx::grovedb_verify_subset_query(proof_slice, *query.m_impl->m_query);
-    if (result.root_hash.size() != 32) {
-      return Err(
-          Error::Corruption(
-              "root hash: expected 32 bytes, got " + std::to_string(result.root_hash.size())
-          )
-      );
-    }
-    Hash root_hash{};
-    std::copy(result.root_hash.begin(), result.root_hash.end(), root_hash.begin());
-    return DecodeVerifyResults({result.results.data(), result.results.size()})
-        .transform([&](std::vector<PathKeyElement> entries) {
-          return Costed<PVR>{PVR{root_hash, std::move(entries)}, convert_cost(result.cost)};
-        });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  return VerifyImpl(proof, [&](auto proof_slice) {
+    return grovedb_cxx::grovedb_verify_subset_query(proof_slice, *query.m_impl->m_query);
+  });
 }
 
 Result<Costed<PVR>, Error>
 Db::VerifyQueryWithAbsenceProof(const Bytes& proof, const PathQuery& query)
 {
-  try {
-    rust::Slice<const uint8_t> proof_slice{proof.data(), proof.size()};
-    auto result =
-        grovedb_cxx::grovedb_verify_query_with_absence_proof(proof_slice, *query.m_impl->m_query);
-    if (result.root_hash.size() != 32) {
-      return Err(
-          Error::Corruption(
-              "root hash: expected 32 bytes, got " + std::to_string(result.root_hash.size())
-          )
-      );
-    }
-    Hash root_hash{};
-    std::copy(result.root_hash.begin(), result.root_hash.end(), root_hash.begin());
-    return DecodeVerifyResults({result.results.data(), result.results.size()})
-        .transform([&](std::vector<PathKeyElement> entries) {
-          return Costed<PVR>{PVR{root_hash, std::move(entries)}, convert_cost(result.cost)};
-        });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  return VerifyImpl(proof, [&](auto proof_slice) {
+    return grovedb_cxx::grovedb_verify_query_with_absence_proof(
+        proof_slice, *query.m_impl->m_query
+    );
+  });
 }
 
 Result<Costed<PVR>, Error>
 Db::VerifySubsetQueryWithAbsenceProof(const Bytes& proof, const PathQuery& query)
 {
-  try {
-    rust::Slice<const uint8_t> proof_slice{proof.data(), proof.size()};
-    auto result = grovedb_cxx::grovedb_verify_subset_query_with_absence_proof(
+  return VerifyImpl(proof, [&](auto proof_slice) {
+    return grovedb_cxx::grovedb_verify_subset_query_with_absence_proof(
         proof_slice, *query.m_impl->m_query
     );
-    if (result.root_hash.size() != 32) {
-      return Err(
-          Error::Corruption(
-              "root hash: expected 32 bytes, got " + std::to_string(result.root_hash.size())
-          )
-      );
-    }
-    Hash root_hash{};
-    std::copy(result.root_hash.begin(), result.root_hash.end(), root_hash.begin());
-    return DecodeVerifyResults({result.results.data(), result.results.size()})
-        .transform([&](std::vector<PathKeyElement> entries) {
-          return Costed<PVR>{PVR{root_hash, std::move(entries)}, convert_cost(result.cost)};
-        });
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -198,8 +142,8 @@ Result<Costed<CVR>, Error> Db::VerifyChainedQueries(
     const Bytes& proof, const PathQuery& first_query, const std::vector<PathQuery*>& chained_queries
 )
 {
-  try {
-    rust::Slice<const uint8_t> proof_slice{proof.data(), proof.size()};
+  return CallFFI([&]() -> Result<Costed<CVR>, Error> {
+    auto proof_slice = ToSlice(proof);
 
     // Build the BoxedPathQueryVec from the chained queries.
     auto vec = grovedb_cxx::grovedb_path_query_vec_new();
@@ -211,15 +155,10 @@ Result<Costed<CVR>, Error> Db::VerifyChainedQueries(
         proof_slice, *first_query.m_impl->m_query, *vec
     );
 
-    if (result.root_hash.size() != 32) {
-      return Err(
-          Error::Corruption(
-              "root hash: expected 32 bytes, got " + std::to_string(result.root_hash.size())
-          )
-      );
+    auto root_hash = HashFromSlice(result.root_hash);
+    if (!root_hash) {
+      return Err(std::move(root_hash).error());
     }
-    Hash root_hash{};
-    std::copy(result.root_hash.begin(), result.root_hash.end(), root_hash.begin());
 
     // Decode nested results: [u32 query_count][result_set₁][result_set₂]…
     wire::Reader r{{result.results.data(), result.results.size()}};
@@ -275,9 +214,7 @@ Result<Costed<CVR>, Error> Db::VerifyChainedQueries(
       all_results.push_back(std::move(entries));
     }
 
-    return Costed<CVR>{CVR{root_hash, std::move(all_results)}, convert_cost(result.cost)};
-  } catch (const std::exception& e) {
-    return Err(StringToError(e.what()));
-  }
+    return Costed<CVR>{CVR{*root_hash, std::move(all_results)}, convert_cost(result.cost)};
+  });
 }
 } // namespace grovedb
