@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE.MIT or https://opensource.org/license/mit
 
-#include <db_internal.h>
+#include <types/db.h>
 #include <util/ffi.h>
 
 #include <rust/grovedb_cxx/lib.h>
