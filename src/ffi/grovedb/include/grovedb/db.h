@@ -21,6 +21,8 @@
 #include <vector>
 
 namespace grovedb {
+/** @addtogroup database
+ *  @{ */
 // Forward declarations for query types (defined in grovedb/query.h).
 class PathQuery;
 class QueryItem;
@@ -574,6 +576,7 @@ private:
 
 /** Return a human-readable build identification string. */
 [[nodiscard]] std::string GetWhoami();
+/** @} */
 } // namespace grovedb
 
 #endif // LIBGROVEDB_DB_H

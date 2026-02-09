@@ -10,6 +10,8 @@
 #include <tuple>
 
 namespace grovedb {
+/** @addtogroup cost
+ *  @{ */
 /**
  * Resource consumption counters returned alongside cost-tracked operations.
  */
@@ -54,6 +56,7 @@ struct OperationCost {
         );
   }
 };
+/** @} */
 } // namespace grovedb
 
 #endif // LIBGROVEDB_COST_H

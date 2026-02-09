@@ -8,6 +8,8 @@
 #include <memory>
 
 namespace grovedb {
+/** @addtogroup transactions
+ *  @{ */
 class Db;
 
 /**
@@ -33,6 +35,7 @@ private:
   struct Impl;
   std::unique_ptr<Impl> m_impl;
 };
+/** @} */
 } // namespace grovedb
 
 #endif // LIBGROVEDB_TRANSACTION_H

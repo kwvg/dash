@@ -17,13 +17,17 @@
 #include <vector>
 
 namespace grovedb {
+/** Little-endian binary serialization for on-disk and network encoding. */
 namespace wire {
+/** @addtogroup wire
+ *  @{ */
 /** Maximum number of segments in a wire-encoded path. */
 inline constexpr uint32_t MAX_PATH_SEGMENTS = 256;
 
 /** Maximum number of elements in a wire-encoded vector. */
 inline constexpr uint32_t MAX_VECTOR_SIZE = 1000000;
 
+/** Wire-level error codes for serialization and deserialization. */
 enum class Error {
   /** Buffer underflow or malformed data. */
   Corruption,
@@ -209,7 +213,6 @@ inline void Write(Writer& w, const grovedb::Bytes& v)
 /**
  * Decode a byte vector from length-prefixed bytes.
  *
- * @param[in] r  Reader to consume from.
  * @return The decoded byte vector on success; an error otherwise.
  */
 template <typename T>
@@ -240,7 +243,6 @@ inline void Write(Writer& w, const Path& path)
  *
  * Wire layout: `[u32 count][Bytes₁][Bytes₂]…`
  *
- * @param[in] r  Reader to consume from.
  * @return The decoded path on success; an error otherwise.
  */
 template <typename T>
@@ -291,7 +293,6 @@ void Write(Writer& w, const std::vector<T>& v)
  *
  * Wire layout: `[u32 count][T₁][T₂]…`
  *
- * @param[in] r  Reader to consume from.
  * @return The decoded vector on success; an error otherwise.
  */
 template <typename T>
@@ -363,6 +364,7 @@ inline std::ostream& operator<<(std::ostream& os, Error err)
 {
   return os << ToString(err);
 }
+/** @} */
 } // namespace wire
 } // namespace grovedb
 

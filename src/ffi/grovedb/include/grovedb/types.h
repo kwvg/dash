@@ -15,6 +15,8 @@
 #include <vector>
 
 namespace grovedb {
+/** @addtogroup types
+ *  @{ */
 /** A byte vector. */
 struct Bytes : std::vector<uint8_t> {
   using std::vector<uint8_t>::vector;
@@ -76,6 +78,7 @@ struct Hash : std::array<uint8_t, 32> {
    */
   [[nodiscard]] static Result<Hash, Error> FromHex(std::string_view sv);
 };
+/** @} */
 } // namespace grovedb
 
 #endif // LIBGROVEDB_TYPES_H

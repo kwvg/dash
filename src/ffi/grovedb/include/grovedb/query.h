@@ -18,6 +18,8 @@
 #include <vector>
 
 namespace grovedb {
+/** @addtogroup queries
+ *  @{ */
 class Db;
 
 /**
@@ -309,6 +311,7 @@ inline std::ostream& operator<<(std::ostream& os, QueryResultKind kind)
 {
   return os << ToString(kind);
 }
+/** @} */
 } // namespace grovedb
 
 #endif // LIBGROVEDB_QUERY_H

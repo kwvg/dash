@@ -11,7 +11,10 @@
 #include <string_view>
 #include <utility>
 
+/** @brief C++20 bindings for GroveDB. */
 namespace grovedb {
+/** @addtogroup errors
+ *  @{ */
 /**
  * Primary error discriminant for GroveDB operations.
  *
@@ -132,6 +135,7 @@ inline std::ostream& operator<<(std::ostream& os, const Error& err)
   }
   return os;
 }
+/** @} */
 } // namespace grovedb
 
 #endif // LIBGROVEDB_ERROR_H

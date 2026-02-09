@@ -16,6 +16,8 @@
 #include <vector>
 
 namespace grovedb {
+/** @addtogroup batch
+ *  @{ */
 // ---------------------------------------------------------------------------
 // TreeType — type of tree for DeleteTree operations
 // ---------------------------------------------------------------------------
@@ -210,6 +212,7 @@ inline std::ostream& operator<<(std::ostream& os, BatchOperation::Kind kind)
 {
   return os << ToString(kind);
 }
+/** @} */
 } // namespace grovedb
 
 #endif // LIBGROVEDB_BATCH_H

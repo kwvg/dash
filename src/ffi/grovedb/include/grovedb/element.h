@@ -14,6 +14,8 @@
 #include <string_view>
 
 namespace grovedb {
+/** @addtogroup elements
+ *  @{ */
 class Db;
 
 /**
@@ -130,6 +132,7 @@ inline std::ostream& operator<<(std::ostream& os, ElementType type)
 {
   return os << ToString(type);
 }
+/** @} */
 } // namespace grovedb
 
 #endif // LIBGROVEDB_ELEMENT_H

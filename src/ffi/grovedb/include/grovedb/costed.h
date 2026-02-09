@@ -10,6 +10,8 @@
 #include <utility>
 
 namespace grovedb {
+/** @addtogroup cost
+ *  @{ */
 /**
  * Bundles a value with its associated OperationCost.
  *
@@ -41,6 +43,7 @@ struct Costed {
     return m_cost;
   }
 };
+/** @} */
 } // namespace grovedb
 
 #endif // LIBGROVEDB_COSTED_H

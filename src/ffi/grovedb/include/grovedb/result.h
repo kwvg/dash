@@ -8,6 +8,8 @@
 #include <grovedb/vendor/tl/expected.hpp>
 
 namespace grovedb {
+/** @addtogroup errors
+ *  @{ */
 template <class T, class E>
 using Result = tl::expected<T, E>;
 
@@ -16,6 +18,7 @@ auto Err(E&& e)
 {
   return tl::unexpected(std::forward<E>(e));
 }
+/** @} */
 } // namespace grovedb
 
 #endif // LIBGROVEDB_RESULT_H
