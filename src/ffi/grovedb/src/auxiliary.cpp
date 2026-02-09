@@ -26,7 +26,7 @@ Result<OperationCost, Error> Db::PutAux(const Bytes& key, const Bytes& value)
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
   return CallFFI([&]() -> Result<OperationCost, Error> {
-    auto result = grovedb_cxx::grovedb_put_aux(*m_impl->m_db, ToSlice(key), ToSlice(value));
+    auto result = grovedb_cxx::grovedb_put_aux(**m_impl->m_db, ToSlice(key), ToSlice(value));
     return convert_cost(result);
   });
 }
@@ -39,7 +39,7 @@ Db::PutAux(const Bytes& key, const Bytes& value, const Transaction& txn)
   }
   return CallFFI([&]() -> Result<OperationCost, Error> {
     auto result = grovedb_cxx::grovedb_put_aux_with_tx(
-        *m_impl->m_db, ToSlice(key), ToSlice(value), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(key), ToSlice(value), *txn.m_impl->m_tx
     );
     return convert_cost(result);
   });
@@ -55,7 +55,7 @@ Result<Costed<std::optional<Bytes>>, Error> Db::GetAux(const Bytes& key)
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
   return CallFFI([&]() -> Result<Costed<std::optional<Bytes>>, Error> {
-    auto result = grovedb_cxx::grovedb_get_aux(*m_impl->m_db, ToSlice(key));
+    auto result = grovedb_cxx::grovedb_get_aux(**m_impl->m_db, ToSlice(key));
     return ConvertOptionalBytes(result);
   });
 }
@@ -67,7 +67,7 @@ Result<Costed<std::optional<Bytes>>, Error> Db::GetAux(const Bytes& key, const T
   }
   return CallFFI([&]() -> Result<Costed<std::optional<Bytes>>, Error> {
     auto result =
-        grovedb_cxx::grovedb_get_aux_with_tx(*m_impl->m_db, ToSlice(key), *txn.m_impl->m_tx);
+        grovedb_cxx::grovedb_get_aux_with_tx(**m_impl->m_db, ToSlice(key), *txn.m_impl->m_tx);
     return ConvertOptionalBytes(result);
   });
 }
@@ -82,7 +82,7 @@ Result<OperationCost, Error> Db::DeleteAux(const Bytes& key)
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
   return CallFFI([&]() -> Result<OperationCost, Error> {
-    auto result = grovedb_cxx::grovedb_delete_aux(*m_impl->m_db, ToSlice(key));
+    auto result = grovedb_cxx::grovedb_delete_aux(**m_impl->m_db, ToSlice(key));
     return convert_cost(result);
   });
 }
@@ -94,7 +94,7 @@ Result<OperationCost, Error> Db::DeleteAux(const Bytes& key, const Transaction& 
   }
   return CallFFI([&]() -> Result<OperationCost, Error> {
     auto result =
-        grovedb_cxx::grovedb_delete_aux_with_tx(*m_impl->m_db, ToSlice(key), *txn.m_impl->m_tx);
+        grovedb_cxx::grovedb_delete_aux_with_tx(**m_impl->m_db, ToSlice(key), *txn.m_impl->m_tx);
     return convert_cost(result);
   });
 }
@@ -110,7 +110,7 @@ Result<Costed<std::vector<Path>>, Error> Db::FindSubtrees(const Path& path)
   }
   return CallFFI([&]() -> Result<Costed<std::vector<Path>>, Error> {
     auto path_buf = wire::Encode(path);
-    auto result = grovedb_cxx::grovedb_find_subtrees(*m_impl->m_db, ToSlice(path_buf));
+    auto result = grovedb_cxx::grovedb_find_subtrees(**m_impl->m_db, ToSlice(path_buf));
     auto cost = convert_cost(result.cost);
 
     // Decode wire-encoded paths: [u32 count][path₁]…
@@ -144,7 +144,7 @@ Result<Costed<std::vector<Path>>, Error> Db::FindSubtrees(const Path& path, cons
   return CallFFI([&]() -> Result<Costed<std::vector<Path>>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_find_subtrees_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), *txn.m_impl->m_tx
     );
     auto cost = convert_cost(result.cost);
 

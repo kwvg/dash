@@ -33,7 +33,7 @@ Result<void, Error> Db::Flush()
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
   return CallFFI([&]() -> Result<void, Error> {
-    grovedb_cxx::grovedb_flush(*m_impl->m_db);
+    grovedb_cxx::grovedb_flush(**m_impl->m_db);
     return {};
   });
 }
@@ -44,7 +44,7 @@ Result<void, Error> Db::Destroy()
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
   return CallFFI([&]() -> Result<void, Error> {
-    grovedb_cxx::grovedb_wipe(*m_impl->m_db);
+    grovedb_cxx::grovedb_wipe(**m_impl->m_db);
     return {};
   });
 }
@@ -55,7 +55,7 @@ Result<Costed<Hash>, Error> Db::GetRootHash()
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
   return CallFFI([&]() -> Result<Costed<Hash>, Error> {
-    auto result = grovedb_cxx::grovedb_root_hash(*m_impl->m_db);
+    auto result = grovedb_cxx::grovedb_root_hash(**m_impl->m_db);
     auto hash = HashFromSlice(result.root_hash);
     if (!hash) {
       return Err(std::move(hash).error());
@@ -70,7 +70,7 @@ Result<bool, Error> Db::VerifyIntegrity()
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
   return CallFFI([&]() -> Result<bool, Error> {
-    return grovedb_cxx::grovedb_verify(*m_impl->m_db);
+    return grovedb_cxx::grovedb_verify(**m_impl->m_db);
   });
 }
 
@@ -80,9 +80,9 @@ Result<Transaction, Error> Db::BeginTransaction()
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
   return CallFFI([&]() -> Result<Transaction, Error> {
-    auto tx = grovedb_cxx::grovedb_start_transaction(*m_impl->m_db);
+    auto tx = grovedb_cxx::grovedb_start_transaction(**m_impl->m_db);
     Transaction txn;
-    txn.m_impl = std::make_unique<Transaction::Impl>(*m_impl->m_db, std::move(tx));
+    txn.m_impl = std::make_unique<Transaction::Impl>(m_impl->m_db, std::move(tx));
     return txn;
   });
 }
@@ -103,7 +103,7 @@ Result<OperationCost, Error> Db::Commit(Transaction& txn)
     // Box regardless of success or failure.
     txn.m_impl->m_committed = true;
     auto result =
-        grovedb_cxx::grovedb_commit_transaction(txn.m_impl->m_db, std::move(txn.m_impl->m_tx));
+        grovedb_cxx::grovedb_commit_transaction(**txn.m_impl->m_db, std::move(txn.m_impl->m_tx));
     return convert_cost(result);
   });
 }
@@ -117,7 +117,7 @@ Result<void, Error> Db::Rollback(Transaction& txn)
     return Err(Error::InvalidArgument("transaction already finalized"));
   }
   return CallFFI([&]() -> Result<void, Error> {
-    grovedb_cxx::grovedb_rollback_transaction(txn.m_impl->m_db, *txn.m_impl->m_tx);
+    grovedb_cxx::grovedb_rollback_transaction(**txn.m_impl->m_db, *txn.m_impl->m_tx);
     txn.m_impl->m_rolled_back = true;
     return {};
   });

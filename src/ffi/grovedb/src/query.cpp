@@ -423,7 +423,7 @@ Bytes EncodeManyQueries(const std::vector<Db::RawQuerySpec>& queries)
 Result<Costed<QueryData<std::vector<Bytes>>>, Error> Db::QueryValues(const PathQuery& query)
 {
   return CallFFI([&]() -> Result<Costed<QueryData<std::vector<Bytes>>>, Error> {
-    auto result = grovedb_cxx::grovedb_query_item_value(*m_impl->m_db, *query.m_impl->m_query);
+    auto result = grovedb_cxx::grovedb_query_item_value(**m_impl->m_db, *query.m_impl->m_query);
     return DecodeValues({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
           return Error::Corruption("failed to decode query values");
@@ -441,7 +441,7 @@ Db::QueryValues(const PathQuery& query, const Transaction& txn)
 {
   return CallFFI([&]() -> Result<Costed<QueryData<std::vector<Bytes>>>, Error> {
     auto result = grovedb_cxx::grovedb_query_item_value_with_tx(
-        *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
+        **m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
     );
     return DecodeValues({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
@@ -464,7 +464,7 @@ Db::QueryItemsOrSums(const PathQuery& query)
 {
   return CallFFI([&]() -> Result<Costed<QueryData<std::vector<QueryItemOrSum>>>, Error> {
     auto result =
-        grovedb_cxx::grovedb_query_item_value_or_sum(*m_impl->m_db, *query.m_impl->m_query);
+        grovedb_cxx::grovedb_query_item_value_or_sum(**m_impl->m_db, *query.m_impl->m_query);
     return DecodeItemsOrSums({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
           return Error::Corruption("failed to decode items-or-sums");
@@ -482,7 +482,7 @@ Db::QueryItemsOrSums(const PathQuery& query, const Transaction& txn)
 {
   return CallFFI([&]() -> Result<Costed<QueryData<std::vector<QueryItemOrSum>>>, Error> {
     auto result = grovedb_cxx::grovedb_query_item_value_or_sum_with_tx(
-        *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
+        **m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
     );
     return DecodeItemsOrSums({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
@@ -503,7 +503,7 @@ Db::QueryItemsOrSums(const PathQuery& query, const Transaction& txn)
 Result<Costed<QueryData<std::vector<int64_t>>>, Error> Db::QuerySums(const PathQuery& query)
 {
   return CallFFI([&]() -> Result<Costed<QueryData<std::vector<int64_t>>>, Error> {
-    auto result = grovedb_cxx::grovedb_query_sums(*m_impl->m_db, *query.m_impl->m_query);
+    auto result = grovedb_cxx::grovedb_query_sums(**m_impl->m_db, *query.m_impl->m_query);
     return DecodeSums({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) { return Error::Corruption("failed to decode sums"); })
         .transform([&](std::vector<int64_t> sums) {
@@ -519,7 +519,7 @@ Db::QuerySums(const PathQuery& query, const Transaction& txn)
 {
   return CallFFI([&]() -> Result<Costed<QueryData<std::vector<int64_t>>>, Error> {
     auto result = grovedb_cxx::grovedb_query_sums_with_tx(
-        *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
+        **m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
     );
     return DecodeSums({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) { return Error::Corruption("failed to decode sums"); })
@@ -540,7 +540,7 @@ Db::QueryRaw(const PathQuery& query, uint8_t result_type)
 {
   return CallFFI([&]() -> Result<Costed<QueryData<std::vector<QueryResultElement>>>, Error> {
     auto result =
-        grovedb_cxx::grovedb_query_raw(*m_impl->m_db, *query.m_impl->m_query, result_type);
+        grovedb_cxx::grovedb_query_raw(**m_impl->m_db, *query.m_impl->m_query, result_type);
     return DecodeQueryResultElements({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
           return Error::Corruption("failed to decode raw query results");
@@ -558,7 +558,7 @@ Db::QueryRaw(const PathQuery& query, uint8_t result_type, const Transaction& txn
 {
   return CallFFI([&]() -> Result<Costed<QueryData<std::vector<QueryResultElement>>>, Error> {
     auto result = grovedb_cxx::grovedb_query_raw_with_tx(
-        *m_impl->m_db, *query.m_impl->m_query, result_type, *txn.m_impl->m_tx
+        **m_impl->m_db, *query.m_impl->m_query, result_type, *txn.m_impl->m_tx
     );
     return DecodeQueryResultElements({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
@@ -581,7 +581,7 @@ Db::QueryManyRaw(const std::vector<RawQuerySpec>& queries, uint8_t result_type)
 {
   return CallFFI([&]() -> Result<Costed<std::vector<QueryResultElement>>, Error> {
     auto encoded = EncodeManyQueries(queries);
-    auto result = grovedb_cxx::grovedb_query_many_raw(*m_impl->m_db, ToSlice(encoded), result_type);
+    auto result = grovedb_cxx::grovedb_query_many_raw(**m_impl->m_db, ToSlice(encoded), result_type);
     return DecodeQueryResultElements({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
           return Error::Corruption("failed to decode many-raw query results");
@@ -601,7 +601,7 @@ Db::QueryManyRaw(const std::vector<RawQuerySpec>& queries, uint8_t result_type)
 Result<Costed<std::vector<PathKeyElement>>, Error> Db::QueryKeysOptional(const PathQuery& query)
 {
   return CallFFI([&]() -> Result<Costed<std::vector<PathKeyElement>>, Error> {
-    auto result = grovedb_cxx::grovedb_query_keys_optional(*m_impl->m_db, *query.m_impl->m_query);
+    auto result = grovedb_cxx::grovedb_query_keys_optional(**m_impl->m_db, *query.m_impl->m_query);
     return DecodePathKeyElements({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
           return Error::Corruption("failed to decode keys-optional results");
@@ -617,7 +617,7 @@ Db::QueryKeysOptional(const PathQuery& query, const Transaction& txn)
 {
   return CallFFI([&]() -> Result<Costed<std::vector<PathKeyElement>>, Error> {
     auto result = grovedb_cxx::grovedb_query_keys_optional_with_tx(
-        *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
+        **m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
     );
     return DecodePathKeyElements({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
@@ -633,7 +633,7 @@ Result<Costed<std::vector<PathKeyElement>>, Error> Db::QueryRawKeysOptional(cons
 {
   return CallFFI([&]() -> Result<Costed<std::vector<PathKeyElement>>, Error> {
     auto result =
-        grovedb_cxx::grovedb_query_raw_keys_optional(*m_impl->m_db, *query.m_impl->m_query);
+        grovedb_cxx::grovedb_query_raw_keys_optional(**m_impl->m_db, *query.m_impl->m_query);
     return DecodePathKeyElements({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {
           return Error::Corruption("failed to decode raw-keys-optional results");
@@ -649,7 +649,7 @@ Db::QueryRawKeysOptional(const PathQuery& query, const Transaction& txn)
 {
   return CallFFI([&]() -> Result<Costed<std::vector<PathKeyElement>>, Error> {
     auto result = grovedb_cxx::grovedb_query_raw_keys_optional_with_tx(
-        *m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
+        **m_impl->m_db, *query.m_impl->m_query, *txn.m_impl->m_tx
     );
     return DecodePathKeyElements({result.values.data(), result.values.size()})
         .transform_error([](wire::Error) {

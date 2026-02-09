@@ -21,7 +21,7 @@ Result<void, Error> Db::CreateCheckpoint(std::string_view path)
     return Err(Error::InvalidArgument("called on uninitialized database"));
   }
   return CallFFI([&]() -> Result<void, Error> {
-    grovedb_cxx::grovedb_create_checkpoint(*m_impl->m_db, rust::Str(path.data(), path.size()));
+    grovedb_cxx::grovedb_create_checkpoint(**m_impl->m_db, rust::Str(path.data(), path.size()));
     return {};
   });
 }

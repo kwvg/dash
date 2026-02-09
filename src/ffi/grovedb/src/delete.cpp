@@ -20,7 +20,7 @@ Result<OperationCost, Error> Db::Delete(const Path& path, const Bytes& key)
   }
   return CallFFI([&]() -> Result<OperationCost, Error> {
     auto path_buf = wire::Encode(path);
-    auto result = grovedb_cxx::grovedb_delete(*m_impl->m_db, ToSlice(path_buf), ToSlice(key));
+    auto result = grovedb_cxx::grovedb_delete(**m_impl->m_db, ToSlice(path_buf), ToSlice(key));
     return convert_cost(result);
   });
 }
@@ -33,7 +33,7 @@ Result<OperationCost, Error> Db::Delete(const Path& path, const Bytes& key, cons
   return CallFFI([&]() -> Result<OperationCost, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_delete_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
     );
     return convert_cost(result);
   });
@@ -51,7 +51,7 @@ Result<Costed<bool>, Error> Db::DeleteIfEmpty(const Path& path, const Bytes& key
   return CallFFI([&]() -> Result<Costed<bool>, Error> {
     auto path_buf = wire::Encode(path);
     auto result =
-        grovedb_cxx::grovedb_delete_if_empty_tree(*m_impl->m_db, ToSlice(path_buf), ToSlice(key));
+        grovedb_cxx::grovedb_delete_if_empty_tree(**m_impl->m_db, ToSlice(path_buf), ToSlice(key));
     return ConvertBool(result);
   });
 }
@@ -65,7 +65,7 @@ Db::DeleteIfEmpty(const Path& path, const Bytes& key, const Transaction& txn)
   return CallFFI([&]() -> Result<Costed<bool>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_delete_if_empty_tree_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
     );
     return ConvertBool(result);
   });
@@ -83,7 +83,7 @@ Result<Costed<uint32_t>, Error> Db::PruneEmptyAncestors(const Path& path, const 
   return CallFFI([&]() -> Result<Costed<uint32_t>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_delete_up_tree_while_empty(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key)
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key)
     );
     return ConvertU32(result);
   });
@@ -98,7 +98,7 @@ Db::PruneEmptyAncestors(const Path& path, const Bytes& key, const Transaction& t
   return CallFFI([&]() -> Result<Costed<uint32_t>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_delete_up_tree_while_empty_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
     );
     return ConvertU32(result);
   });
@@ -115,7 +115,7 @@ Result<bool, Error> Db::Clear(const Path& path)
   }
   return CallFFI([&]() -> Result<bool, Error> {
     auto path_buf = wire::Encode(path);
-    return grovedb_cxx::grovedb_clear_subtree(*m_impl->m_db, ToSlice(path_buf));
+    return grovedb_cxx::grovedb_clear_subtree(**m_impl->m_db, ToSlice(path_buf));
   });
 }
 
@@ -127,7 +127,7 @@ Result<bool, Error> Db::Clear(const Path& path, const Transaction& txn)
   return CallFFI([&]() -> Result<bool, Error> {
     auto path_buf = wire::Encode(path);
     return grovedb_cxx::grovedb_clear_subtree_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), *txn.m_impl->m_tx
     );
   });
 }

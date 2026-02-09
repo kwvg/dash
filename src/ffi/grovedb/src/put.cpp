@@ -21,7 +21,7 @@ Result<OperationCost, Error> Db::Put(const Path& path, const Bytes& key, const E
   return CallFFI([&]() -> Result<OperationCost, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_insert(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data)
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data)
     );
     return convert_cost(result);
   });
@@ -36,7 +36,7 @@ Db::Put(const Path& path, const Bytes& key, const Element& element, const Transa
   return CallFFI([&]() -> Result<OperationCost, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_insert_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data), *txn.m_impl->m_tx
     );
     return convert_cost(result);
   });
@@ -55,7 +55,7 @@ Db::PutIfAbsent(const Path& path, const Bytes& key, const Element& element)
   return CallFFI([&]() -> Result<Costed<bool>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_insert_if_not_exists(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data)
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data)
     );
     return ConvertBool(result);
   });
@@ -70,7 +70,7 @@ Db::PutIfAbsent(const Path& path, const Bytes& key, const Element& element, cons
   return CallFFI([&]() -> Result<Costed<bool>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_insert_if_not_exists_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data), *txn.m_impl->m_tx
     );
     return ConvertBool(result);
   });
@@ -89,7 +89,7 @@ Db::PutIfAbsentAndGet(const Path& path, const Bytes& key, const Element& element
   return CallFFI([&]() -> Result<Costed<std::optional<Element>>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_insert_if_not_exists_return_existing(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data)
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data)
     );
     return ConvertOptionalElement(result);
   });
@@ -105,7 +105,7 @@ Result<Costed<std::optional<Element>>, Error> Db::PutIfAbsentAndGet(
   return CallFFI([&]() -> Result<Costed<std::optional<Element>>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_insert_if_not_exists_return_existing_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data), *txn.m_impl->m_tx
     );
     return ConvertOptionalElement(result);
   });
@@ -124,7 +124,7 @@ Db::PutIfChanged(const Path& path, const Bytes& key, const Element& element)
   return CallFFI([&]() -> Result<Costed<ChangedValue>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_insert_if_changed_value(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data)
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data)
     );
     return ConvertChangedValue(result);
   });
@@ -139,7 +139,7 @@ Db::PutIfChanged(const Path& path, const Bytes& key, const Element& element, con
   return CallFFI([&]() -> Result<Costed<ChangedValue>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_insert_if_changed_value_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), ToSlice(element.m_data), *txn.m_impl->m_tx
     );
     return ConvertChangedValue(result);
   });

@@ -11,7 +11,7 @@ Transaction::~Transaction()
 {
   if (m_impl && !m_impl->m_committed && !m_impl->m_rolled_back) {
     try {
-      grovedb_cxx::grovedb_rollback_transaction(m_impl->m_db, *m_impl->m_tx);
+      grovedb_cxx::grovedb_rollback_transaction(**m_impl->m_db, *m_impl->m_tx);
     } catch (...) {
       // Suppress exceptions in destructor.
     }

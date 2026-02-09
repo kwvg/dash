@@ -20,7 +20,7 @@ Result<Costed<Element>, Error> Db::Get(const Path& path, const Bytes& key)
   }
   return CallFFI([&]() -> Result<Costed<Element>, Error> {
     auto path_buf = wire::Encode(path);
-    auto result = grovedb_cxx::grovedb_get(*m_impl->m_db, ToSlice(path_buf), ToSlice(key));
+    auto result = grovedb_cxx::grovedb_get(**m_impl->m_db, ToSlice(path_buf), ToSlice(key));
     return ConvertElement(result);
   });
 }
@@ -33,7 +33,7 @@ Result<Costed<Element>, Error> Db::Get(const Path& path, const Bytes& key, const
   return CallFFI([&]() -> Result<Costed<Element>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_get_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
     );
     return ConvertElement(result);
   });
@@ -50,7 +50,7 @@ Result<Costed<Element>, Error> Db::GetDirect(const Path& path, const Bytes& key)
   }
   return CallFFI([&]() -> Result<Costed<Element>, Error> {
     auto path_buf = wire::Encode(path);
-    auto result = grovedb_cxx::grovedb_get_raw(*m_impl->m_db, ToSlice(path_buf), ToSlice(key));
+    auto result = grovedb_cxx::grovedb_get_raw(**m_impl->m_db, ToSlice(path_buf), ToSlice(key));
     return ConvertElement(result);
   });
 }
@@ -64,7 +64,7 @@ Db::GetDirect(const Path& path, const Bytes& key, const Transaction& txn)
   return CallFFI([&]() -> Result<Costed<Element>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_get_raw_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
     );
     return ConvertElement(result);
   });
@@ -82,7 +82,7 @@ Result<Costed<std::optional<Element>>, Error> Db::GetOptional(const Path& path, 
   return CallFFI([&]() -> Result<Costed<std::optional<Element>>, Error> {
     auto path_buf = wire::Encode(path);
     auto result =
-        grovedb_cxx::grovedb_get_raw_optional(*m_impl->m_db, ToSlice(path_buf), ToSlice(key));
+        grovedb_cxx::grovedb_get_raw_optional(**m_impl->m_db, ToSlice(path_buf), ToSlice(key));
     return ConvertOptionalElement(result);
   });
 }
@@ -96,7 +96,7 @@ Db::GetOptional(const Path& path, const Bytes& key, const Transaction& txn)
   return CallFFI([&]() -> Result<Costed<std::optional<Element>>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_get_raw_optional_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
     );
     return ConvertOptionalElement(result);
   });
@@ -113,7 +113,7 @@ Result<Costed<bool>, Error> Db::KeyExists(const Path& path, const Bytes& key)
   }
   return CallFFI([&]() -> Result<Costed<bool>, Error> {
     auto path_buf = wire::Encode(path);
-    auto result = grovedb_cxx::grovedb_has_raw(*m_impl->m_db, ToSlice(path_buf), ToSlice(key));
+    auto result = grovedb_cxx::grovedb_has_raw(**m_impl->m_db, ToSlice(path_buf), ToSlice(key));
     return ConvertBool(result);
   });
 }
@@ -127,7 +127,7 @@ Db::KeyExists(const Path& path, const Bytes& key, const Transaction& txn)
   return CallFFI([&]() -> Result<Costed<bool>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_has_raw_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), ToSlice(key), *txn.m_impl->m_tx
     );
     return ConvertBool(result);
   });
@@ -144,7 +144,7 @@ Result<Costed<bool>, Error> Db::SubtreeExists(const Path& path)
   }
   return CallFFI([&]() -> Result<Costed<bool>, Error> {
     auto path_buf = wire::Encode(path);
-    auto result = grovedb_cxx::grovedb_check_subtree_exists(*m_impl->m_db, ToSlice(path_buf));
+    auto result = grovedb_cxx::grovedb_check_subtree_exists(**m_impl->m_db, ToSlice(path_buf));
     return ConvertBool(result);
   });
 }
@@ -157,7 +157,7 @@ Result<Costed<bool>, Error> Db::SubtreeExists(const Path& path, const Transactio
   return CallFFI([&]() -> Result<Costed<bool>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_check_subtree_exists_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), *txn.m_impl->m_tx
     );
     return ConvertBool(result);
   });
@@ -174,7 +174,7 @@ Result<Costed<bool>, Error> Db::IsEmptyTree(const Path& path)
   }
   return CallFFI([&]() -> Result<Costed<bool>, Error> {
     auto path_buf = wire::Encode(path);
-    auto result = grovedb_cxx::grovedb_is_empty_tree(*m_impl->m_db, ToSlice(path_buf));
+    auto result = grovedb_cxx::grovedb_is_empty_tree(**m_impl->m_db, ToSlice(path_buf));
     return ConvertBool(result);
   });
 }
@@ -187,7 +187,7 @@ Result<Costed<bool>, Error> Db::IsEmptyTree(const Path& path, const Transaction&
   return CallFFI([&]() -> Result<Costed<bool>, Error> {
     auto path_buf = wire::Encode(path);
     auto result = grovedb_cxx::grovedb_is_empty_tree_with_tx(
-        *m_impl->m_db, ToSlice(path_buf), *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(path_buf), *txn.m_impl->m_tx
     );
     return ConvertBool(result);
   });

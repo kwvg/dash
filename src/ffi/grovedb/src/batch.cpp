@@ -141,7 +141,7 @@ Db::ApplyBatch(const std::vector<BatchOperation>& ops, const BatchApplyOptions& 
   return CallFFI([&]() -> Result<OperationCost, Error> {
     auto encoded = EncodeBatchOps(ops);
     auto ffi_opts = ConvertOptions(options);
-    auto result = grovedb_cxx::grovedb_apply_batch(*m_impl->m_db, ToSlice(encoded), ffi_opts);
+    auto result = grovedb_cxx::grovedb_apply_batch(**m_impl->m_db, ToSlice(encoded), ffi_opts);
     return convert_cost(result);
   });
 }
@@ -157,7 +157,7 @@ Result<OperationCost, Error> Db::ApplyBatch(
     auto encoded = EncodeBatchOps(ops);
     auto ffi_opts = ConvertOptions(options);
     auto result = grovedb_cxx::grovedb_apply_batch_with_tx(
-        *m_impl->m_db, ToSlice(encoded), ffi_opts, *txn.m_impl->m_tx
+        **m_impl->m_db, ToSlice(encoded), ffi_opts, *txn.m_impl->m_tx
     );
     return convert_cost(result);
   });

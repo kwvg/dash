@@ -70,7 +70,7 @@ Result<Costed<Bytes>, Error> Db::Prove(const PathQuery& query, bool decrease_lim
 {
   return CallFFI([&]() -> Result<Costed<Bytes>, Error> {
     auto result = grovedb_cxx::grovedb_prove_query(
-        *m_impl->m_db, *query.m_impl->m_query, decrease_limit_on_empty
+        **m_impl->m_db, *query.m_impl->m_query, decrease_limit_on_empty
     );
     Bytes proof{result.proof.begin(), result.proof.end()};
     return Costed<Bytes>{std::move(proof), convert_cost(result.cost)};
