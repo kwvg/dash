@@ -55,6 +55,7 @@ HTML_EXTRA_STYLESHEET  =                                  \
   theme/doxygen-awesome.css                               \
   theme/doxygen-awesome-sidebar-only.css                  \
   theme/doxygen-awesome-sidebar-only-darkmode-toggle.css  \
+  custom/palette.css                                      \
   custom/custom.css
 HTML_EXTRA_FILES       =                        \
   favicon.ico                                   \

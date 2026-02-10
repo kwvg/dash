@@ -2,6 +2,8 @@
 
 {% include "primer.css" %}
 
+{% include "palette.css" %}
+
 {% include "style.common.css" %}
 
 {% include "style.colors.css" %}
@@ -176,8 +178,8 @@ body {
   left: 0;
   bottom: 0;
   width: 335px;
-  background-color: #0289DD;
-  color: #ffffff;
+  background-color: var(--grovedb-chrome);
+  color: var(--grovedb-chrome-fg);
   display: flex;
   flex-direction: column;
   z-index: 100;
@@ -197,8 +199,9 @@ body {
 #sidebar-logo svg {
   display: block;
   margin: 0 auto;
-  width: 200px;
-  height: 28px;
+  max-height: 36px;
+  max-width: 240px;
+  width: auto;
 }
 
 /* ---------- Sidebar navigation ---------- */
@@ -413,9 +416,9 @@ main {
   left: 335px;
   right: 0;
   z-index: 50;
-  background: #ededed;
+  background: var(--grovedb-footer);
   border-top: 1px solid var(--color-border-default);
-  color: #67727e;
+  color: var(--grovedb-fg-muted);
   font-size: 13px;
   min-height: 35px;
   display: flex;
@@ -433,7 +436,7 @@ main {
   left: -12px;
   width: 12px;
   height: 12px;
-  background: radial-gradient(circle at 0% 100%, transparent 12px, #ededed 12px);
+  background: radial-gradient(circle at 0% 100%, transparent 12px, var(--grovedb-footer) 12px);
 }
 
 #content-footer a {
@@ -445,29 +448,13 @@ main {
   color: var(--color-accent-fg);
 }
 
-html.dark-mode #content-footer {
-  background: #1c1c1c;
-}
-
-html.dark-mode #content-footer::before {
-  background: radial-gradient(circle at 0% 100%, transparent 12px, #1c1c1c 12px);
-}
-
 html.dark-mode #content-footer a:hover {
-  color: #a0a8b0;
+  color: var(--grovedb-fg-muted);
 }
 
 @media (prefers-color-scheme: dark) {
-  html:not(.light-mode) #content-footer {
-    background: #1c1c1c;
-  }
-
-  html:not(.light-mode) #content-footer::before {
-    background: radial-gradient(circle at 0% 100%, transparent 12px, #1c1c1c 12px);
-  }
-
   html:not(.light-mode) #content-footer a:hover {
-    color: #a0a8b0;
+    color: var(--grovedb-fg-muted);
   }
 }
 
@@ -809,18 +796,6 @@ html.dark-mode .sticky {
   margin-bottom: 4px;
 }
 
-/* ========== Dark mode sidebar adjustments ========== */
-
-html.dark-mode #sidebar {
-  background-color: #182E3C;
-}
-
-@media (prefers-color-scheme: dark) {
-  html:not(.light-mode) #sidebar {
-    background-color: #182E3C;
-  }
-}
-
 /* ========== Responsive — mobile ========== */
 
 @media (max-width: 767px) {
@@ -843,8 +818,10 @@ html.dark-mode #sidebar {
   }
 
   #sidebar-logo svg {
-    width: 150px;
-    height: 21px;
+    max-width: 150px;
+    max-height: 24px;
+    width: auto;
+    height: auto;
   }
 
   #sidebar-nav {

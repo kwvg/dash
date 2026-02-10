@@ -1,0 +1,165 @@
+/* GroveDB Shared Design Palette
+ *
+ * Single source of truth for GroveDB brand colors and design tokens.
+ * Consumed by both Doxygen and gcovr themes via symlinks.
+ *
+ * Tokens are prefixed --grovedb-* to avoid collisions with theme CSS.
+ *
+ * Tier A — Core (both themes): canvas, fg, chrome, brand, border, surface, footer
+ * Tier B — Coverage semantic (gcovr): success, danger, attention, neutral, severe
+ * Tier C — Structural (gcovr): canvas-subtle, canvas-inset, accent shades
+ */
+
+/* ==================== Light Mode ==================== */
+
+:root {
+    /* Core (Tier A) */
+    --grovedb-brand:            #0289DD;
+    --grovedb-brand-fg:         #0289DD;
+    --grovedb-canvas:           #ffffff;
+    --grovedb-fg:               #2c3e50;
+    --grovedb-fg-muted:         #67727e;
+    --grovedb-fg-on-emphasis:   #ffffff;
+    --grovedb-border:           #e0e0e0;
+    --grovedb-surface:          #f5f5f5;
+    --grovedb-chrome:           #0289DD;
+    --grovedb-chrome-fg:        #ffffff;
+    --grovedb-footer:           #ededed;
+
+    /* Structural (Tier C) */
+    --grovedb-canvas-subtle:    #f6f8fa;
+    --grovedb-canvas-inset:     #f0f3f6;
+    --grovedb-accent-muted:     rgba(2, 137, 221, 0.4);
+    --grovedb-accent-subtle:    rgba(2, 137, 221, 0.08);
+    --grovedb-border-muted:     rgba(2, 137, 221, 0.2);
+
+    /* Coverage semantic (Tier B) */
+    --grovedb-success-emphasis:  #1a7f37;
+    --grovedb-success-fg:        #1a7f37;
+    --grovedb-success-muted:     rgba(46, 160, 67, 0.35);
+    --grovedb-success-subtle:    rgba(46, 160, 67, 0.18);
+    --grovedb-danger-emphasis:   #cf222e;
+    --grovedb-danger-fg:         #cf222e;
+    --grovedb-danger-subtle:     rgba(207, 34, 46, 0.18);
+    --grovedb-attention-emphasis: #9a6700;
+    --grovedb-attention-fg:      #9a6700;
+}
+
+/* ==================== Dark Mode (toggle) ==================== */
+
+html.dark-mode {
+    color-scheme: dark;
+
+    /* Core (Tier A) */
+    --grovedb-brand:            #0289DD;
+    --grovedb-brand-fg:         #70bdec;
+    --grovedb-canvas:           #141414;
+    --grovedb-fg:               #e0e0e0;
+    --grovedb-fg-muted:         #a0a8b0;
+    --grovedb-fg-on-emphasis:   #ffffff;
+    --grovedb-border:           #2a2a2a;
+    --grovedb-surface:          #1c1c1c;
+    --grovedb-chrome:           #182E3C;
+    --grovedb-chrome-fg:        #ffffff;
+    --grovedb-footer:           #1c1c1c;
+
+    /* Structural (Tier C) */
+    --grovedb-canvas-subtle:    #1c1c1c;
+    --grovedb-canvas-inset:     #0f0f0f;
+    --grovedb-accent-muted:     rgba(112, 189, 236, 0.4);
+    --grovedb-accent-subtle:    rgba(112, 189, 236, 0.1);
+    --grovedb-border-muted:     rgba(112, 189, 236, 0.2);
+
+    /* Coverage semantic (Tier B) */
+    --grovedb-success-emphasis:  #2ea043;
+    --grovedb-success-fg:        #3fb950;
+    --grovedb-success-muted:     rgba(46, 160, 67, 0.4);
+    --grovedb-success-subtle:    rgba(46, 160, 67, 0.15);
+    --grovedb-danger-emphasis:   #da3633;
+    --grovedb-danger-fg:         #f85149;
+    --grovedb-danger-subtle:     rgba(248, 81, 73, 0.15);
+    --grovedb-attention-emphasis: #d29922;
+    --grovedb-attention-fg:      #d29922;
+    --grovedb-attention-subtle:  rgba(187, 128, 9, 0.15);
+    --grovedb-neutral-emphasis:  #6e7681;
+    --grovedb-severe-subtle:     rgba(219, 171, 9, 0.15);
+}
+
+/* ==================== Dark Mode (system preference) ==================== */
+
+@media (prefers-color-scheme: dark) {
+    html:not(.light-mode) {
+        color-scheme: dark;
+
+        /* Core (Tier A) */
+        --grovedb-brand:            #0289DD;
+        --grovedb-brand-fg:         #70bdec;
+        --grovedb-canvas:           #141414;
+        --grovedb-fg:               #e0e0e0;
+        --grovedb-fg-muted:         #a0a8b0;
+        --grovedb-fg-on-emphasis:   #ffffff;
+        --grovedb-border:           #2a2a2a;
+        --grovedb-surface:          #1c1c1c;
+        --grovedb-chrome:           #182E3C;
+        --grovedb-chrome-fg:        #ffffff;
+        --grovedb-footer:           #1c1c1c;
+
+        /* Structural (Tier C) */
+        --grovedb-canvas-subtle:    #1c1c1c;
+        --grovedb-canvas-inset:     #0f0f0f;
+        --grovedb-accent-muted:     rgba(112, 189, 236, 0.4);
+        --grovedb-accent-subtle:    rgba(112, 189, 236, 0.1);
+        --grovedb-border-muted:     rgba(112, 189, 236, 0.2);
+
+        /* Coverage semantic (Tier B) */
+        --grovedb-success-emphasis:  #2ea043;
+        --grovedb-success-fg:        #3fb950;
+        --grovedb-success-muted:     rgba(46, 160, 67, 0.4);
+        --grovedb-success-subtle:    rgba(46, 160, 67, 0.15);
+        --grovedb-danger-emphasis:   #da3633;
+        --grovedb-danger-fg:         #f85149;
+        --grovedb-danger-subtle:     rgba(248, 81, 73, 0.15);
+        --grovedb-attention-emphasis: #d29922;
+        --grovedb-attention-fg:      #d29922;
+        --grovedb-attention-subtle:  rgba(187, 128, 9, 0.15);
+        --grovedb-neutral-emphasis:  #6e7681;
+        --grovedb-severe-subtle:     rgba(219, 171, 9, 0.15);
+    }
+}
+
+/* ==================== Force-light override ==================== */
+
+html.light-mode {
+    color-scheme: light;
+
+    /* Core (Tier A) */
+    --grovedb-brand:            #0289DD;
+    --grovedb-brand-fg:         #0289DD;
+    --grovedb-canvas:           #ffffff;
+    --grovedb-fg:               #2c3e50;
+    --grovedb-fg-muted:         #67727e;
+    --grovedb-fg-on-emphasis:   #ffffff;
+    --grovedb-border:           #e0e0e0;
+    --grovedb-surface:          #f5f5f5;
+    --grovedb-chrome:           #0289DD;
+    --grovedb-chrome-fg:        #ffffff;
+    --grovedb-footer:           #ededed;
+
+    /* Structural (Tier C) */
+    --grovedb-canvas-subtle:    #f6f8fa;
+    --grovedb-canvas-inset:     #f0f3f6;
+    --grovedb-accent-muted:     rgba(2, 137, 221, 0.4);
+    --grovedb-accent-subtle:    rgba(2, 137, 221, 0.08);
+    --grovedb-border-muted:     rgba(2, 137, 221, 0.2);
+
+    /* Coverage semantic (Tier B) */
+    --grovedb-success-emphasis:  #1a7f37;
+    --grovedb-success-fg:        #1a7f37;
+    --grovedb-success-muted:     rgba(46, 160, 67, 0.35);
+    --grovedb-success-subtle:    rgba(46, 160, 67, 0.18);
+    --grovedb-danger-emphasis:   #cf222e;
+    --grovedb-danger-fg:         #cf222e;
+    --grovedb-danger-subtle:     rgba(207, 34, 46, 0.18);
+    --grovedb-attention-emphasis: #9a6700;
+    --grovedb-attention-fg:      #9a6700;
+}

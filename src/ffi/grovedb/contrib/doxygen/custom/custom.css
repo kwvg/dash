@@ -16,23 +16,23 @@
 /* ---------- Light Mode ---------- */
 
 html {
-    /* Primary brand colors */
-    --primary-color: #0289DD;
+    /* Primary brand colors — accent via shared palette */
+    --primary-color: var(--grovedb-brand-fg);
     --primary-dark-color: #0270B8;
     --primary-light-color: #70bdec;
     --primary-lighter-color: #b8dff5;
     --primary-lightest-color: #e6f3fb;
 
-    /* Page */
-    --page-background-color: #ffffff;
-    --page-foreground-color: #2c3e50;
-    --page-secondary-foreground-color: #67727e;
+    /* Page — via shared palette */
+    --page-background-color: var(--grovedb-canvas);
+    --page-foreground-color: var(--grovedb-fg);
+    --page-secondary-foreground-color: var(--grovedb-fg-muted);
 
-    /* Sidebar - brand blue background */
-    --side-nav-background: #0289DD;
-    --side-nav-foreground: #ffffff;
-    --header-background: #0289DD;
-    --header-foreground: #ffffff;
+    /* Sidebar — via shared palette */
+    --side-nav-background: var(--grovedb-chrome);
+    --side-nav-foreground: var(--grovedb-fg-on-emphasis);
+    --header-background: var(--grovedb-chrome);
+    --header-foreground: var(--grovedb-fg-on-emphasis);
 
     /* Search bar in sidebar - white text on translucent white bg */
     --searchbar-background: rgba(255, 255, 255, 0.15);
@@ -46,12 +46,12 @@ html {
     /* Alternating row stripe */
     --odd-color: rgba(2, 137, 221, 0.04);
 
-    /* Code fragments */
-    --fragment-background: #f5f5f5;
+    /* Code fragments — via shared palette */
+    --fragment-background: var(--grovedb-surface);
     --fragment-foreground: var(--page-foreground-color);
     --fragment-link-color: var(--primary-color);
     --fragment-linenumber-color: #a0a0a0;
-    --code-background: #f5f5f5;
+    --code-background: var(--grovedb-surface);
 
     /* Typography - Inter */
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
@@ -76,8 +76,8 @@ html {
     --border-radius-small: 6px;
     --border-radius-medium: 8px;
 
-    /* Separator */
-    --separator-color: #e0e0e0;
+    /* Separator — via shared palette */
+    --separator-color: var(--grovedb-border);
 
     /* Table rows */
     --table-line-height: 2.2;
@@ -97,48 +97,33 @@ html {
 /* ---------- Dark Mode ---------- */
 
 html.dark-mode {
-    color-scheme: dark;
+    /* Re-assert palette-mapped vars to beat doxygen-awesome.css html.dark-mode
+       specificity (both 0,1,1 — later stylesheet wins). */
+    --primary-color: var(--grovedb-brand-fg);
+    --page-background-color: var(--grovedb-canvas);
+    --page-foreground-color: var(--grovedb-fg);
+    --page-secondary-foreground-color: var(--grovedb-fg-muted);
+    --side-nav-background: var(--grovedb-chrome);
+    --header-background: var(--grovedb-chrome);
+    --separator-color: var(--grovedb-border);
+    --fragment-background: var(--grovedb-surface);
+    --code-background: var(--grovedb-surface);
 
-    /* Primary colors - lighter for readability on dark bg */
-    --primary-color: #70bdec;
+    /* Doxygen-specific overrides */
     --primary-dark-color: #a0d4f3;
     --primary-light-color: #2a7ab5;
     --primary-lighter-color: #1a3d55;
     --primary-lightest-color: #0f2233;
 
-    /* Page - matches grovedb.org body.night */
-    --page-background-color: #141414;
-    --page-foreground-color: #e0e0e0;
-    --page-secondary-foreground-color: #a0a8b0;
-
-    /* Sidebar - dark card gradient from grovedb.org */
-    --side-nav-background: #182E3C;
-    --side-nav-foreground: #ffffff;
-    --header-background: #182E3C;
-    --header-foreground: #ffffff;
-
-    /* Search bar in sidebar */
     --searchbar-background: rgba(255, 255, 255, 0.1);
-    --searchbar-foreground: #ffffff;
 
-    /* Table of contents */
     --toc-background: #1c2a35;
-    --toc-foreground: var(--page-foreground-color);
 
-    /* Alternating row stripe */
     --odd-color: rgba(255, 255, 255, 0.04);
 
-    /* Code fragments */
-    --fragment-background: #1c1c1c;
     --fragment-foreground: #d4d4d4;
-    --fragment-link-color: var(--primary-color);
     --fragment-linenumber-color: #606060;
-    --code-background: #1c1c1c;
 
-    /* Separator */
-    --separator-color: #2a2a2a;
-
-    /* Admonition / note colors */
     --note-color: #70bdec;
     --note-color-dark: #0289DD;
     --note-color-darker: #70bdec;
@@ -147,41 +132,34 @@ html.dark-mode {
     --todo-color-darker: #70bdec;
 }
 
-/* Also handle prefers-color-scheme for users without the toggle */
+/* Also handle prefers-color-scheme for users without the toggle. */
 @media (prefers-color-scheme: dark) {
     html:not(.light-mode) {
-        color-scheme: dark;
+        /* Re-assert palette-mapped vars (same reason as html.dark-mode above) */
+        --primary-color: var(--grovedb-brand-fg);
+        --page-background-color: var(--grovedb-canvas);
+        --page-foreground-color: var(--grovedb-fg);
+        --page-secondary-foreground-color: var(--grovedb-fg-muted);
+        --side-nav-background: var(--grovedb-chrome);
+        --header-background: var(--grovedb-chrome);
+        --separator-color: var(--grovedb-border);
+        --fragment-background: var(--grovedb-surface);
+        --code-background: var(--grovedb-surface);
 
-        --primary-color: #70bdec;
+        /* Doxygen-specific overrides */
         --primary-dark-color: #a0d4f3;
         --primary-light-color: #2a7ab5;
         --primary-lighter-color: #1a3d55;
         --primary-lightest-color: #0f2233;
 
-        --page-background-color: #141414;
-        --page-foreground-color: #e0e0e0;
-        --page-secondary-foreground-color: #a0a8b0;
-
-        --side-nav-background: #182E3C;
-        --side-nav-foreground: #ffffff;
-        --header-background: #182E3C;
-        --header-foreground: #ffffff;
-
         --searchbar-background: rgba(255, 255, 255, 0.1);
-        --searchbar-foreground: #ffffff;
 
         --toc-background: #1c2a35;
-        --toc-foreground: var(--page-foreground-color);
 
         --odd-color: rgba(255, 255, 255, 0.04);
 
-        --fragment-background: #1c1c1c;
         --fragment-foreground: #d4d4d4;
-        --fragment-link-color: var(--primary-color);
         --fragment-linenumber-color: #606060;
-        --code-background: #1c1c1c;
-
-        --separator-color: #2a2a2a;
 
         --note-color: #70bdec;
         --note-color-dark: #0289DD;
@@ -282,6 +260,14 @@ code, div.fragment, pre.fragment, span.tt {
     }
 }
 
+/* ---------- Mobile hamburger menu icon — white on blue sidebar ---------- */
+
+.main-menu-btn-icon,
+.main-menu-btn-icon::before,
+.main-menu-btn-icon::after {
+    background: var(--grovedb-chrome-fg) !important;
+}
+
 /* ---------- Search bar ---------- */
 
 /* Ensure search text is always readable (white on blue sidebar) */
@@ -296,6 +282,24 @@ code, div.fragment, pre.fragment, span.tt {
 /* Search border: subtle white instead of separator-color on blue bg */
 #MSearchBox {
     border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Search box: fill the sidebar width instead of leaving dead space.
+   menu.js creates #searchBoxPos1 with inline right:8px and a fixed-width
+   #MSearchBox. Override both so the search stretches edge-to-edge. */
+@media screen and (min-width: 768px) {
+    #searchBoxPos1 {
+        left: var(--spacing-medium) !important;
+        right: var(--spacing-medium) !important;
+    }
+
+    #searchBoxPos1 #MSearchBox {
+        width: 100% !important;
+    }
+
+    #searchBoxPos1 #MSearchField {
+        width: calc(100% - 38px) !important;
+    }
 }
 
 /* Search icon: override hardcoded #909090 from search.css */
@@ -522,11 +526,11 @@ html.dark-mode .doc-icon::after {
     left: 0;
     right: 0;
     z-index: 50;
-    background: #ededed;
+    background: var(--grovedb-footer);
 }
 
 #nav-path ul {
-    background: #ededed !important;
+    background: var(--grovedb-footer) !important;
     background-image: none !important;
     border-top: 1px solid var(--separator-color);
     border-bottom: none !important;
@@ -555,7 +559,7 @@ html.dark-mode .doc-icon::after {
 
 
 #nav-path .navpath li.footer {
-    color: #67727e;
+    color: var(--grovedb-fg-muted);
     float: none !important;
     list-style-type: none;
     font-size: 13px !important;
@@ -571,33 +575,12 @@ html.dark-mode .doc-icon::after {
 }
 
 html.dark-mode #nav-path .navpath li.footer a:hover {
-    color: #a0a8b0;
+    color: var(--grovedb-fg-muted);
 }
 
 @media (prefers-color-scheme: dark) {
     html:not(.light-mode) #nav-path .navpath li.footer a:hover {
-        color: #a0a8b0;
-    }
-}
-
-html.dark-mode #nav-path,
-html.dark-mode #nav-path ul {
-    background: #1c1c1c !important;
-}
-
-
-html.dark-mode .navpath li.footer {
-    color: #808890;
-}
-
-@media (prefers-color-scheme: dark) {
-    html:not(.light-mode) #nav-path,
-    html:not(.light-mode) #nav-path ul {
-        background: #1c1c1c !important;
-    }
-
-    html:not(.light-mode) .navpath li.footer {
-        color: #808890;
+        color: var(--grovedb-fg-muted);
     }
 }
 
@@ -642,16 +625,6 @@ doxygen-awesome-dark-mode-toggle:hover {
     background: var(--side-nav-background);
     box-sizing: border-box;
     z-index: 101;
-}
-
-html.dark-mode #sidebar-toggle-footer {
-    background: #182E3C;
-}
-
-@media (prefers-color-scheme: dark) {
-    html:not(.light-mode) #sidebar-toggle-footer {
-        background: #182E3C;
-    }
 }
 
 @media (max-width: 767px) {

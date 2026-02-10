@@ -1,15 +1,8 @@
 /* GroveDB Coverage Theme Colors
  *
- * Overrides Primer CSS variables with the GroveDB brand palette.
- * High coverage uses green (matching GitHub convention); semantic
- * red/yellow preserved for low/medium coverage indicators.
- * Brand blue remains the accent color for links, UI chrome, etc.
- *
- * Colors matched to the GroveDB Doxygen documentation theme.
- *   Brand blue:  #0289DD
- *   Hover blue:  #70bdec
- *   Dark bg:     #141414
- *   Dark card:   #182E3C
+ * Primer CSS variable aliases pointing to shared --grovedb-* design tokens.
+ * All mode-switching (light/dark/system-pref) is handled by palette.css;
+ * this file is a pure alias layer — no duplicate color values.
  */
 
 /* ---------- Coverage semantic colors ---------- */
@@ -40,160 +33,48 @@
     --strictly_equal_color: #777777;
 }
 
-/* ---------- Light Mode: GroveDB palette ---------- */
+/* ---------- Primer → GroveDB palette aliases ---------- */
 
 :root {
-    /* Primary/Accent → GroveDB brand blue */
-    --color-accent-fg: #0289DD;
-    --color-accent-emphasis: #0289DD;
-    --color-accent-muted: rgba(2, 137, 221, 0.4);
-    --color-accent-subtle: rgba(2, 137, 221, 0.08);
+    /* Accent */
+    --color-accent-fg:             var(--grovedb-brand-fg);
+    --color-accent-emphasis:       var(--grovedb-brand);
+    --color-accent-muted:          var(--grovedb-accent-muted);
+    --color-accent-subtle:         var(--grovedb-accent-subtle);
 
-    /* Canvas → GroveDB light backgrounds */
-    --color-canvas-default: #ffffff;
-    --color-canvas-subtle: #f6f8fa;
-    --color-canvas-inset: #f0f3f6;
+    /* Canvas */
+    --color-canvas-default:        var(--grovedb-canvas);
+    --color-canvas-subtle:         var(--grovedb-canvas-subtle);
+    --color-canvas-inset:          var(--grovedb-canvas-inset);
 
-    /* Foreground → GroveDB text colors */
-    --color-fg-default: #2c3e50;
-    --color-fg-muted: #67727e;
-    --color-fg-on-emphasis: #ffffff;
+    /* Foreground */
+    --color-fg-default:            var(--grovedb-fg);
+    --color-fg-muted:              var(--grovedb-fg-muted);
+    --color-fg-on-emphasis:        var(--grovedb-fg-on-emphasis);
 
-    /* Success (green) — coverage overlays (high alpha for readability over dark text) */
-    --color-success-emphasis: #1a7f37;
-    --color-success-fg: #1a7f37;
-    --color-success-muted: rgba(46, 160, 67, 0.35);
-    --color-success-subtle: rgba(46, 160, 67, 0.18);
+    /* Borders */
+    --color-border-default:        var(--grovedb-border);
+    --color-border-muted:          var(--grovedb-border-muted);
 
-    /* Danger (red) — uncovered lines */
-    --color-danger-emphasis: #cf222e;
-    --color-danger-fg: #cf222e;
-    --color-danger-subtle: rgba(207, 34, 46, 0.18);
+    /* Success */
+    --color-success-emphasis:      var(--grovedb-success-emphasis);
+    --color-success-fg:            var(--grovedb-success-fg);
+    --color-success-muted:         var(--grovedb-success-muted);
+    --color-success-subtle:        var(--grovedb-success-subtle);
 
-    /* Attention (yellow) */
-    --color-attention-emphasis: #9a6700;
-    --color-attention-fg: #9a6700;
+    /* Danger */
+    --color-danger-emphasis:       var(--grovedb-danger-emphasis);
+    --color-danger-fg:             var(--grovedb-danger-fg);
+    --color-danger-subtle:         var(--grovedb-danger-subtle);
 
-    /* Borders → GroveDB separator */
-    --color-border-default: #e0e0e0;
-    --color-border-muted: rgba(2, 137, 221, 0.2);
-}
+    /* Attention */
+    --color-attention-emphasis:    var(--grovedb-attention-emphasis);
+    --color-attention-fg:          var(--grovedb-attention-fg);
+    --color-attention-subtle:      var(--grovedb-attention-subtle);
 
-/* ---------- Dark Mode: GroveDB palette ---------- */
+    /* Neutral */
+    --color-neutral-emphasis-plus: var(--grovedb-neutral-emphasis);
 
-/* System preference */
-@media (prefers-color-scheme: dark) {
-    :root {
-        color-scheme: dark;
-
-        /* Primary/Accent → lighter blue for dark readability */
-        --color-accent-fg: #70bdec;
-        --color-accent-emphasis: #0289DD;
-        --color-accent-muted: rgba(112, 189, 236, 0.4);
-        --color-accent-subtle: rgba(112, 189, 236, 0.1);
-
-        /* Canvas → GroveDB dark backgrounds */
-        --color-canvas-default: #141414;
-        --color-canvas-subtle: #1c1c1c;
-        --color-canvas-inset: #0f0f0f;
-
-        /* Foreground → GroveDB dark text */
-        --color-fg-default: #e0e0e0;
-        --color-fg-muted: #a0a8b0;
-        --color-fg-on-emphasis: #ffffff;
-
-        /* Borders */
-        --color-border-default: #2a2a2a;
-        --color-border-muted: rgba(112, 189, 236, 0.2);
-
-        /* Success (green) — readable on dark bg */
-        --color-success-emphasis: #2ea043;
-        --color-success-fg: #3fb950;
-        --color-success-muted: rgba(46, 160, 67, 0.4);
-        --color-success-subtle: rgba(46, 160, 67, 0.15);
-
-        /* Danger (red) — readable on dark bg */
-        --color-danger-emphasis: #da3633;
-        --color-danger-fg: #f85149;
-        --color-danger-subtle: rgba(248, 81, 73, 0.15);
-
-        /* Attention (yellow) */
-        --color-attention-emphasis: #d29922;
-        --color-attention-fg: #d29922;
-        --color-attention-subtle: rgba(187, 128, 9, 0.15);
-
-        /* Neutral */
-        --color-neutral-emphasis-plus: #6e7681;
-
-        /* Severe */
-        --color-severe-subtle: rgba(219, 171, 9, 0.15);
-    }
-}
-
-/* Manual toggle via JS */
-html.dark-mode {
-    color-scheme: dark;
-
-    --color-accent-fg: #70bdec;
-    --color-accent-emphasis: #0289DD;
-    --color-accent-muted: rgba(112, 189, 236, 0.4);
-    --color-accent-subtle: rgba(112, 189, 236, 0.1);
-
-    --color-canvas-default: #141414;
-    --color-canvas-subtle: #1c1c1c;
-    --color-canvas-inset: #0f0f0f;
-
-    --color-fg-default: #e0e0e0;
-    --color-fg-muted: #a0a8b0;
-    --color-fg-on-emphasis: #ffffff;
-
-    --color-border-default: #2a2a2a;
-    --color-border-muted: rgba(112, 189, 236, 0.2);
-
-    --color-success-emphasis: #2ea043;
-    --color-success-fg: #3fb950;
-    --color-success-muted: rgba(46, 160, 67, 0.4);
-    --color-success-subtle: rgba(46, 160, 67, 0.15);
-
-    --color-danger-emphasis: #da3633;
-    --color-danger-fg: #f85149;
-    --color-danger-subtle: rgba(248, 81, 73, 0.15);
-
-    --color-attention-emphasis: #d29922;
-    --color-attention-fg: #d29922;
-    --color-attention-subtle: rgba(187, 128, 9, 0.15);
-
-    --color-neutral-emphasis-plus: #6e7681;
-
-    --color-severe-subtle: rgba(219, 171, 9, 0.15);
-}
-
-/* Force light when manually toggled to light in dark-preferring system */
-html.light-mode {
-    color-scheme: light;
-
-    --color-accent-fg: #0289DD;
-    --color-accent-emphasis: #0289DD;
-    --color-accent-muted: rgba(2, 137, 221, 0.4);
-    --color-accent-subtle: rgba(2, 137, 221, 0.08);
-
-    --color-canvas-default: #ffffff;
-    --color-canvas-subtle: #f6f8fa;
-    --color-canvas-inset: #f0f3f6;
-
-    --color-fg-default: #2c3e50;
-    --color-fg-muted: #67727e;
-    --color-fg-on-emphasis: #ffffff;
-
-    --color-success-emphasis: #1a7f37;
-    --color-success-fg: #1a7f37;
-    --color-success-muted: rgba(46, 160, 67, 0.35);
-    --color-success-subtle: rgba(46, 160, 67, 0.18);
-
-    --color-danger-emphasis: #cf222e;
-    --color-danger-fg: #cf222e;
-    --color-danger-subtle: rgba(207, 34, 46, 0.18);
-
-    --color-border-default: #e0e0e0;
-    --color-border-muted: rgba(2, 137, 221, 0.2);
+    /* Severe */
+    --color-severe-subtle:         var(--grovedb-severe-subtle);
 }
