@@ -67,7 +67,7 @@ if (!result.has_value()) {
 auto db = std::move(result).value();
 ```
 
-`Open` creates a new database if the path doesn't exist, or opens an existing one. A fresh database starts with an empty root tree — similar to how `rocksdb::DB::Open` creates or opens a RocksDB instance, but with authenticated tree structures built in.
+[`Db::Open()`](@ref grovedb::Db::Open) creates a new database if the path doesn't exist, or opens an existing one. A fresh database starts with an empty root tree — similar to how `rocksdb::DB::Open` creates or opens a RocksDB instance, but with authenticated tree structures built in.
 
 The path is a directory — GroveDB (via RocksDB) stores multiple files within it.
 
@@ -82,7 +82,7 @@ The path is a directory — GroveDB (via RocksDB) stores multiple files within i
 
 ## Closing and Cleanup
 
-The `Db` destructor handles cleanup via RAII — it flushes pending writes and closes the database. No explicit close call needed.
+The [`Db`](@ref grovedb::Db) destructor handles cleanup via RAII — it flushes pending writes and closes the database. No explicit close call needed.
 
 For explicit control:
 

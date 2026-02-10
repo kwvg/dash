@@ -4,7 +4,7 @@
 
 ## What Is an Element?
 
-An Element is the unit of storage in GroveDB. It's not raw bytes — it's a typed wrapper with four variants:
+An [`Element`](@ref grovedb::Element) is the unit of storage in GroveDB. It's not raw bytes — it's a typed wrapper with four variants:
 
 ```mermaid
 graph TD
@@ -21,7 +21,7 @@ graph TD
 
 ## Creating Elements
 
-Elements are created via static factory methods that return `grovedb::Result<Element, Error>`:
+Elements are created via static factory methods that return [`Result<Element, Error>`](@ref grovedb::Result):
 
 ```cpp
 auto item = grovedb::Element::Item(grovedb::Bytes::FromString("hello"));
@@ -30,7 +30,7 @@ auto sum_tree = grovedb::Element::EmptySumTree();
 auto sum_item = grovedb::Element::SumItem(42);
 ```
 
-Each factory returns a `Result` because the element is serialized to its internal bincode representation. In practice, these calls succeed unless memory allocation fails.
+Each factory returns a [`Result`](@ref grovedb::Result) because the element is serialized to its internal bincode representation. In practice, these calls succeed unless memory allocation fails.
 
 ## Building a Hierarchy
 
@@ -80,7 +80,7 @@ For the complete example, see [`contrib/examples/subtree_hierarchy.cpp`](../libg
 
 ## Paths Explained
 
-A `Path` is `std::vector<Bytes>` — a sequence of byte segments navigating the subtree hierarchy:
+A [`Path`](@ref grovedb::Path) is `std::vector<`[`Bytes`](@ref grovedb::Bytes)`>` — a sequence of byte segments navigating the subtree hierarchy:
 
 ```cpp
 grovedb::Path root{};                                         // the root tree
@@ -108,7 +108,7 @@ auto empty = db.IsEmptyTree(alice_path);     // grovedb::Result<Costed<bool>, Er
 auto found = db.FindSubtrees(root);          // grovedb::Result<Costed<std::vector<Path>>, Error>
 ```
 
-`FindSubtrees` recursively discovers the entire subtree hierarchy, returning every path. Useful for debugging and tree visualization.
+[`FindSubtrees()`](@ref grovedb::Db::FindSubtrees) recursively discovers the entire subtree hierarchy, returning every path. Useful for debugging and tree visualization.
 
 ## Why This Hierarchy Matters
 

@@ -11,7 +11,7 @@ auto result = db.Put(path, key, element);
 // grovedb::Result<OperationCost, Error>
 ```
 
-Every mutation returns its resource cost — an `OperationCost` with seek counts, storage bytes added/replaced/removed, and hash operations. In a blockchain context, these feed directly into fee calculation.
+Every mutation returns its resource cost — an [`OperationCost`](@ref grovedb::OperationCost) with seek counts, storage bytes added/replaced/removed, and hash operations. In a blockchain context, these feed directly into fee calculation.
 
 ```cpp
 auto put = grovedb::Element::Item(grovedb::Bytes::FromString("Hello GroveDB!"))
@@ -23,7 +23,7 @@ if (put.has_value()) {
 }
 ```
 
-All Put variants also accept a `Transaction&` parameter for transactional writes. See [Transactions](08-transactions.md).
+All Put variants also accept a [`Transaction`](@ref grovedb::Transaction)`&` parameter for transactional writes. See [Transactions](08-transactions.md).
 
 ## Conditional Puts
 
@@ -38,7 +38,7 @@ auto result = db.PutIfAbsent(path, key, element);
 // grovedb::Result<Costed<bool>, Error>
 ```
 
-Use case: idempotent replays. When replaying blocks, you want to insert state entries only if they don't already exist. `PutIfAbsent` avoids overwriting valid state during catch-up.
+Use case: idempotent replays. When replaying blocks, you want to insert state entries only if they don't already exist. [`PutIfAbsent`](@ref grovedb::Db::PutIfAbsent) avoids overwriting valid state during catch-up.
 
 ### PutIfAbsentAndGet
 
@@ -50,7 +50,7 @@ auto result = db.PutIfAbsentAndGet(path, key, element);
 // nullopt if inserted (key was new), Element if key already existed
 ```
 
-Use case: deduplication. When processing transactions that might create duplicate entries, this atomically checks and either inserts or retrieves the existing value.
+Use case: deduplication. When processing transactions that might create duplicate entries, [`PutIfAbsentAndGet`](@ref grovedb::Db::PutIfAbsentAndGet) atomically checks and either inserts or retrieves the existing value.
 
 ### PutIfChanged
 
@@ -62,7 +62,7 @@ auto result = db.PutIfChanged(path, key, element);
 // ChangedValue { bool m_changed; std::optional<Element> m_previous; }
 ```
 
-Use case: state caching. Skip unnecessary tree rebalancing when the value hasn't actually changed. If your block processing recalculates derived state, `PutIfChanged` avoids the I/O and hash cost of writing an identical value.
+Use case: state caching. Skip unnecessary tree rebalancing when the value hasn't actually changed. If your block processing recalculates derived state, [`PutIfChanged`](@ref grovedb::Db::PutIfChanged) avoids the I/O and hash cost of writing an identical value.
 
 For all three conditional variants demonstrated, see [`contrib/examples/conditional_insert.cpp`](../libgrovedb/contrib/examples/conditional_insert.cpp).
 
@@ -75,7 +75,7 @@ auto result = db.Get(path, key);
 // grovedb::Result<Costed<Element>, Error>
 ```
 
-The result bundles the element with its operation cost via `Costed<T>`. Access both:
+The result bundles the element with its operation cost via [`Costed<T>`](@ref grovedb::Costed). Access both:
 
 ```cpp
 if (result.has_value()) {
@@ -88,14 +88,14 @@ if (result.has_value()) {
 
 | Method | Returns | When to use |
 |--------|---------|-------------|
-| `Get` | `Costed<Element>` | Standard retrieval, follows references |
-| `GetDirect` | `Costed<Element>` | Don't follow references — get the raw element |
-| `GetOptional` | `Costed<std::optional<Element>>` | Returns `nullopt` instead of error for missing keys |
-| `KeyExists` | `Costed<bool>` | Check presence without loading the value |
-| `SubtreeExists` | `Costed<bool>` | Check if all parent subtrees in a path exist |
-| `IsEmptyTree` | `Costed<bool>` | Check if a subtree has no children |
+| [`Get`](@ref grovedb::Db::Get) | `Costed<Element>` | Standard retrieval, follows references |
+| [`GetDirect`](@ref grovedb::Db::GetDirect) | `Costed<Element>` | Don't follow references — get the raw element |
+| [`GetOptional`](@ref grovedb::Db::GetOptional) | `Costed<std::optional<Element>>` | Returns `nullopt` instead of error for missing keys |
+| [`KeyExists`](@ref grovedb::Db::KeyExists) | `Costed<bool>` | Check presence without loading the value |
+| [`SubtreeExists`](@ref grovedb::Db::SubtreeExists) | `Costed<bool>` | Check if all parent subtrees in a path exist |
+| [`IsEmptyTree`](@ref grovedb::Db::IsEmptyTree) | `Costed<bool>` | Check if a subtree has no children |
 
-`GetOptional` is particularly useful in "check if exists" flows — it returns `nullopt` for missing keys instead of an error, making the calling code cleaner:
+[`GetOptional`](@ref grovedb::Db::GetOptional) is particularly useful in "check if exists" flows — it returns `nullopt` for missing keys instead of an error, making the calling code cleaner:
 
 ```cpp
 auto result = db.GetOptional(path, key);
@@ -119,12 +119,12 @@ auto result = db.Delete(path, key);
 
 | Method | Returns | Behavior |
 |--------|---------|----------|
-| `Delete` | `OperationCost` | Remove the element |
-| `DeleteIfEmpty` | `Costed<bool>` | Delete only if the element is an empty subtree (safety check) |
-| `PruneEmptyAncestors` | `Costed<uint32_t>` | Delete and recursively remove empty parent subtrees |
-| `Clear` | `bool` | Remove all elements within a subtree |
+| [`Delete`](@ref grovedb::Db::Delete) | `OperationCost` | Remove the element |
+| [`DeleteIfEmpty`](@ref grovedb::Db::DeleteIfEmpty) | `Costed<bool>` | Delete only if the element is an empty subtree (safety check) |
+| [`PruneEmptyAncestors`](@ref grovedb::Db::PruneEmptyAncestors) | `Costed<uint32_t>` | Delete and recursively remove empty parent subtrees |
+| [`Clear`](@ref grovedb::Db::Clear) | `bool` | Remove all elements within a subtree |
 
-`PruneEmptyAncestors` is useful for cleanup — after deleting the last item in a subtree, it removes the now-empty subtree and any empty ancestors above it:
+[`PruneEmptyAncestors`](@ref grovedb::Db::PruneEmptyAncestors) is useful for cleanup — after deleting the last item in a subtree, it removes the now-empty subtree and any empty ancestors above it:
 
 ```cpp
 auto result = db.PruneEmptyAncestors(path, key);
@@ -133,7 +133,7 @@ auto result = db.PruneEmptyAncestors(path, key);
 
 ## Operation Costs
 
-Every operation reports its resource consumption through `OperationCost`:
+Every operation reports its resource consumption through [`OperationCost`](@ref grovedb::OperationCost):
 
 | Field | Type | Description |
 |-------|------|-------------|

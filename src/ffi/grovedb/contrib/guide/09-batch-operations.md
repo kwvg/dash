@@ -19,7 +19,7 @@ flowchart LR
 
 ## Operation Types
 
-`BatchOperation` provides five factory methods:
+[`BatchOperation`](@ref grovedb::BatchOperation) provides five factory methods:
 
 | Factory | Behavior |
 |---------|----------|
@@ -62,7 +62,7 @@ If any operation in the batch fails validation, none are applied. The batch is a
 
 ## Batch Options
 
-`BatchApplyOptions` controls validation behavior:
+[`BatchApplyOptions`](@ref grovedb::BatchApplyOptions) controls validation behavior:
 
 | Field | Default | Description |
 |-------|---------|-------------|
@@ -90,7 +90,7 @@ This is useful when a block's state transitions include both batched operations 
 
 ## Tree Types for DeleteTree
 
-When deleting a subtree, specify the tree type to match what was originally inserted:
+When deleting a subtree, specify the [`TreeType`](@ref grovedb::TreeType) to match what was originally inserted:
 
 ```cpp
 grovedb::BatchOperation::DeleteTree(path, key, grovedb::TreeType::NormalTree);

@@ -4,11 +4,11 @@
 
 ## Beyond Single-Key Lookups
 
-`Get` is like looking up a UTXO by outpoint — one key, one value. Queries are like asking "show me all UTXOs for this address" — range-based, filterable, and *provable*. This is what GroveDB was built for.
+[`Get`](@ref grovedb::Db::Get) is like looking up a UTXO by outpoint — one key, one value. Queries are like asking "show me all UTXOs for this address" — range-based, filterable, and *provable*. This is what GroveDB was built for.
 
 ## Query Items
 
-A `QueryItem` is a predicate that selects keys from a subtree. GroveDB provides 10 factory methods covering every range pattern:
+A [`QueryItem`](@ref grovedb::QueryItem) is a predicate that selects keys from a subtree. GroveDB provides 10 factory methods covering every range pattern:
 
 | Factory | Matches | Example |
 |---------|---------|---------|
@@ -36,7 +36,7 @@ graph LR
 
 ## Path Queries
 
-A `PathQuery` combines a path, query predicates, and optional pagination:
+A [`PathQuery`](@ref grovedb::PathQuery) combines a path, query predicates, and optional pagination:
 
 ```cpp
 auto pq = grovedb::PathQuery::New(
@@ -47,7 +47,7 @@ auto pq = grovedb::PathQuery::New(
 );
 ```
 
-Multiple query items in the same PathQuery are combined as a union — results matching *any* of the items are returned:
+Multiple query items in the same [`PathQuery`](@ref grovedb::PathQuery) are combined as a union — results matching *any* of the items are returned:
 
 ```cpp
 // Get keys "a", "c", and everything from "f" onward
@@ -64,14 +64,14 @@ Different query methods return data in different formats:
 
 | Method | Returns | Use when |
 |--------|---------|----------|
-| `QueryValues` | `vector<Bytes>` | You want raw byte values only |
-| `QueryItemsOrSums` | `vector<QueryItemOrSum>` | Querying mixed trees with Items and SumItems |
-| `QuerySums` | `vector<int64_t>` | Querying SumTrees for aggregate values |
-| `QueryRaw` | `vector<QueryResultElement>` | You want full Element objects with optional keys and paths |
-| `QueryKeysOptional` | `vector<PathKeyElement>` | You want path+key+element triples (follows references) |
-| `QueryRawKeysOptional` | `vector<PathKeyElement>` | Same as above, without following references |
+| [`QueryValues`](@ref grovedb::Db::QueryValues) | `vector<Bytes>` | You want raw byte values only |
+| [`QueryItemsOrSums`](@ref grovedb::Db::QueryItemsOrSums) | `vector<QueryItemOrSum>` | Querying mixed trees with Items and SumItems |
+| [`QuerySums`](@ref grovedb::Db::QuerySums) | `vector<int64_t>` | Querying SumTrees for aggregate values |
+| [`QueryRaw`](@ref grovedb::Db::QueryRaw) | `vector<QueryResultElement>` | You want full Element objects with optional keys and paths |
+| [`QueryKeysOptional`](@ref grovedb::Db::QueryKeysOptional) | `vector<PathKeyElement>` | You want path+key+element triples (follows references) |
+| [`QueryRawKeysOptional`](@ref grovedb::Db::QueryRawKeysOptional) | `vector<PathKeyElement>` | Same as above, without following references |
 
-All query methods return results wrapped in `Costed<QueryData<T>>`, where `QueryData` bundles the results with a skip count:
+All query methods return results wrapped in [`Costed`](@ref grovedb::Costed)`<`[`QueryData<T>`](@ref grovedb::QueryData)`>`, where [`QueryData`](@ref grovedb::QueryData) bundles the results with a skip count:
 
 ```cpp
 auto result = db.QueryValues(pq);
@@ -84,7 +84,7 @@ if (result.has_value()) {
 
 ### QueryRaw result types
 
-`QueryRaw` takes a `result_type` parameter controlling how much context is included:
+[`QueryRaw`](@ref grovedb::Db::QueryRaw) takes a `result_type` parameter controlling how much context is included:
 
 | `result_type` | Returns | Fields populated |
 |---------------|---------|-----------------|
@@ -94,7 +94,7 @@ if (result.has_value()) {
 
 ## Hierarchical Subqueries
 
-`PathQuery::NewWithSubquery` enables two-level queries: for each result at the outer level, run a subquery one level deeper. This is how you query across subtrees without making multiple round trips.
+[`PathQuery::NewWithSubquery`](@ref grovedb::PathQuery::NewWithSubquery) enables two-level queries: for each result at the outer level, run a subquery one level deeper. This is how you query across subtrees without making multiple round trips.
 
 Example: "for each user subtree, get the element with key 'x'":
 
@@ -130,7 +130,7 @@ For the complete hierarchical query example, see [`contrib/examples/hierarchical
 
 ## Multi-Queries
 
-`QueryManyRaw` executes multiple independent queries atomically, returning merged results:
+[`QueryManyRaw`](@ref grovedb::Db::QueryManyRaw) executes multiple independent queries atomically, returning merged results:
 
 ```cpp
 std::vector<grovedb::Db::RawQuerySpec> queries{

@@ -7,52 +7,52 @@ A data structure where a short digest (hash) commits to all stored data, enablin
 A proof demonstrating that a key does **not** exist in the database. Works by showing the neighboring keys that do exist, proving there's no room for the absent key in the sorted tree. See [Proofs](07-proofs.md#absence-proofs).
 
 **Batch**
-A set of operations applied atomically with a single tree rebalance pass. More efficient than individual operations for block processing. See [Batch Operations](09-batch-operations.md).
+A set of [`BatchOperation`](@ref grovedb::BatchOperation) entries applied atomically with a single tree rebalance pass. More efficient than individual operations for block processing. See [Batch Operations](09-batch-operations.md).
 
-**Bytes**
+**[`Bytes`](@ref grovedb::Bytes)**
 `grovedb::Bytes` — a byte vector (`std::vector<uint8_t>`) with convenience methods for string and hex conversion. The fundamental data type for keys and values.
 
 **Checkpoint**
 An immutable, read-only snapshot of the database at a point in time. Created near-instantly using RocksDB's hard-link mechanism. See [Advanced Topics](10-advanced-topics.md#checkpoints).
 
-**Costed\<T\>**
-A template that bundles a value with its associated `OperationCost`. Returned by operations that track resource consumption. Access via `.value()` and `.cost()`.
+**[`Costed<T>`](@ref grovedb::Costed)**
+A template that bundles a value with its associated [`OperationCost`](@ref grovedb::OperationCost). Returned by operations that track resource consumption. Access via `.value()` and `.cost()`.
 
-**Element**
+**[`Element`](@ref grovedb::Element)**
 The typed unit of storage in GroveDB. Four variants: `Item` (arbitrary bytes), `Tree` (empty subtree), `SumTree` (subtree tracking sums), `SumItem` (integer in a SumTree). See [Elements and Trees](04-elements-and-trees.md).
 
-**Error**
-`grovedb::Error` — carries an `ErrorCode` discriminant and a human-readable message. Constructed via factory methods like `Error::NotFound("message")`. See [Error Handling](11-error-handling.md).
+**[`Error`](@ref grovedb::Error)**
+`grovedb::Error` — carries an [`ErrorCode`](@ref grovedb::ErrorCode) discriminant and a human-readable message. Constructed via factory methods like `Error::NotFound("message")`. See [Error Handling](11-error-handling.md).
 
-**ErrorCode**
+**[`ErrorCode`](@ref grovedb::ErrorCode)**
 Enum discriminant for errors: `Ok`, `NotFound`, `Corruption`, `InvalidArgument`, `IOError`, `NotSupported`, `Aborted`. See [Error Handling](11-error-handling.md#error-codes).
 
 **Hierarchical Authenticated Data Structure**
 Trees within trees. GroveDB's core architecture. The root hash of each subtree is stored in its parent tree, so one root hash commits to the entire hierarchy. Based on Etemad & Kupcu, 2015. See [Architecture](02-architecture.md#the-hierarchy-trees-within-trees).
 
-**Hash**
+**[`Hash`](@ref grovedb::Hash)**
 `grovedb::Hash` — a 32-byte array (`std::array<uint8_t, 32>`) representing a Merkle hash. The root hash commits to the entire database state.
 
 **Merk**
 The Merkle AVL tree implementation used for each subtree. Provides O(log n) operations, sorted key order for range queries, and efficient proof generation. Source: [github.com/dashpay/grovedb/merk](https://github.com/dashpay/grovedb/tree/master/merk). See [Architecture](02-architecture.md#merk-trees).
 
-**OperationCost**
+**[`OperationCost`](@ref grovedb::OperationCost)**
 Resource consumption metrics returned by every operation: `m_seek_count`, `m_storage_added_bytes`, `m_storage_replaced_bytes`, `m_storage_removed_bytes`, `m_storage_loaded_bytes`, `m_hash_node_calls`. Costs are additive. See [Basic Operations](05-basic-operations.md#operation-costs).
 
-**Path**
-`grovedb::Path` — a `std::vector<Bytes>` navigating the subtree hierarchy. The empty path `{}` addresses the root tree. Each additional segment navigates one level deeper. See [Elements and Trees](04-elements-and-trees.md#paths-explained).
+**[`Path`](@ref grovedb::Path)**
+`grovedb::Path` — a `std::vector<`[`Bytes`](@ref grovedb::Bytes)`>` navigating the subtree hierarchy. The empty path `{}` addresses the root tree. Each additional segment navigates one level deeper. See [Elements and Trees](04-elements-and-trees.md#paths-explained).
 
-**PathQuery**
-A query combining a path (which subtree to query), predicates (which keys to match), and optional pagination (limit/offset). Created via `PathQuery::New()` or `PathQuery::NewWithSubquery()`. See [Queries](06-queries.md#path-queries).
+**[`PathQuery`](@ref grovedb::PathQuery)**
+A query combining a path (which subtree to query), predicates (which keys to match), and optional pagination (limit/offset). Created via [`PathQuery::New()`](@ref grovedb::PathQuery::New) or [`PathQuery::NewWithSubquery()`](@ref grovedb::PathQuery::NewWithSubquery). See [Queries](06-queries.md#path-queries).
 
 **Proof**
-Opaque bytes that cryptographically demonstrate a query result is authentic. Generated by `Db::Prove()`, verified by `Db::VerifyQuery()` and related methods. Verification requires only the 32-byte root hash — no database access needed. See [Proofs](07-proofs.md).
+Opaque bytes that cryptographically demonstrate a query result is authentic. Generated by [`Db::Prove()`](@ref grovedb::Db::Prove), verified by [`Db::VerifyQuery()`](@ref grovedb::Db::VerifyQuery) and related methods. Verification requires only the 32-byte root hash — no database access needed. See [Proofs](07-proofs.md).
 
-**QueryItem**
-A predicate (exact key, range, etc.) used within a PathQuery. Ten variants: `Key`, `Range`, `RangeInclusive`, `RangeFull`, `RangeFrom`, `RangeTo`, `RangeToInclusive`, `RangeAfter`, `RangeAfterTo`, `RangeAfterToInclusive`. See [Queries](06-queries.md#query-items).
+**[`QueryItem`](@ref grovedb::QueryItem)**
+A predicate (exact key, range, etc.) used within a [`PathQuery`](@ref grovedb::PathQuery). Ten variants: `Key`, `Range`, `RangeInclusive`, `RangeFull`, `RangeFrom`, `RangeTo`, `RangeToInclusive`, `RangeAfter`, `RangeAfterTo`, `RangeAfterToInclusive`. See [Queries](06-queries.md#query-items).
 
-**Result\<T, Error\>**
-`grovedb::Result<T, Error>` — the return type used throughout the API. Either holds a success value or an `Error`. Can be checked imperatively with `has_value()`/`error()`, or chained with `.and_then()` and `.map()` for concise handling of complex nested types. See [Error Handling](11-error-handling.md).
+**[`Result<T, Error>`](@ref grovedb::Result)**
+`grovedb::Result<T, Error>` — the return type used throughout the API. Either holds a success value or an [`Error`](@ref grovedb::Error). Can be checked imperatively with `has_value()`/`error()`, or chained with `.and_then()` and `.map()` for concise handling of complex nested types. See [Error Handling](11-error-handling.md).
 
 **Root Hash**
 The 32-byte hash at the top of the tree hierarchy, committing to the entire database state. Any change to any element anywhere causes the root hash to change. Analogous to a Bitcoin block header's Merkle root.
@@ -61,7 +61,7 @@ The 32-byte hash at the top of the tree hierarchy, committing to the entire data
 A Merk tree nested within another tree. Created by inserting a `Tree` or `SumTree` element. Each subtree has its own root hash, stored in the parent tree.
 
 **SumTree / SumItem**
-A subtree type that automatically maintains a running sum of all `SumItem` children. `SumItem` values are `int64_t` (can be negative). Query the aggregate with `QuerySums()`. See [Advanced Topics](10-advanced-topics.md#sum-trees).
+A subtree type that automatically maintains a running sum of all `SumItem` children. `SumItem` values are `int64_t` (can be negative). Query the aggregate with [`QuerySums()`](@ref grovedb::Db::QuerySums). See [Advanced Topics](10-advanced-topics.md#sum-trees).
 
-**Transaction**
+**[`Transaction`](@ref grovedb::Transaction)**
 `grovedb::Transaction` — an RAII handle for optimistic transactions. Provides atomic commit/rollback with snapshot isolation. Auto-rolls back on destruction if not committed. See [Transactions](08-transactions.md).

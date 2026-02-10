@@ -47,7 +47,7 @@ if (proof.has_value()) {
 }
 ```
 
-`Prove` returns opaque proof bytes. The proof is compact because Merk's AVL structure produces efficient range proofs — proof size is O(log n) per tree level, independent of the total data size.
+[`Prove`](@ref grovedb::Db::Prove) returns opaque proof bytes. The proof is compact because Merk's AVL structure produces efficient range proofs — proof size is O(log n) per tree level, independent of the total data size.
 
 The optional `decrease_limit_on_empty` parameter (default `true`) controls whether empty subtrees count against the query limit.
 
@@ -71,20 +71,20 @@ if (verified.has_value()) {
 
 The critical point: **verification is stateless**. A light client with only the 32-byte root hash (from a block header) can verify any query result. No database access needed. This is the entire point of GroveDB.
 
-The `ProofVerifyResult` contains:
+The [`ProofVerifyResult`](@ref grovedb::Db::ProofVerifyResult) contains:
 - `m_root_hash` — the root hash reconstructed from the proof (compare against the known state root)
-- `m_entries` — `vector<PathKeyElement>`, each with a path, key, and optional element (present for existing keys, absent for non-existing keys in absence proofs)
+- `m_entries` — `vector<`[`PathKeyElement`](@ref grovedb::PathKeyElement)`>`, each with a path, key, and optional element (present for existing keys, absent for non-existing keys in absence proofs)
 
 ## Proof Verification Variants
 
 | Method | Behavior |
 |--------|----------|
-| `VerifyQuery` | Strict verification — proof must be succinct (no extra data) |
-| `VerifySubsetQuery` | Non-strict — proof may contain extra data beyond what the query asked for |
-| `VerifyQueryWithAbsenceProof` | Proves keys are *not* in the database (entries with `m_element = nullopt`) |
-| `VerifySubsetQueryWithAbsenceProof` | Combines subset verification with absence proofs |
-| `VerifyQueryWithOptions` | Full control over verification behavior |
-| `VerifyChainedQueries` | Verifies a sequence of dependent queries |
+| [`VerifyQuery`](@ref grovedb::Db::VerifyQuery) | Strict verification — proof must be succinct (no extra data) |
+| [`VerifySubsetQuery`](@ref grovedb::Db::VerifySubsetQuery) | Non-strict — proof may contain extra data beyond what the query asked for |
+| [`VerifyQueryWithAbsenceProof`](@ref grovedb::Db::VerifyQueryWithAbsenceProof) | Proves keys are *not* in the database (entries with `m_element = nullopt`) |
+| [`VerifySubsetQueryWithAbsenceProof`](@ref grovedb::Db::VerifySubsetQueryWithAbsenceProof) | Combines subset verification with absence proofs |
+| [`VerifyQueryWithOptions`](@ref grovedb::Db::VerifyQueryWithOptions) | Full control over verification behavior |
+| [`VerifyChainedQueries`](@ref grovedb::Db::VerifyChainedQueries) | Verifies a sequence of dependent queries |
 
 ## Absence Proofs
 
@@ -120,7 +120,7 @@ For the complete absence proof example, see [`contrib/examples/absence_proofs.cp
 
 ## Chained Query Verification
 
-`VerifyChainedQueries` verifies a sequence of queries where each depends on the result of the previous one. The first result key of each query is appended to the next query's path.
+[`VerifyChainedQueries`](@ref grovedb::Db::VerifyChainedQueries) verifies a sequence of queries where each depends on the result of the previous one. The first result key of each query is appended to the next query's path.
 
 ```cpp
 auto result = db.VerifyChainedQueries(
@@ -138,7 +138,7 @@ For chained query examples, see [`contrib/examples/chained_queries.cpp`](../libg
 
 ## Custom Verification Options
 
-`VerifyQueryWithOptions` provides fine-grained control:
+[`VerifyQueryWithOptions`](@ref grovedb::Db::VerifyQueryWithOptions) provides fine-grained control:
 
 ```cpp
 auto result = db.VerifyQueryWithOptions(
@@ -158,8 +158,8 @@ A flat Merkle tree proves "this key exists":
 
 ```mermaid
 graph TD
-  BR["Root Hash"] --> BH1["..."]
-  BR --> BH2["..."]
+  BR["Root Hash"] --> BH1["…"]
+  BR --> BH2["…"]
   BH2 --> BTX["tx_abc ✓"]
 ```
 

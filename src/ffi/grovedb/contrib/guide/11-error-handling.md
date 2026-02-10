@@ -2,7 +2,7 @@
 
 ## The Result Type
 
-Every operation in the GroveDB C++ API returns `grovedb::Result<T, Error>`. A `grovedb::Result` either holds a success value (`T`) or an `Error` — there's no ambiguous "empty" state. You always know whether an operation succeeded or failed.
+Every operation in the GroveDB C++ API returns [`grovedb::Result<T, Error>`](@ref grovedb::Result). A `grovedb::Result` either holds a success value (`T`) or an [`Error`](@ref grovedb::Error) — there's no ambiguous "empty" state. You always know whether an operation succeeded or failed.
 
 ```cpp
 #include <grovedb/result.h>  // for Result
@@ -29,7 +29,7 @@ if (result.has_value()) {
 }
 ```
 
-This works well for simple operations. But GroveDB's return types are often nested — `Get` doesn't return a bare `Element`, it returns `grovedb::Result<Costed<Element>, Error>`. And `GetOptional` returns `grovedb::Result<Costed<std::optional<Element>>, Error>`. Unwrapping these imperatively means multiple levels of checking:
+This works well for simple operations. But GroveDB's return types are often nested — [`Get`](@ref grovedb::Db::Get) doesn't return a bare [`Element`](@ref grovedb::Element), it returns `grovedb::Result<Costed<Element>, Error>`. And [`GetOptional`](@ref grovedb::Db::GetOptional) returns `grovedb::Result<Costed<std::optional<Element>>, Error>`. Unwrapping these imperatively means multiple levels of checking:
 
 ```cpp
 // Imperative approach to GetOptional — verbose but explicit
@@ -47,11 +47,11 @@ This is where chaining becomes valuable.
 
 ## Chained Style
 
-`grovedb::Result` supports `.and_then()` and `.map()` for composing operations without manually unwrapping at each step. The examples below show common patterns and why you'd reach for each one.
+[`grovedb::Result`](@ref grovedb::Result) supports `.and_then()` and `.map()` for composing operations without manually unwrapping at each step. The examples below show common patterns and why you'd reach for each one.
 
 ### Unwrapping a Costed value
 
-`Get` returns `grovedb::Result<Costed<Element>, Error>` — you usually want the `Element`, not the cost wrapper. `.map()` strips the layer away:
+[`Get`](@ref grovedb::Db::Get) returns `grovedb::Result<Costed<Element>, Error>` — you usually want the [`Element`](@ref grovedb::Element), not the cost wrapper. `.map()` strips the layer away:
 
 ```cpp
 auto elem = db.Get(root, key).map([](grovedb::Costed<grovedb::Element> ce) {
@@ -77,7 +77,7 @@ There's no way to accidentally insert an invalid element — `.and_then` won't c
 
 ### Accumulating costs
 
-Operations return `OperationCost`, which supports `operator+=`. In a loop, chain the happy path and accumulate costs imperatively:
+Operations return [`OperationCost`](@ref grovedb::OperationCost), which supports `operator+=`. In a loop, chain the happy path and accumulate costs imperatively:
 
 ```cpp
 grovedb::OperationCost total{};
@@ -100,7 +100,7 @@ The chain handles validation (element creation → insertion), while the loop ha
 
 ### Build a query and execute it
 
-`PathQuery::New` returns a `grovedb::Result` too. Chain it directly into the query execution:
+[`PathQuery::New`](@ref grovedb::PathQuery::New) returns a `grovedb::Result` too. Chain it directly into the query execution:
 
 ```cpp
 auto result = grovedb::PathQuery::New(root, {grovedb::QueryItem::RangeInclusive(from, to)})
@@ -197,7 +197,7 @@ In practice, most code mixes both: chain the happy path with `.and_then()`, then
 
 ## Error Codes
 
-Every `Error` carries an `ErrorCode` discriminant:
+Every [`Error`](@ref grovedb::Error) carries an [`ErrorCode`](@ref grovedb::ErrorCode) discriminant:
 
 | Code | When it occurs |
 |------|----------------|
@@ -240,7 +240,7 @@ auto fail_chain = db.Get(root, grovedb::Bytes::FromString("nonexistent"))
 
 ## Constructing Errors
 
-Use `grovedb::Err()` to construct error results:
+Use [`grovedb::Err()`](@ref grovedb::Err) to construct error results:
 
 ```cpp
 grovedb::Result<int, grovedb::Error> validate(int x) {
@@ -253,7 +253,7 @@ grovedb::Result<int, grovedb::Error> validate(int x) {
 
 ## Pattern: Handling Optional Keys
 
-When a missing key is expected (not an error), use `GetOptional` instead of `Get`:
+When a missing key is expected (not an error), use [`GetOptional`](@ref grovedb::Db::GetOptional) instead of [`Get`](@ref grovedb::Db::Get):
 
 ```cpp
 // Get returns an error for missing keys

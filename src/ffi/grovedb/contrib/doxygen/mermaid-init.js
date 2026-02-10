@@ -15,6 +15,11 @@
         return document.documentElement.classList.contains('dark-mode');
     }
 
+    function fragmentBg() {
+        return getComputedStyle(document.documentElement)
+            .getPropertyValue('--fragment-background').trim() || '#f5f5f5';
+    }
+
     /* GroveDB palette — must use 'base' theme for themeVariables to apply */
     var LIGHT_VARS = {
         primaryColor: '#e6f3fb',
@@ -78,10 +83,13 @@
         var divs = document.querySelectorAll('div.mermaid[data-mermaid-source]');
         if (!divs.length) return;
 
+        var vars = isDark() ? Object.assign({}, DARK_VARS) : Object.assign({}, LIGHT_VARS);
+        vars.edgeLabelBackground = fragmentBg();
+
         mermaid.initialize({
             startOnLoad: false,
             theme: 'base',
-            themeVariables: isDark() ? DARK_VARS : LIGHT_VARS
+            themeVariables: vars
         });
 
         divs.forEach(function (div) {

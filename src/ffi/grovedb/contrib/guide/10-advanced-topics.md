@@ -63,7 +63,7 @@ auto result = db.GetAux(grovedb::Bytes::FromString("sync_height"));
 db.DeleteAux(grovedb::Bytes::FromString("sync_height"));
 ```
 
-All three operations accept an optional `Transaction&` parameter.
+All three operations accept an optional [`Transaction`](@ref grovedb::Transaction)`&` parameter.
 
 ### Use Case
 
@@ -73,7 +73,7 @@ For the complete auxiliary storage example, see [`contrib/examples/auxiliary_sto
 
 ## Cost Tracking
 
-Every operation returns an `OperationCost` with six fields measuring resource consumption:
+Every operation returns an [`OperationCost`](@ref grovedb::OperationCost) with six fields measuring resource consumption:
 
 | Field | Description |
 |-------|-------------|
@@ -104,7 +104,7 @@ For detailed cost tracking patterns, see [`contrib/examples/operation_costs.cpp`
 
 ## Integrity Verification
 
-`VerifyIntegrity` walks the entire tree hierarchy and checks all hashes:
+[`VerifyIntegrity`](@ref grovedb::Db::VerifyIntegrity) walks the entire tree hierarchy and checks all hashes:
 
 ```cpp
 auto result = db.VerifyIntegrity();
@@ -127,7 +127,7 @@ auto exists = db.SubtreeExists(path);
 auto empty = db.IsEmptyTree(path);
 ```
 
-`FindSubtrees` returns every path in the hierarchy under the given root — useful for debugging, migration, and tree visualization.
+[`FindSubtrees`](@ref grovedb::Db::FindSubtrees) returns every path in the hierarchy under the given root — useful for debugging, migration, and tree visualization.
 
 For tree inspection patterns, see [`contrib/examples/tree_state.cpp`](../libgrovedb/contrib/examples/tree_state.cpp).
 
@@ -159,7 +159,7 @@ grovedb::Element::SumItem(-200).and_then([&](grovedb::Element e) {
 
 ### Querying Sums
 
-`QuerySums` returns aggregate sum values:
+[`QuerySums`](@ref grovedb::Db::QuerySums) returns aggregate sum values:
 
 ```cpp
 auto sums = grovedb::PathQuery::New(balances, {grovedb::QueryItem::RangeFull()})
@@ -169,7 +169,7 @@ auto sums = grovedb::PathQuery::New(balances, {grovedb::QueryItem::RangeFull()})
 // sums->value().m_data contains the individual sum values
 ```
 
-`QueryItemsOrSums` returns a tagged union for each entry, distinguishing between item data and sum values:
+[`QueryItemsOrSums`](@ref grovedb::Db::QueryItemsOrSums) returns a tagged union for each entry, distinguishing between item data and sum values:
 
 ```cpp
 auto result = db.QueryItemsOrSums(query);

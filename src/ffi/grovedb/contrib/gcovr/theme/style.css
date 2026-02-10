@@ -554,56 +554,93 @@ td.linenos {
   padding-right: 12px;
 }
 
-/* ---------- Pygments syntax highlighting — dark mode ---------- */
-/* Colors based on GitHub's dark theme for familiarity               */
+/* ---------- Pygments syntax highlighting — light mode (palette-unified) -- */
+/* Overrides Pygments defaults (bare selectors) with palette variables.     */
+/* .src prefix gives specificity 0,0,2 to beat bare 0,0,1 Pygments rules.  */
+
+/* Comments */
+.src .c, .src .c1, .src .ch, .src .cm,
+.src .cpf, .src .cs                      { color: var(--grovedb-syntax-comment); }
+.src .sd                                 { color: var(--grovedb-syntax-comment); }
+/* Preprocessor */
+.src .cp                                 { color: var(--grovedb-syntax-preprocessor); }
+
+/* Keywords */
+.src .k, .src .kc, .src .kd,
+.src .kn, .src .kp, .src .kr            { color: var(--grovedb-syntax-keyword); }
+.src .kt                                { color: var(--grovedb-syntax-type); }
+
+/* Operators */
+.src .ow                                { color: var(--grovedb-syntax-keyword); }
+
+/* Names */
+.src .nf, .src .fm                      { color: var(--grovedb-syntax-function); }
+.src .nc, .src .nn                      { color: var(--grovedb-syntax-name); }
+.src .nd                                { color: var(--grovedb-syntax-function); }
+.src .nb, .src .bp                      { color: var(--grovedb-syntax-number); }
+.src .na, .src .no                      { color: var(--grovedb-syntax-number); }
+.src .nt                                { color: var(--grovedb-syntax-string); }
+.src .nv, .src .vc, .src .vg,
+.src .vi, .src .vm                      { color: var(--grovedb-syntax-number); }
+
+/* Strings */
+.src .s, .src .s1, .src .s2, .src .sa,
+.src .sb, .src .sc, .src .dl, .src .sh,
+.src .si, .src .sr, .src .ss, .src .sx  { color: var(--grovedb-syntax-string); }
+.src .se                                { color: var(--grovedb-syntax-flow); }
+
+/* Numbers */
+.src .m, .src .mi, .src .mf, .src .mb,
+.src .mh, .src .mo, .src .il            { color: var(--grovedb-syntax-number); }
+
+/* ---------- Pygments syntax highlighting — dark mode (palette-unified) -- */
 
 html.dark-mode .src .hll        { background-color: rgba(187, 128, 9, 0.15); }
 
-/* Comments — muted gray */
+/* Comments */
 html.dark-mode .src .c,
 html.dark-mode .src .c1,
 html.dark-mode .src .ch,
 html.dark-mode .src .cm,
 html.dark-mode .src .cpf,
-html.dark-mode .src .cs          { color: #8b949e; }
-/* Preprocessor comment — gold */
-html.dark-mode .src .cp          { color: #ffa657; }
+html.dark-mode .src .cs          { color: var(--grovedb-syntax-comment); }
+html.dark-mode .src .sd          { color: var(--grovedb-syntax-comment); }
+/* Preprocessor */
+html.dark-mode .src .cp          { color: var(--grovedb-syntax-preprocessor); }
 
-/* Keywords — pinkish-red */
+/* Keywords */
 html.dark-mode .src .k,
 html.dark-mode .src .kc,
 html.dark-mode .src .kd,
 html.dark-mode .src .kn,
 html.dark-mode .src .kp,
-html.dark-mode .src .kr          { color: #ff7b72; }
-/* Keyword type — orange */
-html.dark-mode .src .kt          { color: #ffa657; }
+html.dark-mode .src .kr          { color: var(--grovedb-syntax-keyword); }
+html.dark-mode .src .kt          { color: var(--grovedb-syntax-type); }
 
-/* Operators — light gray */
-html.dark-mode .src .o           { color: #c9d1d9; }
-/* Operator word — pinkish-red like keywords */
-html.dark-mode .src .ow          { color: #ff7b72; }
+/* Operators */
+html.dark-mode .src .o           { color: var(--grovedb-fg); }
+html.dark-mode .src .ow          { color: var(--grovedb-syntax-keyword); }
 
-/* Names — functions/classes purple, builtins blue, tags green */
+/* Names */
 html.dark-mode .src .nf,
-html.dark-mode .src .fm          { color: #d2a8ff; }
+html.dark-mode .src .fm          { color: var(--grovedb-syntax-function); }
 html.dark-mode .src .nc,
-html.dark-mode .src .nn          { color: #ffa657; }
-html.dark-mode .src .nd          { color: #d2a8ff; }
+html.dark-mode .src .nn          { color: var(--grovedb-syntax-name); }
+html.dark-mode .src .nd          { color: var(--grovedb-syntax-function); }
 html.dark-mode .src .ne          { color: #ffa198; }
 html.dark-mode .src .nb,
-html.dark-mode .src .bp          { color: #79c0ff; }
+html.dark-mode .src .bp          { color: var(--grovedb-syntax-number); }
 html.dark-mode .src .na,
-html.dark-mode .src .no          { color: #79c0ff; }
-html.dark-mode .src .ni          { color: #c9d1d9; }
-html.dark-mode .src .nt          { color: #7ee787; }
+html.dark-mode .src .no          { color: var(--grovedb-syntax-number); }
+html.dark-mode .src .ni          { color: var(--grovedb-fg); }
+html.dark-mode .src .nt          { color: var(--grovedb-syntax-string); }
 html.dark-mode .src .nv,
 html.dark-mode .src .vc,
 html.dark-mode .src .vg,
 html.dark-mode .src .vi,
-html.dark-mode .src .vm          { color: #79c0ff; }
+html.dark-mode .src .vm          { color: var(--grovedb-syntax-number); }
 
-/* Strings — light blue */
+/* Strings */
 html.dark-mode .src .s,
 html.dark-mode .src .s1,
 html.dark-mode .src .s2,
@@ -615,30 +652,27 @@ html.dark-mode .src .sh,
 html.dark-mode .src .si,
 html.dark-mode .src .sr,
 html.dark-mode .src .ss,
-html.dark-mode .src .sx          { color: #a5d6ff; }
-/* Doc strings — muted like comments */
-html.dark-mode .src .sd          { color: #8b949e; }
-/* Escape sequences — orange */
-html.dark-mode .src .se          { color: #ffa657; }
+html.dark-mode .src .sx          { color: var(--grovedb-syntax-string); }
+html.dark-mode .src .se          { color: var(--grovedb-syntax-flow); }
 
-/* Numbers — blue */
+/* Numbers */
 html.dark-mode .src .m,
 html.dark-mode .src .mi,
 html.dark-mode .src .mf,
 html.dark-mode .src .mb,
 html.dark-mode .src .mh,
 html.dark-mode .src .mo,
-html.dark-mode .src .il          { color: #79c0ff; }
+html.dark-mode .src .il          { color: var(--grovedb-syntax-number); }
 
 /* Generic — diff, output, errors */
 html.dark-mode .src .gd          { color: #ffa198; background-color: rgba(248, 81, 73, 0.15); }
 html.dark-mode .src .gi          { color: #7ee787; background-color: rgba(46, 160, 67, 0.15); }
-html.dark-mode .src .go          { color: #8b949e; }
-html.dark-mode .src .gp          { color: #8b949e; }
+html.dark-mode .src .go          { color: var(--grovedb-syntax-comment); }
+html.dark-mode .src .gp          { color: var(--grovedb-syntax-comment); }
 html.dark-mode .src .gr          { color: #ffa198; }
-html.dark-mode .src .gt          { color: #79c0ff; }
+html.dark-mode .src .gt          { color: var(--grovedb-syntax-number); }
 html.dark-mode .src .gh,
-html.dark-mode .src .gu          { color: #d2a8ff; }
+html.dark-mode .src .gu          { color: var(--grovedb-syntax-function); }
 
 /* Whitespace / Error */
 html.dark-mode .src .w           { color: #484f58; }
@@ -647,48 +681,55 @@ html.dark-mode .src .err         { color: #ffa198; border-color: #f85149; }
 /* Line numbers */
 html.dark-mode td.linenos .normal { color: #484f58; }
 
-/* ---------- Pygments — system dark preference ---------- */
+/* ---------- Pygments — system dark preference (palette-unified) ---------- */
 
 @media (prefers-color-scheme: dark) {
   html:not(.light-mode) .src .hll        { background-color: rgba(187, 128, 9, 0.15); }
 
+  /* Comments */
   html:not(.light-mode) .src .c,
   html:not(.light-mode) .src .c1,
   html:not(.light-mode) .src .ch,
   html:not(.light-mode) .src .cm,
   html:not(.light-mode) .src .cpf,
-  html:not(.light-mode) .src .cs          { color: #8b949e; }
-  html:not(.light-mode) .src .cp          { color: #ffa657; }
+  html:not(.light-mode) .src .cs          { color: var(--grovedb-syntax-comment); }
+  html:not(.light-mode) .src .sd          { color: var(--grovedb-syntax-comment); }
+  /* Preprocessor */
+  html:not(.light-mode) .src .cp          { color: var(--grovedb-syntax-preprocessor); }
 
+  /* Keywords */
   html:not(.light-mode) .src .k,
   html:not(.light-mode) .src .kc,
   html:not(.light-mode) .src .kd,
   html:not(.light-mode) .src .kn,
   html:not(.light-mode) .src .kp,
-  html:not(.light-mode) .src .kr          { color: #ff7b72; }
-  html:not(.light-mode) .src .kt          { color: #ffa657; }
+  html:not(.light-mode) .src .kr          { color: var(--grovedb-syntax-keyword); }
+  html:not(.light-mode) .src .kt          { color: var(--grovedb-syntax-type); }
 
-  html:not(.light-mode) .src .o           { color: #c9d1d9; }
-  html:not(.light-mode) .src .ow          { color: #ff7b72; }
+  /* Operators */
+  html:not(.light-mode) .src .o           { color: var(--grovedb-fg); }
+  html:not(.light-mode) .src .ow          { color: var(--grovedb-syntax-keyword); }
 
+  /* Names */
   html:not(.light-mode) .src .nf,
-  html:not(.light-mode) .src .fm          { color: #d2a8ff; }
+  html:not(.light-mode) .src .fm          { color: var(--grovedb-syntax-function); }
   html:not(.light-mode) .src .nc,
-  html:not(.light-mode) .src .nn          { color: #ffa657; }
-  html:not(.light-mode) .src .nd          { color: #d2a8ff; }
+  html:not(.light-mode) .src .nn          { color: var(--grovedb-syntax-name); }
+  html:not(.light-mode) .src .nd          { color: var(--grovedb-syntax-function); }
   html:not(.light-mode) .src .ne          { color: #ffa198; }
   html:not(.light-mode) .src .nb,
-  html:not(.light-mode) .src .bp          { color: #79c0ff; }
+  html:not(.light-mode) .src .bp          { color: var(--grovedb-syntax-number); }
   html:not(.light-mode) .src .na,
-  html:not(.light-mode) .src .no          { color: #79c0ff; }
-  html:not(.light-mode) .src .ni          { color: #c9d1d9; }
-  html:not(.light-mode) .src .nt          { color: #7ee787; }
+  html:not(.light-mode) .src .no          { color: var(--grovedb-syntax-number); }
+  html:not(.light-mode) .src .ni          { color: var(--grovedb-fg); }
+  html:not(.light-mode) .src .nt          { color: var(--grovedb-syntax-string); }
   html:not(.light-mode) .src .nv,
   html:not(.light-mode) .src .vc,
   html:not(.light-mode) .src .vg,
   html:not(.light-mode) .src .vi,
-  html:not(.light-mode) .src .vm          { color: #79c0ff; }
+  html:not(.light-mode) .src .vm          { color: var(--grovedb-syntax-number); }
 
+  /* Strings */
   html:not(.light-mode) .src .s,
   html:not(.light-mode) .src .s1,
   html:not(.light-mode) .src .s2,
@@ -700,27 +741,29 @@ html.dark-mode td.linenos .normal { color: #484f58; }
   html:not(.light-mode) .src .si,
   html:not(.light-mode) .src .sr,
   html:not(.light-mode) .src .ss,
-  html:not(.light-mode) .src .sx          { color: #a5d6ff; }
-  html:not(.light-mode) .src .sd          { color: #8b949e; }
-  html:not(.light-mode) .src .se          { color: #ffa657; }
+  html:not(.light-mode) .src .sx          { color: var(--grovedb-syntax-string); }
+  html:not(.light-mode) .src .se          { color: var(--grovedb-syntax-flow); }
 
+  /* Numbers */
   html:not(.light-mode) .src .m,
   html:not(.light-mode) .src .mi,
   html:not(.light-mode) .src .mf,
   html:not(.light-mode) .src .mb,
   html:not(.light-mode) .src .mh,
   html:not(.light-mode) .src .mo,
-  html:not(.light-mode) .src .il          { color: #79c0ff; }
+  html:not(.light-mode) .src .il          { color: var(--grovedb-syntax-number); }
 
+  /* Generic — diff, output, errors */
   html:not(.light-mode) .src .gd          { color: #ffa198; background-color: rgba(248, 81, 73, 0.15); }
   html:not(.light-mode) .src .gi          { color: #7ee787; background-color: rgba(46, 160, 67, 0.15); }
-  html:not(.light-mode) .src .go          { color: #8b949e; }
-  html:not(.light-mode) .src .gp          { color: #8b949e; }
+  html:not(.light-mode) .src .go          { color: var(--grovedb-syntax-comment); }
+  html:not(.light-mode) .src .gp          { color: var(--grovedb-syntax-comment); }
   html:not(.light-mode) .src .gr          { color: #ffa198; }
-  html:not(.light-mode) .src .gt          { color: #79c0ff; }
+  html:not(.light-mode) .src .gt          { color: var(--grovedb-syntax-number); }
   html:not(.light-mode) .src .gh,
-  html:not(.light-mode) .src .gu          { color: #d2a8ff; }
+  html:not(.light-mode) .src .gu          { color: var(--grovedb-syntax-function); }
 
+  /* Whitespace / Error */
   html:not(.light-mode) .src .w           { color: #484f58; }
   html:not(.light-mode) .src .err         { color: #ffa198; border-color: #f85149; }
 

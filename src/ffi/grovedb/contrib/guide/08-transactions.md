@@ -50,7 +50,7 @@ if (!commit_result.has_value()) {
 // commit_result->m_seek_count, etc.
 ```
 
-Commit returns an `OperationCost` on success, reflecting the cost of flushing the transaction to storage. After commit, the transaction handle is consumed — no further operations are possible on it.
+[`Commit`](@ref grovedb::Db::Commit) returns an [`OperationCost`](@ref grovedb::OperationCost) on success, reflecting the cost of flushing the transaction to storage. After commit, the transaction handle is consumed — no further operations are possible on it.
 
 ### Rollback
 
@@ -62,7 +62,7 @@ auto rb = db.Rollback(*txn);
 
 ### RAII Auto-Rollback
 
-If a `Transaction` is destroyed without an explicit `Commit` or `Rollback`, the destructor automatically rolls back:
+If a [`Transaction`](@ref grovedb::Transaction) is destroyed without an explicit [`Commit`](@ref grovedb::Db::Commit) or [`Rollback`](@ref grovedb::Db::Rollback), the destructor automatically rolls back:
 
 ```cpp
 {
@@ -77,7 +77,7 @@ The destructor guarantees cleanup — you can't accidentally leave dangling tran
 
 ## Batches Within Transactions
 
-`ApplyBatch` accepts an optional transaction argument for operations that combine batch efficiency with transactional safety:
+[`ApplyBatch`](@ref grovedb::Db::ApplyBatch) accepts an optional transaction argument for operations that combine batch efficiency with transactional safety:
 
 ```cpp
 auto result = db.ApplyBatch(ops, options, *txn);

@@ -49,6 +49,13 @@ html {
     /* Code fragments — via shared palette */
     --fragment-background: var(--grovedb-surface);
     --fragment-foreground: var(--page-foreground-color);
+    --fragment-keyword: var(--grovedb-syntax-keyword);
+    --fragment-keywordtype: var(--grovedb-syntax-type);
+    --fragment-keywordflow: var(--grovedb-syntax-flow);
+    --fragment-token: var(--grovedb-syntax-string);
+    --fragment-comment: var(--grovedb-syntax-comment);
+    --fragment-link: var(--grovedb-syntax-link);
+    --fragment-preprocessor: var(--grovedb-syntax-preprocessor);
     --fragment-link-color: var(--primary-color);
     --fragment-linenumber-color: #a0a0a0;
     --code-background: var(--grovedb-surface);
@@ -122,6 +129,13 @@ html.dark-mode {
     --odd-color: rgba(255, 255, 255, 0.04);
 
     --fragment-foreground: #d4d4d4;
+    --fragment-keyword: var(--grovedb-syntax-keyword);
+    --fragment-keywordtype: var(--grovedb-syntax-type);
+    --fragment-keywordflow: var(--grovedb-syntax-flow);
+    --fragment-token: var(--grovedb-syntax-string);
+    --fragment-comment: var(--grovedb-syntax-comment);
+    --fragment-link: var(--grovedb-syntax-link);
+    --fragment-preprocessor: var(--grovedb-syntax-preprocessor);
     --fragment-linenumber-color: #606060;
 
     --note-color: #70bdec;
@@ -159,6 +173,13 @@ html.dark-mode {
         --odd-color: rgba(255, 255, 255, 0.04);
 
         --fragment-foreground: #d4d4d4;
+        --fragment-keyword: var(--grovedb-syntax-keyword);
+        --fragment-keywordtype: var(--grovedb-syntax-type);
+        --fragment-keywordflow: var(--grovedb-syntax-flow);
+        --fragment-token: var(--grovedb-syntax-string);
+        --fragment-comment: var(--grovedb-syntax-comment);
+        --fragment-link: var(--grovedb-syntax-link);
+        --fragment-preprocessor: var(--grovedb-syntax-preprocessor);
         --fragment-linenumber-color: #606060;
 
         --note-color: #70bdec;
@@ -647,6 +668,16 @@ div.mermaid svg * {
     text-align: center !important;
 }
 
+/* Fix top-biased text in nodes — Mermaid sizes the foreignObject taller
+   than the text actually needs after CSS resets.  Vertically center the
+   inner content so labels sit in the middle of their nodes. */
+div.mermaid svg foreignObject > div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+}
+
 /* Rounded nodes/clusters to match the rest of the layout */
 div.mermaid svg rect,
 div.mermaid svg .node rect,
@@ -663,6 +694,46 @@ pre.mermaid-error {
     color: var(--warning-color);
     font-family: var(--font-family-monospace);
     font-size: 0.85em;
+}
+
+/* ---------- Hover tooltip (powerTip) dark-mode ---------- */
+
+#powerTip {
+    color: var(--page-foreground-color);
+    background-color: var(--page-background-color);
+    border-color: var(--separator-color);
+}
+
+#powerTip div.ttdoc {
+    color: var(--page-secondary-foreground-color);
+}
+
+#powerTip div.ttdeci {
+    color: var(--primary-dark-color);
+}
+
+#powerTip a {
+    color: var(--primary-color);
+}
+
+/* Arrow colors must match the tooltip background */
+#powerTip.n:after, #powerTip.ne:after, #powerTip.nw:after {
+    border-top-color: var(--page-background-color);
+}
+#powerTip.s:after, #powerTip.se:after, #powerTip.sw:after {
+    border-bottom-color: var(--page-background-color);
+}
+#powerTip.n:before, #powerTip.ne:before, #powerTip.nw:before {
+    border-top-color: var(--separator-color);
+}
+#powerTip.s:before, #powerTip.se:before, #powerTip.sw:before {
+    border-bottom-color: var(--separator-color);
+}
+#powerTip.e:after, #powerTip.e:before {
+    border-left-color: var(--separator-color);
+}
+#powerTip.w:after, #powerTip.w:before {
+    border-right-color: var(--separator-color);
 }
 
 /* ---------- Main page hero logo ---------- */

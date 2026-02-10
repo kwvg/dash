@@ -8,6 +8,7 @@
  * Tier A — Core (both themes): canvas, fg, chrome, brand, border, surface, footer
  * Tier B — Coverage semantic (gcovr): success, danger, attention, neutral, severe
  * Tier C — Structural (gcovr): canvas-subtle, canvas-inset, accent shades
+ * Tier D — Syntax highlighting (both themes): keyword, type, flow, string, etc.
  */
 
 /* ==================== Light Mode ==================== */
@@ -43,6 +44,18 @@
     --grovedb-danger-subtle:     rgba(207, 34, 46, 0.18);
     --grovedb-attention-emphasis: #9a6700;
     --grovedb-attention-fg:      #9a6700;
+
+    /* Syntax highlighting (Tier D) — GitHub Primer prettylights */
+    --grovedb-syntax-keyword:      #cf222e;
+    --grovedb-syntax-type:         #cf222e;
+    --grovedb-syntax-flow:         #cf222e;
+    --grovedb-syntax-string:       #0a3069;
+    --grovedb-syntax-comment:      #59636e;
+    --grovedb-syntax-link:         #6639ba;
+    --grovedb-syntax-preprocessor: #cf222e;
+    --grovedb-syntax-number:       #0550ae;
+    --grovedb-syntax-function:     #6639ba;
+    --grovedb-syntax-name:         #6639ba;
 }
 
 /* ==================== Dark Mode (toggle) ==================== */
@@ -83,6 +96,18 @@ html.dark-mode {
     --grovedb-attention-subtle:  rgba(187, 128, 9, 0.15);
     --grovedb-neutral-emphasis:  #6e7681;
     --grovedb-severe-subtle:     rgba(219, 171, 9, 0.15);
+
+    /* Syntax highlighting (Tier D) — GitHub Primer prettylights */
+    --grovedb-syntax-keyword:      #ff7b72;
+    --grovedb-syntax-type:         #ff7b72;
+    --grovedb-syntax-flow:         #ff7b72;
+    --grovedb-syntax-string:       #a5d6ff;
+    --grovedb-syntax-comment:      #9198a1;
+    --grovedb-syntax-link:         #d2a8ff;
+    --grovedb-syntax-preprocessor: #ff7b72;
+    --grovedb-syntax-number:       #79c0ff;
+    --grovedb-syntax-function:     #d2a8ff;
+    --grovedb-syntax-name:         #d2a8ff;
 }
 
 /* ==================== Dark Mode (system preference) ==================== */
@@ -124,6 +149,18 @@ html.dark-mode {
         --grovedb-attention-subtle:  rgba(187, 128, 9, 0.15);
         --grovedb-neutral-emphasis:  #6e7681;
         --grovedb-severe-subtle:     rgba(219, 171, 9, 0.15);
+
+        /* Syntax highlighting (Tier D) — GitHub Primer prettylights */
+        --grovedb-syntax-keyword:      #ff7b72;
+        --grovedb-syntax-type:         #ff7b72;
+        --grovedb-syntax-flow:         #ff7b72;
+        --grovedb-syntax-string:       #a5d6ff;
+        --grovedb-syntax-comment:      #9198a1;
+        --grovedb-syntax-link:         #d2a8ff;
+        --grovedb-syntax-preprocessor: #ff7b72;
+        --grovedb-syntax-number:       #79c0ff;
+        --grovedb-syntax-function:     #d2a8ff;
+        --grovedb-syntax-name:         #d2a8ff;
     }
 }
 
@@ -162,4 +199,16 @@ html.light-mode {
     --grovedb-danger-subtle:     rgba(207, 34, 46, 0.18);
     --grovedb-attention-emphasis: #9a6700;
     --grovedb-attention-fg:      #9a6700;
+
+    /* Syntax highlighting (Tier D) — GitHub Primer prettylights */
+    --grovedb-syntax-keyword:      #cf222e;
+    --grovedb-syntax-type:         #cf222e;
+    --grovedb-syntax-flow:         #cf222e;
+    --grovedb-syntax-string:       #0a3069;
+    --grovedb-syntax-comment:      #59636e;
+    --grovedb-syntax-link:         #6639ba;
+    --grovedb-syntax-preprocessor: #cf222e;
+    --grovedb-syntax-number:       #0550ae;
+    --grovedb-syntax-function:     #6639ba;
+    --grovedb-syntax-name:         #6639ba;
 }

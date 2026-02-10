@@ -69,9 +69,9 @@ The C++ library (`libgrovedb`) provides idiomatic C++20 bindings over the Rust G
 
 Key design choices:
 
-- **`grovedb::Result<T, Error>` return types** — every operation returns `grovedb::Result<T, Error>`. You can check results imperatively with `if`/`else`, or chain operations with `.and_then()` and `.map()` — particularly useful when unwrapping complex nested types and ensuring validation steps aren't skipped. See [Error Handling](11-error-handling.md).
-- **Move-only handles** — `Db` and `Transaction` are move-only RAII types. Transactions auto-rollback on destruction if not committed.
+- **[`Result<T, Error>`](@ref grovedb::Result) return types** — every operation returns [`Result<T, Error>`](@ref grovedb::Result). You can check results imperatively with `if`/`else`, or chain operations with `.and_then()` and `.map()` — particularly useful when unwrapping complex nested types and ensuring validation steps aren't skipped. See [Error Handling](11-error-handling.md).
+- **Move-only handles** — [`Db`](@ref grovedb::Db) and [`Transaction`](@ref grovedb::Transaction) are move-only RAII types. Transactions auto-rollback on destruction if not committed.
 - **Full proof support** — generate and verify proofs for any query, including absence proofs and chained multi-query verification.
-- **Cost tracking** — every mutation and query returns an `OperationCost` with seek counts, storage bytes, and hash operations, feeding directly into blockchain fee markets.
+- **Cost tracking** — every mutation and query returns an [`OperationCost`](@ref grovedb::OperationCost) with seek counts, storage bytes, and hash operations, feeding directly into blockchain fee markets.
 
-**Origin**: GroveDB was created by [Dash Platform](https://dashplatform.readme.io/) for decentralized application state management. The underlying tree-of-trees structure and its security properties are described in Etemad & Kupcu, "Database Outsourcing with Hierarchical Authenticated Data Structures" (2015).
+**Origin**: GroveDB was created by [Dash Platform](https://docs.dash.org/projects/platform/en/stable/docs/intro/what-is-dash-platform.html) for decentralized application state management. The underlying tree-of-trees structure and its security properties are described in Etemad & Kupcu, "Database Outsourcing with Hierarchical Authenticated Data Structures" (2015).

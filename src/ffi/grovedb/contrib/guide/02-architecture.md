@@ -48,8 +48,8 @@ Each Merk tree independently computes its own root hash. The parent tree stores 
 
 Navigation in GroveDB uses two concepts:
 
-- **Path** — a sequence of byte segments navigating the subtree hierarchy (`std::vector<Bytes>`)
-- **Key** — an identifier within a single subtree (`Bytes`)
+- **[`Path`](@ref grovedb::Path)** — a sequence of byte segments navigating the subtree hierarchy (`std::vector<`[`Bytes`](@ref grovedb::Bytes)`>`)
+- **Key** — an identifier within a single subtree ([`Bytes`](@ref grovedb::Bytes))
 
 ```mermaid
 graph LR
@@ -79,7 +79,7 @@ If you think of the UTXO database as a flat key-value store, GroveDB is a *hiera
 
 ## Root Hash
 
-A single 32-byte hash commits to the entire database state:
+A single 32-byte [`Hash`](@ref grovedb::Hash) commits to the entire database state:
 
 ```cpp
 auto root_hash = db.GetRootHash();
@@ -90,10 +90,10 @@ Any change to any element anywhere in the hierarchy causes the root hash to chan
 
 ```mermaid
 graph TD
-  ROOT["Root Hash<br/>e4a3b2..."] --> USERS_HASH["users subtree hash<br/>7f1c9d..."]
-  ROOT --> CONTRACTS_HASH["contracts subtree hash<br/>2b8e5a..."]
-  USERS_HASH --> ALICE_HASH["alice subtree hash<br/>c3d4e5..."]
-  USERS_HASH --> BOB_HASH["bob subtree hash<br/>a1b2c3..."]
+  ROOT["Root Hash<br/>e4a3b2…"] --> USERS_HASH["users subtree hash<br/>7f1c9d…"]
+  ROOT --> CONTRACTS_HASH["contracts subtree hash<br/>2b8e5a…"]
+  USERS_HASH --> ALICE_HASH["alice subtree hash<br/>c3d4e5…"]
+  USERS_HASH --> BOB_HASH["bob subtree hash<br/>a1b2c3…"]
   ALICE_HASH --> EMAIL["email: alice@example.com"]
   ALICE_HASH --> BAL["balance: 100"]
 ```
