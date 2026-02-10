@@ -284,24 +284,6 @@ code, div.fragment, pre.fragment, span.tt {
     border-color: rgba(255, 255, 255, 0.25);
 }
 
-/* Search box: fill the sidebar width instead of leaving dead space.
-   menu.js creates #searchBoxPos1 with inline right:8px and a fixed-width
-   #MSearchBox. Override both so the search stretches edge-to-edge. */
-@media screen and (min-width: 768px) {
-    #searchBoxPos1 {
-        left: var(--spacing-medium) !important;
-        right: var(--spacing-medium) !important;
-    }
-
-    #searchBoxPos1 #MSearchBox {
-        width: 100% !important;
-    }
-
-    #searchBoxPos1 #MSearchField {
-        width: calc(100% - 38px) !important;
-    }
-}
-
 /* Search icon: override hardcoded #909090 from search.css */
 .search-icon::before {
     border-color: rgba(255, 255, 255, 0.7) !important;
