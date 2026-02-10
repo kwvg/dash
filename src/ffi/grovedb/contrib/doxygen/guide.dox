@@ -1,0 +1,27 @@
+/**
+@page guide Documentation
+
+@subpage guide-what-is-grovedb
+
+@subpage guide-architecture
+
+@subpage guide-getting-started
+
+@subpage guide-elements-and-trees
+
+@subpage guide-basic-operations
+
+@subpage guide-queries
+
+@subpage guide-proofs
+
+@subpage guide-transactions
+
+@subpage guide-batch-operations
+
+@subpage guide-advanced-topics
+
+@subpage guide-error-handling
+
+@subpage guide-glossary
+*/

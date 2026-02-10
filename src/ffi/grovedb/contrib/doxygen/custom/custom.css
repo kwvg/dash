@@ -194,22 +194,31 @@ html.dark-mode {
 
 /* ---------- Title area layout ---------- */
 
-/* Logo sizing - prominent in the sidebar */
+/* Logo sizing - centered in the sidebar */
+#titlearea {
+    border-bottom: none;
+    padding: var(--spacing-xlarge) 0;
+}
+
+#titlearea table {
+    width: 100%;
+}
+
+#projectlogo {
+    text-align: center;
+}
+
 #projectlogo img {
+    display: block;
+    margin: 0 auto;
     max-height: 36px;
+    max-width: 240px;
     width: auto;
-    padding-left: 10%;
 }
 
 /* Hide the project brief text */
 #projectbrief {
     display: none;
-}
-
-/* Title area: roomy, blends with sidebar */
-#titlearea {
-    border-bottom: none;
-    padding: var(--spacing-xlarge) var(--spacing-medium);
 }
 
 /* Horizontal ruler below search bar — matches gcovr sidebar header */
@@ -648,5 +657,78 @@ html.dark-mode #sidebar-toggle-footer {
 @media (max-width: 767px) {
     #sidebar-toggle-footer {
         display: none;
+    }
+}
+
+/* ---------- Mermaid diagram containers ---------- */
+
+div.mermaid {
+    text-align: center;
+    margin: var(--spacing-large) 0;
+    padding: var(--spacing-medium);
+    background: var(--fragment-background);
+    border-radius: var(--border-radius-medium);
+    overflow-x: auto;
+}
+
+div.mermaid svg {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Kill all external font interference inside Mermaid SVGs.
+   Mermaid sizes nodes based on its own font metrics — any override
+   from Doxygen/theme CSS causes text to clip. */
+div.mermaid svg,
+div.mermaid svg * {
+    font-family: sans-serif !important;
+    font-size: initial !important;
+    font-weight: initial !important;
+    font-style: initial !important;
+    font-variant: initial !important;
+    letter-spacing: initial !important;
+    word-spacing: initial !important;
+    line-height: initial !important;
+    text-align: center !important;
+}
+
+/* Rounded nodes/clusters to match the rest of the layout */
+div.mermaid svg rect,
+div.mermaid svg .node rect,
+div.mermaid svg .node polygon,
+div.mermaid svg .cluster rect,
+div.mermaid svg .label-container rect,
+div.mermaid svg .stateGroup rect {
+    rx: 8px;
+    ry: 8px;
+}
+
+pre.mermaid-error {
+    text-align: left;
+    color: var(--warning-color);
+    font-family: var(--font-family-monospace);
+    font-size: 0.85em;
+}
+
+/* ---------- Main page hero logo ---------- */
+
+.mainpage-hero {
+    text-align: center;
+    margin: var(--spacing-large) 0 var(--spacing-xlarge);
+}
+
+.mainpage-hero img {
+    width: 500px;
+    height: auto;
+    filter: brightness(0);
+}
+
+html.dark-mode .mainpage-hero img {
+    filter: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not(.light-mode) .mainpage-hero img {
+        filter: none;
     }
 }

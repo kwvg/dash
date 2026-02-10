@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build Doxygen docs and gcovr coverage reports into ./output/."""
 
+import base64
 import glob
 import os
 import re
@@ -12,6 +13,8 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 OUTPUT = os.path.join(ROOT, "output")
 DOXYGEN_DIR = os.path.join(ROOT, "contrib", "doxygen")
 GCOVR_DIR = os.path.join(ROOT, "contrib", "gcovr")
+GUIDE_SRC = os.path.join(ROOT, "contrib", "guide")
+GUIDE_DST = os.path.join(DOXYGEN_DIR, "_guide")
 DOXYFILE = os.path.join(DOXYGEN_DIR, "Doxyfile")
 
 
@@ -32,6 +35,74 @@ def inject_git_hash(directory, hash_str):
         content = content.replace("build unknown", f"build {hash_str}")
         with open(path, "w") as f:
             f.write(content)
+
+
+def preprocess_guide():
+    """Copy contrib/guide/ into contrib/doxygen/_guide/ with transforms."""
+    print("==> Preprocessing guide markdown...")
+
+    if os.path.isdir(GUIDE_DST):
+        shutil.rmtree(GUIDE_DST)
+    os.makedirs(GUIDE_DST, exist_ok=True)
+
+    # Copy assets directory
+    src_assets = os.path.join(GUIDE_SRC, "assets")
+    dst_assets = os.path.join(GUIDE_DST, "assets")
+    if os.path.isdir(src_assets):
+        shutil.copytree(src_assets, dst_assets)
+
+    # Process each markdown file
+    for md in sorted(glob.glob(os.path.join(GUIDE_SRC, "*.md"))):
+        name = os.path.basename(md)
+        # Skip README.md — its content is already on the mainpage
+        if name == "README.md":
+            continue
+        with open(md, "r") as f:
+            content = f.read()
+
+        # --- Transform A: Page ID injection ---
+        stem = os.path.splitext(name)[0]
+        stem = re.sub(r"^\d+-", "", stem).lower()
+        page_id = f"guide-{stem}"
+
+        content = re.sub(
+            r"^(# .+)",
+            rf"\1 {{#{page_id}}}",
+            content,
+            count=1,
+            flags=re.MULTILINE,
+        )
+
+        # --- Transform B: Mermaid fenced blocks → HTML divs ---
+        def mermaid_to_html(m):
+            source = m.group(1)
+            encoded = base64.b64encode(source.encode()).decode()
+            return (
+                "@htmlonly\n"
+                f'<div class="mermaid" data-mermaid-source="{encoded}">\n'
+                "Loading diagram...\n"
+                "</div>\n"
+                "@endhtmlonly"
+            )
+
+        content = re.sub(
+            r"```mermaid\n(.*?)```",
+            mermaid_to_html,
+            content,
+            flags=re.DOTALL,
+        )
+
+        # --- Transform C: Example source links ---
+        content = re.sub(
+            r"\]\(\.\.\/libgrovedb\/contrib\/examples\/(\w+\.cpp)\)",
+            r"](@ref \1)",
+            content,
+        )
+
+        with open(os.path.join(GUIDE_DST, name), "w") as f:
+            f.write(content)
+
+    print(f"    Preprocessed guide -> {os.path.relpath(GUIDE_DST, ROOT)}")
 
 
 def build_doxygen(hash_str):
@@ -76,6 +147,32 @@ def build_doxygen(hash_str):
     print("    Doxygen output -> output/")
 
 
+def patch_navtree():
+    """Inject coverage report links into the Doxygen sidebar nav tree."""
+    navtree_js = os.path.join(OUTPUT, "navtreedata.js")
+    if not os.path.isfile(navtree_js):
+        return
+    with open(navtree_js, "r") as f:
+        content = f.read()
+
+    # Insert as top-level siblings of "GroveDB for C++" (same depth in NAVTREE[])
+    # Each entry: [ "Label", "^url", null ]  — the ^ prefix means absolute URL
+    # \u2009 = thin space before the arrow for padding
+    coverage_entries = (
+        ',\n'
+        '  [ "Test Coverage \\u2009\\u2197", "^test/index.html", null ],\n'
+        '  [ "Fuzz Coverage \\u2009\\u2197", "^fuzz/index.html", null ]'
+    )
+    # Close of NAVTREE: the root entry ends with ] ]\n];
+    # We insert after the root's closing ] ] but before the outer ];
+    content = content.replace(
+        "  ] ]\n];",
+        "  ] ]" + coverage_entries + "\n];",
+    )
+    with open(navtree_js, "w") as f:
+        f.write(content)
+
+
 def build_gcovr(name, config, hash_str):
     print(f"==> Building {name} coverage report...")
     os.makedirs(os.path.join(GCOVR_DIR, "output", name), exist_ok=True)
@@ -99,8 +196,14 @@ def build_gcovr(name, config, hash_str):
 def main():
     hash_str = git_hash()
 
+    # Preprocess guide markdown into staging directory
+    preprocess_guide()
+
     # Doxygen is mandatory
     build_doxygen(hash_str)
+
+    # Inject coverage links into sidebar nav tree
+    patch_navtree()
 
     # Coverage reports are optional (skip on failure)
     coverage_steps = [

@@ -1,5 +1,5 @@
-PROJECT_NAME           = "GroveDb"
-PROJECT_BRIEF          = "C++20 bindings for GroveDb"
+PROJECT_NAME           = "GroveDB for C++"
+PROJECT_BRIEF          = ""
 PROJECT_NUMBER         = unknown
 PROJECT_LOGO           = logo.svg
 OUTPUT_DIRECTORY       = output
@@ -19,8 +19,9 @@ EXCLUDE_PATTERNS       = \
   */vendor/*
 EXAMPLE_RECURSIVE      = NO
 EXCLUDE_SYMBOLS        = detail::* internal::* *::Impl
-FILE_PATTERNS          = *.h *.hpp *.cpp
-INPUT                  = ../../include ../../src examples.dox mainpage.dox
+FILE_PATTERNS          = *.h *.hpp *.cpp *.md
+INPUT                  = ../../include ../../src examples.dox mainpage.dox guide.dox _guide
+IMAGE_PATH             = _guide/assets
 STRIP_FROM_PATH        = ../../
 STRIP_FROM_INC_PATH    = ../../include
 RECURSIVE              = YES
@@ -58,6 +59,7 @@ HTML_EXTRA_STYLESHEET  =                                  \
 HTML_EXTRA_FILES       =                        \
   favicon.ico                                   \
   logo.svg                                      \
+  mermaid-init.js                               \
   theme/doxygen-awesome-darkmode-toggle.js      \
   theme/doxygen-awesome-fragment-copy-button.js \
   theme/doxygen-awesome-interactive-toc.js      \

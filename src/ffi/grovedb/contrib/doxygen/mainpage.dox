@@ -1,7 +1,38 @@
 /**
 @mainpage Introduction
 
-@section modules API Modules
+@htmlonly
+<script>document.currentScript.closest('.contents').previousElementSibling.style.display='none';</script>
+<div class="mainpage-hero">
+  <img src="logo.svg" alt="GroveDB for C++">
+</div>
+@endhtmlonly
+
+GroveDB is a hierarchical authenticated database. It organizes data as trees
+within trees, where a single 32-byte root hash cryptographically commits to
+the entire database state. Any query result — including range queries and
+secondary index lookups — can be proven correct against that root hash.
+
+@htmlonly <h1>Documentation</h1> @endhtmlonly
+
+| Chapter | Description |
+|---------|-------------|
+| @ref guide-what-is-grovedb "What Is GroveDB?" | Why it exists and what problems it solves |
+| @ref guide-architecture "Architecture" | Three-layer stack and separation of concerns |
+| @ref guide-getting-started "Getting Started" | Prerequisites and setup for C++20 development |
+| @ref guide-elements-and-trees "Elements & Trees" | Data organization as trees within trees |
+| @ref guide-basic-operations "Basic Operations" | Put, get, delete, and cost tracking |
+| @ref guide-queries "Queries" | Range queries and lookups beyond single keys |
+| @ref guide-proofs "Cryptographic Proofs" | Generate and verify proofs for any query result |
+| @ref guide-transactions "Transactions" | Optimistic transaction semantics for updates |
+| @ref guide-batch-operations "Batch Operations" | Efficient bulk operations on multiple keys |
+| @ref guide-advanced-topics "Advanced Topics" | Checkpoints, auxiliary storage, and sum trees |
+| @ref guide-error-handling "Error Handling" | Result types for safe error propagation |
+| @ref guide-glossary "Glossary" | Key terminology and concept definitions |
+
+@htmlonly <h1>Topics</h1> @endhtmlonly
+
+Headers, classes, and functions grouped by domain.
 
 | Module | Header | Description |
 |--------|--------|-------------|

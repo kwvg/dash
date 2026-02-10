@@ -191,13 +191,14 @@ body {
 
 #sidebar-logo {
   display: block;
-  padding-left: 5%;
+  text-align: center;
 }
 
 #sidebar-logo svg {
   display: block;
-  width: 144px;
-  height: 32px;
+  margin: 0 auto;
+  width: 200px;
+  height: 28px;
 }
 
 /* ---------- Sidebar navigation ---------- */
@@ -842,8 +843,8 @@ html.dark-mode #sidebar {
   }
 
   #sidebar-logo svg {
-    width: 108px;
-    height: 24px;
+    width: 150px;
+    height: 21px;
   }
 
   #sidebar-nav {
