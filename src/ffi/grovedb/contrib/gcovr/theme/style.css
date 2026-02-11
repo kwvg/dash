@@ -123,7 +123,7 @@ td.linenos .normal {
 
 /* ---------- GroveDB visual language overlay ---------- */
 
-/* Typography — Inter for UI, Space Mono for code */
+/* Typography — Inter for UI, JetBrains Mono for code */
 body,
 p, a,
 h1, h2, h3, h4, h5, h6,
@@ -146,10 +146,10 @@ body {
   padding: 0;
 }
 
-/* Monospace — Space Mono for source code */
+/* Monospace — JetBrains Mono for source code */
 .src, .src *, code, pre, pre *, .text-mono, td.linenos,
 .source-table-container, .source-table-container * {
-  font-family: 'Space Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
                Consolas, 'Liberation Mono', monospace !important;
   font-size: 14.4px;
 }
@@ -560,10 +560,12 @@ td.linenos {
 
 /* Comments */
 .src .c, .src .c1, .src .ch, .src .cm,
-.src .cpf, .src .cs                      { color: var(--grovedb-syntax-comment); }
+.src .cs                                 { color: var(--grovedb-syntax-comment); }
 .src .sd                                 { color: var(--grovedb-syntax-comment); }
-/* Preprocessor */
+/* Preprocessor keyword (#include, #define) */
 .src .cp                                 { color: var(--grovedb-syntax-preprocessor); }
+/* Preprocessor filename (<header.h>) */
+.src .cpf                                { color: var(--grovedb-syntax-string); }
 
 /* Keywords */
 .src .k, .src .kc, .src .kd,
@@ -573,7 +575,7 @@ td.linenos {
 /* Operators */
 .src .ow                                { color: var(--grovedb-syntax-keyword); }
 
-/* Names */
+/* Names — functions purple, classes/namespaces purple, macros purple */
 .src .nf, .src .fm                      { color: var(--grovedb-syntax-function); }
 .src .nc, .src .nn                      { color: var(--grovedb-syntax-name); }
 .src .nd                                { color: var(--grovedb-syntax-function); }
@@ -602,11 +604,12 @@ html.dark-mode .src .c,
 html.dark-mode .src .c1,
 html.dark-mode .src .ch,
 html.dark-mode .src .cm,
-html.dark-mode .src .cpf,
 html.dark-mode .src .cs          { color: var(--grovedb-syntax-comment); }
 html.dark-mode .src .sd          { color: var(--grovedb-syntax-comment); }
-/* Preprocessor */
+/* Preprocessor keyword (#include, #define) */
 html.dark-mode .src .cp          { color: var(--grovedb-syntax-preprocessor); }
+/* Preprocessor filename (<header.h>) */
+html.dark-mode .src .cpf         { color: var(--grovedb-syntax-string); }
 
 /* Keywords */
 html.dark-mode .src .k,
@@ -691,11 +694,12 @@ html.dark-mode td.linenos .normal { color: #484f58; }
   html:not(.light-mode) .src .c1,
   html:not(.light-mode) .src .ch,
   html:not(.light-mode) .src .cm,
-  html:not(.light-mode) .src .cpf,
   html:not(.light-mode) .src .cs          { color: var(--grovedb-syntax-comment); }
   html:not(.light-mode) .src .sd          { color: var(--grovedb-syntax-comment); }
-  /* Preprocessor */
+  /* Preprocessor keyword (#include, #define) */
   html:not(.light-mode) .src .cp          { color: var(--grovedb-syntax-preprocessor); }
+  /* Preprocessor filename (<header.h>) */
+  html:not(.light-mode) .src .cpf         { color: var(--grovedb-syntax-string); }
 
   /* Keywords */
   html:not(.light-mode) .src .k,

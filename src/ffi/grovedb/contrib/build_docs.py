@@ -9,7 +9,10 @@ import shutil
 import subprocess
 import sys
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+import pygment_docs
+
+# This script lives in contrib/; ROOT is the project root one level up.
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT = os.path.join(ROOT, "output")
 DOXYGEN_DIR = os.path.join(ROOT, "contrib", "doxygen")
 GCOVR_DIR = os.path.join(ROOT, "contrib", "gcovr")
@@ -202,8 +205,12 @@ def main():
     # Doxygen is mandatory
     build_doxygen(hash_str)
 
-    # Inject coverage links into sidebar nav tree
+    # Post-process Doxygen output
     patch_navtree()
+    total = len(glob.glob(os.path.join(OUTPUT, "*.html")))
+    print("==> Re-highlighting with Pygments...")
+    n = pygment_docs.rehighlight(OUTPUT)
+    print(f"    Re-highlighted {n}/{total} files")
 
     # Coverage reports are optional (skip on failure)
     coverage_steps = [

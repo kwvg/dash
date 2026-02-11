@@ -9,4 +9,4 @@ coverage-test:
 	gcovr --config contrib/gcovr/test.cfg
 
 docs:
-	cd contrib/doxygen && doxygen Doxyfile
+	python3 contrib/build_docs.py
