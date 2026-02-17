@@ -40,7 +40,7 @@ enum class ProposalSource : uint8_t {
     Local
 };
 
-/** Governance Manager page widget */
+/** Governance proposals list widget */
 class ProposalList : public QWidget
 {
     Q_OBJECT
