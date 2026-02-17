@@ -291,7 +291,7 @@ QVariant MasternodeModel::data(const QModelIndex& index, int role) const
                     if (auto ban_height = entry->poseBanHeight(); ban_height && *ban_height > 0) {
                         return m_current_height - *ban_height;
                     }
-                    return 0; // Unknown ban time, treat as freshly banned
+                    return 1; // Unknown ban time, still positive so filter works
                 } else {
                     // Active nodes use negative values
                     int32_t active_height = entry->registeredHeight();

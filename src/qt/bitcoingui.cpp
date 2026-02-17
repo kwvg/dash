@@ -1555,7 +1555,7 @@ void BitcoinGUI::updateWidth()
     int nWidthWidestButton{0};
     int nButtonsVisible{0};
     for (QAbstractButton* button : tabGroup->buttons()) {
-        if (!button->isEnabled() || !button->isVisible()) {
+        if (!button->isVisible()) {
             continue;
         }
         QFontMetrics fm(button->font());
