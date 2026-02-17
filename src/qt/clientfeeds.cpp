@@ -11,8 +11,6 @@
 #include <util/time.h>
 
 #include <qt/clientmodel.h>
-#include <qt/masternodemodel.h>
-#include <qt/proposalmodel.h>
 
 #include <QDebug>
 #include <QThread>

@@ -10,6 +10,9 @@
 #include <sync.h>
 #include <threadsafety.h>
 
+#include <qt/masternodemodel.h>
+#include <qt/proposalmodel.h>
+
 #include <QObject>
 #include <QTimer>
 
@@ -22,8 +25,6 @@ class QThread;
 QT_END_NAMESPACE
 
 class ClientModel;
-class MasternodeEntry;
-class Proposal;
 
 class FeedBase : public QObject
 {
@@ -91,8 +92,6 @@ private:
     std::shared_ptr<const Data> m_data GUARDED_BY(m_cs);
 };
 
-using MasternodeEntryList = std::vector<std::shared_ptr<MasternodeEntry>>;
-
 struct MasternodeData {
     bool m_valid{false};
     int m_list_height{0};
@@ -111,8 +110,6 @@ public:
 private:
     ClientModel& m_client_model;
 };
-
-using Proposals = std::vector<std::shared_ptr<Proposal>>;
 
 struct ProposalData {
     int m_abs_vote_req{0};
