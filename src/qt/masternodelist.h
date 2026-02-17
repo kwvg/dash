@@ -31,7 +31,6 @@ class MasternodeList;
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
-class QThread;
 QT_END_NAMESPACE
 
 class MasternodeListSortFilterProxyModel : public QSortFilterProxyModel

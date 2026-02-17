@@ -23,7 +23,6 @@
 #include <QHeaderView>
 #include <QMetaObject>
 #include <QSettings>
-#include <QThread>
 
 #include <set>
 
