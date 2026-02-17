@@ -10,6 +10,7 @@
 #include <interfaces/node.h>
 
 #include <wallet/ismine.h>
+#include <script/script.h>
 
 #include <cstdint>
 
@@ -100,6 +101,15 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(interfaces::Nod
                     sub.type = TransactionRecord::DustReceive;
                 }
 
+                parts.append(sub);
+            }
+            else if (!wtx.is_coinbase && IsDataScript(txout.scriptPubKey))
+            {
+                TransactionRecord sub(hash, nTime);
+                sub.idx = i;
+                sub.credit = txout.nValue;
+                sub.type = TransactionRecord::DataTransaction;
+                sub.strAddress = "";
                 parts.append(sub);
             }
         }
@@ -236,7 +246,13 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(interfaces::Nod
                     continue;
                 }
 
-                if (!std::get_if<CNoDestination>(&wtx.txout_address[nOut]))
+                if (IsDataScript(txout.scriptPubKey))
+                {
+                    sub.type = TransactionRecord::DataTransaction;
+                    sub.strAddress = "";
+                    sub.txDest = DecodeDestination(sub.strAddress);
+                }
+                else if (!std::get_if<CNoDestination>(&wtx.txout_address[nOut]))
                 {
                     // Sent to Dash Address
                     sub.type = TransactionRecord::SendToAddress;

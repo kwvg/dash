@@ -19,8 +19,10 @@
 #include <interfaces/node.h>
 #include <interfaces/wallet.h>
 #include <util/system.h>
+#include <util/strencodings.h>
 #include <validation.h>
 #include <wallet/ismine.h>
+#include <script/script.h>
 
 #include <stdint.h>
 #include <string>
@@ -293,6 +295,29 @@ QString TransactionDesc::toHTML(interfaces::Node& node, interfaces::Wallet& wall
     strHTML += "<b>" + tr("Transaction ID") + ":</b> " + rec->getTxHash() + "<br>";
     strHTML += "<b>" + tr("Output index") + ":</b> " + QString::number(rec->getOutputIndex()) + "<br>";
     strHTML += "<b>" + tr("Transaction total size") + ":</b> " + QString::number(wtx.tx->GetTotalSize()) + " bytes<br>";
+
+    // List all OP_RETURN payloads
+    if (rec->type == TransactionRecord::DataTransaction) {
+        for (const auto& txout : wtx.tx->vout) {
+            if (!TransactionRecord::IsDataScript(txout.scriptPubKey)) {
+                continue;
+            }
+            const auto& script{txout.scriptPubKey};
+            // Extract all data pushes after OP_RETURN
+            const auto payload = [&script]() {
+                auto pc = script.begin() + 1; // Skip opcode
+                opcodetype opcode;
+                std::vector<uint8_t> ret{}, vch{};
+                while (pc < script.end() && script.GetOp(pc, opcode, vch)) {
+                    ret.insert(ret.end(), vch.begin(), vch.end());
+                }
+                return ret;
+            }();
+            if (!payload.empty()) {
+                strHTML += "<b>" + tr("Payload") + ":</b> " + QString::fromStdString(HexStr(payload)) + "<br>";
+            }
+        }
+    }
 
     // Message from normal dash:URI (dash:XyZ...?message=example)
     for (const std::pair<std::string, std::string>& r : orderForm) {
