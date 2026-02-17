@@ -75,8 +75,8 @@ void MasternodeFeed::fetch()
 
     Uint256HashMap<int> nextPayments;
     for (size_t i = 0; i < projectedPayees.size(); i++) {
-        const auto& dmn = projectedPayees[i];
-        nextPayments.emplace(dmn->getProTxHash(), ret->m_list_height + (int)i + 1);
+        const auto& payee = projectedPayees[i];
+        nextPayments.emplace(payee->getProTxHash(), ret->m_list_height + (int)i + 1);
     }
 
     dmn->forEachMN(/*only_valid=*/false, [&](const auto& dmn) {
