@@ -306,9 +306,11 @@ void ProposalList::showCreateProposalDialog()
     proposalCreate->setModal(false);
     proposalCreate->setWindowFlag(Qt::Window, true);
     // Auto-open Resume dialog after successful creation and refresh the proposal list
-    connect(proposalCreate, &QDialog::accepted, this, [this] { if (m_feed) m_feed->requestForceRefresh(); });
-    connect(proposalCreate, &QDialog::accepted, this, &ProposalList::updateProposalButtons);
-    connect(proposalCreate, &QDialog::accepted, this, &ProposalList::showResumeProposalDialog);
+    connect(proposalCreate, &QDialog::accepted, this, [this] {
+        if (m_feed) m_feed->requestForceRefresh();
+        updateProposalButtons();
+        showResumeProposalDialog();
+    });
     proposalCreate->show();
 }
 
