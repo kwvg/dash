@@ -51,7 +51,7 @@ Q_SIGNALS:
     void dataReady();
 
 protected:
-    bool m_syncing{true};
+    std::atomic<bool> m_syncing{true};
     Config m_config;
     QTimer* m_timer{nullptr};
     std::atomic<bool> m_in_progress{false};
