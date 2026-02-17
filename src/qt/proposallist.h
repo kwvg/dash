@@ -20,7 +20,6 @@
 #include <optional>
 #include <vector>
 
-class CDeterministicMNList;
 class ClientModel;
 class ProposalCreate;
 class ProposalFeed;
