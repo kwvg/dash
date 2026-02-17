@@ -214,6 +214,7 @@ void ClientFeeds::stop()
         m_thread->quit();
         m_thread->wait();
     }
+    delete m_worker;
     m_worker = nullptr;
 }
 
