@@ -90,6 +90,7 @@ ClientModel::ClientModel(interfaces::Node& node, OptionsModel *_optionsModel, QO
         [this](int, const QDateTime&, const QString&, double, bool header, SynchronizationState sync_state) {
             if (header) return;
             m_feeds->setSyncing(sync_state != SynchronizationState::POST_INIT);
+            m_feed_masternode->requestRefresh();
             if (m_feed_proposal) m_feed_proposal->requestRefresh();
         });
 
