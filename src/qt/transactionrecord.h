@@ -19,6 +19,8 @@ struct WalletTx;
 struct WalletTxStatus;
 }
 
+class CScript;
+
 /** UI model for transaction status. The transaction status is the part of a transaction that will change over time.
  */
 struct TransactionStatus {
@@ -87,10 +89,16 @@ public:
         CoinJoinSend,
         PlatformTransfer,
         DustReceive,
+        DataTransaction,
     };
 
     /** Number of confirmation recommended for accepting a transaction */
     static const int RecommendedNumConfirmations = 6;
+
+    /** Check if script is an OP_RETURN data script */
+    static bool IsDataScript(const CScript& script) {
+        return !script.empty() && script[0] == OP_RETURN;
+    }
 
     TransactionRecord():
             hash(), time(0), type(Other), debit(0), credit(0), idx(0)
