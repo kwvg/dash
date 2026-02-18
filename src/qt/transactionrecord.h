@@ -6,8 +6,9 @@
 #define BITCOIN_QT_TRANSACTIONRECORD_H
 
 #include <consensus/amount.h>
-#include <uint256.h>
 #include <key_io.h>
+#include <script/script.h>
+#include <uint256.h>
 
 #include <QList>
 #include <QString>
@@ -18,8 +19,6 @@ class Wallet;
 struct WalletTx;
 struct WalletTxStatus;
 }
-
-class CScript;
 
 /** UI model for transaction status. The transaction status is the part of a transaction that will change over time.
  */
