@@ -296,26 +296,23 @@ QString TransactionDesc::toHTML(interfaces::Node& node, interfaces::Wallet& wall
     strHTML += "<b>" + tr("Output index") + ":</b> " + QString::number(rec->getOutputIndex()) + "<br>";
     strHTML += "<b>" + tr("Transaction total size") + ":</b> " + QString::number(wtx.tx->GetTotalSize()) + " bytes<br>";
 
-    // List all OP_RETURN payloads
-    if (rec->type == TransactionRecord::DataTransaction) {
-        for (const auto& txout : wtx.tx->vout) {
-            if (!TransactionRecord::IsDataScript(txout.scriptPubKey)) {
-                continue;
+    // Show OP_RETURN payload for this specific output
+    if (rec->type == TransactionRecord::DataTransaction &&
+        rec->idx >= 0 && static_cast<size_t>(rec->idx) < wtx.tx->vout.size() &&
+        TransactionRecord::IsDataScript(wtx.tx->vout[rec->idx].scriptPubKey)) {
+        const auto& script{wtx.tx->vout[rec->idx].scriptPubKey};
+        // Extract all data pushes after OP_RETURN
+        const auto payload = [&script]() {
+            auto pc = script.begin() + 1; // Skip opcode
+            opcodetype opcode;
+            std::vector<uint8_t> ret{}, vch{};
+            while (pc < script.end() && script.GetOp(pc, opcode, vch)) {
+                ret.insert(ret.end(), vch.begin(), vch.end());
             }
-            const auto& script{txout.scriptPubKey};
-            // Extract all data pushes after OP_RETURN
-            const auto payload = [&script]() {
-                auto pc = script.begin() + 1; // Skip opcode
-                opcodetype opcode;
-                std::vector<uint8_t> ret{}, vch{};
-                while (pc < script.end() && script.GetOp(pc, opcode, vch)) {
-                    ret.insert(ret.end(), vch.begin(), vch.end());
-                }
-                return ret;
-            }();
-            if (!payload.empty()) {
-                strHTML += "<b>" + tr("Payload") + ":</b> " + QString::fromStdString(HexStr(payload)) + "<br>";
-            }
+            return ret;
+        }();
+        if (!payload.empty()) {
+            strHTML += "<b>" + tr("Payload") + ":</b> " + QString::fromStdString(HexStr(payload)) + "<br>";
         }
     }
 
