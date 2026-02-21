@@ -161,29 +161,29 @@ public:
     void forEachMN(bool only_valid, std::function<void(const MnEntryCPtr&)> cb) const override
     {
         m_list.ForEachMNShared(only_valid, [&cb](const auto& dmn) {
-            cb(std::make_shared<const MnEntryImpl>(dmn));
+            cb(std::make_unique<const MnEntryImpl>(dmn));
         });
     }
     MnEntryCPtr getMN(const uint256& hash) const override
     {
         const auto dmn{m_list.GetMN(hash)};
-        return dmn ? std::make_shared<const MnEntryImpl>(dmn) : nullptr;
+        return dmn ? std::make_unique<const MnEntryImpl>(dmn) : nullptr;
     }
     MnEntryCPtr getMNByService(const CService& service) const override
     {
         const auto dmn{m_list.GetMNByService(service)};
-        return dmn ? std::make_shared<const MnEntryImpl>(dmn) : nullptr;
+        return dmn ? std::make_unique<const MnEntryImpl>(dmn) : nullptr;
     }
     MnEntryCPtr getValidMN(const uint256& hash) const override
     {
         const auto dmn{m_list.GetValidMN(hash)};
-        return dmn ? std::make_shared<const MnEntryImpl>(dmn) : nullptr;
+        return dmn ? std::make_unique<const MnEntryImpl>(dmn) : nullptr;
     }
     std::vector<MnEntryCPtr> getProjectedMNPayees(const CBlockIndex* pindex) const override
     {
         std::vector<MnEntryCPtr> ret;
         for (const auto& payee : m_list.GetProjectedMNPayees(pindex)) {
-            ret.emplace_back(std::make_shared<const MnEntryImpl>(payee));
+            ret.emplace_back(std::make_unique<const MnEntryImpl>(payee));
         }
         return ret;
     }
