@@ -475,6 +475,16 @@ public:
         }
         return {};
     }
+    size_t getPendingAssetUnlocks() override
+    {
+        if (!context().mempool) {
+            return 0;
+        }
+        LOCK(context().mempool->cs);
+        return static_cast<size_t>(ranges::count_if(context().mempool->mapTx, [](const auto& p) {
+            return p.GetTx().IsPlatformTransfer();
+        }));
+    }
     void setContext(NodeContext* context) override
     {
         m_context = context;
