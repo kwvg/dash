@@ -429,6 +429,20 @@ private:
     NodeContext& context() { return *Assert(m_context); }
 
 public:
+    ChainLockInfo getBestChainLock() override
+    {
+        if (context().chainlocks) {
+            const auto [clsig, pindex] = context().chainlocks->GetBestChainlockWithPindex();
+            if (pindex) {
+                return {
+                    .m_height = clsig.getHeight(),
+                    .m_block_time = pindex->GetBlockTime(),
+                    .m_hash = clsig.getBlockHash(),
+                };
+            }
+        }
+        return {};
+    }
     size_t getInstantSentLockCount() override
     {
         if (context().llmq_ctx && context().llmq_ctx->isman != nullptr) {
