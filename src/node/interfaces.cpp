@@ -443,12 +443,18 @@ public:
         }
         return {};
     }
-    size_t getInstantSentLockCount() override
+    InstantSendCounts getInstantSendCounts() override
     {
-        if (context().llmq_ctx && context().llmq_ctx->isman != nullptr) {
-            return context().llmq_ctx->isman->GetInstantSendLockCount();
+        if (context().llmq_ctx && context().llmq_ctx->isman) {
+            const auto counts = context().llmq_ctx->isman->GetCounts();
+            return {
+                .m_verified = counts.m_verified,
+                .m_unverified = counts.m_unverified,
+                .m_awaiting_tx = counts.m_awaiting_tx,
+                .m_unprotected_tx = counts.m_unprotected_tx,
+            };
         }
-        return 0;
+        return {};
     }
     void setContext(NodeContext* context) override
     {
