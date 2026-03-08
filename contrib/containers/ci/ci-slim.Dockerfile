@@ -83,6 +83,7 @@ RUN uv pip install --system --break-system-packages \
     lief==0.13.2 \
     multiprocess \
     mypy==0.981 \
+    openapi-schema-validator==0.8.1 \
     pyzmq==24.0.1 \
     vulture==2.6
 

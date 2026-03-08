@@ -24,6 +24,12 @@ REST Interface consistency guarantees
 The [same guarantees as for the RPC Interface](/doc/JSON-RPC-interface.md#rpc-consistency-guarantees)
 apply.
 
+OpenAPI Specification
+---------------------
+
+A machine-readable [OpenAPI 3.1 specification](openapi.json) of the REST
+interface is available.
+
 Supported API
 -------------
 

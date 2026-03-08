@@ -1,0 +1,1536 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Dash Core REST API",
+    "description": "Read-only REST interface to the Dash Core node. Every endpoint supports three wire formats selected by the URI extension: `.json`, `.hex`, `.bin`. Some endpoints (chaininfo, mempool) are JSON-only.",
+    "version": "0.1.0",
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:9997",
+      "description": "Mainnet (default port)"
+    },
+    {
+      "url": "http://127.0.0.1:19997",
+      "description": "Testnet (default port)"
+    },
+    {
+      "url": "http://127.0.0.1:19897",
+      "description": "Regtest (default port)"
+    }
+  ],
+  "components": {
+    "parameters": {
+      "hash": {
+        "name": "hash",
+        "in": "path",
+        "required": true,
+        "description": "256-bit hex-encoded hash.",
+        "schema": {
+          "$ref": "#/components/schemas/hash256"
+        }
+      },
+      "headerCount": {
+        "name": "count",
+        "in": "query",
+        "required": false,
+        "description": "Number of consecutive headers to return (1\u20132000, default 5).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000,
+          "default": 5
+        }
+      },
+      "filterType": {
+        "name": "filtertype",
+        "in": "path",
+        "required": true,
+        "description": "BIP 157 filter type name (e.g. `basic`).",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "basic"
+          ]
+        }
+      },
+      "height": {
+        "name": "height",
+        "in": "path",
+        "required": true,
+        "description": "Non-negative block height.",
+        "schema": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "schemas": {
+      "hash256": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$",
+        "description": "256-bit hex-encoded hash (64 characters, lowercase)."
+      },
+      "blockHeader": {
+        "type": "object",
+        "description": "Serialised block header (JSON representation).",
+        "properties": {
+          "hash": {
+            "$ref": "#/components/schemas/hash256"
+          },
+          "confirmations": {
+            "type": "integer"
+          },
+          "height": {
+            "type": "integer"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "merkleroot": {
+            "$ref": "#/components/schemas/hash256"
+          },
+          "time": {
+            "type": "integer"
+          },
+          "nonce": {
+            "type": "integer"
+          },
+          "bits": {
+            "type": "string"
+          },
+          "difficulty": {
+            "type": "number"
+          },
+          "chainwork": {
+            "type": "string"
+          },
+          "previousblockhash": {
+            "$ref": "#/components/schemas/hash256"
+          },
+          "nextblockhash": {
+            "$ref": "#/components/schemas/hash256"
+          },
+          "chainlock": {
+            "type": "boolean"
+          }
+        }
+      },
+      "block": {
+        "description": "Full block with verbose transaction objects.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/blockHeader"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "tx": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "blockNoTxDetails": {
+        "description": "Block with transaction ids only (no full tx objects).",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/blockHeader"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "tx": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/hash256"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "transaction": {
+        "type": "object",
+        "description": "Raw transaction in JSON form.",
+        "properties": {
+          "txid": {
+            "$ref": "#/components/schemas/hash256"
+          },
+          "hash": {
+            "$ref": "#/components/schemas/hash256"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "locktime": {
+            "type": "integer"
+          },
+          "vin": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "vout": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "mempoolInfo": {
+        "type": "object",
+        "properties": {
+          "loaded": {
+            "type": "boolean"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "bytes": {
+            "type": "integer"
+          },
+          "usage": {
+            "type": "integer"
+          },
+          "total_fee": {
+            "type": "number"
+          },
+          "maxmempool": {
+            "type": "integer"
+          },
+          "mempoolminfee": {
+            "type": "number"
+          },
+          "minrelaytxfee": {
+            "type": "number"
+          },
+          "instantsendlocks": {
+            "type": "integer"
+          }
+        }
+      },
+      "mempoolContents": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "description": "Per-transaction mempool entry, keyed by txid."
+        }
+      },
+      "utxoResponse": {
+        "type": "object",
+        "properties": {
+          "chainHeight": {
+            "type": "integer"
+          },
+          "chaintipHash": {
+            "$ref": "#/components/schemas/hash256"
+          },
+          "bitmap": {
+            "type": "string",
+            "description": "Bit string where each character corresponds to a queried outpoint (1 = unspent, 0 = spent)."
+          },
+          "utxos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "height": {
+                  "type": "integer"
+                },
+                "value": {
+                  "type": "number"
+                },
+                "scriptPubKey": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "blockFilter": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "string",
+            "description": "Hex-encoded BIP 158 compact block filter."
+          }
+        }
+      },
+      "blockHashByHeight": {
+        "type": "object",
+        "properties": {
+          "blockhash": {
+            "$ref": "#/components/schemas/hash256"
+          }
+        }
+      },
+      "chainInfo": {
+        "type": "object",
+        "description": "Identical to the `getblockchaininfo` RPC response.",
+        "properties": {
+          "chain": {
+            "type": "string"
+          },
+          "blocks": {
+            "type": "integer"
+          },
+          "headers": {
+            "type": "integer"
+          },
+          "bestblockhash": {
+            "$ref": "#/components/schemas/hash256"
+          }
+        }
+      }
+    },
+    "responses": {
+      "badRequest": {
+        "description": "Malformed request (invalid hash, out-of-range parameter, etc.).",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "notFound": {
+        "description": "Requested resource was not found on the active chain.",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "warmup": {
+        "description": "Node is still starting up.",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/rest/tx/{hash}.json": {
+      "get": {
+        "operationId": "getTxJson",
+        "summary": "Look up a raw transaction by its txid.",
+        "tags": [
+          "Transactions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/transaction"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/tx/{hash}.hex": {
+      "get": {
+        "operationId": "getTxHex",
+        "summary": "Look up a raw transaction (hex-encoded).",
+        "tags": [
+          "Transactions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/rest/tx/{hash}.bin": {
+      "get": {
+        "operationId": "getTxBin",
+        "summary": "Look up a raw transaction (binary).",
+        "tags": [
+          "Transactions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction found.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/rest/block/{hash}.json": {
+      "get": {
+        "operationId": "getBlockJson",
+        "summary": "Get a block with full transaction details.",
+        "tags": [
+          "Blocks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/block"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/block/{hash}.hex": {
+      "get": {
+        "operationId": "getBlockHex",
+        "summary": "Get a serialised block (hex-encoded).",
+        "tags": [
+          "Blocks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/rest/block/{hash}.bin": {
+      "get": {
+        "operationId": "getBlockBin",
+        "summary": "Get a serialised block (binary).",
+        "tags": [
+          "Blocks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block found.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/rest/block/notxdetails/{hash}.json": {
+      "get": {
+        "operationId": "getBlockNoTxDetailsJson",
+        "summary": "Get a block with only txids (no full transaction objects).",
+        "tags": [
+          "Blocks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/blockNoTxDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/block/notxdetails/{hash}.hex": {
+      "get": {
+        "operationId": "getBlockNoTxDetailsHex",
+        "summary": "Get a block with only txids (hex-encoded).",
+        "tags": [
+          "Blocks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/rest/block/notxdetails/{hash}.bin": {
+      "get": {
+        "operationId": "getBlockNoTxDetailsBin",
+        "summary": "Get a block with only txids (binary).",
+        "tags": [
+          "Blocks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block found.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/rest/headers/{hash}.json": {
+      "get": {
+        "operationId": "getHeadersJson",
+        "summary": "Get one or more consecutive block headers starting from a given hash.",
+        "tags": [
+          "Headers"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          },
+          {
+            "$ref": "#/components/parameters/headerCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of block headers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/blockHeader"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/headers/{hash}.hex": {
+      "get": {
+        "operationId": "getHeadersHex",
+        "summary": "Get one or more consecutive block headers (hex-encoded).",
+        "tags": [
+          "Headers"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          },
+          {
+            "$ref": "#/components/parameters/headerCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Concatenated serialised headers.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          }
+        }
+      }
+    },
+    "/rest/headers/{hash}.bin": {
+      "get": {
+        "operationId": "getHeadersBin",
+        "summary": "Get one or more consecutive block headers (binary).",
+        "tags": [
+          "Headers"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          },
+          {
+            "$ref": "#/components/parameters/headerCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Concatenated serialised headers.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          }
+        }
+      }
+    },
+    "/rest/headers/{count}/{hash}.json": {
+      "get": {
+        "operationId": "getHeadersDeprecatedJson",
+        "summary": "[Deprecated] Get block headers with count in path.",
+        "deprecated": true,
+        "tags": [
+          "Headers"
+        ],
+        "parameters": [
+          {
+            "name": "count",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000
+            }
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of block headers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/blockHeader"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          }
+        }
+      }
+    },
+    "/rest/headers/{count}/{hash}.hex": {
+      "get": {
+        "operationId": "getHeadersDeprecatedHex",
+        "summary": "[Deprecated] Get block headers with count in path (hex-encoded).",
+        "deprecated": true,
+        "tags": [
+          "Headers"
+        ],
+        "parameters": [
+          {
+            "name": "count",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000
+            }
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Concatenated serialised headers.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          }
+        }
+      }
+    },
+    "/rest/headers/{count}/{hash}.bin": {
+      "get": {
+        "operationId": "getHeadersDeprecatedBin",
+        "summary": "[Deprecated] Get block headers with count in path (binary).",
+        "deprecated": true,
+        "tags": [
+          "Headers"
+        ],
+        "parameters": [
+          {
+            "name": "count",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000
+            }
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Concatenated serialised headers.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          }
+        }
+      }
+    },
+    "/rest/blockfilter/{filtertype}/{hash}.json": {
+      "get": {
+        "operationId": "getBlockFilterJson",
+        "summary": "Get a BIP 158 compact block filter for a given block.",
+        "tags": [
+          "Block Filters"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/filterType"
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block filter found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/blockFilter"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/blockfilter/{filtertype}/{hash}.hex": {
+      "get": {
+        "operationId": "getBlockFilterHex",
+        "summary": "Get a BIP 158 compact block filter (hex-encoded).",
+        "tags": [
+          "Block Filters"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/filterType"
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block filter found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/rest/blockfilter/{filtertype}/{hash}.bin": {
+      "get": {
+        "operationId": "getBlockFilterBin",
+        "summary": "Get a BIP 158 compact block filter (binary).",
+        "tags": [
+          "Block Filters"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/filterType"
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block filter found.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/rest/blockfilterheaders/{filtertype}/{hash}.json": {
+      "get": {
+        "operationId": "getBlockFilterHeadersJson",
+        "summary": "Get one or more consecutive block filter headers.",
+        "tags": [
+          "Block Filters"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/filterType"
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          },
+          {
+            "$ref": "#/components/parameters/headerCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of filter header hashes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/hash256"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/blockfilterheaders/{filtertype}/{hash}.hex": {
+      "get": {
+        "operationId": "getBlockFilterHeadersHex",
+        "summary": "Get block filter headers (hex-encoded).",
+        "tags": [
+          "Block Filters"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/filterType"
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          },
+          {
+            "$ref": "#/components/parameters/headerCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Concatenated filter headers.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/rest/blockfilterheaders/{filtertype}/{hash}.bin": {
+      "get": {
+        "operationId": "getBlockFilterHeadersBin",
+        "summary": "Get block filter headers (binary).",
+        "tags": [
+          "Block Filters"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/filterType"
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          },
+          {
+            "$ref": "#/components/parameters/headerCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Concatenated filter headers.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/rest/blockfilterheaders/{filtertype}/{count}/{hash}.json": {
+      "get": {
+        "operationId": "getBlockFilterHeadersDeprecatedJson",
+        "summary": "[Deprecated] Get block filter headers with count in path.",
+        "deprecated": true,
+        "tags": [
+          "Block Filters"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/filterType"
+          },
+          {
+            "name": "count",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000
+            }
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of filter header hashes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/hash256"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          }
+        }
+      }
+    },
+    "/rest/blockfilterheaders/{filtertype}/{count}/{hash}.hex": {
+      "get": {
+        "operationId": "getBlockFilterHeadersDeprecatedHex",
+        "summary": "[Deprecated] Get block filter headers with count in path (hex-encoded).",
+        "deprecated": true,
+        "tags": [
+          "Block Filters"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/filterType"
+          },
+          {
+            "name": "count",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000
+            }
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Concatenated filter headers.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          }
+        }
+      }
+    },
+    "/rest/blockfilterheaders/{filtertype}/{count}/{hash}.bin": {
+      "get": {
+        "operationId": "getBlockFilterHeadersDeprecatedBin",
+        "summary": "[Deprecated] Get block filter headers with count in path (binary).",
+        "deprecated": true,
+        "tags": [
+          "Block Filters"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/filterType"
+          },
+          {
+            "name": "count",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000
+            }
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Concatenated filter headers.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          }
+        }
+      }
+    },
+    "/rest/chaininfo.json": {
+      "get": {
+        "operationId": "getChainInfo",
+        "summary": "Get blockchain state information (equivalent to `getblockchaininfo` RPC).",
+        "tags": [
+          "Chain"
+        ],
+        "responses": {
+          "200": {
+            "description": "Blockchain info.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chainInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Non-JSON format requested.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/mempool/info.json": {
+      "get": {
+        "operationId": "getMempoolInfo",
+        "summary": "Get mempool statistics (equivalent to `getmempoolinfo` RPC).",
+        "tags": [
+          "Mempool"
+        ],
+        "responses": {
+          "200": {
+            "description": "Mempool info.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mempoolInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Non-JSON format requested or mempool not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/mempool/contents.json": {
+      "get": {
+        "operationId": "getMempoolContents",
+        "summary": "Get full mempool contents (equivalent to `getrawmempool true` RPC).",
+        "tags": [
+          "Mempool"
+        ],
+        "responses": {
+          "200": {
+            "description": "Mempool contents keyed by txid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mempoolContents"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Non-JSON format requested or mempool not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/getutxos/{outpoints}.json": {
+      "get": {
+        "operationId": "getUtxosJson",
+        "summary": "Query UTXO set for one or more outpoints.",
+        "description": "URI scheme: `/rest/getutxos[/checkmempool]/{txid}-{vout}[/{txid}-{vout}...].json`\nPrefix the outpoints with `checkmempool/` to also consider the mempool. Maximum 15 outpoints per request.",
+        "tags": [
+          "UTXOs"
+        ],
+        "parameters": [
+          {
+            "name": "outpoints",
+            "in": "path",
+            "required": true,
+            "description": "Slash-separated `{txid}-{vout}` pairs, optionally prefixed with `checkmempool/`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "UTXO query results.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/utxoResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/getutxos/{outpoints}.hex": {
+      "get": {
+        "operationId": "getUtxosHex",
+        "summary": "Query UTXO set (hex-encoded).",
+        "tags": [
+          "UTXOs"
+        ],
+        "parameters": [
+          {
+            "name": "outpoints",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "UTXO query results.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          }
+        }
+      }
+    },
+    "/rest/getutxos/{outpoints}.bin": {
+      "get": {
+        "operationId": "getUtxosBin",
+        "summary": "Query UTXO set (binary).",
+        "tags": [
+          "UTXOs"
+        ],
+        "parameters": [
+          {
+            "name": "outpoints",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "UTXO query results.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          }
+        }
+      }
+    },
+    "/rest/blockhashbyheight/{height}.json": {
+      "get": {
+        "operationId": "getBlockHashByHeightJson",
+        "summary": "Get the block hash at a given height.",
+        "tags": [
+          "Blocks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/height"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block hash found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/blockHashByHeight"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/blockhashbyheight/{height}.hex": {
+      "get": {
+        "operationId": "getBlockHashByHeightHex",
+        "summary": "Get the block hash at a given height (hex string).",
+        "tags": [
+          "Blocks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/height"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block hash found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/rest/blockhashbyheight/{height}.bin": {
+      "get": {
+        "operationId": "getBlockHashByHeightBin",
+        "summary": "Get the block hash at a given height (binary).",
+        "tags": [
+          "Blocks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/height"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block hash found.",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    }
+  }
+}
