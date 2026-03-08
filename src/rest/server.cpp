@@ -313,8 +313,8 @@ static bool rest_headers(const CoreContext& context,
     }
 
     // Wrap callback to annotate deprecated-path responses with RFC 8594 headers.
-    const rest::Callback& effective_cb = is_deprecated_path
-        ? static_cast<rest::Callback>([&cb](const drogon::HttpResponsePtr& resp) {
+    rest::Callback effective_cb = is_deprecated_path
+        ? rest::Callback([&cb](const drogon::HttpResponsePtr& resp) {
               AddDeprecationHeaders(resp, "/rest/headers/<hash>.<ext>?count=<count>");
               cb(resp);
           })
@@ -497,8 +497,8 @@ static bool rest_filter_header(const CoreContext& context, const drogon::HttpReq
     }
 
     // Wrap callback to annotate deprecated-path responses with RFC 8594 headers.
-    const rest::Callback& effective_cb = is_deprecated_path
-        ? static_cast<rest::Callback>([&cb](const drogon::HttpResponsePtr& resp) {
+    rest::Callback effective_cb = is_deprecated_path
+        ? rest::Callback([&cb](const drogon::HttpResponsePtr& resp) {
               AddDeprecationHeaders(resp, "/rest/blockfilterheaders/<filtertype>/<blockhash>.<ext>?count=<count>");
               cb(resp);
           })
@@ -1046,6 +1046,21 @@ static const struct {
       {"/rest/blockhashbyheight/(.+)", rest_blockhash_by_height},
 };
 
+/**
+ * Return true when @p path ends with a recognised format suffix
+ * (.json, .hex, .bin).
+ */
+static bool HasFormatSuffix(const std::string& path)
+{
+    const auto dot = path.rfind('.');
+    if (dot == std::string::npos) return false;
+    const std::string ext = path.substr(dot + 1);
+    for (const auto& rf_name : rf_names) {
+        if (strlen(rf_name.name) > 0 && ext == rf_name.name) return true;
+    }
+    return false;
+}
+
 static void RegisterHandlers(const CoreContext& context)
 {
     auto& app = drogon::app();
@@ -1053,7 +1068,23 @@ static void RegisterHandlers(const CoreContext& context)
         auto handler = [context, up](const drogon::HttpRequestPtr& req,
                                      rest::Callback&& cb,
                                      const std::string& uri_part) {
-            up.handler(context, req, cb, uri_part);
+            const auto& req_path{req->getPath()};
+            if (HasFormatSuffix(req_path)) {
+                // Suffix-based format selection is deprecated in favour of Accept-header negotiation.
+                // Wrap the callback to annotate the response with RFC 8594 deprecation headers pointing
+                // to the equivalent suffix-free URI.
+                std::string successor{req_path.substr(0, req_path.rfind('.'))};
+                rest::Callback wrapped = [orig = std::move(cb), successor = std::move(successor)](const drogon::HttpResponsePtr& resp) {
+                    // Only add when the handler has not already annotated the response (e.g. count-in-path legacy deprecation).
+                    if (resp->getHeader("Deprecation").empty()) {
+                        AddDeprecationHeaders(resp, successor);
+                    }
+                    orig(resp);
+                };
+                up.handler(context, req, wrapped, uri_part);
+            } else {
+                up.handler(context, req, cb, uri_part);
+            }
         };
         app.registerHandlerViaRegex(up.prefix, std::move(handler));
     }

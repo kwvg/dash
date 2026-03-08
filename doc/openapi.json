@@ -335,7 +335,7 @@
     "/rest/tx/{hash}.json": {
       "get": {
         "operationId": "getTxJson",
-        "summary": "Look up a raw transaction by its txid.",
+        "summary": "[Deprecated] Look up a raw transaction by its txid. Use /rest/tx/{hash} with Accept header instead.",
         "tags": [
           "Transactions"
         ],
@@ -353,6 +353,23 @@
                   "$ref": "#/components/schemas/transaction"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -364,13 +381,14 @@
           "503": {
             "$ref": "#/components/responses/warmup"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/tx/{hash}.hex": {
       "get": {
         "operationId": "getTxHex",
-        "summary": "Look up a raw transaction (hex-encoded).",
+        "summary": "[Deprecated] Look up a raw transaction (hex-encoded). Use /rest/tx/{hash} with Accept header instead.",
         "tags": [
           "Transactions"
         ],
@@ -388,6 +406,23 @@
                   "type": "string"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -396,13 +431,14 @@
           "404": {
             "$ref": "#/components/responses/notFound"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/tx/{hash}.bin": {
       "get": {
         "operationId": "getTxBin",
-        "summary": "Look up a raw transaction (binary).",
+        "summary": "[Deprecated] Look up a raw transaction (binary). Use /rest/tx/{hash} with Accept header instead.",
         "tags": [
           "Transactions"
         ],
@@ -421,6 +457,23 @@
                   "format": "binary"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -429,13 +482,14 @@
           "404": {
             "$ref": "#/components/responses/notFound"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/block/{hash}.json": {
       "get": {
         "operationId": "getBlockJson",
-        "summary": "Get a block with full transaction details.",
+        "summary": "[Deprecated] Get a block with full transaction details. Use /rest/block/{hash} with Accept header instead.",
         "tags": [
           "Blocks"
         ],
@@ -453,6 +507,23 @@
                   "$ref": "#/components/schemas/block"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -464,13 +535,14 @@
           "503": {
             "$ref": "#/components/responses/warmup"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/block/{hash}.hex": {
       "get": {
         "operationId": "getBlockHex",
-        "summary": "Get a serialised block (hex-encoded).",
+        "summary": "[Deprecated] Get a serialised block (hex-encoded). Use /rest/block/{hash} with Accept header instead.",
         "tags": [
           "Blocks"
         ],
@@ -488,6 +560,23 @@
                   "type": "string"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -496,13 +585,14 @@
           "404": {
             "$ref": "#/components/responses/notFound"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/block/{hash}.bin": {
       "get": {
         "operationId": "getBlockBin",
-        "summary": "Get a serialised block (binary).",
+        "summary": "[Deprecated] Get a serialised block (binary). Use /rest/block/{hash} with Accept header instead.",
         "tags": [
           "Blocks"
         ],
@@ -521,6 +611,23 @@
                   "format": "binary"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -529,13 +636,14 @@
           "404": {
             "$ref": "#/components/responses/notFound"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/block/notxdetails/{hash}.json": {
       "get": {
         "operationId": "getBlockNoTxDetailsJson",
-        "summary": "Get a block with only txids (no full transaction objects).",
+        "summary": "[Deprecated] Get a block with only txids (no full transaction objects). Use /rest/block/notxdetails/{hash} with Accept header instead.",
         "tags": [
           "Blocks"
         ],
@@ -553,6 +661,23 @@
                   "$ref": "#/components/schemas/blockNoTxDetails"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -564,13 +689,14 @@
           "503": {
             "$ref": "#/components/responses/warmup"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/block/notxdetails/{hash}.hex": {
       "get": {
         "operationId": "getBlockNoTxDetailsHex",
-        "summary": "Get a block with only txids (hex-encoded).",
+        "summary": "[Deprecated] Get a block with only txids (hex-encoded). Use /rest/block/notxdetails/{hash} with Accept header instead.",
         "tags": [
           "Blocks"
         ],
@@ -588,6 +714,23 @@
                   "type": "string"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -596,13 +739,14 @@
           "404": {
             "$ref": "#/components/responses/notFound"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/block/notxdetails/{hash}.bin": {
       "get": {
         "operationId": "getBlockNoTxDetailsBin",
-        "summary": "Get a block with only txids (binary).",
+        "summary": "[Deprecated] Get a block with only txids (binary). Use /rest/block/notxdetails/{hash} with Accept header instead.",
         "tags": [
           "Blocks"
         ],
@@ -621,6 +765,23 @@
                   "format": "binary"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -629,13 +790,14 @@
           "404": {
             "$ref": "#/components/responses/notFound"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/headers/{hash}.json": {
       "get": {
         "operationId": "getHeadersJson",
-        "summary": "Get one or more consecutive block headers starting from a given hash.",
+        "summary": "[Deprecated] Get one or more consecutive block headers starting from a given hash. Use /rest/headers/{hash} with Accept header instead.",
         "tags": [
           "Headers"
         ],
@@ -659,6 +821,23 @@
                   }
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -667,13 +846,14 @@
           "503": {
             "$ref": "#/components/responses/warmup"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/headers/{hash}.hex": {
       "get": {
         "operationId": "getHeadersHex",
-        "summary": "Get one or more consecutive block headers (hex-encoded).",
+        "summary": "[Deprecated] Get one or more consecutive block headers (hex-encoded). Use /rest/headers/{hash} with Accept header instead.",
         "tags": [
           "Headers"
         ],
@@ -694,18 +874,36 @@
                   "type": "string"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
             "$ref": "#/components/responses/badRequest"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/headers/{hash}.bin": {
       "get": {
         "operationId": "getHeadersBin",
-        "summary": "Get one or more consecutive block headers (binary).",
+        "summary": "[Deprecated] Get one or more consecutive block headers (binary). Use /rest/headers/{hash} with Accept header instead.",
         "tags": [
           "Headers"
         ],
@@ -727,12 +925,30 @@
                   "format": "binary"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
             "$ref": "#/components/responses/badRequest"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/headers/{count}/{hash}.json": {
@@ -913,7 +1129,7 @@
     "/rest/blockfilter/{filtertype}/{hash}.json": {
       "get": {
         "operationId": "getBlockFilterJson",
-        "summary": "Get a BIP 158 compact block filter for a given block.",
+        "summary": "[Deprecated] Get a BIP 158 compact block filter for a given block. Use /rest/blockfilter/{filtertype}/{hash} with Accept header instead.",
         "tags": [
           "Block Filters"
         ],
@@ -934,6 +1150,23 @@
                   "$ref": "#/components/schemas/blockFilter"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -945,13 +1178,14 @@
           "503": {
             "$ref": "#/components/responses/warmup"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/blockfilter/{filtertype}/{hash}.hex": {
       "get": {
         "operationId": "getBlockFilterHex",
-        "summary": "Get a BIP 158 compact block filter (hex-encoded).",
+        "summary": "[Deprecated] Get a BIP 158 compact block filter (hex-encoded). Use /rest/blockfilter/{filtertype}/{hash} with Accept header instead.",
         "tags": [
           "Block Filters"
         ],
@@ -972,6 +1206,23 @@
                   "type": "string"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -980,13 +1231,14 @@
           "404": {
             "$ref": "#/components/responses/notFound"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/blockfilter/{filtertype}/{hash}.bin": {
       "get": {
         "operationId": "getBlockFilterBin",
-        "summary": "Get a BIP 158 compact block filter (binary).",
+        "summary": "[Deprecated] Get a BIP 158 compact block filter (binary). Use /rest/blockfilter/{filtertype}/{hash} with Accept header instead.",
         "tags": [
           "Block Filters"
         ],
@@ -1008,6 +1260,23 @@
                   "format": "binary"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -1016,13 +1285,14 @@
           "404": {
             "$ref": "#/components/responses/notFound"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/blockfilterheaders/{filtertype}/{hash}.json": {
       "get": {
         "operationId": "getBlockFilterHeadersJson",
-        "summary": "Get one or more consecutive block filter headers.",
+        "summary": "[Deprecated] Get one or more consecutive block filter headers. Use /rest/blockfilterheaders/{filtertype}/{hash} with Accept header instead.",
         "tags": [
           "Block Filters"
         ],
@@ -1049,6 +1319,23 @@
                   }
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -1060,13 +1347,14 @@
           "503": {
             "$ref": "#/components/responses/warmup"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/blockfilterheaders/{filtertype}/{hash}.hex": {
       "get": {
         "operationId": "getBlockFilterHeadersHex",
-        "summary": "Get block filter headers (hex-encoded).",
+        "summary": "[Deprecated] Get block filter headers (hex-encoded). Use /rest/blockfilterheaders/{filtertype}/{hash} with Accept header instead.",
         "tags": [
           "Block Filters"
         ],
@@ -1090,6 +1378,23 @@
                   "type": "string"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -1098,13 +1403,14 @@
           "404": {
             "$ref": "#/components/responses/notFound"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/blockfilterheaders/{filtertype}/{hash}.bin": {
       "get": {
         "operationId": "getBlockFilterHeadersBin",
-        "summary": "Get block filter headers (binary).",
+        "summary": "[Deprecated] Get block filter headers (binary). Use /rest/blockfilterheaders/{filtertype}/{hash} with Accept header instead.",
         "tags": [
           "Block Filters"
         ],
@@ -1129,6 +1435,23 @@
                   "format": "binary"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -1137,7 +1460,8 @@
           "404": {
             "$ref": "#/components/responses/notFound"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/blockfilterheaders/{filtertype}/{count}/{hash}.json": {
@@ -1327,7 +1651,7 @@
     "/rest/chaininfo.json": {
       "get": {
         "operationId": "getChainInfo",
-        "summary": "Get blockchain state information (equivalent to `getblockchaininfo` RPC).",
+        "summary": "[Deprecated] Get blockchain state information (equivalent to `getblockchaininfo` RPC). Use /rest/chaininfo with Accept header instead.",
         "tags": [
           "Chain"
         ],
@@ -1338,6 +1662,23 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/chainInfo"
+                }
+              }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
                 }
               }
             }
@@ -1355,13 +1696,14 @@
           "503": {
             "$ref": "#/components/responses/warmup"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/mempool/info.json": {
       "get": {
         "operationId": "getMempoolInfo",
-        "summary": "Get mempool statistics (equivalent to `getmempoolinfo` RPC).",
+        "summary": "[Deprecated] Get mempool statistics (equivalent to `getmempoolinfo` RPC). Use /rest/mempool/info with Accept header instead.",
         "tags": [
           "Mempool"
         ],
@@ -1374,6 +1716,23 @@
                   "$ref": "#/components/schemas/mempoolInfo"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "404": {
@@ -1389,13 +1748,14 @@
           "503": {
             "$ref": "#/components/responses/warmup"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/mempool/contents.json": {
       "get": {
         "operationId": "getMempoolContents",
-        "summary": "Get full mempool contents (equivalent to `getrawmempool true` RPC).",
+        "summary": "[Deprecated] Get full mempool contents (equivalent to `getrawmempool true` RPC). Use /rest/mempool/contents with Accept header instead.",
         "tags": [
           "Mempool"
         ],
@@ -1408,6 +1768,23 @@
                   "$ref": "#/components/schemas/mempoolContents"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "404": {
@@ -1423,13 +1800,14 @@
           "503": {
             "$ref": "#/components/responses/warmup"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/getutxos/{outpoints}.json": {
       "get": {
         "operationId": "getUtxosJson",
-        "summary": "Query UTXO set for one or more outpoints.",
+        "summary": "[Deprecated] Query UTXO set for one or more outpoints. Use /rest/getutxos/{outpoints} with Accept header instead.",
         "description": "URI scheme: `/rest/getutxos[/checkmempool]/{txid}-{vout}[/{txid}-{vout}...].json`\nPrefix the outpoints with `checkmempool/` to also consider the mempool. Maximum 15 outpoints per request.",
         "tags": [
           "UTXOs"
@@ -1454,6 +1832,23 @@
                   "$ref": "#/components/schemas/utxoResponse"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -1462,13 +1857,14 @@
           "503": {
             "$ref": "#/components/responses/warmup"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/getutxos/{outpoints}.hex": {
       "get": {
         "operationId": "getUtxosHex",
-        "summary": "Query UTXO set (hex-encoded).",
+        "summary": "[Deprecated] Query UTXO set (hex-encoded). Use /rest/getutxos/{outpoints} with Accept header instead.",
         "tags": [
           "UTXOs"
         ],
@@ -1491,18 +1887,36 @@
                   "type": "string"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
             "$ref": "#/components/responses/badRequest"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/getutxos/{outpoints}.bin": {
       "get": {
         "operationId": "getUtxosBin",
-        "summary": "Query UTXO set (binary).",
+        "summary": "[Deprecated] Query UTXO set (binary). Use /rest/getutxos/{outpoints} with Accept header instead.",
         "tags": [
           "UTXOs"
         ],
@@ -1526,18 +1940,36 @@
                   "format": "binary"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
             "$ref": "#/components/responses/badRequest"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/blockhashbyheight/{height}.json": {
       "get": {
         "operationId": "getBlockHashByHeightJson",
-        "summary": "Get the block hash at a given height.",
+        "summary": "[Deprecated] Get the block hash at a given height. Use /rest/blockhashbyheight/{height} with Accept header instead.",
         "tags": [
           "Blocks"
         ],
@@ -1555,6 +1987,23 @@
                   "$ref": "#/components/schemas/blockHashByHeight"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -1566,13 +2015,14 @@
           "503": {
             "$ref": "#/components/responses/warmup"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/blockhashbyheight/{height}.hex": {
       "get": {
         "operationId": "getBlockHashByHeightHex",
-        "summary": "Get the block hash at a given height (hex string).",
+        "summary": "[Deprecated] Get the block hash at a given height (hex string). Use /rest/blockhashbyheight/{height} with Accept header instead.",
         "tags": [
           "Blocks"
         ],
@@ -1590,6 +2040,23 @@
                   "type": "string"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -1598,13 +2065,14 @@
           "404": {
             "$ref": "#/components/responses/notFound"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/blockhashbyheight/{height}.bin": {
       "get": {
         "operationId": "getBlockHashByHeightBin",
-        "summary": "Get the block hash at a given height (binary).",
+        "summary": "[Deprecated] Get the block hash at a given height (binary). Use /rest/blockhashbyheight/{height} with Accept header instead.",
         "tags": [
           "Blocks"
         ],
@@ -1623,6 +2091,23 @@
                   "format": "binary"
                 }
               }
+            },
+            "headers": {
+              "Deprecation": {
+                "description": "RFC 8594 deprecation marker.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "true"
+                  ]
+                }
+              },
+              "Link": {
+                "description": "Link to the suffix-free successor endpoint.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             }
           },
           "400": {
@@ -1631,7 +2116,8 @@
           "404": {
             "$ref": "#/components/responses/notFound"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/rest/block/notxdetails/{hash}": {

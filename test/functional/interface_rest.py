@@ -404,9 +404,10 @@ class RESTTest (BitcoinTestFramework):
         assert "successor-version" in resp.getheader("Link")
         resp.read()
 
-        # New /rest/headers/<hash>?count= should NOT carry deprecation headers
+        # New /rest/headers/<hash>.json?count= should carry suffix deprecation headers
         resp = self.test_rest_request(f"/headers/{bb_hash}", query_params={"count": 1}, ret_type=RetType.OBJ)
-        assert resp.getheader("Deprecation") is None, "New-style path should not have Deprecation header"
+        assert_equal(resp.getheader("Deprecation"), "true")
+        assert f"/rest/headers/{bb_hash}" in resp.getheader("Link"), "Link should point to suffix-free path"
         resp.read()
 
         # Legacy /rest/blockfilterheaders/<filtertype>/<count>/<hash> should carry deprecation headers
@@ -415,9 +416,10 @@ class RESTTest (BitcoinTestFramework):
         assert "successor-version" in resp.getheader("Link")
         resp.read()
 
-        # New /rest/blockfilterheaders/<filtertype>/<hash>?count= should NOT carry deprecation headers
+        # New /rest/blockfilterheaders/<filtertype>/<hash>.json?count= should carry suffix deprecation headers
         resp = self.test_rest_request(f"/blockfilterheaders/basic/{bb_hash}", query_params={"count": 1}, ret_type=RetType.OBJ)
-        assert resp.getheader("Deprecation") is None, "New-style path should not have Deprecation header"
+        assert_equal(resp.getheader("Deprecation"), "true")
+        assert f"/rest/blockfilterheaders/basic/{bb_hash}" in resp.getheader("Link"), "Link should point to suffix-free path"
         resp.read()
 
 

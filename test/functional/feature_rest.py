@@ -386,6 +386,37 @@ class RESTFeatureTest(BitcoinTestFramework):
         # 400 Bad Request - getutxos with empty request
         v.request('/rest/getutxos.json', status=400)
 
+        self.log.info("Test deprecation headers on suffixed endpoints")
+
+        def get_response(uri):
+            conn = http.client.HTTPConnection(DEFAULT_ADDR, self.rest_port)
+            conn.request('GET', uri)
+            return conn.getresponse()
+
+        # Suffixed paths carry deprecation headers pointing to the suffix-free URI
+        for suffix in ['.json', '.hex', '.bin']:
+            resp = get_response(f'/rest/block/{bb_hash}{suffix}')
+            assert_equal(resp.status, 200)
+            assert_equal(resp.getheader('Deprecation'), 'true')
+            link = resp.getheader('Link')
+            assert f'/rest/block/{bb_hash}' in link, f"Link should contain suffix-free path, got: {link}"
+            assert 'successor-version' in link
+            resp.read()
+
+        # Suffix-free path should NOT carry deprecation headers
+        resp = get_response(f'/rest/block/{bb_hash}')
+        assert_equal(resp.status, 200)
+        assert resp.getheader('Deprecation') is None, "Suffix-free path should not have Deprecation header"
+        resp.read()
+
+        # Legacy count-in-path deprecation takes precedence over suffix deprecation
+        resp = get_response(f'/rest/headers/1/{bb_hash}.json')
+        assert_equal(resp.status, 200)
+        assert_equal(resp.getheader('Deprecation'), 'true')
+        link = resp.getheader('Link')
+        assert 'count' in link, f"Count-in-path deprecation Link should mention count, got: {link}"
+        resp.read()
+
         self.log.info("Test content negotiation via Accept header")
 
         def accept_request(uri, accept=None, status=200):
