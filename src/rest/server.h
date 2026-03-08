@@ -8,20 +8,10 @@
 
 #include <context.h>
 
-#include <drogon/HttpRequest.h>
-#include <drogon/HttpResponse.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <string>
-
-enum class RESTResponseFormat {
-    UNDEF,
-    BINARY,
-    HEX,
-    JSON,
-};
 
 namespace rest {
 /** Default value for SO_REUSEPORT flag use. */
@@ -67,21 +57,5 @@ void InterruptServer();
 /** Stop HTTP REST subsystem. */
 void StopServer();
 } // namespace rest
-
-/**
- * Determine response format from the Accept header.
- */
-RESTResponseFormat ParseAcceptFormat(const drogon::HttpRequestPtr& req);
-
-/**
- * Parse a URI to get the data format and URI without data format
- * and query string.
- *
- * @param[out]  param   The strReq without the data format string and
- *                      without the query string (if any).
- * @param[in]   strReq  The URI to be parsed.
- * @return      RESTResponseFormat that was parsed from the URI.
- */
-RESTResponseFormat ParseDataFormat(std::string& param, const std::string& strReq);
 
 #endif // BITCOIN_REST_SERVER_H

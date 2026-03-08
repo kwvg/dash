@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <rest/server.h>
+#include <rest/common.h>
 #include <test/util/setup_common.h>
 
 #include <drogon/HttpRequest.h>
@@ -10,6 +10,9 @@
 #include <boost/test/unit_test.hpp>
 
 #include <string>
+
+using rest::ParseAcceptFormat;
+using rest::ParseDataFormat;
 
 BOOST_FIXTURE_TEST_SUITE(rest_tests, BasicTestingSetup)
 
