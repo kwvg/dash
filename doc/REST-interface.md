@@ -103,6 +103,13 @@ Responds with 404 if the block doesn't exist.
 Given a height: returns hash of block in best-block-chain at height provided.
 Responds with 404 if block not found.
 
+#### ProTx Diff
+`GET /rest/protx/diff/<BASE-HEIGHT>/<BLOCK-HEIGHT>`
+
+Returns the deterministic masternode list diff between two block heights, including proof data.
+Only supports JSON as output format.
+The optional query parameter `extended=true` includes additional fields.
+
 #### ChainLock
 `GET /rest/chainlock`
 

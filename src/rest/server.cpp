@@ -23,6 +23,7 @@
 #include <primitives/transaction.h>
 #include <rest/chainlock.h>
 #include <rest/common.h>
+#include <rest/evo.h>
 #include <rest/governance.h>
 #include <rest/reader.h>
 #include <rpc/blockchain.h>
@@ -896,6 +897,7 @@ static void RegisterHandlers(const CoreContext& context)
         app.registerHandlerViaRegex(up.prefix, std::move(handler));
     }
     rest::RegisterChainLockHandlers(context, app);
+    rest::RegisterEvoHandlers(context, app);
     rest::RegisterGovernanceHandlers(context, app);
 }
 

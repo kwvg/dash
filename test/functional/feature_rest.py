@@ -355,6 +355,14 @@ class RESTFeatureTest(BitcoinTestFramework):
         invalid_hash = 'not_a_hash'
         unknown_hash = '0' * 64
 
+        self.log.info("  /rest/protx/diff")
+        v.assert_path('/rest/protx/diff/{baseHeight}/{blockHeight}')
+        v.assert_status('/rest/protx/diff/{baseHeight}/{blockHeight}', 200)
+        diff_obj = v.request_json(f'/rest/protx/diff/0/{height}')
+        assert 'baseBlockHash' in diff_obj
+        assert 'blockHash' in diff_obj
+        v.validate_response('/rest/protx/diff/{baseHeight}/{blockHeight}', diff_obj)
+
         self.log.info("  /rest/chainlock")
         v.assert_path('/rest/chainlock')
         v.assert_status('/rest/chainlock', 404)
@@ -500,6 +508,7 @@ class RESTFeatureTest(BitcoinTestFramework):
             '/rest/mempool/contents',
             '/rest/getutxos/{outpoints}',
             '/rest/blockhashbyheight/{height}',
+            '/rest/protx/diff/{baseHeight}/{blockHeight}',
             '/rest/chainlock',
             '/rest/governance/proposals',
             '/rest/governance/proposal/{hash}',

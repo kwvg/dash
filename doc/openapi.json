@@ -271,6 +271,40 @@
           }
         }
       },
+      "protxDiff": {
+        "type": "object",
+        "description": "Deterministic masternode list diff between two blocks, including proof data.",
+        "properties": {
+          "baseBlockHash": {
+            "$ref": "#/components/schemas/hash256"
+          },
+          "blockHash": {
+            "$ref": "#/components/schemas/hash256"
+          },
+          "cbTx": {
+            "type": ["string", "object"]
+          },
+          "deletedMNs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/hash256"
+            }
+          },
+          "mnList": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nVersion": {
+            "type": "integer"
+          },
+          "merkleRootMNList": {
+            "$ref": "#/components/schemas/hash256"
+          }
+        },
+        "additionalProperties": true
+      },
       "chainLock": {
         "type": "object",
         "description": "Best known ChainLock.",
@@ -2672,6 +2706,69 @@
                 "schema": {
                   "type": "string",
                   "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/protx/diff/{baseHeight}/{blockHeight}": {
+      "get": {
+        "operationId": "getProtxDiff",
+        "summary": "Get deterministic masternode list diff between two block heights.",
+        "description": "Returns the masternode list diff including proof data. JSON only. Use `?extended=true` for additional fields.",
+        "tags": [
+          "Evo"
+        ],
+        "parameters": [
+          {
+            "name": "baseHeight",
+            "in": "path",
+            "required": true,
+            "description": "Starting block height.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "blockHeight",
+            "in": "path",
+            "required": true,
+            "description": "Ending block height.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "extended",
+            "in": "query",
+            "required": false,
+            "description": "Include additional fields in the diff.",
+            "schema": {
+              "type": "string",
+              "enum": ["true"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Masternode list diff.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/protxDiff"
                 }
               }
             }

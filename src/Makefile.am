@@ -665,6 +665,8 @@ libbitcoin_query_a_SOURCES = \
   rest/chainlock.h \
   rest/common.cpp \
   rest/common.h \
+  rest/evo.cpp \
+  rest/evo.h \
   rest/governance.cpp \
   rest/governance.h \
   rest/reader.cpp \
