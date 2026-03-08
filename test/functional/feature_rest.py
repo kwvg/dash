@@ -355,6 +355,16 @@ class RESTFeatureTest(BitcoinTestFramework):
         invalid_hash = 'not_a_hash'
         unknown_hash = '0' * 64
 
+        self.log.info("  /rest/quorum/list")
+        v.assert_path('/rest/quorum/list')
+        v.assert_status('/rest/quorum/list', 200)
+        quorum_obj = v.request_json('/rest/quorum/list')
+        assert isinstance(quorum_obj, dict)
+        v.validate_response('/rest/quorum/list', quorum_obj)
+        # With explicit height parameter
+        quorum_at_height = v.request_json(f'/rest/quorum/list?height={height}')
+        assert isinstance(quorum_at_height, dict)
+
         self.log.info("  /rest/protx/diff")
         v.assert_path('/rest/protx/diff/{baseHeight}/{blockHeight}')
         v.assert_status('/rest/protx/diff/{baseHeight}/{blockHeight}', 200)
@@ -508,6 +518,7 @@ class RESTFeatureTest(BitcoinTestFramework):
             '/rest/mempool/contents',
             '/rest/getutxos/{outpoints}',
             '/rest/blockhashbyheight/{height}',
+            '/rest/quorum/list',
             '/rest/protx/diff/{baseHeight}/{blockHeight}',
             '/rest/chainlock',
             '/rest/governance/proposals',

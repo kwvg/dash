@@ -669,6 +669,8 @@ libbitcoin_query_a_SOURCES = \
   rest/evo.h \
   rest/governance.cpp \
   rest/governance.h \
+  rest/quorum.cpp \
+  rest/quorum.h \
   rest/reader.cpp \
   rest/reader.h \
   rest/server.cpp \

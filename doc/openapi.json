@@ -271,6 +271,37 @@
           }
         }
       },
+      "quorumListExtended": {
+        "type": "object",
+        "description": "Extended list of on-chain quorums, keyed by quorum type name.",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "Object keyed by quorum hash containing quorum details.",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "creationHeight": {
+                  "type": "integer"
+                },
+                "quorumIndex": {
+                  "type": "integer"
+                },
+                "minedBlockHash": {
+                  "$ref": "#/components/schemas/hash256"
+                },
+                "numValidMembers": {
+                  "type": "integer"
+                },
+                "healthRatio": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
       "protxDiff": {
         "type": "object",
         "description": "Deterministic masternode list diff between two blocks, including proof data.",
@@ -2715,6 +2746,46 @@
           },
           "404": {
             "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/quorum/list": {
+      "get": {
+        "operationId": "getQuorumListExtended",
+        "summary": "Get extended list of on-chain quorums.",
+        "description": "Returns quorum details per type at the chain tip or at a specified height. JSON only.",
+        "tags": [
+          "Quorum"
+        ],
+        "parameters": [
+          {
+            "name": "height",
+            "in": "query",
+            "required": false,
+            "description": "Block height for active quorums (defaults to chain tip).",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Extended quorum list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/quorumListExtended"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
           },
           "503": {
             "$ref": "#/components/responses/warmup"

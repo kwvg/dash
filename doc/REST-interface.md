@@ -103,6 +103,12 @@ Responds with 404 if the block doesn't exist.
 Given a height: returns hash of block in best-block-chain at height provided.
 Responds with 404 if block not found.
 
+#### Quorum List
+`GET /rest/quorum/list`
+
+Returns the extended list of on-chain quorums at the chain tip, or at the height specified by the optional `height` query parameter.
+Only supports JSON as output format.
+
 #### ProTx Diff
 `GET /rest/protx/diff/<BASE-HEIGHT>/<BLOCK-HEIGHT>`
 

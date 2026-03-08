@@ -25,6 +25,7 @@
 #include <rest/common.h>
 #include <rest/evo.h>
 #include <rest/governance.h>
+#include <rest/quorum.h>
 #include <rest/reader.h>
 #include <rpc/blockchain.h>
 #include <rpc/mempool.h>
@@ -899,6 +900,7 @@ static void RegisterHandlers(const CoreContext& context)
     rest::RegisterChainLockHandlers(context, app);
     rest::RegisterEvoHandlers(context, app);
     rest::RegisterGovernanceHandlers(context, app);
+    rest::RegisterQuorumHandlers(context, app);
 }
 
 namespace rest {
