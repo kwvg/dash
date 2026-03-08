@@ -69,6 +69,11 @@ void StopServer();
 } // namespace rest
 
 /**
+ * Determine response format from the Accept header.
+ */
+RESTResponseFormat ParseAcceptFormat(const drogon::HttpRequestPtr& req);
+
+/**
  * Parse a URI to get the data format and URI without data format
  * and query string.
  *

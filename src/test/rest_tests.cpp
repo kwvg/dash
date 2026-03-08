@@ -5,6 +5,8 @@
 #include <rest/server.h>
 #include <test/util/setup_common.h>
 
+#include <drogon/HttpRequest.h>
+
 #include <boost/test/unit_test.hpp>
 
 #include <string>
@@ -45,4 +47,24 @@ BOOST_AUTO_TEST_CASE(test_query_string)
     BOOST_CHECK_EQUAL(param, "/rest/endpoint/someresource");
     BOOST_CHECK_EQUAL(rf, RESTResponseFormat::UNDEF);
 }
+
+BOOST_AUTO_TEST_CASE(test_parse_accept_format)
+{
+    constexpr std::array<std::pair<std::string_view, RESTResponseFormat>, 7> test_vals{{
+        {"", RESTResponseFormat::JSON},
+        {"*/*", RESTResponseFormat::JSON},
+        {"application/json", RESTResponseFormat::JSON},
+        {"application/octet-stream", RESTResponseFormat::BINARY},
+        {"text/plain", RESTResponseFormat::HEX},
+        {"text/html", RESTResponseFormat::UNDEF},
+        {"text/html, application/json", RESTResponseFormat::JSON},
+    }};
+
+    for (const auto& [accept, res] : test_vals) {
+        auto req{drogon::HttpRequest::newHttpRequest()};
+        if (!accept.empty()) req->addHeader("Accept", std::string{accept});
+        BOOST_CHECK_EQUAL(ParseAcceptFormat(req), res);
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()

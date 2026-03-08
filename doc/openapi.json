@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Dash Core REST API",
-    "description": "Read-only REST interface to the Dash Core node. Every endpoint supports three wire formats selected by the URI extension: `.json`, `.hex`, `.bin`. Some endpoints (chaininfo, mempool) are JSON-only.",
+    "description": "Read-only REST interface to the Dash Core node. The response format can be selected either via a URI extension (`.json`, `.hex`, `.bin`) or via the `Accept` header (`application/json`, `text/plain`, `application/octet-stream`). When no extension is present, the Accept header is used; the default is `application/json`. Some endpoints (chaininfo, mempool) are JSON-only.",
     "version": "0.1.0",
     "license": {
       "name": "MIT",
@@ -1630,6 +1630,505 @@
           },
           "404": {
             "$ref": "#/components/responses/notFound"
+          }
+        }
+      }
+    },
+    "/rest/block/notxdetails/{hash}": {
+      "get": {
+        "operationId": "getBlockNoTxDetailsAccept",
+        "summary": "Get a block with only txids (no full transaction objects).",
+        "description": "Format is determined by the Accept header. Default: application/json.",
+        "tags": [
+          "Blocks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/blockNoTxDetails"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/block/{hash}": {
+      "get": {
+        "operationId": "getBlockAccept",
+        "summary": "Get a block with full transaction details.",
+        "description": "Format is determined by the Accept header. Default: application/json.",
+        "tags": [
+          "Blocks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/block"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/blockfilter/{filtertype}/{hash}": {
+      "get": {
+        "operationId": "getBlockFilterAccept",
+        "summary": "Get a BIP 158 compact block filter for a given block.",
+        "description": "Format is determined by the Accept header. Default: application/json.",
+        "tags": [
+          "Block Filters"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/filterType"
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block filter found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/blockFilter"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/blockfilterheaders/{filtertype}/{hash}": {
+      "get": {
+        "operationId": "getBlockFilterHeadersAccept",
+        "summary": "Get one or more consecutive block filter headers.",
+        "description": "Format is determined by the Accept header. Default: application/json.",
+        "tags": [
+          "Block Filters"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/filterType"
+          },
+          {
+            "$ref": "#/components/parameters/hash"
+          },
+          {
+            "$ref": "#/components/parameters/headerCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of filter header hashes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/hash256"
+                  }
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/blockhashbyheight/{height}": {
+      "get": {
+        "operationId": "getBlockHashByHeightAccept",
+        "summary": "Get the block hash at a given height.",
+        "description": "Format is determined by the Accept header. Default: application/json.",
+        "tags": [
+          "Blocks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/height"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Block hash found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/blockHashByHeight"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/chaininfo": {
+      "get": {
+        "operationId": "getChainInfoAccept",
+        "summary": "Get blockchain state information (equivalent to `getblockchaininfo` RPC).",
+        "description": "Format is determined by the Accept header. Default: application/json.",
+        "tags": [
+          "Chain"
+        ],
+        "responses": {
+          "200": {
+            "description": "Blockchain info.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chainInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Non-JSON format requested.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/getutxos/{outpoints}": {
+      "get": {
+        "operationId": "getUtxosAccept",
+        "summary": "Query UTXO set for one or more outpoints.",
+        "description": "Format is determined by the Accept header. Default: application/json.",
+        "tags": [
+          "UTXOs"
+        ],
+        "parameters": [
+          {
+            "name": "outpoints",
+            "in": "path",
+            "required": true,
+            "description": "Slash-separated `{txid}-{vout}` pairs, optionally prefixed with `checkmempool/`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "UTXO query results.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/utxoResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/headers/{hash}": {
+      "get": {
+        "operationId": "getHeadersAccept",
+        "summary": "Get one or more consecutive block headers starting from a given hash.",
+        "description": "Format is determined by the Accept header. Default: application/json.",
+        "tags": [
+          "Headers"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          },
+          {
+            "$ref": "#/components/parameters/headerCount"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of block headers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/blockHeader"
+                  }
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/mempool/contents": {
+      "get": {
+        "operationId": "getMempoolContentsAccept",
+        "summary": "Get full mempool contents (equivalent to `getrawmempool true` RPC).",
+        "description": "Format is determined by the Accept header. Default: application/json.",
+        "tags": [
+          "Mempool"
+        ],
+        "responses": {
+          "200": {
+            "description": "Mempool contents keyed by txid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mempoolContents"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Non-JSON format requested or mempool not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/mempool/info": {
+      "get": {
+        "operationId": "getMempoolInfoAccept",
+        "summary": "Get mempool statistics (equivalent to `getmempoolinfo` RPC).",
+        "description": "Format is determined by the Accept header. Default: application/json.",
+        "tags": [
+          "Mempool"
+        ],
+        "responses": {
+          "200": {
+            "description": "Mempool info.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mempoolInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Non-JSON format requested or mempool not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/tx/{hash}": {
+      "get": {
+        "operationId": "getTxAccept",
+        "summary": "Look up a raw transaction by its txid.",
+        "description": "Format is determined by the Accept header. Default: application/json.",
+        "tags": [
+          "Transactions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/transaction"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
           }
         }
       }

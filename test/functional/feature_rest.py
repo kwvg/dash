@@ -386,6 +386,54 @@ class RESTFeatureTest(BitcoinTestFramework):
         # 400 Bad Request - getutxos with empty request
         v.request('/rest/getutxos.json', status=400)
 
+        self.log.info("Test content negotiation via Accept header")
+
+        def accept_request(uri, accept=None, status=200):
+            """Send a request without format suffix, using an Accept header."""
+            conn = http.client.HTTPConnection(DEFAULT_ADDR, self.rest_port)
+            headers = {"Accept": accept} if accept else {}
+            conn.request("GET", uri, headers=headers)
+            resp = conn.getresponse()
+            body = resp.read()
+            assert_equal(resp.status, status)
+            return body
+
+        # application/json (matches .json suffix)
+        json_accept = json.loads(accept_request(f'/rest/block/{bb_hash}', 'application/json'), parse_float=Decimal)
+        json_suffix = v.request_json(f'/rest/block/{bb_hash}.json')
+        assert_equal(json_accept, json_suffix)
+
+        # application/octet-stream (matches .bin suffix)
+        bin_accept = accept_request(f'/rest/block/{bb_hash}', 'application/octet-stream')
+        bin_suffix = v.request(f'/rest/block/{bb_hash}.bin')
+        assert_equal(bin_accept, bin_suffix)
+
+        # text/plain (matches .hex suffix)
+        hex_accept = accept_request(f'/rest/block/{bb_hash}', 'text/plain')
+        hex_suffix = v.request(f'/rest/block/{bb_hash}.hex')
+        assert_equal(hex_accept, hex_suffix)
+
+        # empty (defaults to JSON)
+        json_default = json.loads(accept_request(f'/rest/block/{bb_hash}'), parse_float=Decimal)
+        assert_equal(json_default, json_suffix)
+
+        # */* (defaults to JSON)
+        json_wildcard = json.loads(accept_request(f'/rest/block/{bb_hash}', '*/*'), parse_float=Decimal)
+        assert_equal(json_wildcard, json_suffix)
+
+        # unsupported type (e.g. text/html), 406 Not Acceptable
+        accept_request(f'/rest/block/{bb_hash}', 'text/html', status=406)
+
+        # Suffix takes precedence over Accept header
+        hex_override = v.request(f'/rest/block/{bb_hash}.hex')
+        assert_equal(hex_override, hex_suffix)
+
+        # Works across different endpoint types
+        chain_accept = json.loads(accept_request('/rest/chaininfo', 'application/json'), parse_float=Decimal)
+        assert 'chain' in chain_accept
+        height_accept = json.loads(accept_request(f'/rest/blockhashbyheight/{height}', 'application/json'), parse_float=Decimal)
+        assert 'blockhash' in height_accept
+
         self.log.info("Validate spec completeness against registered server routes")
         # Known routes from uri_prefixes[] in server.cpp
         v.check_route_completeness({

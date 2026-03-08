@@ -234,6 +234,32 @@ RESTResponseFormat ParseDataFormat(std::string& param, const std::string& strReq
     return rf_names[0].rf;
 }
 
+RESTResponseFormat ParseAcceptFormat(const drogon::HttpRequestPtr& req)
+{
+    const std::string& accept = req->getHeader("Accept");
+    if (accept.empty() || accept.find("*/*") != std::string::npos ||
+        accept.find("application/json") != std::string::npos) {
+        return RESTResponseFormat::JSON;
+    }
+    if (accept.find("application/octet-stream") != std::string::npos) {
+        return RESTResponseFormat::BINARY;
+    }
+    if (accept.find("text/plain") != std::string::npos) {
+        return RESTResponseFormat::HEX;
+    }
+    return RESTResponseFormat::UNDEF;
+}
+
+/**
+ * Determine the response format: prefer an explicit URI suffix (.json/.hex/.bin),
+ * fall back to the Accept header when no suffix is present.
+ */
+static RESTResponseFormat NegotiateFormat(std::string& param, const std::string& req_str, const drogon::HttpRequestPtr& req)
+{
+    const RESTResponseFormat rf = ParseDataFormat(param, req_str);
+    return rf == RESTResponseFormat::UNDEF ? ParseAcceptFormat(req) : rf;
+}
+
 static std::string AvailableDataFormatsString()
 {
     std::string formats;
@@ -267,7 +293,7 @@ static bool rest_headers(const CoreContext& context,
     if (!CheckWarmup(cb))
         return false;
     std::string param;
-    const RESTResponseFormat rf = ParseDataFormat(param, strURIPart);
+    const RESTResponseFormat rf = NegotiateFormat(param, strURIPart, req);
     std::vector<std::string> path = SplitString(param, '/');
 
     std::string raw_count;
@@ -369,7 +395,7 @@ static bool rest_block(const CoreContext& context,
     if (!CheckWarmup(cb))
         return false;
     std::string hashStr;
-    const RESTResponseFormat rf = ParseDataFormat(hashStr, strURIPart);
+    const RESTResponseFormat rf = NegotiateFormat(hashStr, strURIPart, req);
 
     uint256 hash;
     if (!ParseHashStr(hashStr, hash))
@@ -451,7 +477,7 @@ static bool rest_filter_header(const CoreContext& context, const drogon::HttpReq
     if (!CheckWarmup(cb)) return false;
 
     std::string param;
-    const RESTResponseFormat rf = ParseDataFormat(param, strURIPart);
+    const RESTResponseFormat rf = NegotiateFormat(param, strURIPart, req);
 
     std::vector<std::string> uri_parts = SplitString(param, '/');
     std::string raw_count;
@@ -574,7 +600,7 @@ static bool rest_block_filter(const CoreContext& context, const drogon::HttpRequ
     if (!CheckWarmup(cb)) return false;
 
     std::string param;
-    const RESTResponseFormat rf = ParseDataFormat(param, strURIPart);
+    const RESTResponseFormat rf = NegotiateFormat(param, strURIPart, req);
 
     // request is sent over URI scheme /rest/blockfilter/filtertype/blockhash
     std::vector<std::string> uri_parts = SplitString(param, '/');
@@ -663,7 +689,7 @@ static bool rest_chaininfo(const CoreContext& context, const drogon::HttpRequest
     if (!CheckWarmup(cb))
         return false;
     std::string param;
-    const RESTResponseFormat rf = ParseDataFormat(param, strURIPart);
+    const RESTResponseFormat rf = NegotiateFormat(param, strURIPart, req);
 
     switch (rf) {
     case RESTResponseFormat::JSON: {
@@ -686,7 +712,7 @@ static bool rest_mempool(const CoreContext& context, const drogon::HttpRequestPt
         return false;
 
     std::string param;
-    const RESTResponseFormat rf = ParseDataFormat(param, str_uri_part);
+    const RESTResponseFormat rf = NegotiateFormat(param, str_uri_part, req);
     if (param != "contents" && param != "info") {
         return RESTERR(cb, drogon::k400BadRequest, "Invalid URI format. Expected /rest/mempool/<info|contents>.json");
     }
@@ -720,7 +746,7 @@ static bool rest_tx(const CoreContext& context, const drogon::HttpRequestPtr& re
     if (!CheckWarmup(cb))
         return false;
     std::string hashStr;
-    const RESTResponseFormat rf = ParseDataFormat(hashStr, strURIPart);
+    const RESTResponseFormat rf = NegotiateFormat(hashStr, strURIPart, req);
 
     uint256 hash;
     if (!ParseHashStr(hashStr, hash))
@@ -773,7 +799,7 @@ static bool rest_getutxos(const CoreContext& context, const drogon::HttpRequestP
     if (!CheckWarmup(cb))
         return false;
     std::string param;
-    const RESTResponseFormat rf = ParseDataFormat(param, strURIPart);
+    const RESTResponseFormat rf = NegotiateFormat(param, strURIPart, req);
 
     std::vector<std::string> uriParts;
     if (param.length() > 1)
@@ -962,7 +988,7 @@ static bool rest_blockhash_by_height(const CoreContext& context, const drogon::H
 {
     if (!CheckWarmup(cb)) return false;
     std::string height_str;
-    const RESTResponseFormat rf = ParseDataFormat(height_str, str_uri_part);
+    const RESTResponseFormat rf = NegotiateFormat(height_str, str_uri_part, req);
 
     int32_t blockheight = -1; // Initialization done only to prevent valgrind false positive, see https://github.com/bitcoin/bitcoin/pull/18785
     if (!ParseInt32(height_str, &blockheight) || blockheight < 0) {
