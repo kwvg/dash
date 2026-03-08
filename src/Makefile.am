@@ -663,6 +663,8 @@ libbitcoin_query_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_query_a_SOURCES = \
   rest/common.cpp \
   rest/common.h \
+  rest/governance.cpp \
+  rest/governance.h \
   rest/reader.cpp \
   rest/reader.h \
   rest/server.cpp \

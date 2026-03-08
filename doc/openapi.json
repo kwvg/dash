@@ -279,6 +279,54 @@
           }
         }
       },
+      "proposal": {
+        "type": "object",
+        "description": "Governance proposal.",
+        "properties": {
+          "hash": {
+            "$ref": "#/components/schemas/hash256"
+          },
+          "collateralHash": {
+            "$ref": "#/components/schemas/hash256"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": ["string", "null"]
+          },
+          "paymentAddress": {
+            "type": ["string", "null"]
+          },
+          "paymentAmount": {
+            "type": "number"
+          },
+          "startEpoch": {
+            "type": ["integer", "null"]
+          },
+          "endEpoch": {
+            "type": ["integer", "null"]
+          },
+          "creationTime": {
+            "type": "integer"
+          },
+          "yesCount": {
+            "type": "integer"
+          },
+          "noCount": {
+            "type": "integer"
+          },
+          "abstainCount": {
+            "type": "integer"
+          },
+          "funded": {
+            "type": "boolean"
+          },
+          "valid": {
+            "type": "boolean"
+          }
+        }
+      },
       "chainInfo": {
         "type": "object",
         "description": "Identical to the `getblockchaininfo` RPC response.",
@@ -2603,6 +2651,80 @@
                 "schema": {
                   "type": "string",
                   "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/badRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/governance/proposals": {
+      "get": {
+        "operationId": "getGovernanceProposals",
+        "summary": "List all valid governance proposals.",
+        "description": "Returns all valid governance proposals sorted by creation time (newest first). JSON only.",
+        "tags": [
+          "Governance"
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of governance proposals.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/proposal"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Non-JSON format requested.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/governance/proposal/{hash}": {
+      "get": {
+        "operationId": "getGovernanceProposal",
+        "summary": "Get a single governance proposal by hash.",
+        "description": "Returns a single governance proposal identified by its 256-bit hash. JSON only.",
+        "tags": [
+          "Governance"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/hash"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Governance proposal found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/proposal"
                 }
               }
             }

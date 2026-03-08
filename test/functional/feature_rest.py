@@ -355,6 +355,19 @@ class RESTFeatureTest(BitcoinTestFramework):
         invalid_hash = 'not_a_hash'
         unknown_hash = '0' * 64
 
+        self.log.info("  /rest/governance/proposals")
+        v.assert_path('/rest/governance/proposals')
+        v.assert_status('/rest/governance/proposals', 200)
+        proposals = v.request_json('/rest/governance/proposals')
+        assert isinstance(proposals, list)
+        v.validate_response('/rest/governance/proposals', proposals)
+
+        self.log.info("  /rest/governance/proposal/{hash}")
+        v.assert_path('/rest/governance/proposal/{hash}')
+        v.assert_status('/rest/governance/proposal/{hash}', 404)
+        # 404 Not Found - unknown proposal hash
+        v.request(f'/rest/governance/proposal/{unknown_hash}', status=404)
+
         # 400 Bad Request - invalid hash
         v.check_error(f'/rest/tx/{invalid_hash}.json', '/rest/tx/{hash}.json', 400)
         v.check_error(f'/rest/block/{invalid_hash}.json', '/rest/block/{hash}.json', 400)
@@ -481,6 +494,8 @@ class RESTFeatureTest(BitcoinTestFramework):
             '/rest/mempool/contents',
             '/rest/getutxos/{outpoints}',
             '/rest/blockhashbyheight/{height}',
+            '/rest/governance/proposals',
+            '/rest/governance/proposal/{hash}',
         })
 
         self.stop_node(0)

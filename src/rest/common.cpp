@@ -6,6 +6,8 @@
 
 #include <rest/common.h>
 
+#include <univalue.h>
+
 #include <llmq/context.h>
 #include <node/context.h>
 #include <rpc/server.h>
@@ -36,6 +38,11 @@ drogon::HttpResponsePtr MakeResponse(drogon::HttpStatusCode code, drogon::Conten
 void WriteReply(const Callback& cb, drogon::ContentType ct, std::string body)
 {
     cb(MakeResponse(drogon::k200OK, ct, std::move(body)));
+}
+
+void WriteJsonReply(const Callback& cb, const UniValue& val)
+{
+    WriteReply(cb, drogon::CT_APPLICATION_JSON, val.write() + "\n");
 }
 
 bool RESTERR(const Callback& cb, drogon::HttpStatusCode status, std::string message)

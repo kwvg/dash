@@ -22,6 +22,7 @@
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <rest/common.h>
+#include <rest/governance.h>
 #include <rest/reader.h>
 #include <rpc/blockchain.h>
 #include <rpc/mempool.h>
@@ -65,6 +66,7 @@ using rest::ParseAcceptFormat;
 using rest::ParseDataFormat;
 using rest::ReadRawBlockFromDisk;
 using rest::RESTERR;
+using rest::WriteJsonReply;
 using rest::WriteReply;
 
 static const size_t MAX_GETUTXOS_OUTPOINTS = 15; //allow a max of 15 outpoints to be queried at once
@@ -196,7 +198,7 @@ static bool rest_headers(const CoreContext& context,
         for (const CBlockIndex *pindex : headers) {
             jsonHeaders.push_back(blockheaderToJSON(tip, pindex, *node->chainlocks));
         }
-        WriteReply(effective_cb, drogon::CT_APPLICATION_JSON, jsonHeaders.write() + "\n");
+        WriteJsonReply(effective_cb, jsonHeaders);
         return true;
     }
     default: {
@@ -271,7 +273,7 @@ static bool rest_block(const CoreContext& context,
         if (!llmq_ctx) return false;
 
         UniValue objBlock = blockToJSON(chainman.m_blockman, block, tip, pblockindex, *node->chainlocks, *llmq_ctx->isman, tx_verbosity);
-        WriteReply(cb, drogon::CT_APPLICATION_JSON, objBlock.write() + "\n");
+        WriteJsonReply(cb, objBlock);
         return true;
     }
 
@@ -405,7 +407,7 @@ static bool rest_filter_header(const CoreContext& context, const drogon::HttpReq
             jsonHeaders.push_back(header.GetHex());
         }
 
-        WriteReply(effective_cb, drogon::CT_APPLICATION_JSON, jsonHeaders.write() + "\n");
+        WriteJsonReply(effective_cb, jsonHeaders);
         return true;
     }
     default: {
@@ -491,7 +493,7 @@ static bool rest_block_filter(const CoreContext& context, const drogon::HttpRequ
     case RESTResponseFormat::JSON: {
         UniValue ret(UniValue::VOBJ);
         ret.pushKV("filter", HexStr(filter.GetEncodedFilter()));
-        WriteReply(cb, drogon::CT_APPLICATION_JSON, ret.write() + "\n");
+        WriteJsonReply(cb, ret);
         return true;
     }
     default: {
@@ -516,7 +518,7 @@ static bool rest_chaininfo(const CoreContext& context, const drogon::HttpRequest
         jsonRequest.context = context;
         jsonRequest.params = UniValue(UniValue::VARR);
         UniValue chainInfoObject = getblockchaininfo().HandleRequest(jsonRequest);
-        WriteReply(cb, drogon::CT_APPLICATION_JSON, chainInfoObject.write() + "\n");
+        WriteJsonReply(cb, chainInfoObject);
         return true;
     }
     default: {
@@ -603,7 +605,7 @@ static bool rest_tx(const CoreContext& context, const drogon::HttpRequestPtr& re
     case RESTResponseFormat::JSON: {
         UniValue objTx(UniValue::VOBJ);
         TxToUniv(*tx, /*block_hash=*/hashBlock, /*entry=*/objTx);
-        WriteReply(cb, drogon::CT_APPLICATION_JSON, objTx.write() + "\n");
+        WriteJsonReply(cb, objTx);
         return true;
     }
 
@@ -793,7 +795,7 @@ static bool rest_getutxos(const CoreContext& context, const drogon::HttpRequestP
         }
         objGetUTXOResponse.pushKV("utxos", utxos);
 
-        WriteReply(cb, drogon::CT_APPLICATION_JSON, objGetUTXOResponse.write() + "\n");
+        WriteJsonReply(cb, objGetUTXOResponse);
         return true;
     }
     default: {
@@ -840,7 +842,7 @@ static bool rest_blockhash_by_height(const CoreContext& context, const drogon::H
     case RESTResponseFormat::JSON: {
         UniValue resp = UniValue(UniValue::VOBJ);
         resp.pushKV("blockhash", pblockindex->GetBlockHash().GetHex());
-        WriteReply(cb, drogon::CT_APPLICATION_JSON, resp.write() + "\n");
+        WriteJsonReply(cb, resp);
         return true;
     }
     default: {
@@ -892,6 +894,7 @@ static void RegisterHandlers(const CoreContext& context)
         };
         app.registerHandlerViaRegex(up.prefix, std::move(handler));
     }
+    rest::RegisterGovernanceHandlers(context, app);
 }
 
 namespace rest {

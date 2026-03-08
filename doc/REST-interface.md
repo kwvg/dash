@@ -142,6 +142,19 @@ $ curl -H "Accept: application/json" localhost:19997/rest/getutxos/checkmempool/
 }
 ```
 
+#### Governance Proposals
+
+`GET /rest/governance/proposals`
+
+Returns all valid governance proposals, sorted newest-first.
+Only supports JSON as output format.
+
+`GET /rest/governance/proposal/<PROPOSAL-HASH>`
+
+Given a proposal hash: returns a single governance proposal.
+Only supports JSON as output format.
+Responds with 404 if the proposal doesn't exist or is not a valid proposal.
+
 #### Memory pool
 `GET /rest/mempool/info`
 

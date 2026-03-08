@@ -22,6 +22,8 @@ namespace node {
 struct NodeContext;
 } // namespace node
 
+class UniValue;
+
 enum class RESTResponseFormat {
     UNDEF,
     BINARY,
@@ -51,6 +53,16 @@ drogon::HttpResponsePtr MakeResponse(drogon::HttpStatusCode code, drogon::Conten
  * @param[in] body  Response body text.
  */
 void WriteReply(const Callback& cb, drogon::ContentType ct, std::string body);
+
+/**
+ * Send a JSON 200 OK response containing a serialised UniValue.
+ *
+ * Equivalent to `WriteReply(cb, CT_APPLICATION_JSON, val.write() + "\n")`.
+ *
+ * @param[in] cb   Callback to invoke with the response.
+ * @param[in] val  JSON value to serialise into the response body.
+ */
+void WriteJsonReply(const Callback& cb, const UniValue& val);
 
 /**
  * Send an error response and return false (for early-return idiom).
