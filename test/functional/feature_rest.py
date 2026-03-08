@@ -355,6 +355,12 @@ class RESTFeatureTest(BitcoinTestFramework):
         invalid_hash = 'not_a_hash'
         unknown_hash = '0' * 64
 
+        self.log.info("  /rest/chainlock")
+        v.assert_path('/rest/chainlock')
+        v.assert_status('/rest/chainlock', 404)
+        # 404 Not Found - no ChainLock on regtest with clean chain
+        v.request('/rest/chainlock', status=404)
+
         self.log.info("  /rest/governance/proposals")
         v.assert_path('/rest/governance/proposals')
         v.assert_status('/rest/governance/proposals', 200)
@@ -494,6 +500,7 @@ class RESTFeatureTest(BitcoinTestFramework):
             '/rest/mempool/contents',
             '/rest/getutxos/{outpoints}',
             '/rest/blockhashbyheight/{height}',
+            '/rest/chainlock',
             '/rest/governance/proposals',
             '/rest/governance/proposal/{hash}',
         })

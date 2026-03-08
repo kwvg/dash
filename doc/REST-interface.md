@@ -103,6 +103,13 @@ Responds with 404 if the block doesn't exist.
 Given a height: returns hash of block in best-block-chain at height provided.
 Responds with 404 if block not found.
 
+#### ChainLock
+`GET /rest/chainlock`
+
+Returns the best known ChainLock.
+Only supports JSON as output format.
+Responds with 404 if no ChainLock is known yet.
+
 #### Chaininfos
 `GET /rest/chaininfo`
 

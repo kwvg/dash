@@ -271,6 +271,27 @@
           }
         }
       },
+      "chainLock": {
+        "type": "object",
+        "description": "Best known ChainLock.",
+        "properties": {
+          "blockhash": {
+            "$ref": "#/components/schemas/hash256"
+          },
+          "height": {
+            "type": "integer"
+          },
+          "signature": {
+            "type": "string"
+          },
+          "known_block": {
+            "type": "boolean"
+          },
+          "hex": {
+            "type": "string"
+          }
+        }
+      },
       "blockHashByHeight": {
         "type": "object",
         "properties": {
@@ -2660,6 +2681,41 @@
           },
           "404": {
             "$ref": "#/components/responses/notFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/warmup"
+          }
+        }
+      }
+    },
+    "/rest/chainlock": {
+      "get": {
+        "operationId": "getChainLock",
+        "summary": "Get the best known ChainLock.",
+        "description": "Returns the best known ChainLock. JSON only.",
+        "tags": [
+          "Chain"
+        ],
+        "responses": {
+          "200": {
+            "description": "Best known ChainLock.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chainLock"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No ChainLock known yet or non-JSON format requested.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "503": {
             "$ref": "#/components/responses/warmup"
