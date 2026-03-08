@@ -84,6 +84,19 @@ void WriteReply(const rest::Callback& cb, drogon::ContentType ct, std::string bo
 {
     cb(MakeResponse(drogon::k200OK, ct, std::move(body)));
 }
+
+/**
+ * Annotate an HTTP response with RFC 8594 / draft-ietf-httpapi-deprecation
+ * headers indicating the endpoint is deprecated.
+ *
+ * @param[in] resp           The response to annotate.
+ * @param[in] link_target    The preferred replacement URI template (used in the Link header).
+ */
+void AddDeprecationHeaders(const drogon::HttpResponsePtr& resp, const std::string& link_target)
+{
+    resp->addHeader("Deprecation", "true");
+    resp->addHeader("Link", "<" + link_target + ">; rel=\"successor-version\"");
+}
 } // anonymous namespace
 
 static const struct {
@@ -259,10 +272,12 @@ static bool rest_headers(const CoreContext& context,
 
     std::string raw_count;
     std::string hashStr;
+    bool is_deprecated_path{false};
     if (path.size() == 2) {
         // deprecated path: /rest/headers/<count>/<hash>
         hashStr = path[1];
         raw_count = path[0];
+        is_deprecated_path = true;
     } else if (path.size() == 1) {
         // new path with query parameter: /rest/headers/<hash>?count=<count>
         hashStr = path[0];
@@ -271,20 +286,28 @@ static bool rest_headers(const CoreContext& context,
         return RESTERR(cb, drogon::k400BadRequest, "Invalid URI format. Expected /rest/headers/<hash>.<ext>?count=<count>");
     }
 
+    // Wrap callback to annotate deprecated-path responses with RFC 8594 headers.
+    const rest::Callback& effective_cb = is_deprecated_path
+        ? static_cast<rest::Callback>([&cb](const drogon::HttpResponsePtr& resp) {
+              AddDeprecationHeaders(resp, "/rest/headers/<hash>.<ext>?count=<count>");
+              cb(resp);
+          })
+        : cb;
+
     const auto parsed_count{ToIntegral<size_t>(raw_count)};
     if (!parsed_count.has_value() || *parsed_count < 1 || *parsed_count > MAX_REST_HEADERS_RESULTS) {
-        return RESTERR(cb, drogon::k400BadRequest, strprintf("Header count is invalid or out of acceptable range (1-%u): %s", MAX_REST_HEADERS_RESULTS, raw_count));
+        return RESTERR(effective_cb, drogon::k400BadRequest, strprintf("Header count is invalid or out of acceptable range (1-%u): %s", MAX_REST_HEADERS_RESULTS, raw_count));
     }
 
     uint256 hash;
     if (!ParseHashStr(hashStr, hash))
-        return RESTERR(cb, drogon::k400BadRequest, "Invalid hash: " + hashStr);
+        return RESTERR(effective_cb, drogon::k400BadRequest, "Invalid hash: " + hashStr);
 
     const CBlockIndex* tip = nullptr;
     std::vector<const CBlockIndex*> headers;
     headers.reserve(*parsed_count);
     {
-        ChainstateManager* maybe_chainman = GetChainman(context, cb);
+        ChainstateManager* maybe_chainman = GetChainman(context, effective_cb);
         if (!maybe_chainman) return false;
         ChainstateManager& chainman = *maybe_chainman;
         LOCK(cs_main);
@@ -307,7 +330,7 @@ static bool rest_headers(const CoreContext& context,
             ssHeader << pindex->GetBlockHeader();
         }
 
-        WriteReply(cb, drogon::CT_APPLICATION_OCTET_STREAM, ssHeader.str());
+        WriteReply(effective_cb, drogon::CT_APPLICATION_OCTET_STREAM, ssHeader.str());
         return true;
     }
 
@@ -317,22 +340,22 @@ static bool rest_headers(const CoreContext& context,
             ssHeader << pindex->GetBlockHeader();
         }
 
-        WriteReply(cb, drogon::CT_TEXT_PLAIN, HexStr(ssHeader) + "\n");
+        WriteReply(effective_cb, drogon::CT_TEXT_PLAIN, HexStr(ssHeader) + "\n");
         return true;
     }
     case RESTResponseFormat::JSON: {
-        const NodeContext* const node = GetNodeContext(context, cb);
+        const NodeContext* const node = GetNodeContext(context, effective_cb);
         if (!node || !node->chainlocks) return false;
 
         UniValue jsonHeaders(UniValue::VARR);
         for (const CBlockIndex *pindex : headers) {
             jsonHeaders.push_back(blockheaderToJSON(tip, pindex, *node->chainlocks));
         }
-        WriteReply(cb, drogon::CT_APPLICATION_JSON, jsonHeaders.write() + "\n");
+        WriteReply(effective_cb, drogon::CT_APPLICATION_JSON, jsonHeaders.write() + "\n");
         return true;
     }
     default: {
-        return RESTERR(cb, drogon::k406NotAcceptable, "output format not found (available: " + AvailableDataFormatsString() + ")");
+        return RESTERR(effective_cb, drogon::k406NotAcceptable, "output format not found (available: " + AvailableDataFormatsString() + ")");
     }
     }
 }
@@ -433,10 +456,12 @@ static bool rest_filter_header(const CoreContext& context, const drogon::HttpReq
     std::vector<std::string> uri_parts = SplitString(param, '/');
     std::string raw_count;
     std::string raw_blockhash;
+    bool is_deprecated_path{false};
     if (uri_parts.size() == 3) {
         // deprecated path: /rest/blockfilterheaders/<filtertype>/<count>/<blockhash>
         raw_blockhash = uri_parts[2];
         raw_count = uri_parts[1];
+        is_deprecated_path = true;
     } else if (uri_parts.size() == 2) {
         // new path with query parameter: /rest/blockfilterheaders/<filtertype>/<blockhash>?count=<count>
         raw_blockhash = uri_parts[1];
@@ -445,30 +470,38 @@ static bool rest_filter_header(const CoreContext& context, const drogon::HttpReq
         return RESTERR(cb, drogon::k400BadRequest, "Invalid URI format. Expected /rest/blockfilterheaders/<filtertype>/<blockhash>.<ext>?count=<count>");
     }
 
+    // Wrap callback to annotate deprecated-path responses with RFC 8594 headers.
+    const rest::Callback& effective_cb = is_deprecated_path
+        ? static_cast<rest::Callback>([&cb](const drogon::HttpResponsePtr& resp) {
+              AddDeprecationHeaders(resp, "/rest/blockfilterheaders/<filtertype>/<blockhash>.<ext>?count=<count>");
+              cb(resp);
+          })
+        : cb;
+
     const auto parsed_count{ToIntegral<size_t>(raw_count)};
     if (!parsed_count.has_value() || *parsed_count < 1 || *parsed_count > MAX_REST_HEADERS_RESULTS) {
-        return RESTERR(cb, drogon::k400BadRequest, strprintf("Header count is invalid or out of acceptable range (1-%u): %s", MAX_REST_HEADERS_RESULTS, raw_count));
+        return RESTERR(effective_cb, drogon::k400BadRequest, strprintf("Header count is invalid or out of acceptable range (1-%u): %s", MAX_REST_HEADERS_RESULTS, raw_count));
     }
 
     uint256 block_hash;
     if (!ParseHashStr(raw_blockhash, block_hash)) {
-        return RESTERR(cb, drogon::k400BadRequest, "Invalid hash: " + raw_blockhash);
+        return RESTERR(effective_cb, drogon::k400BadRequest, "Invalid hash: " + raw_blockhash);
     }
 
     BlockFilterType filtertype;
     if (!BlockFilterTypeByName(uri_parts[0], filtertype)) {
-        return RESTERR(cb, drogon::k400BadRequest, "Unknown filtertype " + uri_parts[0]);
+        return RESTERR(effective_cb, drogon::k400BadRequest, "Unknown filtertype " + uri_parts[0]);
     }
 
     BlockFilterIndex* index = GetBlockFilterIndex(filtertype);
     if (!index) {
-        return RESTERR(cb, drogon::k400BadRequest, "Index is not enabled for filtertype " + uri_parts[0]);
+        return RESTERR(effective_cb, drogon::k400BadRequest, "Index is not enabled for filtertype " + uri_parts[0]);
     }
 
     std::vector<const CBlockIndex*> headers;
     headers.reserve(*parsed_count);
     {
-        ChainstateManager* maybe_chainman = GetChainman(context, cb);
+        ChainstateManager* maybe_chainman = GetChainman(context, effective_cb);
         if (!maybe_chainman) return false;
         ChainstateManager& chainman = *maybe_chainman;
         LOCK(cs_main);
@@ -497,7 +530,7 @@ static bool rest_filter_header(const CoreContext& context, const drogon::HttpReq
                 errmsg += " This error is unexpected and indicates index corruption.";
             }
 
-            return RESTERR(cb, drogon::k404NotFound, errmsg);
+            return RESTERR(effective_cb, drogon::k404NotFound, errmsg);
         }
         filter_headers.push_back(filter_header);
     }
@@ -509,7 +542,7 @@ static bool rest_filter_header(const CoreContext& context, const drogon::HttpReq
             ssHeader << header;
         }
 
-        WriteReply(cb, drogon::CT_APPLICATION_OCTET_STREAM, ssHeader.str());
+        WriteReply(effective_cb, drogon::CT_APPLICATION_OCTET_STREAM, ssHeader.str());
         return true;
     }
     case RESTResponseFormat::HEX: {
@@ -518,7 +551,7 @@ static bool rest_filter_header(const CoreContext& context, const drogon::HttpReq
             ssHeader << header;
         }
 
-        WriteReply(cb, drogon::CT_TEXT_PLAIN, HexStr(ssHeader) + "\n");
+        WriteReply(effective_cb, drogon::CT_TEXT_PLAIN, HexStr(ssHeader) + "\n");
         return true;
     }
     case RESTResponseFormat::JSON: {
@@ -527,11 +560,11 @@ static bool rest_filter_header(const CoreContext& context, const drogon::HttpReq
             jsonHeaders.push_back(header.GetHex());
         }
 
-        WriteReply(cb, drogon::CT_APPLICATION_JSON, jsonHeaders.write() + "\n");
+        WriteReply(effective_cb, drogon::CT_APPLICATION_JSON, jsonHeaders.write() + "\n");
         return true;
     }
     default: {
-        return RESTERR(cb, drogon::k406NotAcceptable, "output format not found (available: " + AvailableDataFormatsString() + ")");
+        return RESTERR(effective_cb, drogon::k406NotAcceptable, "output format not found (available: " + AvailableDataFormatsString() + ")");
     }
     }
 }

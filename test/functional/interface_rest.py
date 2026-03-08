@@ -396,6 +396,30 @@ class RESTTest (BitcoinTestFramework):
         assert_equal(self.test_rest_request(f"/headers/{bb_hash}", query_params={"count": 1}), self.test_rest_request(f"/headers/1/{bb_hash}"))
         assert_equal(self.test_rest_request(f"/blockfilterheaders/basic/{bb_hash}", query_params={"count": 1}), self.test_rest_request(f"/blockfilterheaders/basic/5/{bb_hash}"))
 
+        self.log.info("Test deprecation headers on legacy path formats")
+
+        # Legacy /rest/headers/<count>/<hash> should carry deprecation headers
+        resp = self.test_rest_request(f"/headers/1/{bb_hash}", ret_type=RetType.OBJ)
+        assert_equal(resp.getheader("Deprecation"), "true")
+        assert "successor-version" in resp.getheader("Link")
+        resp.read()
+
+        # New /rest/headers/<hash>?count= should NOT carry deprecation headers
+        resp = self.test_rest_request(f"/headers/{bb_hash}", query_params={"count": 1}, ret_type=RetType.OBJ)
+        assert resp.getheader("Deprecation") is None, "New-style path should not have Deprecation header"
+        resp.read()
+
+        # Legacy /rest/blockfilterheaders/<filtertype>/<count>/<hash> should carry deprecation headers
+        resp = self.test_rest_request(f"/blockfilterheaders/basic/1/{bb_hash}", ret_type=RetType.OBJ)
+        assert_equal(resp.getheader("Deprecation"), "true")
+        assert "successor-version" in resp.getheader("Link")
+        resp.read()
+
+        # New /rest/blockfilterheaders/<filtertype>/<hash>?count= should NOT carry deprecation headers
+        resp = self.test_rest_request(f"/blockfilterheaders/basic/{bb_hash}", query_params={"count": 1}, ret_type=RetType.OBJ)
+        assert resp.getheader("Deprecation") is None, "New-style path should not have Deprecation header"
+        resp.read()
+
 
 if __name__ == '__main__':
     RESTTest().main()
