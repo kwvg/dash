@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023 The Dash Core developers
+// Copyright (c) 2019-2024 The Dash Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -7,41 +7,42 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
-template<typename Key, typename Value, typename Hasher, size_t MaxSize = 0, size_t TruncateThreshold = 0>
+template <typename Key, typename Value, typename Hasher, size_t MaxSize = 0>
 class unordered_lru_cache
 {
 private:
-    typedef std::unordered_map<Key, std::pair<Value, int64_t>, Hasher> MapType;
+    using MapType = std::unordered_map<Key, std::pair<Value, int64_t>, Hasher>;
 
-    MapType cacheMap;
-    size_t maxSize;
-    size_t truncateThreshold;
-    int64_t accessCounter{0};
+    MapType m_map;
+    size_t m_max_size;
+    size_t m_truncate_threshold;
+    int64_t m_access_counter{0};
 
 public:
-    explicit unordered_lru_cache(size_t _maxSize = MaxSize, size_t _truncateThreshold = TruncateThreshold) :
-        maxSize(_maxSize),
-        truncateThreshold(_truncateThreshold == 0 ? _maxSize * 2 : _truncateThreshold)
+    explicit unordered_lru_cache(size_t max_size = MaxSize) :
+        m_max_size(max_size),
+        m_truncate_threshold(max_size + std::max<size_t>(max_size / 2, 1))
     {
-        // either specify maxSize through template arguments or the constructor and fail otherwise
-        assert(_maxSize != 0);
+        assert(max_size != 0);
     }
 
-    size_t max_size() const { return maxSize; }
+    size_t max_size() const { return m_max_size; }
 
-    template<typename Value2>
+    template <typename Value2>
     void _emplace(const Key& key, Value2&& v)
     {
-        auto it = cacheMap.find(key);
-        if (it == cacheMap.end()) {
-            cacheMap.emplace(key, std::make_pair(std::forward<Value2>(v), accessCounter++));
+        auto it = m_map.find(key);
+        if (it == m_map.end()) {
+            m_map.emplace(key, std::make_pair(std::forward<Value2>(v), m_access_counter++));
         } else {
             it->second.first = std::forward<Value2>(v);
-            it->second.second = accessCounter++;
+            it->second.second = m_access_counter++;
         }
         truncate_if_needed();
     }
@@ -58,9 +59,9 @@ public:
 
     bool get(const Key& key, Value& value)
     {
-        auto it = cacheMap.find(key);
-        if (it != cacheMap.end()) {
-            it->second.second = accessCounter++;
+        auto it = m_map.find(key);
+        if (it != m_map.end()) {
+            it->second.second = m_access_counter++;
             value = it->second.first;
             return true;
         }
@@ -69,9 +70,9 @@ public:
 
     bool exists(const Key& key)
     {
-        auto it = cacheMap.find(key);
-        if (it != cacheMap.end()) {
-            it->second.second = accessCounter++;
+        auto it = m_map.find(key);
+        if (it != m_map.end()) {
+            it->second.second = m_access_counter++;
             return true;
         }
         return false;
@@ -79,35 +80,36 @@ public:
 
     void erase(const Key& key)
     {
-        cacheMap.erase(key);
+        m_map.erase(key);
     }
 
     void clear()
     {
-        cacheMap.clear();
+        m_map.clear();
     }
 
 private:
     void truncate_if_needed()
     {
-        typedef typename MapType::iterator Iterator;
-
-        if (cacheMap.size() <= truncateThreshold) {
+        if (m_map.size() <= m_truncate_threshold) {
             return;
         }
 
+        using Iterator = typename MapType::iterator;
+
         std::vector<Iterator> vec;
-        vec.reserve(cacheMap.size());
-        for (auto it = cacheMap.begin(); it != cacheMap.end(); ++it) {
+        vec.reserve(m_map.size());
+        for (auto it = m_map.begin(); it != m_map.end(); ++it) {
             vec.emplace_back(it);
         }
-        // sort by last access time (descending order)
-        std::sort(vec.begin(), vec.end(), [](const Iterator& it1, const Iterator& it2) {
-            return it1->second.second > it2->second.second;
-        });
+        // partition: keep the m_max_size most recently accessed entries
+        std::nth_element(vec.begin(), vec.begin() + m_max_size, vec.end(),
+            [](const Iterator& a, const Iterator& b) {
+                return a->second.second > b->second.second;
+            });
 
-        for (size_t i = maxSize; i < vec.size(); i++) {
-            cacheMap.erase(vec[i]);
+        for (size_t i = m_max_size; i < vec.size(); ++i) {
+            m_map.erase(vec[i]);
         }
     }
 };

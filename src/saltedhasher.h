@@ -83,9 +83,9 @@ using Uint256HashMap = std::unordered_map<uint256, T, StaticSaltedHasher>;
 using Uint256HashSet = std::unordered_set<uint256, StaticSaltedHasher>;
 
 
-template <typename Key, typename Value, typename Hasher, size_t MaxSize, size_t TruncateThreshold>
+template <typename Key, typename Value, typename Hasher, size_t MaxSize>
 class unordered_lru_cache;
-template <typename T, size_t MaxSize = 0ul, size_t TruncateThreshold = 0ul>
-using Uint256LruHashMap = unordered_lru_cache<uint256, T, StaticSaltedHasher, MaxSize, TruncateThreshold>;
+template <typename T, size_t MaxSize = 0ul>
+using Uint256LruHashMap = unordered_lru_cache<uint256, T, StaticSaltedHasher, MaxSize>;
 
 #endif // BITCOIN_SALTEDHASHER_H
