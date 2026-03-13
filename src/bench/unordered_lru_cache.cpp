@@ -49,10 +49,9 @@ static void LruCacheGetHitSmall(benchmark::Bench& bench)
     for (uint64_t i{0}; i < SIZE; ++i) {
         cache.insert(i, i * 10);
     }
-    uint64_t val{0};
     uint64_t i{0};
     bench.run([&] {
-        cache.get(i % SIZE, val);
+        ankerl::nanobench::doNotOptimizeAway(cache.get(i % SIZE));
         ++i;
     });
 }
@@ -66,10 +65,9 @@ static void LruCacheGetHitLarge(benchmark::Bench& bench)
     for (uint64_t i{0}; i < SIZE; ++i) {
         cache.insert(i, LargeVal(1024, static_cast<uint8_t>(i)));
     }
-    LargeVal val;
     uint64_t i{0};
     bench.run([&] {
-        cache.get(i % SIZE, val);
+        ankerl::nanobench::doNotOptimizeAway(cache.get(i % SIZE));
         ++i;
     });
 }
@@ -82,10 +80,9 @@ static void LruCacheGetMiss(benchmark::Bench& bench)
     for (uint64_t i{0}; i < SIZE; ++i) {
         cache.insert(i, i * 10);
     }
-    uint64_t val{0};
     uint64_t i{SIZE};
     bench.run([&] {
-        cache.get(i, val);
+        ankerl::nanobench::doNotOptimizeAway(cache.get(i));
         ++i;
     });
 }
@@ -113,7 +110,6 @@ static void LruCacheMixedWorkload(benchmark::Bench& bench)
     for (uint64_t i{0}; i < SIZE; ++i) {
         cache.insert(i, i * 10);
     }
-    uint64_t val{0};
     uint64_t i{0};
     uint64_t next_new_key{SIZE};
     bench.run([&] {
@@ -121,7 +117,7 @@ static void LruCacheMixedWorkload(benchmark::Bench& bench)
             uint64_t key{next_new_key++};
             cache.insert(key, key * 10);
         } else {
-            cache.get(next_new_key - 1 - (i % SIZE), val);
+            ankerl::nanobench::doNotOptimizeAway(cache.get(next_new_key - 1 - (i % SIZE)));
         }
         ++i;
     });
@@ -145,13 +141,12 @@ static void LruCacheBoolInsertGet(benchmark::Bench& bench)
 {
     constexpr size_t SIZE{30000};
     unordered_lru_cache<uint64_t, bool, U64Hasher> cache(SIZE);
-    bool val{false};
     uint64_t i{0};
     bench.run([&] {
         if (i < SIZE) {
             cache.insert(i, (i % 2) == 0);
         } else {
-            cache.get(i - SIZE, val);
+            ankerl::nanobench::doNotOptimizeAway(cache.get(i - SIZE));
         }
         if (++i >= SIZE * 2) {
             cache.clear();

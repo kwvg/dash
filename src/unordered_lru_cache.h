@@ -57,15 +57,14 @@ public:
         _emplace(key, v);
     }
 
-    bool get(const Key& key, Value& value)
+    const Value* get(const Key& key)
     {
         auto it = m_map.find(key);
         if (it != m_map.end()) {
             it->second.second = m_access_counter++;
-            value = it->second.first;
-            return true;
+            return &it->second.first;
         }
-        return false;
+        return nullptr;
     }
 
     bool exists(const Key& key)

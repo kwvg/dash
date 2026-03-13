@@ -585,8 +585,8 @@ QuorumMembers GetAllQuorumMembers(Consensus::LLMQType llmqType, const UtilParame
         }
         if (reset_cache) {
             mapQuorumMembers[llmqType].clear();
-        } else if (mapQuorumMembers[llmqType].get(util_params.m_base_index->GetBlockHash(), quorumMembers)) {
-            return quorumMembers;
+        } else if (const auto* cached = mapQuorumMembers[llmqType].get(util_params.m_base_index->GetBlockHash())) {
+            return *cached;
         }
     }
 
@@ -622,11 +622,11 @@ QuorumMembers GetAllQuorumMembers(Consensus::LLMQType llmqType, const UtilParame
         if (reset_cache) {
             LOCK(cs_indexed_members);
             mapIndexedQuorumMembers[llmqType].clear();
-        } else if (LOCK(cs_indexed_members); mapIndexedQuorumMembers[llmqType].get(
-                       std::pair(pCycleQuorumBaseBlockIndex->GetBlockHash(), quorumIndex), quorumMembers)) {
+        } else if (LOCK(cs_indexed_members); const auto* cached = mapIndexedQuorumMembers[llmqType].get(
+                       std::pair(pCycleQuorumBaseBlockIndex->GetBlockHash(), quorumIndex))) {
             LOCK(cs_members);
-            mapQuorumMembers[llmqType].insert(util_params.m_base_index->GetBlockHash(), quorumMembers);
-            return quorumMembers;
+            mapQuorumMembers[llmqType].insert(util_params.m_base_index->GetBlockHash(), *cached);
+            return *cached;
         }
 
         auto q = ComputeQuorumMembersByQuarterRotation(llmq_params, util_params.replace_index(pCycleQuorumBaseBlockIndex));

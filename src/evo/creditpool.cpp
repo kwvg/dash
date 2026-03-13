@@ -65,14 +65,14 @@ static std::optional<CreditPoolDataPerBlock> GetCreditDataFromBlock(const gsl::n
         return std::nullopt;
     }
 
-    CreditPoolDataPerBlock blockData;
-
     static Mutex cache_mutex;
     static Uint256LruHashMap<CreditPoolDataPerBlock> block_data_cache GUARDED_BY(cache_mutex){
         static_cast<size_t>(Params().CreditPoolPeriodBlocks()) * 2};
-    if (LOCK(cache_mutex); block_data_cache.get(block_index->GetBlockHash(), blockData)) {
-        return blockData;
+    if (LOCK(cache_mutex); const auto* cached = block_data_cache.get(block_index->GetBlockHash())) {
+        return *cached;
     }
+
+    CreditPoolDataPerBlock blockData;
 
     CBlock block;
     if (!ReadBlockFromDisk(block, block_index, consensusParams)) {
@@ -120,13 +120,13 @@ std::optional<CCreditPool> CCreditPoolManager::GetFromCache(const CBlockIndex& b
     if (!DeploymentActiveAt(block_index, m_chainman.GetConsensus(), Consensus::DEPLOYMENT_V20)) return CCreditPool{};
 
     const uint256 block_hash = block_index.GetBlockHash();
-    CCreditPool pool;
     {
         LOCK(cache_mutex);
-        if (creditPoolCache.get(block_hash, pool)) {
-            return pool;
+        if (const auto* cached = creditPoolCache.get(block_hash)) {
+            return *cached;
         }
     }
+    CCreditPool pool;
     if (block_index.nHeight % DISK_SNAPSHOT_PERIOD == 0) {
         if (evoDb.Read(std::make_pair(DB_CREDITPOOL_SNAPSHOT, block_hash), pool)) {
             LOCK(cache_mutex);

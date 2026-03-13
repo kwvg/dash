@@ -131,7 +131,9 @@ MessageProcessingResult CDKGSessionManager::ProcessMessage(CNode& pfrom, bool is
         if (indexedQuorumsCache.empty()) {
             utils::InitQuorumsCache(indexedQuorumsCache, m_chainman.GetConsensus());
         }
-        indexedQuorumsCache[llmqType].get(quorumHash, quorumIndex);
+        if (const auto* cached = indexedQuorumsCache[llmqType].get(quorumHash)) {
+            quorumIndex = *cached;
+        }
     }
 
     // No luck, try to compute

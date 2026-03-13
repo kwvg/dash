@@ -216,12 +216,12 @@ bool CMasternodeMetaMan::AlreadyHavePlatformBan(const uint256& inv_hash) const
 std::optional<PlatformBanMessage> CMasternodeMetaMan::GetPlatformBan(const uint256& inv_hash) const
 {
     LOCK(cs);
-    PlatformBanMessage ret;
-    if (!m_seen_platform_bans.get(inv_hash, ret)) {
+    const auto* ret = m_seen_platform_bans.get(inv_hash);
+    if (!ret) {
         return std::nullopt;
     }
 
-    return ret;
+    return *ret;
 }
 
 void CMasternodeMetaMan::AddUsedMasternode(const uint256& proTxHash)

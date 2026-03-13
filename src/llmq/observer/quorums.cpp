@@ -348,9 +348,8 @@ void QuorumObserver::StartCleanupOldQuorumDataThread(gsl::not_null<const CBlockI
             const CBlockIndex* pindex_loop{pIndex};
             Uint256HashSet quorum_keys;
             while (pindex_loop != nullptr && pIndex->nHeight - pindex_loop->nHeight < params.max_store_depth()) {
-                uint256 quorum_key;
-                if (cache.get(pindex_loop->GetBlockHash(), quorum_key)) {
-                    quorum_keys.insert(quorum_key);
+                if (const auto* quorum_key = cache.get(pindex_loop->GetBlockHash())) {
+                    quorum_keys.insert(*quorum_key);
                     if (quorum_keys.size() >= static_cast<size_t>(params.keepOldKeys)) break; // extra safety belt
                 }
                 pindex_loop = pindex_loop->pprev;

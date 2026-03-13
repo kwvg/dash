@@ -22,7 +22,6 @@ struct IntHasher {
 struct LargeValue {
     std::vector<uint8_t> data;
 
-    LargeValue() = default;
     explicit LargeValue(size_t size) : data(size, 0x42) {}
 };
 
@@ -37,44 +36,41 @@ BOOST_FIXTURE_TEST_SUITE(unordered_lru_cache_tests, BasicTestingSetup)
 BOOST_AUTO_TEST_CASE(insert_and_get)
 {
     SmallCache cache;
-    int val{0};
 
-    BOOST_CHECK(!cache.get(1, val));
+    BOOST_CHECK(cache.get(1) == nullptr);
 
     cache.insert(1, 100);
-    BOOST_CHECK(cache.get(1, val));
-    BOOST_CHECK_EQUAL(val, 100);
+    const auto* val = cache.get(1);
+    BOOST_CHECK(val != nullptr);
+    BOOST_CHECK_EQUAL(*val, 100);
 }
 
 BOOST_AUTO_TEST_CASE(insert_overwrites_existing)
 {
     SmallCache cache;
-    int val{0};
 
     cache.insert(1, 100);
     cache.insert(1, 200);
-    BOOST_CHECK(cache.get(1, val));
-    BOOST_CHECK_EQUAL(val, 200);
+    const auto* val = cache.get(1);
+    BOOST_CHECK(val != nullptr);
+    BOOST_CHECK_EQUAL(*val, 200);
 }
 
 BOOST_AUTO_TEST_CASE(emplace_overwrites_existing)
 {
     SmallCache cache;
-    int val{0};
 
     cache.emplace(1, 100);
     cache.emplace(1, 200);
-    BOOST_CHECK(cache.get(1, val));
-    BOOST_CHECK_EQUAL(val, 200);
+    const auto* val = cache.get(1);
+    BOOST_CHECK(val != nullptr);
+    BOOST_CHECK_EQUAL(*val, 200);
 }
 
-BOOST_AUTO_TEST_CASE(get_miss_does_not_modify_output)
+BOOST_AUTO_TEST_CASE(get_miss_returns_nullptr)
 {
     SmallCache cache;
-    int val{42};
-
-    BOOST_CHECK(!cache.get(999, val));
-    BOOST_CHECK_EQUAL(val, 42);
+    BOOST_CHECK(cache.get(999) == nullptr);
 }
 
 BOOST_AUTO_TEST_CASE(exists_hit_and_miss)
@@ -89,11 +85,10 @@ BOOST_AUTO_TEST_CASE(exists_hit_and_miss)
 BOOST_AUTO_TEST_CASE(erase_removes_entry)
 {
     SmallCache cache;
-    int val{0};
 
     cache.insert(1, 100);
     cache.erase(1);
-    BOOST_CHECK(!cache.get(1, val));
+    BOOST_CHECK(cache.get(1) == nullptr);
     BOOST_CHECK(!cache.exists(1));
 }
 
@@ -102,9 +97,9 @@ BOOST_AUTO_TEST_CASE(erase_nonexistent_is_noop)
     SmallCache cache;
     cache.insert(1, 100);
     cache.erase(999);
-    int val{0};
-    BOOST_CHECK(cache.get(1, val));
-    BOOST_CHECK_EQUAL(val, 100);
+    const auto* val = cache.get(1);
+    BOOST_CHECK(val != nullptr);
+    BOOST_CHECK_EQUAL(*val, 100);
 }
 
 BOOST_AUTO_TEST_CASE(clear_empties_cache)
@@ -131,15 +126,16 @@ BOOST_AUTO_TEST_CASE(max_size_returns_configured_value)
 BOOST_AUTO_TEST_CASE(string_values)
 {
     StringCache cache;
-    std::string val;
 
     cache.insert(1, "hello");
     cache.insert(2, "world");
 
-    BOOST_CHECK(cache.get(1, val));
-    BOOST_CHECK_EQUAL(val, "hello");
-    BOOST_CHECK(cache.get(2, val));
-    BOOST_CHECK_EQUAL(val, "world");
+    const auto* v1 = cache.get(1);
+    BOOST_CHECK(v1 != nullptr);
+    BOOST_CHECK_EQUAL(*v1, "hello");
+    const auto* v2 = cache.get(2);
+    BOOST_CHECK(v2 != nullptr);
+    BOOST_CHECK_EQUAL(*v2, "world");
 }
 
 BOOST_AUTO_TEST_CASE(eviction_removes_least_recently_used)
@@ -152,13 +148,13 @@ BOOST_AUTO_TEST_CASE(eviction_removes_least_recently_used)
     }
 
     // after eviction, only the 5 most recently inserted should survive
-    int val{0};
     for (int i{0}; i <= 5; ++i) {
-        BOOST_CHECK_MESSAGE(!cache.get(i, val), "key " + std::to_string(i) + " should have been evicted");
+        BOOST_CHECK_MESSAGE(cache.get(i) == nullptr, "key " + std::to_string(i) + " should have been evicted");
     }
     for (int i{6}; i <= 10; ++i) {
-        BOOST_CHECK_MESSAGE(cache.get(i, val), "key " + std::to_string(i) + " should still exist");
-        BOOST_CHECK_EQUAL(val, i * 10);
+        const auto* val = cache.get(i);
+        BOOST_CHECK_MESSAGE(val != nullptr, "key " + std::to_string(i) + " should still exist");
+        BOOST_CHECK_EQUAL(*val, i * 10);
     }
 }
 
@@ -171,8 +167,7 @@ BOOST_AUTO_TEST_CASE(get_promotes_entry_in_lru_order)
     }
 
     // promote key 0 via get()
-    int val{0};
-    cache.get(0, val);
+    cache.get(0);
 
     // insert enough items to trigger eviction
     for (int i{5}; i <= 7; ++i) {
@@ -180,8 +175,9 @@ BOOST_AUTO_TEST_CASE(get_promotes_entry_in_lru_order)
     }
 
     // key 0 should survive (promoted by get), unpromoted keys 1-3 should be evicted
-    BOOST_CHECK_MESSAGE(cache.get(0, val), "key 0 should survive (promoted by get)");
-    BOOST_CHECK_EQUAL(val, 0);
+    const auto* val = cache.get(0);
+    BOOST_CHECK_MESSAGE(val != nullptr, "key 0 should survive (promoted by get)");
+    BOOST_CHECK_EQUAL(*val, 0);
     BOOST_CHECK(!cache.exists(1));
     BOOST_CHECK(!cache.exists(2));
     BOOST_CHECK(!cache.exists(3));
@@ -221,9 +217,9 @@ BOOST_AUTO_TEST_CASE(insert_overwrite_promotes_entry)
         cache.insert(i, i * 10);
     }
 
-    int val{0};
-    BOOST_CHECK(cache.get(0, val));
-    BOOST_CHECK_EQUAL(val, 999);
+    const auto* val = cache.get(0);
+    BOOST_CHECK(val != nullptr);
+    BOOST_CHECK_EQUAL(*val, 999);
     BOOST_CHECK(!cache.exists(1));
 }
 
@@ -254,13 +250,15 @@ BOOST_AUTO_TEST_CASE(large_values)
     cache.insert(2, LargeValue(2048));
     cache.insert(3, LargeValue(4096));
 
-    LargeValue val;
-    BOOST_CHECK(cache.get(1, val));
-    BOOST_CHECK_EQUAL(val.data.size(), 1024u);
-    BOOST_CHECK(cache.get(2, val));
-    BOOST_CHECK_EQUAL(val.data.size(), 2048u);
-    BOOST_CHECK(cache.get(3, val));
-    BOOST_CHECK_EQUAL(val.data.size(), 4096u);
+    const auto* v1 = cache.get(1);
+    BOOST_CHECK(v1 != nullptr);
+    BOOST_CHECK_EQUAL(v1->data.size(), 1024u);
+    const auto* v2 = cache.get(2);
+    BOOST_CHECK(v2 != nullptr);
+    BOOST_CHECK_EQUAL(v2->data.size(), 2048u);
+    const auto* v3 = cache.get(3);
+    BOOST_CHECK(v3 != nullptr);
+    BOOST_CHECK_EQUAL(v3->data.size(), 4096u);
 }
 
 BOOST_AUTO_TEST_CASE(large_value_eviction)
@@ -274,28 +272,30 @@ BOOST_AUTO_TEST_CASE(large_value_eviction)
 
     // the 3 most recently inserted (4, 5, 6) should survive
     int count{0};
-    LargeValue val;
     for (int i{0}; i < 7; ++i) {
-        if (cache.get(i, val)) ++count;
+        if (cache.get(i) != nullptr) ++count;
     }
     BOOST_CHECK_EQUAL(count, 3);
 
-    BOOST_CHECK(cache.get(4, val));
-    BOOST_CHECK_EQUAL(val.data.size(), 5 * 1024u);
-    BOOST_CHECK(cache.get(5, val));
-    BOOST_CHECK_EQUAL(val.data.size(), 6 * 1024u);
-    BOOST_CHECK(cache.get(6, val));
-    BOOST_CHECK_EQUAL(val.data.size(), 7 * 1024u);
+    const auto* v4 = cache.get(4);
+    BOOST_CHECK(v4 != nullptr);
+    BOOST_CHECK_EQUAL(v4->data.size(), 5 * 1024u);
+    const auto* v5 = cache.get(5);
+    BOOST_CHECK(v5 != nullptr);
+    BOOST_CHECK_EQUAL(v5->data.size(), 6 * 1024u);
+    const auto* v6 = cache.get(6);
+    BOOST_CHECK(v6 != nullptr);
+    BOOST_CHECK_EQUAL(v6->data.size(), 7 * 1024u);
 }
 
 BOOST_AUTO_TEST_CASE(single_element_cache)
 {
     unordered_lru_cache<int, int, IntHasher> cache(1);
-    int val{0};
 
     cache.insert(1, 100);
-    BOOST_CHECK(cache.get(1, val));
-    BOOST_CHECK_EQUAL(val, 100);
+    const auto* val = cache.get(1);
+    BOOST_CHECK(val != nullptr);
+    BOOST_CHECK_EQUAL(*val, 100);
 
     cache.insert(2, 200);
     cache.insert(3, 300);
@@ -305,38 +305,40 @@ BOOST_AUTO_TEST_CASE(single_element_cache)
         if (cache.exists(i)) ++count;
     }
     BOOST_CHECK_EQUAL(count, 1);
-    BOOST_CHECK(cache.get(3, val));
-    BOOST_CHECK_EQUAL(val, 300);
+    val = cache.get(3);
+    BOOST_CHECK(val != nullptr);
+    BOOST_CHECK_EQUAL(*val, 300);
 }
 
 BOOST_AUTO_TEST_CASE(repeated_access_same_key)
 {
     SmallCache cache;
-    int val{0};
 
     cache.insert(1, 100);
 
     for (int i{0}; i < 100; ++i) {
-        BOOST_CHECK(cache.get(1, val));
-        BOOST_CHECK_EQUAL(val, 100);
+        const auto* val = cache.get(1);
+        BOOST_CHECK(val != nullptr);
+        BOOST_CHECK_EQUAL(*val, 100);
     }
 }
 
 BOOST_AUTO_TEST_CASE(interleaved_insert_get_erase)
 {
     SmallCache cache;
-    int val{0};
 
     cache.insert(1, 10);
     cache.insert(2, 20);
-    cache.get(1, val);
+    cache.get(1);
     cache.erase(2);
     cache.insert(3, 30);
     BOOST_CHECK(!cache.exists(2));
-    BOOST_CHECK(cache.get(1, val));
-    BOOST_CHECK_EQUAL(val, 10);
-    BOOST_CHECK(cache.get(3, val));
-    BOOST_CHECK_EQUAL(val, 30);
+    const auto* v1 = cache.get(1);
+    BOOST_CHECK(v1 != nullptr);
+    BOOST_CHECK_EQUAL(*v1, 10);
+    const auto* v3 = cache.get(3);
+    BOOST_CHECK(v3 != nullptr);
+    BOOST_CHECK_EQUAL(*v3, 30);
 }
 
 BOOST_AUTO_TEST_CASE(stress_many_insertions)
@@ -347,15 +349,14 @@ BOOST_AUTO_TEST_CASE(stress_many_insertions)
         cache.insert(i, i * 10);
 
         if (i > 0 && i % 10 == 0) {
-            int val{0};
-            cache.get(i - 5, val);
+            cache.get(i - 5);
         }
     }
 
-    int val{0};
     for (int i{999}; i >= 950; --i) {
-        BOOST_CHECK_MESSAGE(cache.get(i, val), "key " + std::to_string(i) + " should exist");
-        BOOST_CHECK_EQUAL(val, i * 10);
+        const auto* val = cache.get(i);
+        BOOST_CHECK_MESSAGE(val != nullptr, "key " + std::to_string(i) + " should exist");
+        BOOST_CHECK_EQUAL(*val, i * 10);
     }
 }
 
@@ -372,12 +373,13 @@ BOOST_AUTO_TEST_CASE(pair_key_type)
     cache.insert({1, 2}, true);
     cache.insert({3, 4}, false);
 
-    bool val{false};
-    BOOST_CHECK(cache.get({1, 2}, val));
-    BOOST_CHECK_EQUAL(val, true);
-    BOOST_CHECK(cache.get({3, 4}, val));
-    BOOST_CHECK_EQUAL(val, false);
-    BOOST_CHECK(!cache.get({5, 6}, val));
+    const auto* v1 = cache.get({1, 2});
+    BOOST_CHECK(v1 != nullptr);
+    BOOST_CHECK_EQUAL(*v1, true);
+    const auto* v2 = cache.get({3, 4});
+    BOOST_CHECK(v2 != nullptr);
+    BOOST_CHECK_EQUAL(*v2, false);
+    BOOST_CHECK(cache.get({5, 6}) == nullptr);
 }
 
 BOOST_AUTO_TEST_CASE(eviction_order_with_mixed_access_patterns)
@@ -389,8 +391,7 @@ BOOST_AUTO_TEST_CASE(eviction_order_with_mixed_access_patterns)
     }
 
     // promote keys 0, 2, 4 via different methods
-    int val{0};
-    cache.get(0, val);
+    cache.get(0);
     cache.exists(2);
     cache.insert(4, 40);
 
@@ -411,33 +412,32 @@ BOOST_AUTO_TEST_CASE(eviction_order_with_mixed_access_patterns)
 BOOST_AUTO_TEST_CASE(get_returns_correct_value_after_overwrite)
 {
     SmallCache cache;
-    int val{0};
 
     cache.insert(1, 100);
     cache.insert(1, 200);
     cache.insert(1, 300);
 
-    BOOST_CHECK(cache.get(1, val));
-    BOOST_CHECK_EQUAL(val, 300);
+    const auto* val = cache.get(1);
+    BOOST_CHECK(val != nullptr);
+    BOOST_CHECK_EQUAL(*val, 300);
 }
 
 BOOST_AUTO_TEST_CASE(erase_then_reinsert)
 {
     SmallCache cache;
-    int val{0};
 
     cache.insert(1, 100);
     cache.erase(1);
     cache.insert(1, 200);
 
-    BOOST_CHECK(cache.get(1, val));
-    BOOST_CHECK_EQUAL(val, 200);
+    const auto* val = cache.get(1);
+    BOOST_CHECK(val != nullptr);
+    BOOST_CHECK_EQUAL(*val, 200);
 }
 
 BOOST_AUTO_TEST_CASE(clear_then_reuse)
 {
     SmallCache cache;
-    int val{0};
 
     for (int i{0}; i < 5; ++i) {
         cache.insert(i, i);
@@ -446,8 +446,9 @@ BOOST_AUTO_TEST_CASE(clear_then_reuse)
     BOOST_CHECK_EQUAL(cache.max_size(), 5u);
 
     cache.insert(10, 100);
-    BOOST_CHECK(cache.get(10, val));
-    BOOST_CHECK_EQUAL(val, 100);
+    const auto* val = cache.get(10);
+    BOOST_CHECK(val != nullptr);
+    BOOST_CHECK_EQUAL(*val, 100);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

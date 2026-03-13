@@ -321,8 +321,8 @@ std::optional<CMNHFManager::Signals> CMNHFManager::GetFromCache(const CBlockInde
     const uint256& blockHash = pindex->GetBlockHash();
     {
         LOCK(cs_cache);
-        if (mnhfCache.get(blockHash, signals)) {
-            return signals;
+        if (const auto* cached = mnhfCache.get(blockHash)) {
+            return *cached;
         }
     }
     {
