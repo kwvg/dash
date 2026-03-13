@@ -48,7 +48,7 @@ public:
 
     void emplace(const Key& key, Value&& v)
     {
-        _emplace(key, v);
+        _emplace(key, std::move(v));
     }
 
     void insert(const Key& key, const Value& v)
