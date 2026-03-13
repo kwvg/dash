@@ -32,7 +32,10 @@ public:
         assert(max_size != 0);
     }
 
-    size_t max_size() const { return m_max_size; }
+    [[nodiscard]] size_t max_size() const { return m_max_size; }
+    [[nodiscard]] size_t size() const { return m_map.size(); }
+    [[nodiscard]] bool empty() const { return m_map.empty(); }
+    [[nodiscard]] size_t truncate_threshold() const { return m_truncate_threshold; }
 
     template <typename Value2>
     void _emplace(const Key& key, Value2&& v)

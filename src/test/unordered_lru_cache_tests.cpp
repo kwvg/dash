@@ -123,6 +123,28 @@ BOOST_AUTO_TEST_CASE(max_size_returns_configured_value)
     BOOST_CHECK_EQUAL(cache2.max_size(), 42u);
 }
 
+BOOST_AUTO_TEST_CASE(size_and_empty)
+{
+    SmallCache cache;
+    BOOST_CHECK(cache.empty());
+    BOOST_CHECK_EQUAL(cache.size(), 0u);
+
+    cache.insert(1, 10);
+    BOOST_CHECK(!cache.empty());
+    BOOST_CHECK_EQUAL(cache.size(), 1u);
+
+    cache.insert(2, 20);
+    cache.insert(3, 30);
+    BOOST_CHECK_EQUAL(cache.size(), 3u);
+
+    cache.erase(2);
+    BOOST_CHECK_EQUAL(cache.size(), 2u);
+
+    cache.clear();
+    BOOST_CHECK(cache.empty());
+    BOOST_CHECK_EQUAL(cache.size(), 0u);
+}
+
 BOOST_AUTO_TEST_CASE(string_values)
 {
     StringCache cache;
@@ -223,23 +245,16 @@ BOOST_AUTO_TEST_CASE(insert_overwrite_promotes_entry)
     BOOST_CHECK(!cache.exists(1));
 }
 
-BOOST_AUTO_TEST_CASE(eviction_keeps_exactly_max_size)
+BOOST_AUTO_TEST_CASE(size_bounded_by_truncate_threshold)
 {
     SmallCache cache;
 
-    // insert enough items to trigger eviction
-    for (int i{0}; i < 20; ++i) {
-        cache.insert(i, i);
+    for (int i{0}; i < 100; ++i) {
+        cache.insert(i, i * 10);
+        BOOST_CHECK(cache.size() <= cache.truncate_threshold());
     }
-
-    // count surviving entries
-    int count{0};
-    for (int i{0}; i < 20; ++i) {
-        if (cache.exists(i)) ++count;
-    }
-    // after the last eviction, at most max_size + threshold overshoot entries survive
-    BOOST_CHECK(count >= 5);
-    BOOST_CHECK(count <= 8); // max_size(5) + max_size/2(2) + 1
+    BOOST_CHECK(cache.size() >= cache.max_size());
+    BOOST_CHECK(cache.size() <= cache.truncate_threshold());
 }
 
 BOOST_AUTO_TEST_CASE(large_values)
