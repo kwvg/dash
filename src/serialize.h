@@ -21,7 +21,7 @@
 #include <optional>
 #include <set>
 #include <string>
-#include <string.h>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -591,6 +591,7 @@ static inline Wrapper<Formatter, T&> Using(T&& t) { return Wrapper<Formatter, T&
 #define VARINT(obj) Using<VarIntFormatter<VarIntMode::DEFAULT>>(obj)
 #define COMPACTSIZE(obj) Using<CompactSizeFormatter<true>>(obj)
 #define LIMITED_STRING(obj,n) Using<LimitedStringFormatter<n>>(obj)
+#define LIMITED_VECTOR(obj,n) Using<LimitedVectorFormatter<n>>(obj)
 
 /** TODO: describe DynamicBitSet */
 struct DynamicBitSetFormatter
@@ -826,6 +827,12 @@ template<typename Stream, typename A, typename B, typename C> void Serialize(Str
 template<typename Stream, typename A, typename B, typename C> void Unserialize(Stream& is, std::basic_string<A, B, C>& str);
 
 /**
+ *  string_view
+ */
+template<typename Stream, typename C> void Serialize(Stream& os, const std::basic_string_view<C>& str);
+template<typename Stream, typename C> void Unserialize(Stream& is, std::basic_string_view<C>& str);
+
+/**
  * prevector
  * prevectors of unsigned char are a special case and are intended to be serialized as a single opaque blob.
  */
@@ -956,6 +963,36 @@ struct DefaultFormatter
 };
 
 /**
+ * Limited vector formatter. Throws an error if a vector is oversized.
+ */
+
+template<size_t Limit, class Formatter = DefaultFormatter>
+struct LimitedVectorFormatter
+{
+    template<typename Stream, typename V>
+    void Unser(Stream& s, V& v)
+    {
+        Formatter formatter;
+        v.clear();
+        size_t size = ReadCompactSize(s);
+        if (size > Limit) {
+            throw std::ios_base::failure("Vector length limit exceeded");
+        }
+        v.reserve(size);
+        for (size_t i = 0; i < size; ++i) {
+            v.emplace_back();
+            formatter.Unser(s, v.back());
+        }
+    }
+
+    template<typename Stream, typename V>
+    void Ser(Stream& s, const V& v)
+    {
+        VectorFormatter<Formatter>{}.Ser(s, v);
+    }
+};
+
+/**
  * string
  */
 template<typename Stream, typename A, typename B, typename C>
@@ -982,8 +1019,9 @@ template<typename Stream, typename C>
 void Serialize(Stream& os, const std::basic_string_view<C>& str)
 {
     WriteCompactSize(os, str.size());
-    if (!str.empty())
-        os.write(AsBytes(Span{str.data(), str.size() * sizeof(C)}));
+    if (!str.empty()) {
+        os.write(MakeByteSpan(str));
+    }
 }
 
 template<typename Stream, typename C>
