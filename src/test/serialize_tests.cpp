@@ -215,6 +215,47 @@ BOOST_AUTO_TEST_CASE(noncanonical)
     BOOST_CHECK_EXCEPTION(ReadCompactSize(ss), std::ios_base::failure, isCanonicalException);
 }
 
+BOOST_AUTO_TEST_CASE(class_methods)
+{
+    int intval(100);
+    bool boolval(true);
+    std::string stringval("testing");
+    const uint8_t charstrval[16]{"testing charstr"};
+    CMutableTransaction txval;
+    CTransactionRef tx_ref{MakeTransactionRef(txval)};
+    CSerializeMethodsTestSingle methodtest1(intval, boolval, stringval, charstrval, tx_ref);
+    CSerializeMethodsTestMany methodtest2(intval, boolval, stringval, charstrval, tx_ref);
+    CSerializeMethodsTestSingle methodtest3;
+    CSerializeMethodsTestMany methodtest4;
+    CDataStream ss(SER_DISK, PROTOCOL_VERSION);
+    BOOST_CHECK(methodtest1 == methodtest2);
+    ss << methodtest1;
+    ss >> methodtest4;
+    ss << methodtest2;
+    ss >> methodtest3;
+    BOOST_CHECK(methodtest1 == methodtest2);
+    BOOST_CHECK(methodtest2 == methodtest3);
+    BOOST_CHECK(methodtest3 == methodtest4);
+
+    CDataStream ss2{SER_DISK, PROTOCOL_VERSION};
+    ss2 << intval << boolval << stringval << charstrval << txval;
+    ss2 >> methodtest3;
+    BOOST_CHECK(methodtest3 == methodtest4);
+    {
+        DataStream ds;
+        const std::string in{"ab"};
+        ds << Span{in} << std::byte{'c'};
+        std::array<std::byte, 2> out;
+        std::byte out_3;
+        ds >> Span{out} >> out_3;
+        BOOST_CHECK_EQUAL(out.at(0), std::byte{'a'});
+        BOOST_CHECK_EQUAL(out.at(1), std::byte{'b'});
+        BOOST_CHECK_EQUAL(out_3, std::byte{'c'});
+    }
+}
+
+/* --------------------------- Dash-specific tests start here --------------------------- */
+
 // Change struct size and check if it can be deserialized
 // from old version archive and vice versa
 struct old_version
@@ -265,45 +306,6 @@ BOOST_AUTO_TEST_CASE(check_backward_compatibility)
     old_version old_dest({5});
     BOOST_REQUIRE_NO_THROW(ss >> old_dest);
     BOOST_REQUIRE(new_src.field1 == old_dest.field1);
-}
-
-BOOST_AUTO_TEST_CASE(class_methods)
-{
-    int intval(100);
-    bool boolval(true);
-    std::string stringval("testing");
-    const uint8_t charstrval[16]{"testing charstr"};
-    CMutableTransaction txval;
-    CTransactionRef tx_ref{MakeTransactionRef(txval)};
-    CSerializeMethodsTestSingle methodtest1(intval, boolval, stringval, charstrval, tx_ref);
-    CSerializeMethodsTestMany methodtest2(intval, boolval, stringval, charstrval, tx_ref);
-    CSerializeMethodsTestSingle methodtest3;
-    CSerializeMethodsTestMany methodtest4;
-    CDataStream ss(SER_DISK, PROTOCOL_VERSION);
-    BOOST_CHECK(methodtest1 == methodtest2);
-    ss << methodtest1;
-    ss >> methodtest4;
-    ss << methodtest2;
-    ss >> methodtest3;
-    BOOST_CHECK(methodtest1 == methodtest2);
-    BOOST_CHECK(methodtest2 == methodtest3);
-    BOOST_CHECK(methodtest3 == methodtest4);
-
-    CDataStream ss2{SER_DISK, PROTOCOL_VERSION};
-    ss2 << intval << boolval << stringval << charstrval << txval;
-    ss2 >> methodtest3;
-    BOOST_CHECK(methodtest3 == methodtest4);
-    {
-        DataStream ds;
-        const std::string in{"ab"};
-        ds << Span{in} << std::byte{'c'};
-        std::array<std::byte, 2> out;
-        std::byte out_3;
-        ds >> Span{out} >> out_3;
-        BOOST_CHECK_EQUAL(out.at(0), std::byte{'a'});
-        BOOST_CHECK_EQUAL(out.at(1), std::byte{'b'});
-        BOOST_CHECK_EQUAL(out_3, std::byte{'c'});
-    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
