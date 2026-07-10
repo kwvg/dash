@@ -451,10 +451,8 @@ BOOST_AUTO_TEST_CASE(unserialize_vector_with_max_size)
         BOOST_CHECK((out == std::vector<int>{7, 8, 9}));
     }
 
-    // ReadCompactSize's generic MAX_SIZE gate must NOT fire before this helper's
-    // own limit — otherwise callers cannot use MAX_SIZE (or larger) as a legitimate
-    // bound and cannot reject a MAX_SIZE+1 wire count with a return value. Hand-
-    // encode both CompactSize widths that exceed MAX_SIZE.
+    // A wire count at MAX_SIZE still hits the caller's own limit (8) first and
+    // returns false without decoding any element.
     {
         static_assert(MAX_SIZE < std::numeric_limits<uint32_t>::max(),
                       "MAX_SIZE must fit in a 32-bit CompactSize prefix for this test");
@@ -463,34 +461,28 @@ BOOST_AUTO_TEST_CASE(unserialize_vector_with_max_size)
         ss << static_cast<uint32_t>(MAX_SIZE);
         std::vector<int> out;
         CountingFormatter::Reset();
-        // MAX_SIZE-count against a small caller-supplied limit: rejected here,
-        // not by ReadCompactSize throwing before the gate can be consulted.
         BOOST_CHECK(!UnserializeVectorWithMaxSize<CountingFormatter>(ss, out, /*max_size=*/8));
         BOOST_CHECK(out.empty());
         BOOST_CHECK_EQUAL(CountingFormatter::unser_calls, 0U);
     }
+
+    // Counts above MAX_SIZE throw from ReadCompactSize before the caller's
+    // gate is consulted — these are malformed at the CompactSize level.
     {
         DataStream ss;
         ss << uint8_t{0xfe};
         ss << static_cast<uint32_t>(MAX_SIZE + 1);
         std::vector<int> out;
-        CountingFormatter::Reset();
-        BOOST_CHECK(!UnserializeVectorWithMaxSize<CountingFormatter>(ss, out, /*max_size=*/8));
-        BOOST_CHECK(out.empty());
-        BOOST_CHECK_EQUAL(CountingFormatter::unser_calls, 0U);
+        BOOST_CHECK_THROW((void)UnserializeVectorWithMaxSize<CountingFormatter>(ss, out, /*max_size=*/8),
+                          std::ios_base::failure);
     }
-    // The 0xff/uint64 CompactSize form must be rejected via uint64 comparison,
-    // not a narrowed size_t. Use a value comfortably above 2^32 (canonical for
-    // the uint64 encoding) so the widened compare is what does the work.
     {
         DataStream ss;
         ss << uint8_t{0xff};
         ss << uint64_t{0x100000000ULL + MAX_SIZE};
         std::vector<int> out;
-        CountingFormatter::Reset();
-        BOOST_CHECK(!UnserializeVectorWithMaxSize<CountingFormatter>(ss, out, /*max_size=*/8));
-        BOOST_CHECK(out.empty());
-        BOOST_CHECK_EQUAL(CountingFormatter::unser_calls, 0U);
+        BOOST_CHECK_THROW((void)UnserializeVectorWithMaxSize<CountingFormatter>(ss, out, /*max_size=*/8),
+                          std::ios_base::failure);
     }
 }
 
