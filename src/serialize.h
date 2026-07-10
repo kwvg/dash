@@ -978,9 +978,8 @@ struct DefaultFormatter
  *  `max_size` before any element decode or allocation occurs.
  *
  *  Returns false (with `v` cleared, stream positioned just past the count) if
- *  the encoded count exceeds `max_size`. On success the vector is populated
- *  exactly as an ordinary Unserialize would produce, so the wire format is
- *  interchangeable with the unbounded reader. */
+ *  the encoded count exceeds `max_size`. May throw exception if encountering
+ *  unrelated serialization failure. */
 template<class Formatter = DefaultFormatter, typename Stream, typename V>
 [[nodiscard]] bool UnserializeVectorWithMaxSize(Stream& s, V& v, size_t max_size)
 {
