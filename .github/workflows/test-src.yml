@@ -38,7 +38,7 @@ jobs:
       group: ${{ github.workflow }}-${{ inputs.cancel-stale && github.ref || github.run_id }}-test-src-${{ inputs.build-target }}
       cancel-in-progress: true
     container:
-      image: ${{ inputs.container-path }}
+      image: ${{ inputs.container-path }} # zizmor: ignore[unpinned-images] built earlier in this run by build-container.yml
       # SYS_PTRACE is required by LeakSanitizer's stop-the-world
       # (https://github.com/google/sanitizers/issues/764)
       options: --user root --cap-add SYS_PTRACE
