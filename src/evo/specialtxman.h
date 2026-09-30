@@ -144,6 +144,9 @@ public:
     CMNListBuilder(const CSpecialTxProcessor& processor, const CDeterministicMNList& prevList,
                    gsl::not_null<const CBlockIndex*> pindexPrev, bool is_v24_active, const CCoinsViewCache& view,
                    bool debugLogs);
+    //! Starts from the list at pindexPrev, as BuildNewListFromBlock() does.
+    CMNListBuilder(const CSpecialTxProcessor& processor, gsl::not_null<const CBlockIndex*> pindexPrev,
+                   bool is_v24_active, const CCoinsViewCache& view, bool debugLogs) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     //! Same result, and same exceptions, as RebuildListFromBlock() processing this transaction next.
     [[nodiscard]] bool ApplyTx(const CTransaction& tx, BlockValidationState& state);

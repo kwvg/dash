@@ -854,6 +854,14 @@ CMNListBuilder::CMNListBuilder(const CSpecialTxProcessor& processor, const CDete
 {
 }
 
+CMNListBuilder::CMNListBuilder(const CSpecialTxProcessor& processor, gsl::not_null<const CBlockIndex*> pindexPrev,
+                               bool is_v24_active, const CCoinsViewCache& view, bool debugLogs) :
+    CMNListBuilder(processor, processor.m_dmnman.GetListForBlock(pindexPrev), pindexPrev, is_v24_active, view,
+                   debugLogs)
+{
+    AssertLockHeld(::cs_main);
+}
+
 bool CMNListBuilder::ApplyTx(const CTransaction& tx, BlockValidationState& state)
 {
     return m_processor->ApplyTxToList(tx, m_pindex_prev, m_is_v24_active, *m_view, m_debug_logs, m_list, state);
