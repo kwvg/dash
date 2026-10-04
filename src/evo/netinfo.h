@@ -229,7 +229,7 @@ public:
     {
         if (const auto* data_ptr_service{std::get_if<CService>(&m_data)};
             m_type == NetInfoType::Service && data_ptr_service && data_ptr_service->IsValid()) {
-            s << m_type << WithParams(CNetAddr::V2, *data_ptr_service);
+            s << m_type << CNetAddr::V2(*data_ptr_service);
         } else if (const auto* data_ptr_domain{std::get_if<DomainPort>(&m_data)};
                    m_type == NetInfoType::Domain && data_ptr_domain && data_ptr_domain->IsValid()) {
             s << m_type << *data_ptr_domain;
@@ -245,7 +245,7 @@ public:
         if (m_type == NetInfoType::Service) {
             try {
                 auto& service{m_data.emplace<CService>()};
-                s >> WithParams(CNetAddr::V2, service);
+                s >> CNetAddr::V2(service);
                 if (!service.IsValid()) { Clear(); } // Invalid CService, mark as invalid
             } catch (const std::ios_base::failure&) { Clear(); } // Deser failed, mark as invalid
         } else if (m_type == NetInfoType::Domain) {
@@ -325,23 +325,23 @@ public:
     void Serialize(Stream& s) const
     {
         if (const auto service_opt{m_addr.GetAddrPort()}) {
-            s << WithParams(CNetAddr::V1, *service_opt);
+            s << CNetAddr::V1(*service_opt);
         } else {
-            s << WithParams(CNetAddr::V1, CService{});
+            s << CNetAddr::V1(CService{});
         }
     }
 
     // cppcheck-suppress functionStatic
     void Serialize(CSizeComputer& s) const
     {
-        s.seek(::GetSerializeSize(WithParams(CNetAddr::V1, CService{}), s.GetVersion()));
+        s.seek(::GetSerializeSize(CNetAddr::V1(CService{}), s.GetVersion()));
     }
 
     template <typename Stream>
     void Unserialize(Stream& s)
     {
         CService service;
-        s >> WithParams(CNetAddr::V1, service);
+        s >> CNetAddr::V1(service);
         m_addr = NetInfoEntry{service};
     }
 

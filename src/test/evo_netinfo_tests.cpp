@@ -328,7 +328,7 @@ BOOST_AUTO_TEST_CASE(netinfo_ser)
         // Reading an invalid CService should fail trivial validation and return an empty object
         CDataStream ds(SER_DISK, CLIENT_VERSION);
         NetInfoEntry entry{};
-        ds << NetInfoEntry::NetInfoType::Service << WithParams(CNetAddr::V1, CService{});
+        ds << NetInfoEntry::NetInfoType::Service << CNetAddr::V1(CService{});
         ds >> entry;
         BOOST_CHECK(entry.IsEmpty() && !entry.IsTriviallyValid());
     }
@@ -348,7 +348,7 @@ BOOST_AUTO_TEST_CASE(netinfo_ser)
         CService service{LookupNumeric("1.1.1.1", Params().GetDefaultPort())};
         BOOST_CHECK(service.IsValid());
         NetInfoEntry entry{service}, entry2{};
-        ds << NetInfoEntry::NetInfoType::Service << WithParams(CNetAddr::V2, service);
+        ds << NetInfoEntry::NetInfoType::Service << CNetAddr::V2(service);
         ds >> entry2;
         BOOST_CHECK(entry == entry2);
         BOOST_CHECK(!entry.IsEmpty() && entry.IsTriviallyValid());
@@ -362,7 +362,7 @@ BOOST_AUTO_TEST_CASE(netinfo_ser)
         BOOST_CHECK(service.IsValid() && service.IsTor());
 
         CDataStream ds(SER_DISK, CLIENT_VERSION);
-        ds << NetInfoEntry::NetInfoType::Service << WithParams(CNetAddr::V2, service);
+        ds << NetInfoEntry::NetInfoType::Service << CNetAddr::V2(service);
 
         NetInfoEntry entry{};
         ds >> entry;
@@ -411,7 +411,7 @@ BOOST_AUTO_TEST_CASE(netinfo_retvals)
 bool CheckIfSerSame(const CService& lhs, const MnNetInfo& rhs)
 {
     CHashWriter ss_lhs(SER_GETHASH, 0), ss_rhs(SER_GETHASH, 0);
-    ss_lhs << WithParams(CNetAddr::V1, lhs);
+    ss_lhs << CNetAddr::V1(lhs);
     ss_rhs << rhs;
     return ss_lhs.GetSHA256() == ss_rhs.GetSHA256();
 }

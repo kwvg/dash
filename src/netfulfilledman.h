@@ -30,7 +30,7 @@ public:
     SERIALIZE_METHODS(NetFulfilledRequestStore, obj)
     {
         LOCK(obj.cs_mapFulfilledRequests);
-        READWRITE(WithParams(CNetAddr::V1, obj.mapFulfilledRequests));
+        READWRITE(CNetAddr::V1(obj.mapFulfilledRequests));
     }
 
     void Clear();
