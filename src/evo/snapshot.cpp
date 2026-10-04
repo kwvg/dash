@@ -92,8 +92,8 @@ void ValidateHashPrefixRuns(std::vector<uint64_t>& prefixes)
 template <typename T>
 void ValidateMNEncoding(const T& obj)
 {
-    // Use the decoder's actual accounting, including version-dependent fields
-    // and OverrideStream wrappers, rather than maintaining a second size formula.
+    // Use the decoder's actual accounting, including version-dependent fields,
+    // rather than maintaining a second size formula.
     CDataStream encoded{SER_DISK, CLIENT_VERSION};
     encoded << obj;
     SnapshotBoundedInput bounded{encoded, EVO_SNAPSHOT_MAX_MN_COMPACT_ITEMS};

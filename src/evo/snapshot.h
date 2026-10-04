@@ -216,17 +216,6 @@ uint64_t ReadCompactSize(SnapshotBoundedInput<Stream>& stream)
 }
 
 /**
- * NetInfoEntry overrides the stream version while decoding its payload. Keep
- * the snapshot-local CompactSize budget visible through that transparent
- * wrapper so strings are rejected before their deserializer resizes them.
- */
-template <typename Stream>
-uint64_t ReadCompactSize(OverrideStream<SnapshotBoundedInput<Stream>>& stream)
-{
-    return stream.GetStream().ReadBudgetedCompactSize();
-}
-
-/**
  * Snapshot-local canonical deterministic-MN encoding.
  *
  * internalId and nTotalRegisteredCount are intentionally retained. They are
