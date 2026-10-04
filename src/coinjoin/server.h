@@ -147,7 +147,7 @@ private:
     Mutex cs_check_pool;
 
     /// Add signature to a txin
-    bool AddScriptSig(const CTxIn& txin) EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin);
+    bool AddScriptSig(const CTxIn& txin) EXCLUSIVE_LOCKS_REQUIRED(cs_coinjoin);
 
     /// Collaterals chosen to be charged whose consumption has not finished yet. They are chosen
     /// under cs_coinjoin, but ConsumeCollateral() takes cs_main and runs after cs_coinjoin is
