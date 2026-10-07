@@ -677,6 +677,19 @@ bool CCoinJoinServer::HasTimedOut() const
     return GetTime() - nTimeLastSuccessfulStep >= nTimeout;
 }
 
+bool ShouldResetTimedOutSession(const CoinJoinSessionProgress& session)
+{
+    if (!session.timed_out) return false;
+
+    const bool can_advance{(session.state == POOL_STATE_QUEUE && session.queue_ready) ||
+                           (session.state == POOL_STATE_ACCEPTING_ENTRIES &&
+                            (session.entries == session.collaterals ||
+                             (session.entries >= static_cast<size_t>(CoinJoin::GetMinPoolParticipants()) &&
+                              session.sides.IsCovered()))) ||
+                           (session.state == POOL_STATE_SIGNING && session.signatures_complete)};
+    return !can_advance;
+}
+
 //
 // Check for extraneous timeout
 //
@@ -693,9 +706,22 @@ void CCoinJoinServer::CheckTimeout()
     {
         LOCK(cs_coinjoin);
 
-        // Too early to do anything. Recheck while holding the lock so selecting an offender and
-        // closing the session form one atomic cutoff for late entries and signatures.
-        if (!CCoinJoinServer::HasTimedOut()) return;
+        // Decide while holding the lock so selecting an offender and closing the session form one
+        // atomic cutoff for late entries and signatures.
+        // CheckForCompleteQueue() and CheckPool() run before this method on the scheduler thread,
+        // but a final collateral, entry, or signature can arrive after their snapshots. The
+        // message-handling thread then skips its own CheckPool() if this scheduler tick still holds
+        // cs_check_pool. A session that can now advance takes priority over resetting it; the next
+        // scheduler tick will perform the transition, finalization, or commit.
+        if (!ShouldResetTimedOutSession({.state = nState,
+                                         .timed_out = CCoinJoinServer::HasTimedOut(),
+                                         .queue_ready = IsSessionReady(),
+                                         .entries = vecEntries.size(),
+                                         .collaterals = m_session_collaterals.size(),
+                                         .sides = GetMixSideCountsLocked(),
+                                         .signatures_complete = IsSignaturesComplete()})) {
+            return;
+        }
 
         LogPrint(BCLog::COINJOIN, "CCoinJoinServer::CheckTimeout -- %s timed out -- resetting\n",
                  (nState == POOL_STATE_SIGNING) ? "Signing" : "Session");

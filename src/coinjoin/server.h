@@ -28,6 +28,27 @@ class CTxMemPool;
 
 class UniValue;
 
+/** What the server's timeout check reads from a mixing session to decide whether to reset it */
+struct CoinJoinSessionProgress {
+    PoolState state{POOL_STATE_IDLE};
+    bool timed_out{false};
+    //! The queue has enough collaterals covering both sides to start accepting entries
+    bool queue_ready{false};
+    size_t entries{0};
+    size_t collaterals{0};
+    //! The sides of the session denomination occupied by the submitted entries
+    CoinJoin::MixSideCounts sides{};
+    bool signatures_complete{false};
+};
+
+/**
+ * Should a session be reset for timing out? Not while it can still make the transition that
+ * CheckForCompleteQueue() or CheckPool() would make for it: start accepting entries, finalize
+ * (or, with an entry for every collateral but a side uncovered, reset with the participants
+ * told), or commit.
+ */
+bool ShouldResetTimedOutSession(const CoinJoinSessionProgress& session);
+
 /** Used to keep track of current status of mixing pool
  */
 class CCoinJoinServer : public CCoinJoinBaseSession, public NetHandler

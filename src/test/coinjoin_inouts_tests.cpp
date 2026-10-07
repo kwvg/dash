@@ -465,6 +465,58 @@ BOOST_AUTO_TEST_CASE(server_finalization_rechecks_live_side_coverage)
     BOOST_CHECK_EQUAL(server.GetEntriesCount(), 4);
 }
 
+BOOST_AUTO_TEST_CASE(server_timeout_resets_only_sessions_that_cannot_advance)
+{
+    // The final collateral, entry or signature can arrive after the scheduler's own CheckPool()
+    // snapshot. A timed-out session that can still advance must be left for the next tick
+    // instead of being discarded, and one that cannot must still be reset.
+    const size_t min{static_cast<size_t>(CoinJoin::GetMinPoolParticipants())};
+    const CoinJoin::MixSideCounts covered{.inputs = static_cast<int>(min), .outputs = static_cast<int>(min)};
+    // One promoter and min - 1 demoters: the promoter would hold the only session-denom input
+    const CoinJoin::MixSideCounts lone_promoter{.inputs = 1, .outputs = static_cast<int>(min) - 1};
+    struct Case {
+        std::string name;
+        CoinJoinSessionProgress session;
+        bool reset;
+    };
+    const std::vector<Case> cases{
+        {"not timed out",
+         {.state = POOL_STATE_SIGNING, .timed_out = false, .entries = min, .collaterals = min, .sides = covered},
+         false},
+        {"ready queue", {.state = POOL_STATE_QUEUE, .timed_out = true, .queue_ready = true, .collaterals = min}, false},
+        {"queue not ready", {.state = POOL_STATE_QUEUE, .timed_out = true, .collaterals = min - 1}, true},
+        {"every entry in, a side uncovered",
+         {.state = POOL_STATE_ACCEPTING_ENTRIES, .timed_out = true, .entries = min, .collaterals = min,
+          .sides = lone_promoter},
+         false},
+        {"enough covered entries, one straggler",
+         {.state = POOL_STATE_ACCEPTING_ENTRIES, .timed_out = true, .entries = min, .collaterals = min + 1,
+          .sides = covered},
+         false},
+        {"too few entries",
+         {.state = POOL_STATE_ACCEPTING_ENTRIES, .timed_out = true, .entries = min - 1, .collaterals = min,
+          .sides = covered},
+         true},
+        {"enough entries, a side uncovered, one straggler",
+         {.state = POOL_STATE_ACCEPTING_ENTRIES, .timed_out = true, .entries = min, .collaterals = min + 1,
+          .sides = lone_promoter},
+         true},
+        {"every input signed",
+         {.state = POOL_STATE_SIGNING, .timed_out = true, .entries = min, .collaterals = min,
+          .sides = covered, .signatures_complete = true},
+         false},
+        {"a signature missing",
+         {.state = POOL_STATE_SIGNING, .timed_out = true, .entries = min, .collaterals = min, .sides = covered},
+         true},
+    };
+    for (const auto& [name, session, reset] : cases) {
+        BOOST_TEST_CONTEXT(name)
+        {
+            BOOST_CHECK_EQUAL(ShouldResetTimedOutSession(session), reset);
+        }
+    }
+}
+
 BOOST_AUTO_TEST_CASE(entry_deserializes_vectors_through_wire_cap)
 {
     const size_t wire_cap{CoinJoin::GetMaxPoolInputOutputCount()};
