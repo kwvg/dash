@@ -50,7 +50,10 @@ CODESIGNATURE_GIT_ARCHIVE="${DIST_ARCHIVE_BASE}/${DISTNAME}-codesignatures-$(git
 # Create the codesignature tarball if not already there
 if [ ! -e "$CODESIGNATURE_GIT_ARCHIVE" ]; then
     mkdir -p "$(dirname "$CODESIGNATURE_GIT_ARCHIVE")"
-    git -c safe.directory="$DETACHED_SIGS_REPO" -C "$DETACHED_SIGS_REPO" archive --output="$CODESIGNATURE_GIT_ARCHIVE" HEAD
+    git -c safe.directory="$DETACHED_SIGS_REPO" -C "$DETACHED_SIGS_REPO" archive --output="$CODESIGNATURE_GIT_ARCHIVE" HEAD || {
+        rm -f "$CODESIGNATURE_GIT_ARCHIVE"
+        exit 1
+    }
 fi
 
 mkdir -p "$OUTDIR"
