@@ -89,7 +89,10 @@ RUN mkdir -p \
         /src/dash/depends/{built,sources,work}; \
     chown -R ${USER_ID}:${GROUP_ID} \
         /home/ubuntu/.cache \
-        /src;
+        /src; \
+    git config --system --add safe.directory /src/dash; \
+    git config --system --add safe.directory /src/dash-detached-sigs; \
+    git config --system --add safe.directory /src/guix.sigs
 
 WORKDIR "/src/dash"
 
