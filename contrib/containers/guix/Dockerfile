@@ -68,7 +68,8 @@ RUN groupadd --system guixbuild && \
 # Setup unprivileged user and grant it passwordless sudo
 ARG USER_ID=1000 \
     GROUP_ID=1000
-RUN groupmod -g ${GROUP_ID} ubuntu; \
+RUN set -ex; \
+    groupmod -g ${GROUP_ID} ubuntu || echo "GID ${GROUP_ID} already allocated, ignoring"; \
     usermod -u ${USER_ID} -aG sudo ubuntu; \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
