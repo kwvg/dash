@@ -5494,6 +5494,11 @@ bool Chainstate::ReplayBlocks()
 
         LogPrintf("Rolling forward %s (%i)\n", pindex.GetBlockHash().ToString(), nHeight);
         uiInterface.ShowProgress(_("Replaying blocks…").translated, (int) ((nHeight - nForkHeight) * 100.0 / (pindexNew->nHeight - nForkHeight)) , false);
+        // Special transaction and quorum commitment checks read the chain, which
+        // LoadChainTip() has not set yet; give them the view ConnectBlock had.
+        // Stopping at the parent also keeps LoadChainTip() from skipping its
+        // candidate pruning.
+        m_chain.SetTip(*Assert(pindex.pprev));
         if (!RollforwardBlock(&pindex, cache)) return false;
     }
 
