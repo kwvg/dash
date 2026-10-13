@@ -46,9 +46,6 @@ private:
     uint64_t internalId{std::numeric_limits<uint64_t>::max()};
 
 public:
-    static constexpr uint16_t MN_VERSION_FORMAT = 2;
-    static constexpr uint16_t MN_CURRENT_FORMAT = MN_VERSION_FORMAT;
-
     uint256 proTxHash;
     COutPoint collateralOutpoint;
     uint16_t nOperatorReward{0};
