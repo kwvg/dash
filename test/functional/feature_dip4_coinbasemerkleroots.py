@@ -12,8 +12,8 @@ Checks DIP4 merkle roots in coinbases
 
 from io import BytesIO
 
-from test_framework.messages import CBlock, CBlockHeader, CCbTx, CMerkleBlock, from_hex, hash256, msg_getmnlistd, QuorumId, ser_uint256
-from test_framework.p2p import P2PInterface
+from test_framework.messages import CBlock, CBlockHeader, CCbTx, CMerkleBlock, from_hex, hash256, QuorumId, ser_uint256
+from test_framework.p2p import P2PMnListDiffStore
 from test_framework.test_framework import (
     DashTestFramework,
     MasternodeInfo,
@@ -23,28 +23,6 @@ from test_framework.util import assert_equal
 DIP0008_HEIGHT = 432
 DIP0024_HEIGHT = 900
 V20_HEIGHT = 900
-
-# TODO: this helper used in many tests, find a new home for it
-class TestP2PConn(P2PInterface):
-    def __init__(self):
-        super().__init__()
-        self.last_mnlistdiff = None
-
-    def on_mnlistdiff(self, message):
-        self.last_mnlistdiff = message
-
-    def wait_for_mnlistdiff(self, timeout=30):
-        def received_mnlistdiff():
-            return self.last_mnlistdiff is not None
-        self.wait_until(received_mnlistdiff, timeout=timeout)
-
-    def getmnlistdiff(self, baseBlockHash, blockHash):
-        msg = msg_getmnlistd(baseBlockHash, blockHash)
-        self.last_mnlistdiff = None
-        self.send_message(msg)
-        self.wait_for_mnlistdiff()
-        return self.last_mnlistdiff
-
 
 class LLMQCoinbaseCommitmentsTest(DashTestFramework):
     def add_options(self, parser):
@@ -72,7 +50,7 @@ class LLMQCoinbaseCommitmentsTest(DashTestFramework):
         self.nodes[0].sporkupdate("SPORK_19_CHAINLOCKS_ENABLED", 4070908800)
         self.wait_for_sporks_same()
 
-        self.test_node = self.nodes[0].add_p2p_connection(TestP2PConn())
+        self.test_node = self.nodes[0].add_p2p_connection(P2PMnListDiffStore())
 
         self.confirm_mns()
 

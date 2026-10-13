@@ -12,8 +12,8 @@ addresses) forks.
 '''
 from io import BytesIO
 
-from test_framework.p2p import P2PInterface
-from test_framework.messages import CBlock, CBlockHeader, CCbTx, CMerkleBlock, from_hex, hash256, msg_getmnlistd, \
+from test_framework.p2p import P2PMnListDiffStore
+from test_framework.messages import CBlock, CBlockHeader, CCbTx, CMerkleBlock, from_hex, hash256, \
     QuorumId, ser_uint256
 from test_framework.test_framework import (
     DashTestFramework,
@@ -23,27 +23,6 @@ from test_framework.util import (
     assert_equal,
     softfork_active,
 )
-
-
-class TestP2PConn(P2PInterface):
-    def __init__(self):
-        super().__init__()
-        self.last_mnlistdiff = None
-
-    def on_mnlistdiff(self, message):
-        self.last_mnlistdiff = message
-
-    def wait_for_mnlistdiff(self, timeout=30):
-        def received_mnlistdiff():
-            return self.last_mnlistdiff is not None
-        return self.wait_until(received_mnlistdiff, timeout=timeout)
-
-    def getmnlistdiff(self, base_block_hash, block_hash):
-        msg = msg_getmnlistd(base_block_hash, block_hash)
-        self.last_mnlistdiff = None
-        self.send_message(msg)
-        self.wait_for_mnlistdiff()
-        return self.last_mnlistdiff
 
 
 class ProTxVersionTest(DashTestFramework):
@@ -78,7 +57,7 @@ class ProTxVersionTest(DashTestFramework):
         # Otherwise only masternode connections will be established between nodes, which won't propagate TXs/blocks
         # Usually node0 is the one that does this, but in this test we isolate it multiple times
 
-        self.test_node = self.nodes[0].add_p2p_connection(TestP2PConn())
+        self.test_node = self.nodes[0].add_p2p_connection(P2PMnListDiffStore())
         null_hash = format(0, "064x")
 
         self.nodes[0].sporkupdate("SPORK_17_QUORUM_DKG_ENABLED", 0)

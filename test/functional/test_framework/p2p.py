@@ -19,6 +19,8 @@ P2PDataStore: A p2p interface class that keeps a store of transactions and block
               and can respond correctly to getdata and getheaders messages
 P2PTxInvStore: A p2p interface class that inherits from P2PDataStore, and keeps
               a count of how many times each txid has been announced.
+P2PMnListDiffStore: A p2p interface class that requests and stores the latest
+              mnlistdiff.
 """
 import asyncio
 from collections import defaultdict
@@ -1025,3 +1027,19 @@ class P2PTxInvStore(P2PInterface):
         self.wait_until(lambda: set(self.tx_invs_received.keys()) == set([int(tx, 16) for tx in txns]), timeout=timeout)
         # Flush messages and wait for the getdatas to be processed
         self.sync_with_ping()
+
+
+class P2PMnListDiffStore(P2PInterface):
+    """A P2PInterface which requests and stores the latest mnlistdiff."""
+    def __init__(self):
+        super().__init__()
+        self.last_mnlistdiff = None
+
+    def on_mnlistdiff(self, message):
+        self.last_mnlistdiff = message
+
+    def getmnlistdiff(self, base_block_hash, block_hash):
+        self.last_mnlistdiff = None
+        self.send_message(msg_getmnlistd(base_block_hash, block_hash))
+        self.wait_until(lambda: self.last_mnlistdiff is not None, timeout=30)
+        return self.last_mnlistdiff
