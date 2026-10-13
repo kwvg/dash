@@ -5396,6 +5396,9 @@ bool Chainstate::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& in
     BlockValidationState state;
     const CAmount blockSubsidy = GetBlockSubsidy(pindex, m_chainman.GetConsensus());
     MNListUpdates mnlist_updates;
+    // Use the scheme ConnectBlock used for this block instead of whatever replay inherited
+    ScopedBLSLegacyScheme bls_scheme_guard{
+        !DeploymentActiveAt(*pindex, m_chainman.GetConsensus(), Consensus::DEPLOYMENT_V19)};
     if (!m_special_tx.ProcessSpecialTxsInBlock(*this, m_chain, block, pindex,
                                                               GetSpecialTxRules(pindex->pprev, m_chainman), inputs,
                                                               blockSubsidy, /*fJustCheck=*/false,
