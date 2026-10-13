@@ -1426,7 +1426,11 @@ static RPCHelpMan getchainlockbyheight()
 {
     return RPCHelpMan{
         "getchainlockbyheight",
-        "Read a historical ChainLock from coinbases on disk.\n",
+        "Read a historical ChainLock from coinbases on disk.\n"
+        "Only ChainLocks embedded in a later block's coinbase on the active chain can be returned.\n"
+        "The current best ChainLock is unavailable until it has been embedded; use getbestchainlock to read it.\n"
+        "Heights skipped by coinbase ChainLocks cannot be returned, even if they are ChainLocked.\n"
+        "If no embedded ChainLock matches the requested height, the RPC returns \"Chainlock not found for height\".\n",
         {
             {"height", RPCArg::Type::NUM, RPCArg::Optional::NO, "Block height"},
         },
