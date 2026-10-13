@@ -78,9 +78,8 @@ private:
     void CheckQuorumConnections(const Consensus::LLMQParams& llmqParams,
                                          gsl::not_null<const CBlockIndex*> pindexNew) const;
     void TriggerQuorumDataRecoveryThreads(gsl::not_null<const CBlockIndex*> block_index) const;
-    void DataRecoveryThread(gsl::not_null<const CBlockIndex*> block_index, CQuorumCPtr pQuorum,
-                            uint16_t data_mask, const uint256& protx_hash, size_t start_offset) const;
-    void StartVvecSyncThread(gsl::not_null<const CBlockIndex*> block_index, CQuorumCPtr pQuorum) const;
+    void DataRecoveryThread(CQuorumCPtr pQuorum, uint16_t data_mask, const uint256& protx_hash, size_t start_offset) const;
+    void StartVvecSyncThread(CQuorumCPtr pQuorum) const;
     void TryStartVvecSyncThread(gsl::not_null<const CBlockIndex*> block_index, CQuorumCPtr pQuorum,
                                 bool fWeAreQuorumTypeMember) const;
     void StartSkShareRecoveryThread(gsl::not_null<const CBlockIndex*> pIndex, CQuorumCPtr pQuorum,
