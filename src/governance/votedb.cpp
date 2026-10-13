@@ -6,12 +6,6 @@
 
 #include <streams.h>
 
-CGovernanceObjectVoteFile::CGovernanceObjectVoteFile() :
-    listVotes(),
-    mapVoteIndex()
-{
-}
-
 CGovernanceObjectVoteFile::CGovernanceObjectVoteFile(const CGovernanceObjectVoteFile& other) :
     nMemoryVotes(other.nMemoryVotes),
     listVotes(other.listVotes),
@@ -58,10 +52,7 @@ bool CGovernanceObjectVoteFile::SerializeVoteToStream(const uint256& nHash, CDat
 
 std::vector<CGovernanceVote> CGovernanceObjectVoteFile::GetVotes() const
 {
-    std::vector<CGovernanceVote> vecResult;
-    vecResult.reserve(listVotes.size());
-    std::copy(std::begin(listVotes), std::end(listVotes), std::back_inserter(vecResult));
-    return vecResult;
+    return {listVotes.begin(), listVotes.end()};
 }
 
 void CGovernanceObjectVoteFile::RemoveVotesFromMasternode(const COutPoint& outpointMasternode)

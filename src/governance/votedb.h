@@ -40,7 +40,7 @@ private:
     vote_m_t mapVoteIndex;
 
 public:
-    CGovernanceObjectVoteFile();
+    CGovernanceObjectVoteFile() = default;
 
     CGovernanceObjectVoteFile(const CGovernanceObjectVoteFile& other);
 
