@@ -92,13 +92,6 @@ std::unique_ptr<CNode> MakePeer(NodeId id)
     return peer;
 }
 
-void AssertMisbehaviorScore(PeerManager& peerman, const CNode& peer, int expected)
-{
-    CNodeStateStats stats;
-    BOOST_REQUIRE(peerman.GetNodeStateStats(peer.GetId(), stats));
-    BOOST_CHECK_EQUAL(stats.m_misbehavior_score, expected);
-}
-
 CDataStream MakeQGetDataStream(Consensus::LLMQType llmq_type, const uint256& quorum_hash, uint16_t data_mask,
                                const uint256& protx_hash)
 {
@@ -123,7 +116,7 @@ BOOST_AUTO_TEST_CASE(qgetdata_unknown_block_not_scored_not_tracked)
 
     auto peer{MakePeer(/*id=*/2)};
     m_node.peerman->InitializeNode(*peer, NODE_NETWORK);
-    AssertMisbehaviorScore(*m_node.peerman, *peer, 0);
+    BOOST_CHECK_EQUAL(MisbehaviorScore(*m_node.peerman, *peer), 0);
 
     const uint256 protx_hash{uint256S("0x44")};
     for (const auto& hash_str : {"0x33", "0x55"}) {
@@ -131,7 +124,7 @@ BOOST_AUTO_TEST_CASE(qgetdata_unknown_block_not_scored_not_tracked)
         auto stream = MakeQGetDataStream(Consensus::LLMQType::LLMQ_TEST, quorum_hash,
                                          CQuorumDataRequest::QUORUM_VERIFICATION_VECTOR, protx_hash);
         m_net_quorum->ProcessMessage(*peer, NetMsgType::QGETDATA, stream);
-        AssertMisbehaviorScore(*m_node.peerman, *peer, 0);
+        BOOST_CHECK_EQUAL(MisbehaviorScore(*m_node.peerman, *peer), 0);
         BOOST_CHECK(!m_node.llmq_ctx->qman->IsDataRequestPending(peer->GetVerifiedProRegTxHash(),
                                                                  /*we_requested=*/false, quorum_hash,
                                                                  Consensus::LLMQType::LLMQ_TEST));
@@ -151,7 +144,7 @@ BOOST_AUTO_TEST_CASE(qgetdata_active_non_quorum_unscored_once_then_rate_limited)
 
     auto peer{MakePeer(/*id=*/3)};
     m_node.peerman->InitializeNode(*peer, NODE_NETWORK);
-    AssertMisbehaviorScore(*m_node.peerman, *peer, 0);
+    BOOST_CHECK_EQUAL(MisbehaviorScore(*m_node.peerman, *peer), 0);
 
     const uint256 quorum_hash{
         WITH_LOCK(::cs_main, return m_node.chainman->ActiveChain().Genesis()->GetBlockHash())};
@@ -165,14 +158,14 @@ BOOST_AUTO_TEST_CASE(qgetdata_active_non_quorum_unscored_once_then_rate_limited)
 
     // First miss: registered, answered, unscored.
     send_request();
-    AssertMisbehaviorScore(*m_node.peerman, *peer, 0);
+    BOOST_CHECK_EQUAL(MisbehaviorScore(*m_node.peerman, *peer), 0);
     BOOST_CHECK(m_node.llmq_ctx->qman->IsDataRequestPending(peer->GetVerifiedProRegTxHash(), /*we_requested=*/false,
                                                             quorum_hash, Consensus::LLMQType::LLMQ_TEST));
 
     // Repeats hit the registered entry and score like any other rate-limited request.
     for (int score = 25; score <= 75; score += 25) {
         send_request();
-        AssertMisbehaviorScore(*m_node.peerman, *peer, score);
+        BOOST_CHECK_EQUAL(MisbehaviorScore(*m_node.peerman, *peer), score);
         BOOST_CHECK(m_node.llmq_ctx->qman->IsDataRequestPending(peer->GetVerifiedProRegTxHash(),
                                                                 /*we_requested=*/false, quorum_hash,
                                                                 Consensus::LLMQType::LLMQ_TEST));

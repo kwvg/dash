@@ -143,9 +143,7 @@ BOOST_FIXTURE_TEST_CASE(received_genesis_cycle_has_no_quorum, TestChain100Setup)
         BOOST_CHECK(failed.contains(hash));
         BOOST_CHECK(!isman.AlreadyHave(CInv{MSG_ISDLOCK, hash}));
     }
-    CNodeStateStats stats;
-    BOOST_REQUIRE(m_node.peerman->GetNodeStateStats(peer->GetId(), stats));
-    BOOST_CHECK_EQUAL(stats.m_misbehavior_score, 0);
+    BOOST_CHECK_EQUAL(MisbehaviorScore(*m_node.peerman, *peer), 0);
 }
 
 BOOST_FIXTURE_TEST_CASE(missing_quorum_does_not_drop_batch, NetInstantSendTest)
