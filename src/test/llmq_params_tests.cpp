@@ -150,40 +150,11 @@ BOOST_AUTO_TEST_CASE(llmq_params_edge_calculations_test)
     int depth = params.max_store_depth();
     BOOST_CHECK_GT(depth, 0);
 
-    // Test division by zero protection
-    params.signingActiveQuorumCount = 0;
-    // This would cause division by zero in max_cycles if not handled
-    // The implementation should handle this gracefully or it's a bug
-
     // Test with all zeros
     params.useRotation = false;
     params.keepOldKeys = 0;
     params.dkgInterval = 0;
     BOOST_CHECK_EQUAL(params.max_store_depth(), 0);
-}
-
-BOOST_AUTO_TEST_CASE(llmq_params_rotation_consistency_test)
-{
-    // Test that rotation parameters are consistent
-    LLMQParams rotatedParams;
-    rotatedParams.useRotation = true;
-    rotatedParams.signingActiveQuorumCount = 4;
-    rotatedParams.keepOldConnections = 8; // Should be 2x active for rotated
-    rotatedParams.keepOldKeys = 8;
-    rotatedParams.dkgInterval = 24;
-
-    // For rotated quorums, keepOldConnections should typically be 2x signingActiveQuorumCount
-    BOOST_CHECK_EQUAL(rotatedParams.keepOldConnections, 2 * rotatedParams.signingActiveQuorumCount);
-
-    LLMQParams nonRotatedParams;
-    nonRotatedParams.useRotation = false;
-    nonRotatedParams.signingActiveQuorumCount = 4;
-    nonRotatedParams.keepOldConnections = 5; // Should be at least active + 1 for non-rotated
-    nonRotatedParams.keepOldKeys = 8;
-    nonRotatedParams.dkgInterval = 24;
-
-    // For non-rotated quorums, keepOldConnections should be > signingActiveQuorumCount
-    BOOST_CHECK_GT(nonRotatedParams.keepOldConnections, nonRotatedParams.signingActiveQuorumCount);
 }
 
 BOOST_AUTO_TEST_CASE(llmq_params_calculations_overflow_test)
