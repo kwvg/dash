@@ -228,13 +228,8 @@ void CDKGSessionManager::CleanupCache() const
 {
     LOCK(contributionsCacheCs);
     const auto curTime = SteadyClock::now();
-    for (auto it = contributionsCache.begin(); it != contributionsCache.end(); ) {
-        if (curTime - it->second.entryTime > MAX_CONTRIBUTION_CACHE_TIME) {
-            it = contributionsCache.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    std::erase_if(contributionsCache,
+                  [&](const auto& entry) { return curTime - entry.second.entryTime > MAX_CONTRIBUTION_CACHE_TIME; });
 }
 
 void CDKGSessionManager::CleanupOldContributions() const

@@ -522,13 +522,7 @@ bool CSigningManager::CollectPendingRecoveredSigsToVerify(
         // Prune drained (now-empty) node entries so the map only holds nodes with pending sigs.
         // This keeps VerifyAndProcessRecoveredSig's global-cap check cheap and reclaims the queues
         // of disconnected nodes once drained, without waiting for them to be banned.
-        for (auto it = pendingRecoveredSigs.begin(); it != pendingRecoveredSigs.end();) {
-            if (it->second.empty()) {
-                it = pendingRecoveredSigs.erase(it);
-            } else {
-                ++it;
-            }
-        }
+        std::erase_if(pendingRecoveredSigs, [](const auto& entry) { return entry.second.empty(); });
 
         if (retSigShares.empty()) {
             return false;
