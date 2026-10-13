@@ -266,7 +266,6 @@ class DashGovernanceTest (DashTestFramework):
         assert_equal(isolated.gobject("count")["votes"], 16)
 
         self.reconnect_isolated_node(payee_idx, 0)
-        # self.connect_nodes(0, payee_idx)
         self.sync_blocks()
 
         # re-sync helper

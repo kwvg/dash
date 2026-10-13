@@ -7,7 +7,6 @@
 import struct
 from io import BytesIO
 
-from test_framework.authproxy import JSONRPCException
 from test_framework.key import ECKey
 from test_framework.messages import (
     CMnEhf,
@@ -131,31 +130,8 @@ class MnehfTest(DashTestFramework):
         mn_node = self.mninfo[0].get_node(self)
         self.wait_until(lambda: len(self.ehf_signals_in_mempool(mn_node, 28)) == 1)
 
-    def ensure_tx_is_not_mined(self, tx_id):
-        try:
-            assert_equal(self.nodes[0].getrawtransaction(tx_id, 1)['height'], -1)
-            raise AssertionError("Transaction should not be mined")
-        except KeyError:
-            # KeyError is expected
-            pass
-
-    def send_tx(self, tx, expected_error = None, reason = None):
-        try:
-            self.log.info(f"Send tx with expected_error:'{expected_error}'...")
-            tx = self.nodes[0].sendrawtransaction(hexstring=tx.serialize().hex(), maxfeerate=0)
-            if expected_error is None:
-                return tx
-
-            # failure didn't happen, but expected:
-            message = "Transaction should not be accepted"
-            if reason is not None:
-                message += ": " + reason
-
-            raise AssertionError(message)
-        except JSONRPCException as e:
-            self.log.info(f"Send tx triggered an error: {e.error}")
-            assert expected_error in e.error['message']
-
+    def send_tx(self, tx):
+        return self.nodes[0].sendrawtransaction(hexstring=tx.serialize().hex(), maxfeerate=0)
 
     def run_test(self):
         node = self.nodes[0]

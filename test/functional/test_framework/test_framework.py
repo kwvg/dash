@@ -1867,13 +1867,6 @@ class DashTestFramework(BitcoinTestFramework):
             args += extra_args
         return args
 
-    def dynamically_start_masternode(self, mnidx, extra_args=None):
-        args = []
-        if extra_args is not None:
-            args += extra_args
-        self.start_node(mnidx, extra_args=args)
-        force_finish_mnsync(self.nodes[mnidx])
-
     def setup_nodes(self):
         self.log.info("Creating and starting controller node")
         num_simple_nodes = self.num_nodes - self.mn_count

@@ -120,7 +120,6 @@ class DashZMQTest (DashTestFramework):
         node0_extra_args.append("-whitelist=127.0.0.1")
         node0_extra_args.append("-watchquorums")  # have to watch quorums to receive recsigs and trigger zmq
 
-        #extra_args = [node0_extra_args, [], [], [], []]
         self.extra_args[0] = node0_extra_args
 
         self.set_dash_llmq_test_params(4, 4)
@@ -169,11 +168,6 @@ class DashZMQTest (DashTestFramework):
             # Destroy the ZMQ context.
             self.log.debug("Destroying ZMQ context")
             self.zmq_context.destroy(linger=None)
-
-    def generate_blocks(self, num_blocks):
-        mninfos_online = self.mninfo.copy()
-        nodes = [self.nodes[0]] + [mn.get_node(self) for mn in mninfos_online]
-        self.generate(self.nodes[0], num_blocks, sync_fun=lambda: self.sync_blocks(nodes))
 
     def subscribe(self, publishers):
         import zmq
