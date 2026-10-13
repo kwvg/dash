@@ -561,11 +561,6 @@ RPCResult CGovernanceManager::GetJsonHelp(const std::string& key, bool optional)
     }};
 }
 
-RPCResult CGovernanceObject::GetInnerJsonHelp(const std::string& key, bool optional)
-{
-    return Governance::Object::GetJsonHelp(key, optional);
-}
-
 // CGovernanceObject::GetStateJson() defined in governance/object.cpp
 RPCResult CGovernanceObject::GetStateJsonHelp(const std::string& key, bool optional, const std::string& local_valid_key)
 {

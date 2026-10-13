@@ -287,9 +287,6 @@ public:
     void Clear()
         EXCLUSIVE_LOCKS_REQUIRED(!cs_store);
 
-    // CGovernanceObject
-    bool AreRateChecksEnabled() const { return fRateChecksEnabled; }
-
     // Getters/Setters
     int GetCachedBlockHeight() const { return nCachedBlockHeight; }
     int64_t GetLastDiffTime() const { return nTimeLastDiff; }

@@ -52,11 +52,6 @@ public:
     }
 };
 
-// Salted hasher for llmq::SignHash that reuses the salted hasher for uint256
-struct SignHashSaltedHasher {
-    std::size_t operator()(const SignHash& signHash) const noexcept { return StaticSaltedHasher{}(signHash.Get()); }
-};
-
 } // namespace llmq
 
 // Make SignHash hashable for use in unordered_map

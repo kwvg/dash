@@ -265,8 +265,6 @@ public:
 
     int GetAbsoluteYesCount(const CDeterministicMNList& tip_mn_list, vote_signal_enum_t eVoteSignalIn) const
         EXCLUSIVE_LOCKS_REQUIRED(!cs);
-    int GetAbsoluteNoCount(const CDeterministicMNList& tip_mn_list, vote_signal_enum_t eVoteSignalIn) const
-        EXCLUSIVE_LOCKS_REQUIRED(!cs);
     int GetYesCount(const CDeterministicMNList& tip_mn_list, vote_signal_enum_t eVoteSignalIn) const
         EXCLUSIVE_LOCKS_REQUIRED(!cs);
     int GetNoCount(const CDeterministicMNList& tip_mn_list, vote_signal_enum_t eVoteSignalIn) const
@@ -316,7 +314,6 @@ public:
     }
 
     // JSON emitters/help
-    [[nodiscard]] static RPCResult GetInnerJsonHelp(const std::string& key, bool optional);
     [[nodiscard]] UniValue GetInnerJson() const;
 
     [[nodiscard]] static RPCResult GetStateJsonHelp(const std::string& key, bool optional, const std::string& local_valid_key);

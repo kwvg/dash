@@ -412,11 +412,6 @@ public:
     int GetEntriesCountLocked() const EXCLUSIVE_LOCKS_REQUIRED(cs_coinjoin) { return vecEntries.size(); }
 
     /// Participants occupying each side of the session denomination among the entries received
-    CoinJoin::MixSideCounts GetMixSideCounts() const EXCLUSIVE_LOCKS_REQUIRED(!cs_coinjoin)
-    {
-        LOCK(cs_coinjoin);
-        return GetMixSideCountsLocked();
-    }
     CoinJoin::MixSideCounts GetMixSideCountsLocked() const EXCLUSIVE_LOCKS_REQUIRED(cs_coinjoin)
     {
         CoinJoin::MixSideCounts counts;
