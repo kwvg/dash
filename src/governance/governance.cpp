@@ -398,20 +398,10 @@ void CGovernanceManager::CheckAndRemove()
 
     LogPrint(BCLog::GOBJECT, "CGovernanceManager::UpdateCachesAndClean\n");
 
-    std::vector<uint256> vecDirtyHashes = m_mn_metaman.GetAndClearDirtyGovernanceObjectHashes();
-
     const auto tip_mn_list = m_dmnman.GetListAtChainTip();
 
     {
     LOCK2(::cs_main, cs_store);
-
-    for (const uint256& nHash : vecDirtyHashes) {
-        auto it = mapObjects.find(nHash);
-        if (it == mapObjects.end()) {
-            continue;
-        }
-        Assert(it->second)->ClearMasternodeVotes(tip_mn_list);
-    }
 
     ScopedLockBool guard(cs_store, fRateChecksEnabled, false);
 

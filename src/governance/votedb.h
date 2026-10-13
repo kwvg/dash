@@ -78,7 +78,6 @@ public:
         for (const auto& vote : listVotes) fn(vote);
     }
 
-    void RemoveVotesFromMasternode(const COutPoint& outpointMasternode);
     std::set<uint256> RemoveInvalidVotes(const CDeterministicMNList& tip_mn_list, const COutPoint& outpointMasternode, bool fProposal);
 
     SERIALIZE_METHODS(CGovernanceObjectVoteFile, obj)

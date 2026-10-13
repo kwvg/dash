@@ -331,10 +331,6 @@ public:
     bool ProcessVote(CMasternodeMetaMan& mn_metaman, bool fRateChecksEnabled, const CDeterministicMNList& tip_mn_list,
                      const CGovernanceVote& vote, CGovernanceException& exception) EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
-    /// Called when MN's which have voted on this object have been removed
-    void ClearMasternodeVotes(const CDeterministicMNList& tip_mn_list)
-        EXCLUSIVE_LOCKS_REQUIRED(!cs);
-
     // Revalidate all votes from this MN and delete them if validation fails.
     // This is the case for DIP3 MNs that changed voting or operator keys and
     // also for MNs that were removed from the list completely.

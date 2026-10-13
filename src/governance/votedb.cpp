@@ -55,20 +55,6 @@ std::vector<CGovernanceVote> CGovernanceObjectVoteFile::GetVotes() const
     return {listVotes.begin(), listVotes.end()};
 }
 
-void CGovernanceObjectVoteFile::RemoveVotesFromMasternode(const COutPoint& outpointMasternode)
-{
-    auto it = listVotes.begin();
-    while (it != listVotes.end()) {
-        if (it->GetMasternodeOutpoint() == outpointMasternode) {
-            --nMemoryVotes;
-            mapVoteIndex.erase(it->GetHash());
-            listVotes.erase(it++);
-        } else {
-            ++it;
-        }
-    }
-}
-
 std::set<uint256> CGovernanceObjectVoteFile::RemoveInvalidVotes(const CDeterministicMNList& tip_mn_list, const COutPoint& outpointMasternode, bool fProposal)
 {
     std::set<uint256> removedVotes;
