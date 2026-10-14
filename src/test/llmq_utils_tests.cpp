@@ -260,8 +260,6 @@ BOOST_AUTO_TEST_CASE(legacy_recovered_sig_markers_migrate_with_bounded_grace)
     SetMockTime(0);
 }
 
-BOOST_AUTO_TEST_CASE(trivially_passes) { BOOST_CHECK(true); }
-
 static CSigSesAnn MakeSigSesAnn(uint32_t session_id, uint32_t nonce, Consensus::LLMQType llmq_type = Consensus::LLMQType::LLMQ_50_60)
 {
     return CSigSesAnn{session_id, llmq_type, GetTestQuorumHash(1), GetTestQuorumHash(2), GetTestQuorumHash(nonce)};

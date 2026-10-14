@@ -51,22 +51,8 @@ BOOST_AUTO_TEST_CASE(add_get_dstx)
 
 BOOST_AUTO_TEST_CASE(broadcasttx_expiry_height_logic)
 {
-    // Build a valid-looking CCoinJoinBroadcastTx with confirmed height
-    CCoinJoinBroadcastTx dstx;
-    {
-        CMutableTransaction mtx;
-        const int participants = std::max(3, CoinJoin::GetMinPoolParticipants());
-        for (int i = 0; i < participants; ++i) {
-            mtx.vin.emplace_back(COutPoint(uint256::TWO, i));
-            CScript spk;
-            spk << OP_DUP << OP_HASH160 << std::vector<unsigned char>(20, i) << OP_EQUALVERIFY << OP_CHECKSIG;
-            mtx.vout.emplace_back(CoinJoin::GetSmallestDenomination(), spk);
-        }
-        dstx.tx = MakeTransactionRef(mtx);
-        dstx.m_protxHash = uint256::ONE;
-        // mark as confirmed at height 100
-        dstx.SetConfirmedHeight(100);
-    }
+    CCoinJoinBroadcastTx dstx = MakeDSTX(std::max(3, CoinJoin::GetMinPoolParticipants()));
+    dstx.SetConfirmedHeight(100);
 
     int expiry_height = 124; // 125 - 100 == 25 > 24 → expired by height
 
