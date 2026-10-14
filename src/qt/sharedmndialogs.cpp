@@ -1946,15 +1946,17 @@ bool RotateSharedKeysDialog::preparedByThisWallet() const
 
 void RotateSharedKeysDialog::showRequestedChange()
 {
-    // A wallet that did not prepare cannot edit the request; it reads what is
-    // being asked for out of the transaction it just imported
-    const bool foreign_request{m_collector->hasTransaction() && !preparedByThisWallet()};
-    m_requested_change->setVisible(foreign_request);
+    // A wallet that did not prepare cannot edit the request. Every wallet reads
+    // what is being asked for out of the transaction itself: whether this wallet
+    // prepared it is only inferred, and must not decide what gets shown.
+    const bool has_tx{m_collector->hasTransaction()};
+    const bool foreign_request{has_tx && !preparedByThisWallet()};
+    m_requested_change->setVisible(has_tx);
     m_operator_edit->setVisible(!foreign_request);
     m_voting_edit->setVisible(!foreign_request);
     m_fee_source->setVisible(!foreign_request);
     m_prepare_button->setVisible(!foreign_request);
-    if (!foreign_request) return;
+    if (!has_tx) return;
 
     CMutableTransaction tx;
     QStringList lines;
