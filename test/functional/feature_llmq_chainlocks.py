@@ -32,7 +32,6 @@ class LLMQChainLocksTest(DashTestFramework):
         for node in self.nodes:
             self.log.info(f"Expecting no ChainLock for {block_hash}")
             block = node.getblock(block_hash)
-            #assert_equal(block["confirmations"], 0)
             assert not block["chainlock"]
 
     def run_test(self):

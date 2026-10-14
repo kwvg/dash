@@ -25,13 +25,12 @@ from test_framework.messages import (
     from_hex,
     hash256,
     msg_generic,
-    msg_getmnlistd,
     msg_getqrinfo,
     ser_compact_size,
     ser_uint256,
     sha256,
 )
-from test_framework.p2p import P2PInterface
+from test_framework.p2p import P2PMnListDiffStore
 from test_framework.util import (
     assert_equal,
     assert_greater_than_or_equal,
@@ -47,26 +46,6 @@ def intersection(lst1, lst2):
 def extract_quorum_members(quorum_info):
     return [d['proTxHash'] for d in quorum_info["members"]]
 
-class TestP2PConn(P2PInterface):
-    def __init__(self):
-        super().__init__()
-        self.last_mnlistdiff = None
-
-    def on_mnlistdiff(self, message):
-        self.last_mnlistdiff = message
-
-    def wait_for_mnlistdiff(self, timeout=30):
-        def received_mnlistdiff():
-            return self.last_mnlistdiff is not None
-        return self.wait_until(received_mnlistdiff, timeout=timeout)
-
-    def getmnlistdiff(self, baseBlockHash, blockHash):
-        msg = msg_getmnlistd(baseBlockHash, blockHash)
-        self.last_mnlistdiff = None
-        self.send_message(msg)
-        self.wait_for_mnlistdiff()
-        return self.last_mnlistdiff
-
 class LLMQQuorumRotationTest(DashTestFramework):
     def add_options(self, parser):
         self.add_wallet_options(parser)
@@ -80,7 +59,7 @@ class LLMQQuorumRotationTest(DashTestFramework):
         llmq_type=103
         llmq_type_name="llmq_test_dip0024"
 
-        self.test_node = self.nodes[0].add_p2p_connection(TestP2PConn())
+        self.test_node = self.nodes[0].add_p2p_connection(P2PMnListDiffStore())
 
         # Connect all nodes to node1 so that we always have the whole network connected
         # Otherwise only masternode connections will be established between nodes, which won't propagate TXs/blocks
@@ -340,7 +319,7 @@ class LLMQQuorumRotationTest(DashTestFramework):
         assert_raises_rpc_error(-32600, "too many baseBlockHashes", node.quorum, "rotationinfo",
                                 "%064x" % blockRequestHash, False, ["%064x" % baseBlockHash] * (MAX_BASE_BLOCK_HASHES + 1))
 
-        peer = node.add_p2p_connection(TestP2PConn())
+        peer = node.add_p2p_connection(P2PMnListDiffStore())
         self.log.info("A request at the limit is answered")
         with node.assert_debug_log([], unexpected_msgs=["Misbehaving"]):
             peer.send_and_ping(msg_getqrinfo([baseBlockHash] * MAX_BASE_BLOCK_HASHES, blockRequestHash))
@@ -351,7 +330,7 @@ class LLMQQuorumRotationTest(DashTestFramework):
             peer.send_message(msg_getqrinfo([baseBlockHash] * (MAX_BASE_BLOCK_HASHES + 1), blockRequestHash))
             peer.wait_for_disconnect()
         # The count alone is enough: the list is rejected before any element is decoded or allocated.
-        peer = node.add_p2p_connection(TestP2PConn())
+        peer = node.add_p2p_connection(P2PMnListDiffStore())
         with node.assert_debug_log(["Misbehaving", "malformed getqrinfo received"]):
             peer.send_message(msg_generic(b"getqrinfo", ser_compact_size(MAX_BASE_BLOCK_HASHES + 1)))
             peer.wait_for_disconnect()
