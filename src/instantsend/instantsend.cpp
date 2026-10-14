@@ -239,7 +239,10 @@ void CInstantSendManager::RemoveNonLockedTx(const uint256& txid, bool retryChild
                     nonLockedTxs.erase(jt);
                 }
             }
-            nonLockedTxsByOutpoints.erase(outpoint);
+            if (auto kt = nonLockedTxsByOutpoints.find(outpoint);
+                kt != nonLockedTxsByOutpoints.end() && kt->second == txid) {
+                nonLockedTxsByOutpoints.erase(kt);
+            }
         }
     }
 

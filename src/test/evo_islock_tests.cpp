@@ -500,6 +500,14 @@ BOOST_FIXTURE_TEST_CASE(nonlocked_ordinary_tx_released_on_mempool_removal, TestC
     // Peer rejection also reaches this entry point; it must preserve still-mined conflicts.
     isman.TransactionIsRemoved(tx);
     BOOST_CHECK_EQUAL(tx.use_count(), 2);
+    // An unmined spend of the same input, e.g. admitted after a reorg, must not drop the mined
+    // transaction from the outpoint index when it leaves the mempool.
+    CMutableTransaction spend;
+    spend.vin = mined.vin;
+    spend.vout.emplace_back(COIN / 2, CScript{});
+    const auto spend_tx = MakeTransactionRef(spend);
+    isman.AddNonLockedTx(spend_tx, nullptr);
+    isman.TransactionIsRemoved(spend_tx);
     instantsend::InstantSendLock conflict;
     conflict.txid = GetRandHash();
     conflict.inputs.push_back(mined.vin.front().prevout);
