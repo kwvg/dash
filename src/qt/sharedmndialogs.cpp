@@ -2074,8 +2074,8 @@ void RotateSharedKeysDialog::approveAndCopy()
 void RotateSharedKeysDialog::sendRotation()
 {
     combineAndSubmit(m_collector, m_status_label, m_result_edit, tr("The key rotation was sent."),
-                     tr("If the error mentions signing the transaction inputs, this is not the wallet that "
-                        "prepared the request — finish on that wallet."),
+                     tr("If the error says the wallet that funded the request must combine it, finish on "
+                        "the wallet that prepared the request."),
                      [this] {
                          m_approve_button->setEnabled(false);
                          m_send_button->setEnabled(false);
