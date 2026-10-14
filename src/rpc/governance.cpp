@@ -38,6 +38,26 @@ using wallet::HELP_REQUIRING_PASSPHRASE;
 using wallet::isminetype;
 #endif // ENABLE_WALLET
 
+static vote_signal_enum_t ParseVoteSignal(const UniValue& param)
+{
+    const vote_signal_enum_t signal{CGovernanceVoting::ConvertVoteSignal(param.get_str())};
+    if (signal == VOTE_SIGNAL_NONE) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid vote signal. Please use one of the following: "
+                                                  "(funding|valid|delete|endorsed)");
+    }
+    return signal;
+}
+
+static vote_outcome_enum_t ParseVoteOutcome(const UniValue& param)
+{
+    const vote_outcome_enum_t outcome{CGovernanceVoting::ConvertVoteOutcome(param.get_str())};
+    if (outcome == VOTE_OUTCOME_NONE) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER,
+                           "Invalid vote outcome. Please use one of the following: 'yes', 'no' or 'abstain'");
+    }
+    return outcome;
+}
+
 static RPCHelpMan gobject_count()
 {
     const auto json_help{CGovernanceManager::GetJsonHelp(/*key=*/"", /*optional=*/false)};
@@ -531,20 +551,8 @@ static RPCHelpMan gobject_vote_many()
     const NodeContext& node = EnsureAnyNodeContext(request.context);
 
     uint256 hash(ParseHashV(request.params[0], "Object hash"));
-    std::string strVoteSignal = request.params[1].get_str();
-    std::string strVoteOutcome = request.params[2].get_str();
-
-    vote_signal_enum_t eVoteSignal = CGovernanceVoting::ConvertVoteSignal(strVoteSignal);
-    if (eVoteSignal == VOTE_SIGNAL_NONE) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER,
-                           "Invalid vote signal. Please use one of the following: "
-                           "(funding|valid|delete|endorsed)");
-    }
-
-    vote_outcome_enum_t eVoteOutcome = CGovernanceVoting::ConvertVoteOutcome(strVoteOutcome);
-    if (eVoteOutcome == VOTE_OUTCOME_NONE) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid vote outcome. Please use one of the following: 'yes', 'no' or 'abstain'");
-    }
+    const vote_signal_enum_t eVoteSignal{ParseVoteSignal(request.params[1])};
+    const vote_outcome_enum_t eVoteOutcome{ParseVoteOutcome(request.params[2])};
 
     EnsureWalletIsUnlocked(*wallet);
 
@@ -584,20 +592,8 @@ static RPCHelpMan gobject_vote_alias()
     const NodeContext& node = EnsureAnyNodeContext(request.context);
 
     uint256 hash(ParseHashV(request.params[0], "Object hash"));
-    std::string strVoteSignal = request.params[1].get_str();
-    std::string strVoteOutcome = request.params[2].get_str();
-
-    vote_signal_enum_t eVoteSignal = CGovernanceVoting::ConvertVoteSignal(strVoteSignal);
-    if (eVoteSignal == VOTE_SIGNAL_NONE) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER,
-                           "Invalid vote signal. Please use one of the following: "
-                           "(funding|valid|delete|endorsed)");
-    }
-
-    vote_outcome_enum_t eVoteOutcome = CGovernanceVoting::ConvertVoteOutcome(strVoteOutcome);
-    if (eVoteOutcome == VOTE_OUTCOME_NONE) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid vote outcome. Please use one of the following: 'yes', 'no' or 'abstain'");
-    }
+    const vote_signal_enum_t eVoteSignal{ParseVoteSignal(request.params[1])};
+    const vote_outcome_enum_t eVoteOutcome{ParseVoteOutcome(request.params[2])};
 
     EnsureWalletIsUnlocked(*wallet);
 
@@ -880,20 +876,8 @@ static RPCHelpMan voteraw()
     COutPoint outpoint = COutPoint(hashMnCollateralTx, nMnCollateralTxIndex);
 
     uint256 hashGovObj(ParseHashV(request.params[2], "Governance hash"));
-    std::string strVoteSignal = request.params[3].get_str();
-    std::string strVoteOutcome = request.params[4].get_str();
-
-    vote_signal_enum_t eVoteSignal = CGovernanceVoting::ConvertVoteSignal(strVoteSignal);
-    if (eVoteSignal == VOTE_SIGNAL_NONE)  {
-        throw JSONRPCError(RPC_INVALID_PARAMETER,
-                           "Invalid vote signal. Please use one of the following: "
-                           "(funding|valid|delete|endorsed)");
-    }
-
-    vote_outcome_enum_t eVoteOutcome = CGovernanceVoting::ConvertVoteOutcome(strVoteOutcome);
-    if (eVoteOutcome == VOTE_OUTCOME_NONE) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid vote outcome. Please use one of the following: 'yes', 'no' or 'abstain'");
-    }
+    const vote_signal_enum_t eVoteSignal{ParseVoteSignal(request.params[3])};
+    const vote_outcome_enum_t eVoteOutcome{ParseVoteOutcome(request.params[4])};
 
     const NodeContext& node = EnsureAnyNodeContext(request.context);
     CHECK_NONFATAL(node.govman);

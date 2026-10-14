@@ -33,8 +33,12 @@ using wallet::WALLET_FLAG_DISABLE_PRIVATE_KEYS;
 
 #ifdef ENABLE_WALLET
 namespace {
-void ValidateCoinJoinArguments()
+void EnsureClientMixingAvailable(const NodeContext& node)
 {
+    if (node.active_ctx) {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Client-side mixing is not supported on masternodes");
+    }
+
     /* If CoinJoin is enabled, everything is working as expected, we can bail */
     if (CCoinJoinClientOptions::IsEnabled())
         return;
@@ -88,11 +92,7 @@ static RPCHelpMan coinjoin_reset()
 
     const NodeContext& node = EnsureAnyNodeContext(request.context);
 
-    if (node.active_ctx) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Client-side mixing is not supported on masternodes");
-    }
-
-    ValidateCoinJoinArguments();
+    EnsureClientMixingAvailable(node);
 
     CHECK_NONFATAL(CHECK_NONFATAL(node.coinjoin_loader)->WithClient(wallet->GetName(), [](auto& client) {
         client.resetPool();
@@ -123,11 +123,7 @@ static RPCHelpMan coinjoin_start()
 
     const NodeContext& node = EnsureAnyNodeContext(request.context);
 
-    if (node.active_ctx) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Client-side mixing is not supported on masternodes");
-    }
-
-    ValidateCoinJoinArguments();
+    EnsureClientMixingAvailable(node);
 
     {
         LOCK(wallet->cs_wallet);
@@ -165,11 +161,7 @@ static RPCHelpMan coinjoin_status()
 
     const NodeContext& node = EnsureAnyNodeContext(request.context);
 
-    if (node.active_ctx) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Client-side mixing is not supported on masternodes");
-    }
-
-    ValidateCoinJoinArguments();
+    EnsureClientMixingAvailable(node);
 
     UniValue ret(UniValue::VARR);
     CHECK_NONFATAL(CHECK_NONFATAL(node.coinjoin_loader)->WithClient(wallet->GetName(), [&](auto& client) {
@@ -204,11 +196,7 @@ static RPCHelpMan coinjoin_stop()
 
     const NodeContext& node = EnsureAnyNodeContext(request.context);
 
-    if (node.active_ctx) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Client-side mixing is not supported on masternodes");
-    }
-
-    ValidateCoinJoinArguments();
+    EnsureClientMixingAvailable(node);
 
     CHECK_NONFATAL(CHECK_NONFATAL(node.coinjoin_loader)->WithClient(wallet->GetName(), [](auto& client) {
         if (!client.isMixing()) {
