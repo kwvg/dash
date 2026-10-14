@@ -265,8 +265,6 @@ public:
 
     int GetAbsoluteYesCount(const CDeterministicMNList& tip_mn_list, vote_signal_enum_t eVoteSignalIn) const
         EXCLUSIVE_LOCKS_REQUIRED(!cs);
-    int GetAbsoluteNoCount(const CDeterministicMNList& tip_mn_list, vote_signal_enum_t eVoteSignalIn) const
-        EXCLUSIVE_LOCKS_REQUIRED(!cs);
     int GetYesCount(const CDeterministicMNList& tip_mn_list, vote_signal_enum_t eVoteSignalIn) const
         EXCLUSIVE_LOCKS_REQUIRED(!cs);
     int GetNoCount(const CDeterministicMNList& tip_mn_list, vote_signal_enum_t eVoteSignalIn) const
@@ -316,7 +314,6 @@ public:
     }
 
     // JSON emitters/help
-    [[nodiscard]] static RPCResult GetInnerJsonHelp(const std::string& key, bool optional);
     [[nodiscard]] UniValue GetInnerJson() const;
 
     [[nodiscard]] static RPCResult GetStateJsonHelp(const std::string& key, bool optional, const std::string& local_valid_key);
@@ -333,10 +330,6 @@ public:
 
     bool ProcessVote(CMasternodeMetaMan& mn_metaman, bool fRateChecksEnabled, const CDeterministicMNList& tip_mn_list,
                      const CGovernanceVote& vote, CGovernanceException& exception) EXCLUSIVE_LOCKS_REQUIRED(!cs);
-
-    /// Called when MN's which have voted on this object have been removed
-    void ClearMasternodeVotes(const CDeterministicMNList& tip_mn_list)
-        EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
     // Revalidate all votes from this MN and delete them if validation fails.
     // This is the case for DIP3 MNs that changed voting or operator keys and

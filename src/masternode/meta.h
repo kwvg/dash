@@ -193,8 +193,6 @@ private:
     const std::unique_ptr<db_type> m_db;
     bool is_valid{false};
 
-    std::vector<uint256> vecDirtyGovernanceObjectHashes GUARDED_BY(cs);
-
     // equal to double of expected amount of all evo nodes, see DIP-0028
     // it consumes no more than 1Mb of RAM but will cover extreme cases
     static constexpr size_t SeenBanInventorySize = 900;
@@ -228,8 +226,6 @@ public:
 
     void AddGovernanceVote(const uint256& proTxHash, const uint256& nGovernanceObjectHash);
     void RemoveGovernanceObject(const uint256& nGovernanceObjectHash) EXCLUSIVE_LOCKS_REQUIRED(!cs);
-
-    std::vector<uint256> GetAndClearDirtyGovernanceObjectHashes() EXCLUSIVE_LOCKS_REQUIRED(!cs);
 
     void SetLastOutboundAttempt(const uint256& protx_hash, int64_t t) EXCLUSIVE_LOCKS_REQUIRED(!cs);
     void SetLastOutboundSuccess(const uint256& protx_hash, int64_t t) EXCLUSIVE_LOCKS_REQUIRED(!cs);

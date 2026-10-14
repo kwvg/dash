@@ -480,22 +480,6 @@ bool CGovernanceObject::ProcessVote(CMasternodeMetaMan& mn_metaman, bool fRateCh
     return true;
 }
 
-void CGovernanceObject::ClearMasternodeVotes(const CDeterministicMNList& tip_mn_list)
-{
-    LOCK(cs);
-
-    auto it = mapCurrentMNVotes.begin();
-    while (it != mapCurrentMNVotes.end()) {
-        if (!tip_mn_list.HasMNByCollateral(it->first)) {
-            fileVotes.RemoveVotesFromMasternode(it->first);
-            mapCurrentMNVotes.erase(it++);
-            fDirtyCache = true;
-        } else {
-            ++it;
-        }
-    }
-}
-
 std::set<uint256> CGovernanceObject::RemoveInvalidVotes(const CDeterministicMNList& tip_mn_list, const COutPoint& mnOutpoint)
 {
     LOCK(cs);
@@ -902,12 +886,6 @@ int CGovernanceObject::GetAbsoluteYesCount(const CDeterministicMNList& tip_mn_li
 {
     AssertLockNotHeld(cs);
     return GetYesCount(tip_mn_list, eVoteSignalIn) - GetNoCount(tip_mn_list, eVoteSignalIn);
-}
-
-int CGovernanceObject::GetAbsoluteNoCount(const CDeterministicMNList& tip_mn_list, vote_signal_enum_t eVoteSignalIn) const
-{
-    AssertLockNotHeld(cs);
-    return GetNoCount(tip_mn_list, eVoteSignalIn) - GetYesCount(tip_mn_list, eVoteSignalIn);
 }
 
 int CGovernanceObject::GetYesCount(const CDeterministicMNList& tip_mn_list, vote_signal_enum_t eVoteSignalIn) const

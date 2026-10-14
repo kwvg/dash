@@ -81,7 +81,7 @@ public:
 
     [[nodiscard]] static RPCResult GetJsonHelp(const std::string& key, bool optional);
     [[nodiscard]] UniValue ToJson(CDeterministicMNManager& dmnman, CQuorumSnapshotManager& qsnapman,
-                                  const ChainstateManager& chainman, int quorumIndex, int detailLevel) const;
+                                  const ChainstateManager& chainman, int detailLevel) const;
 };
 
 struct CDKGDebugStatus {

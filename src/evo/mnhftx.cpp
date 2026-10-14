@@ -382,13 +382,6 @@ void CMNHFManager::AddToCache(const Signals& signals, const CBlockIndex* const p
     }
 }
 
-void CMNHFManager::AddSignal(const CBlockIndex* const pindex, int bit)
-{
-    auto signals = GetForBlock(pindex->pprev);
-    signals.emplace(bit, pindex->nHeight);
-    AddToCache(signals, pindex);
-}
-
 bool CMNHFManager::ForceSignalDBUpdate(const CBlockIndex* tip)
 {
     // force ehf signals db update

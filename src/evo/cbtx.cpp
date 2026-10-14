@@ -55,7 +55,6 @@ bool CheckCbTx(const CCbTx& cbTx, const CBlockIndex* pindexPrev, bool is_v24_act
 }
 
 using llmq::QcHashMap;
-using llmq::QcIndexedHashMap;
 
 auto CalcHashCountFromQCHashes(const QcHashMap& qcHashes)
 {

@@ -531,8 +531,8 @@ void NetQuorum::TriggerQuorumDataRecoveryThreads(gsl::not_null<const CBlockIndex
     }
 }
 
-void NetQuorum::DataRecoveryThread(gsl::not_null<const CBlockIndex*> block_index, CQuorumCPtr pQuorum,
-                                   uint16_t data_mask, const uint256& protx_hash, size_t start_offset) const
+void NetQuorum::DataRecoveryThread(CQuorumCPtr pQuorum, uint16_t data_mask, const uint256& protx_hash,
+                                   size_t start_offset) const
 {
     size_t nTries{0};
     uint16_t nDataMask{data_mask};
@@ -634,7 +634,7 @@ void NetQuorum::DataRecoveryThread(gsl::not_null<const CBlockIndex*> block_index
     printLog("Done");
 }
 
-void NetQuorum::StartVvecSyncThread(gsl::not_null<const CBlockIndex*> block_index, CQuorumCPtr pQuorum) const
+void NetQuorum::StartVvecSyncThread(CQuorumCPtr pQuorum) const
 {
     if (pQuorum->qc->validMembers.empty()) return;
     if (!pQuorum->TryClaimRecovery()) {
@@ -642,8 +642,8 @@ void NetQuorum::StartVvecSyncThread(gsl::not_null<const CBlockIndex*> block_inde
         return;
     }
 
-    workerPool.push([pQuorum = std::move(pQuorum), block_index, this](int threadId) mutable {
-        DataRecoveryThread(block_index, std::move(pQuorum), CQuorumDataRequest::QUORUM_VERIFICATION_VECTOR,
+    workerPool.push([pQuorum = std::move(pQuorum), this](int threadId) mutable {
+        DataRecoveryThread(std::move(pQuorum), CQuorumDataRequest::QUORUM_VERIFICATION_VECTOR,
                            /*protx_hash=*/uint256(), /*start_offset=*/0);
     });
 }
@@ -659,7 +659,7 @@ void NetQuorum::TryStartVvecSyncThread(gsl::not_null<const CBlockIndex*> block_i
                               (syncMode == QvvecSyncMode::OnlyIfTypeMember && fWeAreQuorumTypeMember);
 
     if ((fSyncForTypeEnabled && fSyncCurrent) && !pQuorum->HasVerificationVector()) {
-        StartVvecSyncThread(block_index, std::move(pQuorum));
+        StartVvecSyncThread(std::move(pQuorum));
     } else {
         LogPrint(BCLog::LLMQ, "NetQuorum::%s -- No data needed from (%d, %s) at height %d\n", __func__,
                  std23::to_underlying(pQuorum->qc->llmqType), pQuorum->qc->quorumHash.ToString(), block_index->nHeight);
@@ -678,7 +678,7 @@ void NetQuorum::StartSkShareRecoveryThread(gsl::not_null<const CBlockIndex*> pIn
 
     workerPool.push([pQuorum = std::move(pQuorum), pIndex, nDataMaskIn, this](int threadId) mutable {
         const size_t size_offset = GetQuorumRecoveryStartOffset(*pQuorum, pIndex);
-        DataRecoveryThread(pIndex, std::move(pQuorum), nDataMaskIn, m_role->GetProTxHash(), size_offset);
+        DataRecoveryThread(std::move(pQuorum), nDataMaskIn, m_role->GetProTxHash(), size_offset);
     });
 }
 

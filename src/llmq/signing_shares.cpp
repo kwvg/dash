@@ -1518,14 +1518,6 @@ std::vector<PendingSignatureData> CSigSharesManager::DispatchPendingSigns()
     return signs;
 }
 
-bool CSigSharesManager::IsAnyPendingProcessing() const
-{
-    LOCK(cs);
-    // Check if there's work, spawn a helper if so
-    return std::any_of(nodeStates.begin(), nodeStates.end(),
-                       [](const auto& entry) { return !entry.second.pendingIncomingSigShares.Empty(); });
-}
-
 std::shared_ptr<CRecoveredSig> CSigSharesManager::SignAndProcessSingleShare(PendingSignatureData work)
 {
     auto opt_sigShare = CreateSigShare(*work.quorum, work.id, work.msgHash);

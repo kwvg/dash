@@ -17,7 +17,7 @@
 namespace llmq
 {
 UniValue CDKGDebugSessionStatus::ToJson(CDeterministicMNManager& dmnman, CQuorumSnapshotManager& qsnapman,
-                                        const ChainstateManager& chainman, int quorumIndex, int detailLevel) const
+                                        const ChainstateManager& chainman, int detailLevel) const
 {
     UniValue ret(UniValue::VOBJ);
 
@@ -137,7 +137,7 @@ UniValue CDKGDebugManager::ToJson(int detailLevel) const
         UniValue s(UniValue::VOBJ);
         s.pushKV("llmqType", std::string(llmq_params_opt->name));
         s.pushKV("quorumIndex", p.first.second);
-        s.pushKV("status", p.second.ToJson(m_dmnman, m_qsnapman, m_chainman, p.first.second, detailLevel));
+        s.pushKV("status", p.second.ToJson(m_dmnman, m_qsnapman, m_chainman, detailLevel));
 
         sessionsArrJson.push_back(s);
     }

@@ -577,7 +577,6 @@ public:
     // Dispatcher functions
     std::vector<PendingSignatureData> DispatchPendingSigns() EXCLUSIVE_LOCKS_REQUIRED(!cs_pendingSigns);
     // Worker pool task functions
-    bool IsAnyPendingProcessing() const EXCLUSIVE_LOCKS_REQUIRED(!cs);
     [[nodiscard]] std::shared_ptr<CRecoveredSig> SignAndProcessSingleShare(PendingSignatureData work)
         EXCLUSIVE_LOCKS_REQUIRED(!cs_pendingSigns, !cs);
 };
