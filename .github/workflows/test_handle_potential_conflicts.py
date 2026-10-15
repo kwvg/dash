@@ -6,7 +6,6 @@
 import importlib.util
 from pathlib import Path
 import argparse
-import requests
 import sys
 import unittest
 
@@ -295,10 +294,10 @@ not-json
         posted = []
         original_list_issue_comments = handle_potential_conflicts.list_issue_comments
         original_github_post = handle_potential_conflicts.github_post
-        handle_potential_conflicts.list_issue_comments = lambda pr_num: (_ for _ in ()).throw(requests.RequestException("boom"))
+        handle_potential_conflicts.list_issue_comments = lambda pr_num: (_ for _ in ()).throw(OSError("boom"))
         handle_potential_conflicts.github_post = lambda path, payload: posted.append((path, payload))
         try:
-            with self.assertRaises(requests.RequestException):
+            with self.assertRaises(OSError):
                 handle_potential_conflicts.save_managed_comment(
                     10,
                     {
@@ -405,6 +404,20 @@ not-json
         self.assertIn("and 2 more", formatted)
         self.assertIn("<code>src/file_0.cpp</code>", formatted)
         self.assertNotIn(f"<code>src/file_{handle_potential_conflicts.MAX_FILE_DETAILS}.cpp</code>", formatted)
+
+    def test_next_page_url_reads_link_header(self):
+        link = (
+            '<https://api.github.com/repositories/1/issues/5/comments?page=1>; rel="prev", '
+            '<https://api.github.com/repositories/1/issues/5/comments?page=3>; rel="next", '
+            '<https://api.github.com/repositories/1/issues/5/comments?page=9>; rel="last"'
+        )
+
+        self.assertEqual(
+            "https://api.github.com/repositories/1/issues/5/comments?page=3",
+            handle_potential_conflicts.next_page_url(link),
+        )
+        self.assertIsNone(handle_potential_conflicts.next_page_url('<https://x/?page=1>; rel="prev"'))
+        self.assertIsNone(handle_potential_conflicts.next_page_url(""))
 
 
 if __name__ == "__main__":
