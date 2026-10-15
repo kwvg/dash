@@ -604,20 +604,18 @@ NetInfoStatus ExtNetInfo::Validate() const
             return NetInfoStatus::Duplicate;
         }
         for (const auto& entry : entries) {
+            NetInfoStatus ret{NetInfoStatus::Malformed};
             if (const auto& service_opt{entry.GetAddrPort()}) {
-                if (auto ret{ValidateService(purpose, *service_opt)}; ret != NetInfoStatus::Success) {
-                    // Stores CService underneath but doesn't pass validation rules
-                    return ret;
-                }
+                ret = ValidateService(purpose, *service_opt);
             } else if (const auto domain_opt{entry.GetDomainPort()}) {
                 if (purpose != NetInfoPurpose::PLATFORM_HTTPS) {
                     // Domains only allowed for Platform HTTPS API
                     return NetInfoStatus::BadInput;
                 }
-                if (auto ret{ValidateDomainPort(*domain_opt)}; ret != NetInfoStatus::Success) {
-                    // Stores DomainPort underneath but doesn't pass validation rules
-                    return ret;
-                }
+                ret = ValidateDomainPort(*domain_opt);
+            }
+            if (ret != NetInfoStatus::Success) {
+                return ret;
             }
         }
     }

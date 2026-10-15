@@ -754,6 +754,26 @@ BOOST_FIXTURE_TEST_CASE(extnetinfo_validate_deser, RegTestingSetup)
         BOOST_CHECK_THROW(ds >> netInfo, std::ios_base::failure);
     }
 
+    // A cleared entry under a known purpose decodes but must not validate
+    const auto with_entry = [&](auto&& write_entry) {
+        CDataStream ds(SER_DISK, CLIENT_VERSION);
+        write_header(ds, 1);
+        ds << NetInfoPurpose::CORE_P2P;
+        WriteCompactSize(ds, 1);
+        write_entry(ds);
+        return ds;
+    };
+    for (auto ds : {
+             with_entry([](CDataStream& s) { s << uint8_t{0x03}; }),                                                  // unknown type
+             with_entry([](CDataStream& s) { s << NetInfoEntry::NetInfoType::Invalid; }),                             // explicit invalid marker
+             with_entry([](CDataStream& s) { s << NetInfoEntry::NetInfoType::Service << CNetAddr::V2(CService{}); }), // unspecified address
+             with_entry([](CDataStream& s) { s << NetInfoEntry::NetInfoType::Service << uint8_t{2} << uint8_t{16}; }), // truncated service
+         }) {
+        ExtNetInfo netInfo;
+        ds >> netInfo;
+        BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::Malformed);
+    }
+
     // Port 443 is only permitted for Platform HTTPS addresses
     for (const auto& [purpose, expected] : std::vector<std::pair<NetInfoPurpose, NetInfoStatus>>{
              {NetInfoPurpose::PLATFORM_HTTPS, NetInfoStatus::Success},
