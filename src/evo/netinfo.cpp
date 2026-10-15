@@ -610,10 +610,6 @@ NetInfoStatus ExtNetInfo::Validate() const
             return NetInfoStatus::Duplicate;
         }
         for (const auto& entry : entries) {
-            if (!entry.IsTriviallyValid()) {
-                // Trivially invalid NetInfoEntry, no point checking against consensus rules
-                return NetInfoStatus::Malformed;
-            }
             if (const auto& service_opt{entry.GetAddrPort()}) {
                 if (auto ret{ValidateService(purpose, *service_opt)}; ret != NetInfoStatus::Success) {
                     // Stores CService underneath but doesn't pass validation rules
@@ -628,9 +624,6 @@ NetInfoStatus ExtNetInfo::Validate() const
                     // Stores DomainPort underneath but doesn't pass validation rules
                     return ret;
                 }
-            } else {
-                // Doesn't store valid type underneath
-                return NetInfoStatus::Malformed;
             }
         }
     }
