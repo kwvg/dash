@@ -167,15 +167,16 @@ template <typename Stream>
 class SnapshotBoundedInput
 {
 private:
-    CHashVerifier<Stream> m_stream;
+    Stream& m_source;
+    HashVerifier<Stream> m_stream;
     uint64_t m_compact_budget;
 
 public:
     SnapshotBoundedInput(Stream& stream, uint64_t compact_budget) :
-        m_stream{&stream}, m_compact_budget{compact_budget} {}
+        m_source{stream}, m_stream{stream}, m_compact_budget{compact_budget} {}
 
-    int GetType() const { return m_stream.GetType(); }
-    int GetVersion() const { return m_stream.GetVersion(); }
+    int GetType() const { return m_source.GetType(); }
+    int GetVersion() const { return m_source.GetVersion(); }
     void read(Span<std::byte> dst) { m_stream.read(dst); }
     void ignore(size_t size) { m_stream.ignore(size); }
 
@@ -212,17 +213,6 @@ template <typename Stream>
 uint64_t ReadCompactSize(SnapshotBoundedInput<Stream>& stream)
 {
     return stream.ReadBudgetedCompactSize();
-}
-
-/**
- * NetInfoEntry overrides the stream version while decoding its payload. Keep
- * the snapshot-local CompactSize budget visible through that transparent
- * wrapper so strings are rejected before their deserializer resizes them.
- */
-template <typename Stream>
-uint64_t ReadCompactSize(OverrideStream<SnapshotBoundedInput<Stream>>& stream)
-{
-    return stream.GetStream().ReadBudgetedCompactSize();
 }
 
 /**
@@ -431,7 +421,7 @@ MinedQuorumCommitment ReadMinedQuorumCommitment(Stream& s)
     ReadFixedBitSet(s, commitment.validMembers, valid_members_size);
     const bool legacy{commitment.nVersion == llmq::CFinalCommitment::LEGACY_BLS_NON_INDEXED_QUORUM_VERSION ||
                       commitment.nVersion == llmq::CFinalCommitment::LEGACY_BLS_INDEXED_QUORUM_VERSION};
-    CHashVerifier<Stream> bls_input{&s};
+    HashVerifier<Stream> bls_input{s};
     bls_input >> CBLSPublicKeyVersionWrapper(commitment.quorumPublicKey, legacy) >> commitment.quorumVvecHash >>
         CBLSSignatureVersionWrapper(commitment.quorumSig, legacy) >>
         CBLSSignatureVersionWrapper(commitment.membersSig, legacy);

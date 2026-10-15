@@ -883,9 +883,8 @@ BOOST_FIXTURE_TEST_CASE(bounded_readers_reject_claimed_sizes_first, BasicTesting
     WriteCompactSize(wrapped_string, evo::EVO_SNAPSHOT_MAX_MN_COMPACT_ITEMS + 1);
     wrapped_string << uint8_t{0x42};
     evo::SnapshotBoundedInput bounded_string{wrapped_string, evo::EVO_SNAPSHOT_MAX_MN_COMPACT_ITEMS};
-    OverrideStream bounded_override{&bounded_string, SER_DISK, CLIENT_VERSION};
     std::string decoded_string;
-    BOOST_CHECK_EXCEPTION(bounded_override >> decoded_string, std::ios_base::failure,
+    BOOST_CHECK_EXCEPTION(bounded_string >> decoded_string, std::ios_base::failure,
                           [](const auto& e) { return std::string{e.what()}.find("CompactSize budget exceeded") != std::string::npos; });
     BOOST_CHECK(decoded_string.empty());
     BOOST_REQUIRE_EQUAL(wrapped_string.size(), 1U);
