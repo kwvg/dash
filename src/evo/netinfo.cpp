@@ -594,9 +594,6 @@ NetInfoStatus ExtNetInfo::Validate() const
         return NetInfoStatus::Duplicate;
     }
     for (const auto& [purpose, entries] : m_data) {
-        if (!IsValidPurpose(purpose)) {
-            return NetInfoStatus::Malformed;
-        }
         if (entries.empty()) {
             // Purpose if present in map must have at least one entry
             return NetInfoStatus::Malformed;

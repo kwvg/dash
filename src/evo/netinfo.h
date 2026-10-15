@@ -423,18 +423,16 @@ public:
         if (m_version == 0 || m_version > CURRENT_VERSION) {
             return; // Don't bother with unknown versions
         }
-        // std::map deserialization silently drops a repeated key, leaving bytes in
-        // the payload that are never validated; reject a repeated purpose instead
+        // Purposes must be known and ascending, so that one object has exactly one encoding
         m_data.clear();
         const auto n_purposes{ReadCompactSize(s)};
         for (size_t i{0}; i < n_purposes; ++i) {
             NetInfoPurpose purpose;
             s >> purpose;
-            auto [it, inserted] = m_data.try_emplace(purpose);
-            if (!inserted) {
-                throw std::ios_base::failure("ExtNetInfo: repeated purpose");
+            if (!IsValidPurpose(purpose) || (!m_data.empty() && purpose <= m_data.rbegin()->first)) {
+                throw std::ios_base::failure("ExtNetInfo: purpose unknown or out of order");
             }
-            s >> it->second;
+            s >> m_data.try_emplace(purpose).first->second;
         }
 
         // Regenerate internal cache

@@ -712,6 +712,23 @@ BOOST_FIXTURE_TEST_CASE(extnetinfo_validate_deser, RegTestingSetup)
         BOOST_CHECK_THROW(ds >> netInfo, std::ios_base::failure);
     }
 
+    // Purposes must be ascending and known, so that one object has exactly one encoding
+    for (const auto& purposes : std::vector<std::vector<NetInfoPurpose>>{
+             {NetInfoPurpose::PLATFORM_HTTPS, NetInfoPurpose::CORE_P2P},
+             {static_cast<NetInfoPurpose>(3)},
+         }) {
+        CDataStream ds(SER_DISK, CLIENT_VERSION);
+        write_header(ds, purposes.size());
+        for (const auto purpose : purposes) {
+            ds << purpose;
+            WriteCompactSize(ds, 1);
+            ds << NetInfoEntry{LookupNumeric("1.1.1.1", port)};
+        }
+
+        ExtNetInfo netInfo;
+        BOOST_CHECK_THROW(ds >> netInfo, std::ios_base::failure);
+    }
+
     // Port 443 is only permitted for Platform HTTPS addresses
     for (const auto& [purpose, expected] : std::vector<std::pair<NetInfoPurpose, NetInfoStatus>>{
              {NetInfoPurpose::PLATFORM_HTTPS, NetInfoStatus::Success},
