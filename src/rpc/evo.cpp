@@ -190,7 +190,7 @@ static RPCArg GetRpcArg(const std::string& strParamName)
                 },
                 RPCArgOptions{
                     .skip_type_check = true,
-                    .oneline_description={"\"payoutAddress\" | [{\"address\",\"reward\"},...] (string or array)"},
+                    .oneline_description={"payoutAddress | [{\"address\",\"reward\"},...] (string or array)"},
                     .type_str={"string or array", "string or array"},
                 }}
         },
@@ -208,7 +208,7 @@ static RPCArg GetRpcArg(const std::string& strParamName)
                 },
                 RPCArgOptions{
                     .skip_type_check = true,
-                    .oneline_description={"\"payoutAddress\" | [{\"address\",\"reward\"},...] (string or array)"},
+                    .oneline_description={"payoutAddress | [{\"address\",\"reward\"},...] (string or array)"},
                     .type_str={"string or array", "string or array"},
                 }}
         },

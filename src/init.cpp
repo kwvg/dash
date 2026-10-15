@@ -52,6 +52,7 @@
 #include <node/chainstate.h>
 #include <node/chainstatemanager_args.h>
 #include <node/context.h>
+#include <node/database_args.h>
 #include <node/interface_ui.h>
 #include <node/mempool_args.h>
 #include <node/mempool_persist_args.h>
@@ -169,6 +170,7 @@ using node::CalculateCacheSizes;
 using node::DEFAULT_PERSIST_MEMPOOL;
 using node::DEFAULT_PRINTPRIORITY;
 using node::DEFAULT_STOPAFTERBLOCKIMPORT;
+using node::g_indexes_ready_to_sync;
 using node::LoadChainstate;
 using node::MempoolPath;
 using node::ShouldPersistMempool;
@@ -639,7 +641,7 @@ void SetupServerArgs(ArgsManager& argsman)
 
     argsman.AddArg("-addressindex", strprintf("Maintain a full address index, used to query for the balance, txids and unspent outputs for addresses (default: %u)", DEFAULT_ADDRESSINDEX), ArgsManager::ALLOW_ANY, OptionsCategory::INDEXING);
     argsman.AddArg("-reindex", "Rebuild chain state and block index from the blk*.dat files on disk. This will also rebuild active optional indexes.", ArgsManager::ALLOW_ANY, OptionsCategory::INDEXING);
-    argsman.AddArg("-reindex-chainstate", "Rebuild chain state from the currently indexed blocks. When in pruning mode or if blocks on disk might be corrupted, use full -reindex instead. Deactivate all optional indexes before running this.", ArgsManager::ALLOW_ANY, OptionsCategory::INDEXING);
+    argsman.AddArg("-reindex-chainstate", "Rebuild chain state from the currently indexed blocks. When in pruning mode or if blocks on disk might be corrupted, use full -reindex instead.", ArgsManager::ALLOW_ANY, OptionsCategory::INDEXING);
     argsman.AddArg("-spentindex", strprintf("Maintain a full spent index, used to query the spending txid and input index for an outpoint (default: %u)", DEFAULT_SPENTINDEX), ArgsManager::ALLOW_ANY, OptionsCategory::INDEXING);
     argsman.AddArg("-timestampindex", strprintf("Maintain a timestamp index for block hashes, used to query blocks hashes by a range of timestamps (default: %u)", DEFAULT_TIMESTAMPINDEX), ArgsManager::ALLOW_ANY, OptionsCategory::INDEXING);
     argsman.AddArg("-txindex", strprintf("Maintain a full transaction index, used by the getrawtransaction rpc call (default: %u)", DEFAULT_TXINDEX), ArgsManager::ALLOW_ANY, OptionsCategory::INDEXING);
@@ -1370,19 +1372,6 @@ bool AppInitParameterInteraction(const ArgsManager& args)
     if (args.GetBoolArg("-peerbloomfilters", DEFAULT_PEERBLOOMFILTERS))
         nLocalServices = ServiceFlags(nLocalServices | NODE_BLOOM);
 
-    if (args.GetBoolArg("-reindex-chainstate", false)) {
-        // indexes that must be deactivated to prevent index corruption, see #24630
-        if (args.GetBoolArg("-coinstatsindex", DEFAULT_COINSTATSINDEX)) {
-            return InitError(_("-reindex-chainstate option is not compatible with -coinstatsindex. Please temporarily disable coinstatsindex while using -reindex-chainstate, or replace -reindex-chainstate with -reindex to fully rebuild all indexes."));
-        }
-        if (g_enabled_filter_types.count(BlockFilterType::BASIC_FILTER)) {
-            return InitError(_("-reindex-chainstate option is not compatible with -blockfilterindex. Please temporarily disable blockfilterindex while using -reindex-chainstate, or replace -reindex-chainstate with -reindex to fully rebuild all indexes."));
-        }
-        if (args.GetBoolArg("-txindex", DEFAULT_TXINDEX)) {
-            return InitError(_("-reindex-chainstate option is not compatible with -txindex. Please temporarily disable txindex while using -reindex-chainstate, or replace -reindex-chainstate with -reindex to fully rebuild all indexes."));
-        }
-    }
-
     try {
         const bool fQuorumVvecRequestsEnabled{llmq::GetEnabledQuorumVvecSyncEntries(args).size() > 0};
         if (!args.GetBoolArg("-llmq-data-recovery", llmq::DEFAULT_ENABLE_QUORUM_DATA_RECOVERY) && fQuorumVvecRequestsEnabled) {
@@ -1458,6 +1447,7 @@ bool AppInitParameterInteraction(const ArgsManager& args)
     {
         ChainstateManager::Options chainman_opts_dummy{
             .chainparams = chainparams,
+            .datadir = args.GetDataDirNet(),
         };
         if (const auto error{ApplyArgsManOptions(args, chainman_opts_dummy)}) {
             return InitError(*error);
@@ -1989,10 +1979,13 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     bool fReindexChainState = args.GetBoolArg("-reindex-chainstate", false);
     ChainstateManager::Options chainman_opts{
         .chainparams = chainparams,
+        .datadir = args.GetDataDirNet(),
         .superblock_status = [&sbman = *node.sbman](const CDeterministicMNList& mn_list, int height) { return sbman.GetStatus(mn_list, height); },
         .mn_sync = node.mn_sync.get(),
     };
     Assert(!ApplyArgsManOptions(args, chainman_opts)); // no error can happen, already checked in AppInitParameterInteraction
+    DBOptions dash_db_options;
+    node::ReadDatabaseArgs(args, dash_db_options);
 
     // cache size calculations
     CacheSizes cache_sizes = CalculateCacheSizes(args, g_enabled_filter_types.size());
@@ -2053,9 +2046,9 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
             }
         };
         auto [status, error] = catch_exceptions([&]() -> node::ChainstateLoadResult {
-            node.evodb = std::make_unique<CEvoDB>(util::DbWrapperParams{.path = args.GetDataDirNet(), .memory = false, .wipe = node::fReindex || fReindexChainState});
+            node.evodb = std::make_unique<CEvoDB>(util::DbWrapperParams{.path = args.GetDataDirNet(), .memory = false, .wipe = node::fReindex || fReindexChainState, .options = dash_db_options});
             node.dmnman = std::make_unique<CDeterministicMNManager>(*node.evodb, *node.mn_metaman);
-            node.isman = std::make_unique<llmq::CInstantSendManager>(*node.sporkman, util::DbWrapperParams{.path = args.GetDataDirNet(), .memory = false, .wipe = node::fReindex || fReindexChainState});
+            node.isman = std::make_unique<llmq::CInstantSendManager>(*node.sporkman, util::DbWrapperParams{.path = args.GetDataDirNet(), .memory = false, .wipe = node::fReindex || fReindexChainState, .options = dash_db_options});
 
             mempool_opts.dmnman = node.dmnman.get();
             mempool_opts.isman = node.isman.get();
@@ -2101,7 +2094,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
             options.isman = Assert(node.isman.get());
             std::tie(status, error) = catch_exceptions([&]() -> node::ChainstateLoadResult {
                 WITH_LOCK(::cs_main, node.llmq_ctx = std::make_unique<LLMQContext>(*node.dmnman, *node.evodb, chainman,
-                                                                                   util::DbWrapperParams{.path = args.GetDataDirNet(), .memory = false, .wipe = node::fReindex || fReindexChainState},
+                                                                                   util::DbWrapperParams{.path = args.GetDataDirNet(), .memory = false, .wipe = node::fReindex || fReindexChainState, .options = dash_db_options},
                                                                                    bls_threads, llmq::DEFAULT_WORKER_COUNT, max_recsigs_age));
                 node.special_tx = std::make_unique<CSpecialTxProcessor>(*node.evodb, *node.dmnman,
                                                                         *node.llmq_ctx->quorum_block_processor, *node.llmq_ctx->qsnapman,
@@ -2175,7 +2168,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     const bool quorums_recovery = args.GetBoolArg("-llmq-data-recovery", llmq::DEFAULT_ENABLE_QUORUM_DATA_RECOVERY);
     const bool quorums_watch = args.GetBoolArg("-watchquorums", llmq::DEFAULT_WATCH_QUORUMS);
     const llmq::QvvecSyncModeMap sync_map{llmq::GetEnabledQuorumVvecSyncEntries(args)};
-    const util::DbWrapperParams dash_db_params{.path = args.GetDataDirNet(), .memory = false, .wipe = (fReindex || fReindexChainState)};
+    const util::DbWrapperParams dash_db_params{.path = args.GetDataDirNet(), .memory = false, .wipe = (fReindex || fReindexChainState), .options = dash_db_options};
     if (const auto operator_sk_str = args.GetArg("-masternodeblsprivkey", ""); !operator_sk_str.empty()) {
         const CBLSSecretKey operator_sk{ParseHex(operator_sk_str)};
         if (!operator_sk.IsValid()) {
@@ -2294,6 +2287,9 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     node.peerman->AddExtraHandler(std::make_unique<SyncManager>(node.peerman.get(), *node.govman, *node.mn_sync, *node.connman, *node.netfulfilledman));
 
     // ********************************************************* Step 8: start indexers
+
+    // If reindex-chainstate was specified, delay syncing indexes until ThreadImport has reindexed the chain
+    if (!fReindexChainState) g_indexes_ready_to_sync = true;
     if (args.GetBoolArg("-txindex", DEFAULT_TXINDEX)) {
         g_txindex = std::make_unique<TxIndex>(interfaces::MakeChain(node), cache_sizes.tx_index, false, fReindex);
         if (!g_txindex->Start()) {

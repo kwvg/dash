@@ -36,7 +36,7 @@ CQuorumManager::CQuorumManager(CBLSWorker& _blsWorker, CDeterministicMNManager& 
     quorumBlockProcessor{_quorumBlockProcessor},
     m_qsnapman{qsnapman},
     m_chainman{chainman},
-    db{util::MakeDbWrapper({db_params.path / "llmq" / "quorumdb", db_params.memory, db_params.wipe, /*cache_size=*/1 << 20})}
+    db{util::MakeDbWrapper({db_params.path / "llmq" / "quorumdb", db_params.memory, db_params.wipe, /*cache_size=*/1 << 20, db_params.options})}
 {
     AssertLockHeld(::cs_main);
     mapQuorumsCache.Init(m_chainman.GetConsensus(), /*limit_by_connections=*/false);

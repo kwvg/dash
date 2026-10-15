@@ -32,7 +32,7 @@ CDKGSessionManager::CDKGSessionManager(CDeterministicMNManager& dmnman, CQuorumS
     m_qsnapman{qsnapman},
     m_chainman{chainman},
     m_sporkman{sporkman},
-    db{util::MakeDbWrapper({db_params.path / "llmq" / "dkgdb", db_params.memory, db_params.wipe, /*cache_size=*/1 << 20})}
+    db{util::MakeDbWrapper({db_params.path / "llmq" / "dkgdb", db_params.memory, db_params.wipe, /*cache_size=*/1 << 20, db_params.options})}
 {
 }
 

@@ -21,19 +21,19 @@ class ReindexTest(BitcoinTestFramework):
         self.setup_clean_chain = True
         self.num_nodes = 1
 
-    def reindex(self, justchainstate=False, txindex=0):
+    def reindex(self, justchainstate=False):
         self.generatetoaddress(self.nodes[0], 3, self.nodes[0].get_deterministic_priv_key().address)
         blockcount = self.nodes[0].getblockcount()
         self.stop_nodes()
-        extra_args = [["-reindex-chainstate", "-txindex=0"]] if justchainstate else [["-reindex", f"-txindex={txindex}"]]
+        extra_args = [["-reindex-chainstate" if justchainstate else "-reindex"]]
         self.start_nodes(extra_args)
         assert_equal(self.nodes[0].getblockcount(), blockcount)  # start_node is blocking on reindex
         self.log.info("Success")
 
     # Check that blocks can be processed out of order
     def out_of_order(self):
-        # The previous test created 24 blocks
-        assert_equal(self.nodes[0].getblockcount(), 24)
+        # The previous test created 12 blocks
+        assert_equal(self.nodes[0].getblockcount(), 12)
         self.stop_nodes()
 
         # In this test environment, blocks will always be in order (since
@@ -72,14 +72,13 @@ class ReindexTest(BitcoinTestFramework):
             self.start_nodes(extra_args)
 
         # All blocks should be accepted and processed.
-        assert_equal(self.nodes[0].getblockcount(), 24)
+        assert_equal(self.nodes[0].getblockcount(), 12)
 
     def run_test(self):
-        for txindex in [0, 1]:
-            self.reindex(False, txindex)
-            self.reindex(True, txindex)
-            self.reindex(False, txindex)
-            self.reindex(True, txindex)
+        self.reindex(False)
+        self.reindex(True)
+        self.reindex(False)
+        self.reindex(True)
 
         self.out_of_order()
 

@@ -27,7 +27,7 @@ static std::tuple<std::string, uint32_t, uint256> BuildInversedISLockKey(std::st
 } // anonymous namespace
 
 CInstantSendDb::CInstantSendDb(const util::DbWrapperParams& db_params) :
-    db{util::MakeDbWrapper({db_params.path / "llmq" / "isdb", db_params.memory, db_params.wipe, /*cache_size=*/32 << 20})}
+    db{util::MakeDbWrapper({db_params.path / "llmq" / "isdb", db_params.memory, db_params.wipe, /*cache_size=*/32 << 20, db_params.options})}
 {
     Upgrade({db_params.path / "llmq" / "isdb", db_params.memory, /*wipe=*/true, /*cache_size=*/32 << 20});
 }
