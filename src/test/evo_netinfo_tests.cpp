@@ -375,6 +375,20 @@ BOOST_AUTO_TEST_CASE(netinfo_ser)
         ds >> entry2;
         BOOST_CHECK(entry == entry2 && entry2.GetAddrPort().value() == service);
     }
+
+    {
+        // GetEntries() order does not depend on whether the object was built or deserialized
+        ExtNetInfo netInfo;
+        BOOST_CHECK_EQUAL(netInfo.AddEntry(NetInfoPurpose::PLATFORM_HTTPS, "1.1.1.1:443"), NetInfoStatus::Success);
+        BOOST_CHECK_EQUAL(netInfo.AddEntry(NetInfoPurpose::CORE_P2P, "1.1.1.1:9999"), NetInfoStatus::Success);
+
+        CDataStream ds(SER_DISK, CLIENT_VERSION);
+        ds << netInfo;
+        ExtNetInfo netInfo2;
+        ds >> netInfo2;
+        BOOST_CHECK(netInfo == netInfo2);
+        BOOST_CHECK(netInfo.GetEntries() == netInfo2.GetEntries());
+    }
 }
 
 BOOST_AUTO_TEST_CASE(netinfo_retvals)

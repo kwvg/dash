@@ -398,9 +398,6 @@ private:
     uint8_t m_version{CURRENT_VERSION};
     std::map<NetInfoPurpose, NetInfoList> m_data{};
 
-    // memory only
-    NetInfoList m_all_entries{};
-
 public:
     ExtNetInfo() = default;
     template <typename Stream>
@@ -434,12 +431,6 @@ public:
             }
             s >> m_data.try_emplace(purpose).first->second;
         }
-
-        // Regenerate internal cache
-        m_all_entries.clear();
-        for (const auto& [_, entries] : m_data) {
-            m_all_entries.insert(m_all_entries.end(), entries.begin(), entries.end());
-        }
     }
 
     NetInfoStatus AddEntry(const NetInfoPurpose purpose, const std::string& input) override;
@@ -457,7 +448,6 @@ public:
     {
         m_version = CURRENT_VERSION;
         m_data.clear();
-        m_all_entries.clear();
     }
 
 private:
