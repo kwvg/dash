@@ -291,7 +291,7 @@ NetInfoStatus MnNetInfo::ValidateService(const CService& service)
     if (!service.IsIPv4()) {
         return NetInfoStatus::BadType;
     }
-    if (Params().RequireRoutableExternalIP() && !service.IsRoutable()) {
+    if (Params().RequireRoutableExternalIP() && (service.IsRFC1918() || !service.IsRoutable())) {
         return NetInfoStatus::NotRoutable;
     }
 
@@ -453,7 +453,7 @@ NetInfoStatus ExtNetInfo::ValidateService(const NetInfoPurpose purpose, const CS
     if (!service.IsCJDNS() && !service.IsI2P() && !service.IsIPv4() && !service.IsIPv6() && !service.IsTor()) {
         return NetInfoStatus::BadType;
     }
-    if (Params().RequireRoutableExternalIP() && !service.IsRoutable()) {
+    if (Params().RequireRoutableExternalIP() && (service.IsRFC1918() || !service.IsRoutable())) {
         return NetInfoStatus::NotRoutable;
     }
     const uint16_t service_port{service.GetPort()};
