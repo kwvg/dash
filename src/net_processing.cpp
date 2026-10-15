@@ -218,6 +218,14 @@ static constexpr double MAX_ADDR_RATE_PER_SECOND{0.1};
  *  based increments won't go above this, but the MAX_ADDR_TO_SEND increment following GETADDR
  *  is exempt from this limit). */
 static constexpr size_t MAX_ADDR_PROCESSING_TOKEN_BUCKET{MAX_ADDR_TO_SEND};
+/** The average rate of masternode list diffs we are willing to build per peer in reply to
+ *  GETMNLISTDIFF and GETQUORUMROTATIONINFO. A GETMNLISTDIFF costs one diff, a GETQUORUMROTATIONINFO
+ *  one per diff in its reply. Synced light clients need about one diff per block, so this leaves
+ *  ample headroom. Can be bypassed using the NetPermissionFlags::NoBan permission. */
+static constexpr double MAX_MNLIST_REQUEST_RATE_PER_SECOND{0.1};
+/** The capacity, in diffs, of the GETMNLISTDIFF/GETQUORUMROTATIONINFO token bucket. Sized to cover
+ *  the burst of diffs a light client requests for quorum verification during initial sync. */
+static constexpr double MAX_MNLIST_REQUEST_TOKEN_BUCKET{100.0};
 /** The compactblocks version we support. See BIP 152. */
 static constexpr uint64_t CMPCTBLOCKS_VERSION{1};
 
@@ -418,6 +426,12 @@ struct Peer {
     std::atomic<uint64_t> m_addr_rate_limited{0};
     /** Total number of addresses that were processed (excludes rate-limited ones). */
     std::atomic<uint64_t> m_addr_processed{0};
+
+    /** Number of masternode list diffs that can be built for this peer's GETMNLISTDIFF/GETQUORUMROTATIONINFO
+     *  requests. Goes negative when a GETQUORUMROTATIONINFO builds more diffs than were left. */
+    double m_mnlist_request_token_bucket GUARDED_BY(NetEventsInterface::g_msgproc_mutex){MAX_MNLIST_REQUEST_TOKEN_BUCKET};
+    /** When m_mnlist_request_token_bucket was last updated */
+    std::chrono::microseconds m_mnlist_request_token_timestamp GUARDED_BY(NetEventsInterface::g_msgproc_mutex){GetTime<std::chrono::microseconds>()};
 
     /** Whether we've sent this peer a getheaders in response to an inv prior to initial-headers-sync completing */
     bool m_inv_triggered_getheaders_before_sync GUARDED_BY(NetEventsInterface::g_msgproc_mutex){false};
@@ -956,6 +970,9 @@ private:
 
     void AddAddressKnown(Peer& peer, const CAddress& addr) EXCLUSIVE_LOCKS_REQUIRED(g_msgproc_mutex);
     void PushAddress(Peer& peer, const CAddress& addr, FastRandomContext& insecure_rand) EXCLUSIVE_LOCKS_REQUIRED(g_msgproc_mutex);
+
+    /** Refill the peer's GETMNLISTDIFF/GETQUORUMROTATIONINFO token bucket and take a token if one is available. */
+    bool ConsumeMNListRequestToken(const CNode& node, Peer& peer) EXCLUSIVE_LOCKS_REQUIRED(g_msgproc_mutex);
 
     /** Number of nodes with fSyncStarted. */
     int nSyncStarted GUARDED_BY(cs_main) = 0;
@@ -5613,6 +5630,11 @@ void PeerManagerImpl::ProcessMessage(
         CGetSimplifiedMNListDiff cmd;
         vRecv >> cmd;
 
+        if (!ConsumeMNListRequestToken(pfrom, *peer)) {
+            LogPrint(BCLog::NET, "%s rate limited, ignoring request, peer=%d\n", msg_type, pfrom.GetId());
+            return;
+        }
+
         LOCK(cs_main);
 
         CSimplifiedMNListDiff mnListDiff;
@@ -5669,12 +5691,29 @@ void PeerManagerImpl::ProcessMessage(
             return;
         }
 
+        if (!ConsumeMNListRequestToken(pfrom, *peer)) {
+            LogPrint(BCLog::NET, "%s rate limited, ignoring request, peer=%d\n", msg_type, pfrom.GetId());
+            return;
+        }
+
         LOCK(cs_main);
 
         llmq::CQuorumRotationInfo quorumRotationInfoRet;
         std::string strError;
         bool use_legacy_construction = pfrom.GetCommonVersion() < EFFICIENT_QRINFO_VERSION;;
-        if (BuildQuorumRotationInfo(m_dmnman, *m_llmq_ctx.qsnapman, m_chainman, *m_llmq_ctx.qman, *m_llmq_ctx.quorum_block_processor, cmd, use_legacy_construction, quorumRotationInfoRet, strError)) {
+        const bool built{BuildQuorumRotationInfo(m_dmnman, *m_llmq_ctx.qsnapman, m_chainman, *m_llmq_ctx.qman,
+                                                 *m_llmq_ctx.quorum_block_processor, cmd, use_legacy_construction,
+                                                 quorumRotationInfoRet, strError)};
+        if (!pfrom.HasPermission(NetPermissionFlags::NoBan)) {
+            // The token taken above paid for one diff. Charge the rest of the reply (the tip, H, the
+            // target cycles and the snapshot diffs) now that its size is known. A build that failed
+            // partway is charged the same way, so it cannot cost less than the work it did. The peer
+            // then waits for the bucket to refill past any overdraft.
+            const size_t diffs_built{2 + quorumRotationInfoRet.GetCycles().size() +
+                                     quorumRotationInfoRet.mnListDiffList.size()};
+            peer->m_mnlist_request_token_bucket -= diffs_built - 1;
+        }
+        if (built) {
             m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::QUORUMROTATIONINFO, quorumRotationInfoRet));
         } else {
             strError = strprintf("getquorumrotationinfo failed for size(baseBlockHashes)=%d, blockRequestHash=%s. error=%s", cmd.baseBlockHashes.size(), cmd.blockRequestHash.ToString(), strError);
@@ -6283,6 +6322,21 @@ bool PeerManagerImpl::RejectIncomingTxs(const CNode& peer) const
     // In -blocksonly mode, peers need the 'relay' permission to send txs to us
     if (m_ignore_incoming_txs && !peer.HasPermission(NetPermissionFlags::Relay)) return true;
     return false;
+}
+
+bool PeerManagerImpl::ConsumeMNListRequestToken(const CNode& node, Peer& peer)
+{
+    if (node.HasPermission(NetPermissionFlags::NoBan)) return true;
+
+    const auto current_time{GetTime<std::chrono::microseconds>()};
+    const auto time_diff{std::max(current_time - peer.m_mnlist_request_token_timestamp, 0us)};
+    const double increment{Ticks<SecondsDouble>(time_diff) * MAX_MNLIST_REQUEST_RATE_PER_SECOND};
+    peer.m_mnlist_request_token_bucket = std::min(peer.m_mnlist_request_token_bucket + increment, MAX_MNLIST_REQUEST_TOKEN_BUCKET);
+    peer.m_mnlist_request_token_timestamp = current_time;
+
+    if (peer.m_mnlist_request_token_bucket < 1.0) return false;
+    peer.m_mnlist_request_token_bucket -= 1.0;
+    return true;
 }
 
 bool PeerManagerImpl::SetupAddressRelay(const CNode& node, Peer& peer)

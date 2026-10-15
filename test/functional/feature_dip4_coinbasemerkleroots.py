@@ -12,8 +12,8 @@ Checks DIP4 merkle roots in coinbases
 
 from io import BytesIO
 
-from test_framework.messages import CBlock, CBlockHeader, CCbTx, CMerkleBlock, from_hex, hash256, QuorumId, ser_uint256
-from test_framework.p2p import P2PMnListDiffStore
+from test_framework.messages import CBlock, CBlockHeader, CCbTx, CMerkleBlock, from_hex, hash256, MAX_MNLIST_REQUEST_TOKEN_BUCKET, msg_getmnlistd, QuorumId, ser_uint256
+from test_framework.p2p import P2PInterface, P2PMnListDiffStore
 from test_framework.test_framework import (
     DashTestFramework,
     MasternodeInfo,
@@ -162,6 +162,13 @@ class LLMQCoinbaseCommitmentsTest(DashTestFramework):
         self.test_getmnlistdiff_quorums(next_block, next_block, quorums_with_third, expectedDeleted, expectedNew)
         self.test_getmnlistdiff_quorums(next_block2, next_block2, quorums_with_third, expectedDeleted, expectedNew)
 
+        self.log.info("Peers with noban permission are not rate limited")
+        self.restart_node(0, extra_args=self.extra_args[0] + ["-whitelist=noban@127.0.0.1"])
+        peer = self.nodes[0].add_p2p_connection(P2PInterface())
+        for _ in range(MAX_MNLIST_REQUEST_TOKEN_BUCKET + 1):
+            peer.send_message(msg_getmnlistd(0, int(next_block2, 16)))
+        peer.sync_with_ping()
+        assert_equal(peer.message_count["mnlistdiff"], MAX_MNLIST_REQUEST_TOKEN_BUCKET + 1)
 
     def test_getmnlistdiff(self, baseBlockHash, blockHash, baseMNList, expectedDeleted, expectedUpdated):
         d = self.test_getmnlistdiff_base(baseBlockHash, blockHash)

@@ -21,10 +21,13 @@ from test_framework.messages import (
     CFinalCommitmentPayload,
     CMerkleBlock,
     MAX_BASE_BLOCK_HASHES,
+    MAX_MNLIST_REQUEST_RATE_PER_SECOND,
+    MAX_MNLIST_REQUEST_TOKEN_BUCKET,
     QuorumId,
     from_hex,
     hash256,
     msg_generic,
+    msg_getmnlistd,
     msg_getqrinfo,
     ser_compact_size,
     ser_uint256,
@@ -33,6 +36,7 @@ from test_framework.messages import (
 from test_framework.p2p import P2PMnListDiffStore
 from test_framework.util import (
     assert_equal,
+    assert_greater_than,
     assert_greater_than_or_equal,
     assert_raises_rpc_error,
 )
@@ -325,7 +329,39 @@ class LLMQQuorumRotationTest(DashTestFramework):
             peer.send_and_ping(msg_getqrinfo([baseBlockHash] * MAX_BASE_BLOCK_HASHES, blockRequestHash))
         self.wait_until(lambda: node.getpeerinfo()[-1]["bytessent_per_msg"].get("qrinfo", 0) > 0)
 
-        self.log.info("One past the limit is rejected and the peer is disconnected")
+        self.log.info("getmnlistd and getqrinfo share a per-peer rate limit, requests past it are ignored")
+        peer_id = node.getpeerinfo()[-1]["id"]
+
+        def qrinfo_bytes():
+            return next(p for p in node.getpeerinfo() if p["id"] == peer_id)["bytessent_per_msg"]["qrinfo"]
+        # A getqrinfo costs one token per diff it builds: the tip, H, the three target cycles and the snapshot diffs.
+        rpc_qr_info = node.quorum("rotationinfo", "%064x" % blockRequestHash, False, ["%064x" % baseBlockHash])
+        qrinfo_cost = 5 + len(rpc_qr_info["mnListDiffList"])
+        mnlistdiffs = MAX_MNLIST_REQUEST_TOKEN_BUCKET - qrinfo_cost - 1
+        for _ in range(mnlistdiffs):
+            peer.send_message(msg_getmnlistd(0, blockRequestHash))
+        peer.sync_with_ping()
+        assert_equal(peer.message_count["mnlistdiff"], mnlistdiffs)
+
+        self.log.info("A getqrinfo needs only one token to be served, and overdraws the bucket by the rest of its cost")
+        qrinfo_bytes_served = qrinfo_bytes()
+        peer.send_and_ping(msg_getqrinfo([baseBlockHash], blockRequestHash))
+        assert_greater_than(qrinfo_bytes(), qrinfo_bytes_served)
+        qrinfo_bytes_served = qrinfo_bytes()
+        # One token's worth of refill does not cover the overdraft.
+        self.bump_mocktime(int(1 / MAX_MNLIST_REQUEST_RATE_PER_SECOND) + 1)
+        with node.assert_debug_log([], unexpected_msgs=["Misbehaving"]):
+            peer.send_and_ping(msg_getqrinfo([baseBlockHash], blockRequestHash))
+            peer.send_and_ping(msg_getmnlistd(0, blockRequestHash))
+        assert_equal(qrinfo_bytes(), qrinfo_bytes_served)
+        assert_equal(peer.message_count["mnlistdiff"], mnlistdiffs)
+
+        self.log.info("The rate limit refills over time")
+        self.bump_mocktime(qrinfo_cost * int(1 / MAX_MNLIST_REQUEST_RATE_PER_SECOND))
+        peer.send_and_ping(msg_getqrinfo([baseBlockHash], blockRequestHash))
+        assert_greater_than(qrinfo_bytes(), qrinfo_bytes_served)
+
+        self.log.info("One past the limit is rejected and the peer is disconnected, even when rate limited")
         with node.assert_debug_log(["Misbehaving", "malformed getqrinfo received"]):
             peer.send_message(msg_getqrinfo([baseBlockHash] * (MAX_BASE_BLOCK_HASHES + 1), blockRequestHash))
             peer.wait_for_disconnect()
