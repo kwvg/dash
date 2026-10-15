@@ -14,7 +14,7 @@ on:
 
 jobs:
   check_merge:
-    runs-on: ubuntu-latest
+    runs-on: dash-x64-light
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6

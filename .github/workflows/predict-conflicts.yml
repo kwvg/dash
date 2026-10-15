@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   predict_conflicts:
-    runs-on: ubuntu-latest
+    runs-on: dash-x64-light
     concurrency:
       group: predict-conflicts
       cancel-in-progress: false
@@ -30,6 +30,11 @@ jobs:
         uses: actions/checkout@v6
         with:
           persist-credentials: false
+      # The light runner's system python3 has no pip, which the step below needs.
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
       - name: Validate potential conflicts and update advisory comments
         continue-on-error: true
         env:
