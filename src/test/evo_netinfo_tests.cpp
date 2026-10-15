@@ -696,6 +696,22 @@ BOOST_FIXTURE_TEST_CASE(extnetinfo_validate_deser, RegTestingSetup)
         BOOST_CHECK_EQUAL(netInfo.Validate(), NetInfoStatus::BadInput);
     }
 
+    {
+        // A repeated purpose is rejected at deserialization, even if its entries would
+        // otherwise be silently cleared instead of failing
+        CDataStream ds(SER_DISK, CLIENT_VERSION);
+        write_header(ds, 2);
+        ds << NetInfoPurpose::CORE_P2P;
+        WriteCompactSize(ds, 1);
+        ds << NetInfoEntry{LookupNumeric("1.1.1.1", port)};
+        ds << NetInfoPurpose::CORE_P2P;
+        WriteCompactSize(ds, 1);
+        ds << uint8_t{0x03}; // unknown NetInfoType
+
+        ExtNetInfo netInfo;
+        BOOST_CHECK_THROW(ds >> netInfo, std::ios_base::failure);
+    }
+
     // Port 443 is only permitted for Platform HTTPS addresses
     for (const auto& [purpose, expected] : std::vector<std::pair<NetInfoPurpose, NetInfoStatus>>{
              {NetInfoPurpose::PLATFORM_HTTPS, NetInfoStatus::Success},
