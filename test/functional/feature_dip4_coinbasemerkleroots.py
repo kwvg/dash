@@ -20,9 +20,12 @@ from test_framework.test_framework import (
 )
 from test_framework.util import assert_equal
 
-DIP0008_HEIGHT = 432
-DIP0024_HEIGHT = 900
-V20_HEIGHT = 900
+# Measured: the first quorum has matured at height 163 when the activation wait starts and the
+# test ends around height 260, so dip0008 activates with a margin above the former and the
+# delayed forks stay a margin beyond the latter
+DIP0008_HEIGHT = 190
+DIP0024_HEIGHT = 300
+V20_HEIGHT = 300
 
 class LLMQCoinbaseCommitmentsTest(DashTestFramework):
     def add_options(self, parser):
