@@ -19,14 +19,15 @@ from __future__ import annotations
 import argparse
 import base64
 import html
+import http.client
 import json
 import os
+import re
 import sys
+import urllib.request
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import quote
-
-import requests
 
 
 COMMENT_MARKER = "dash-potential-conflicts:v1"
@@ -34,6 +35,8 @@ COMMENT_START = f"<!-- {COMMENT_MARKER}"
 COMMENT_END = "-->"
 TRUSTED_COMMENT_AUTHORS = {"github-actions[bot]"}
 MAX_FILE_DETAILS = 12
+# Error statuses, network errors and timeouts are OSError; a malformed body is ValueError.
+REQUEST_ERRORS = (OSError, http.client.HTTPException, ValueError)
 
 
 @dataclass
@@ -56,6 +59,25 @@ def github_headers() -> dict[str, str]:
     return headers
 
 
+def http_request(method: str, url: str, headers: dict[str, str], payload: Any = None) -> tuple[str, str]:
+    """Return the response body and its Link header; raise on an error status."""
+    data = None
+    if payload is not None:
+        data = json.dumps(payload).encode()
+        headers = {**headers, "Content-Type": "application/json"}
+    request = urllib.request.Request(url, data=data, method=method)
+    # Unlike requests, urllib would otherwise send the token on to a redirect's host.
+    for name, value in headers.items():
+        request.add_unredirected_header(name, value)
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return response.read().decode(), response.headers.get("Link", "")
+
+
+def next_page_url(link_header: str) -> str | None:
+    match = re.search(r'<([^>]+)>;\s*rel="next"', link_header)
+    return match.group(1) if match else None
+
+
 def repo_name() -> str:
     return os.environ.get("GITHUB_REPOSITORY", "dashpay/dash")
 
@@ -66,9 +88,8 @@ def api_url(path: str) -> str:
 
 def github_get(path_or_url: str) -> Any:
     url = path_or_url if path_or_url.startswith("https://") else api_url(path_or_url)
-    response = requests.get(url, headers=github_headers(), timeout=30)
-    response.raise_for_status()
-    return response.json()
+    body, _link = http_request("GET", url, github_headers())
+    return json.loads(body)
 
 
 def github_get_paginated(path: str) -> list[dict[str, Any]]:
@@ -76,30 +97,26 @@ def github_get_paginated(path: str) -> list[dict[str, Any]]:
     items = []
 
     while url:
-        response = requests.get(url, headers=github_headers(), timeout=30)
-        response.raise_for_status()
-        page = response.json()
+        body, link = http_request("GET", url, github_headers())
+        page = json.loads(body)
         if not isinstance(page, list):
             raise ValueError(f"Expected a list response from {url}")
         items.extend(page)
-        url = response.links.get("next", {}).get("url")
+        url = next_page_url(link)
 
     return items
 
 
 def github_patch(path: str, payload: dict[str, Any]) -> None:
-    response = requests.patch(api_url(path), headers=github_headers(), json=payload, timeout=30)
-    response.raise_for_status()
+    http_request("PATCH", api_url(path), github_headers(), payload)
 
 
 def github_post(path: str, payload: dict[str, Any]) -> None:
-    response = requests.post(api_url(path), headers=github_headers(), json=payload, timeout=30)
-    response.raise_for_status()
+    http_request("POST", api_url(path), github_headers(), payload)
 
 
 def github_delete(path: str) -> None:
-    response = requests.delete(api_url(path), headers=github_headers(), timeout=30)
-    response.raise_for_status()
+    http_request("DELETE", api_url(path), github_headers())
 
 
 def normalize_state_item(item: Any) -> dict[str, Any] | None:
@@ -261,7 +278,7 @@ def render_comment_body(state: dict[str, Any]) -> str:
 def get_pr_json(pr_num: int) -> dict[str, Any] | None:
     try:
         return github_get(f"pulls/{pr_num}")
-    except requests.RequestException as e:
+    except REQUEST_ERRORS as e:
         print(f"Warning: Error fetching PR {pr_num}: {e}", file=sys.stderr)
         return None
 
@@ -413,15 +430,14 @@ def branches_can_merge(our_pr_label: str, conflict_pr_label: str) -> bool | None
     headers = {"User-Agent": "dash-potential-conflicts"}
 
     try:
-        response = requests.get(merge_check_url, headers=headers, timeout=30)
-        response.raise_for_status()
-    except requests.RequestException as e:
+        text, _link = http_request("GET", merge_check_url, headers)
+    except REQUEST_ERRORS as e:
         print(f"Error checking mergeability at {merge_check_url}: {e}", file=sys.stderr)
         return None
 
-    if "These branches can be automatically merged." in response.text:
+    if "These branches can be automatically merged." in text:
         return True
-    if "Can't automatic" in response.text or "octicon octicon-x" in response.text:
+    if "Can't automatic" in text or "octicon octicon-x" in text:
         return False
 
     print(f"Warning: Unexpected mergeability response: {merge_check_url}", file=sys.stderr)
