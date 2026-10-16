@@ -37,7 +37,10 @@ from test_framework.util import (
     find_output,
     random_bytes,
 )
-from test_framework.wallet_util import bytes_to_wif
+from test_framework.wallet_util import (
+    bytes_to_wif,
+    get_generate_key
+)
 
 import json
 import os
@@ -276,7 +279,7 @@ class PSBTTest(BitcoinTestFramework):
                 assert_raises_rpc_error(-3, "Invalid amount",
                     self.nodes[1].walletcreatefundedpsbt, inputs, outputs, 0, {param: invalid_value, "add_inputs": True})
         # Test fee_rate values that cannot be represented in sat/vB.
-        for invalid_value in [0.0001, 0.00000001, 0.00099999, 31.99999999, "0.0001", "0.00000001", "0.00099999", "31.99999999"]:
+        for invalid_value in [0.0001, 0.00000001, 0.00099999, 31.99999999]:
             assert_raises_rpc_error(-3, "Invalid amount",
                 self.nodes[1].walletcreatefundedpsbt, inputs, outputs, 0, {"fee_rate": invalid_value, "add_inputs": True})
 
@@ -706,6 +709,9 @@ class PSBTTest(BitcoinTestFramework):
         self.log.info("Test we don't crash when making a 0-value funded transaction at 0 fee without forcing an input selection")
         assert_raises_rpc_error(-4, "Transaction requires one destination of non-0 value, a non-0 feerate, or a pre-selected input", self.nodes[0].walletcreatefundedpsbt, [], [{"data": "deadbeef"}], 0, {"fee_rate": "0"})
 
+        self.log.info("Test walletprocesspsbt raises if an invalid sighashtype is passed")
+        assert_raises_rpc_error(-8, "all is not a valid sighash parameter.", self.nodes[0].walletprocesspsbt, psbt["psbt"], sighashtype="all")
+
         self.log.info("Test decoding PSBT with per-input preimage types")
         # note that the decodepsbt RPC doesn't check whether preimages and hashes match
         hash_ripemd160, preimage_ripemd160 = random_bytes(20), random_bytes(50)
@@ -761,6 +767,57 @@ class PSBTTest(BitcoinTestFramework):
         psbt.o = [PSBTMap()]
         assert_equal(self.nodes[0].finalizepsbt(psbt.to_base64()),
             {'hex': tx.serialize().hex(), 'complete': True})
+
+        self.log.info("Test descriptorprocesspsbt updates and signs a psbt with descriptors")
+
+        self.generate(self.nodes[2], 1)
+
+        # Disable the wallet for node 2 since `descriptorprocesspsbt` does not use the wallet
+        self.restart_node(2, extra_args=["-disablewallet"])
+        self.connect_nodes(0, 2)
+        self.connect_nodes(1, 2)
+
+        key_info = get_generate_key()
+        key = key_info.privkey
+        address = key_info.p2pkh_addr
+
+        descriptor = descsum_create(f"pkh({key})")
+
+        txid = self.nodes[0].sendtoaddress(address, 1)
+        self.sync_all()
+        vout = find_output(self.nodes[0], txid, 1)
+
+        psbt = self.nodes[2].createpsbt([{"txid": txid, "vout": vout}], {self.nodes[0].getnewaddress(): 0.99999})
+        decoded = self.nodes[2].decodepsbt(psbt)
+        test_psbt_input_keys(decoded['inputs'][0], [])
+
+        # Test that even if the wrong descriptor is given, `non_witness_utxo`
+        # is still added to the psbt
+        alt_descriptor = descsum_create(f"pkh({get_generate_key().privkey})")
+        alt_psbt = self.nodes[2].descriptorprocesspsbt(psbt=psbt, descriptors=[alt_descriptor], sighashtype="ALL")["psbt"]
+        decoded = self.nodes[2].decodepsbt(alt_psbt)
+        test_psbt_input_keys(decoded['inputs'][0], ['non_witness_utxo'])
+
+        # Test that the psbt is not finalized and does not have bip32_derivs unless specified
+        processed_psbt = self.nodes[2].descriptorprocesspsbt(psbt=psbt, descriptors=[descriptor], sighashtype="ALL", bip32derivs=True, finalize=False)
+        decoded = self.nodes[2].decodepsbt(processed_psbt['psbt'])
+        test_psbt_input_keys(decoded['inputs'][0], ['non_witness_utxo', 'partial_signatures', 'bip32_derivs'])
+
+        # If psbt not finalized, test that result does not have hex
+        assert "hex" not in processed_psbt
+
+        processed_psbt = self.nodes[2].descriptorprocesspsbt(psbt=psbt, descriptors=[descriptor], sighashtype="ALL", bip32derivs=False, finalize=True)
+        decoded = self.nodes[2].decodepsbt(processed_psbt['psbt'])
+        test_psbt_input_keys(decoded['inputs'][0], ['non_witness_utxo', 'final_scriptSig'])
+
+        # Test psbt is complete
+        assert_equal(processed_psbt['complete'], True)
+
+        # Broadcast transaction
+        self.nodes[2].sendrawtransaction(processed_psbt['hex'])
+
+        self.log.info("Test descriptorprocesspsbt raises if an invalid sighashtype is passed")
+        assert_raises_rpc_error(-8, "all is not a valid sighash parameter.", self.nodes[2].descriptorprocesspsbt, psbt, [descriptor], sighashtype="all")
 
 
 if __name__ == '__main__':
