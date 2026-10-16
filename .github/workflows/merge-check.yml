@@ -14,7 +14,7 @@ on:
 
 jobs:
   check_merge:
-    runs-on: ${{ vars.DASH_LIGHT_RUNNER || 'dash-x64-light' }}
+    runs-on: ${{ vars.DASH_LIGHT_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
