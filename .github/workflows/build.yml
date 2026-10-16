@@ -218,6 +218,7 @@ jobs:
       container-path: ${{ needs.container.outputs.path }}
       base-image-digest: ${{ needs.check-skip.outputs.base-image-digest }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      runs-on-check: ${{ needs.check-skip.outputs['runner-check-skip'] }}
 
   depends-linux64:
     name: x86_64-pc-linux-gnu
@@ -233,6 +234,7 @@ jobs:
       container-path: ${{ needs.container.outputs.path }}
       base-image-digest: ${{ needs.check-skip.outputs.base-image-digest }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      runs-on-check: ${{ needs.check-skip.outputs['runner-check-skip'] }}
 
   depends-linux64_multiprocess:
     name: linux64_multiprocess
@@ -246,6 +248,8 @@ jobs:
       container-path: ${{ needs.container.outputs.path }}
       base-image-digest: ${{ needs.check-skip.outputs.base-image-digest }}
       runs-on: ${{ needs.check-skip.outputs['runner-arm64'] }}
+      runs-on-check: ${{ needs.check-skip.outputs['runner-check-skip'] }}
+      runs-on-arch: aarch64
 
   depends-linux64_nowallet:
     name: x86_64-pc-linux-gnu_nowallet
@@ -257,6 +261,7 @@ jobs:
       container-path: ${{ needs.container.outputs.path }}
       base-image-digest: ${{ needs.check-skip.outputs.base-image-digest }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      runs-on-check: ${{ needs.check-skip.outputs['runner-check-skip'] }}
 
   depends-mac:
     name: x86_64-apple-darwin
@@ -268,6 +273,7 @@ jobs:
       container-path: ${{ needs.container.outputs.path }}
       base-image-digest: ${{ needs.check-skip.outputs.base-image-digest }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      runs-on-check: ${{ needs.check-skip.outputs['runner-check-skip'] }}
 
   depends-win64:
     name: x86_64-w64-mingw32
@@ -279,6 +285,7 @@ jobs:
       container-path: ${{ needs.container.outputs.path }}
       base-image-digest: ${{ needs.check-skip.outputs.base-image-digest }}
       runs-on: ${{ needs.check-skip.outputs['runner-amd64'] }}
+      runs-on-check: ${{ needs.check-skip.outputs['runner-check-skip'] }}
 
   lint:
     name: Lint
