@@ -19,8 +19,12 @@ on:
         description: "Runner label to use (e.g., ubuntu-24.04 or ubuntu-24.04-arm)"
         required: true
         type: string
+      runs-on-check:
+        description: "Runner label for the check-cache job; any arch, see runs-on-arch"
+        required: true
+        type: string
       runs-on-arch:
-        description: "Machine arch (uname -m) of the runs-on runner, used by check-cache to compute the same HOST the build runner would"
+        description: "Machine arch (uname -m) of the runs-on runner, so check-cache (which may run on another arch) computes the same HOST the build runner would"
         required: false
         default: x86_64
         type: string
@@ -44,7 +48,7 @@ on:
 jobs:
   check-cache:
     name: Check cache
-    runs-on: ${{ vars.DASH_LIGHT_RUNNER || inputs.runs-on }}
+    runs-on: ${{ inputs.runs-on-check }}
     outputs:
       cache-hit: ${{ steps.cache-check.outputs.cache-hit }}
       cache-key: ${{ steps.setup.outputs.cache-key }}
@@ -73,8 +77,8 @@ jobs:
           BUILD_TARGET: ${{ inputs.build-target }}
           BASE_IMAGE_DIGEST: ${{ inputs.base-image-digest }}
           RUNS_ON: ${{ inputs.runs-on }}
-          # This job does not run on the build runner, so name its arch for
-          # the targets whose HOST follows the machine (see ci/test).
+          # This job may not run on the build runner's arch, so name that arch
+          # for the targets whose HOST follows the machine (see ci/test).
           DEPENDS_ARCH: ${{ inputs.runs-on-arch }}
         run: |
           source ./ci/dash/matrix.sh
