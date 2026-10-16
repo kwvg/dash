@@ -44,7 +44,7 @@ on:
 jobs:
   check-cache:
     name: Check cache
-    runs-on: ${{ vars.DASH_LIGHT_RUNNER || 'dash-x64-light' }}
+    runs-on: ${{ vars.DASH_LIGHT_RUNNER || inputs.runs-on }}
     outputs:
       cache-hit: ${{ steps.cache-check.outputs.cache-hit }}
       cache-key: ${{ steps.setup.outputs.cache-key }}
