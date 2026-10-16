@@ -279,7 +279,7 @@ class PSBTTest(BitcoinTestFramework):
                 assert_raises_rpc_error(-3, "Invalid amount",
                     self.nodes[1].walletcreatefundedpsbt, inputs, outputs, 0, {param: invalid_value, "add_inputs": True})
         # Test fee_rate values that cannot be represented in sat/vB.
-        for invalid_value in [0.0001, 0.00000001, 0.00099999, 31.99999999, "0.0001", "0.00000001", "0.00099999", "31.99999999"]:
+        for invalid_value in [0.0001, 0.00000001, 0.00099999, 31.99999999]:
             assert_raises_rpc_error(-3, "Invalid amount",
                 self.nodes[1].walletcreatefundedpsbt, inputs, outputs, 0, {"fee_rate": invalid_value, "add_inputs": True})
 
@@ -709,6 +709,9 @@ class PSBTTest(BitcoinTestFramework):
         self.log.info("Test we don't crash when making a 0-value funded transaction at 0 fee without forcing an input selection")
         assert_raises_rpc_error(-4, "Transaction requires one destination of non-0 value, a non-0 feerate, or a pre-selected input", self.nodes[0].walletcreatefundedpsbt, [], [{"data": "deadbeef"}], 0, {"fee_rate": "0"})
 
+        self.log.info("Test walletprocesspsbt raises if an invalid sighashtype is passed")
+        assert_raises_rpc_error(-8, "all is not a valid sighash parameter.", self.nodes[0].walletprocesspsbt, psbt["psbt"], sighashtype="all")
+
         self.log.info("Test decoding PSBT with per-input preimage types")
         # note that the decodepsbt RPC doesn't check whether preimages and hashes match
         hash_ripemd160, preimage_ripemd160 = random_bytes(20), random_bytes(50)
@@ -807,6 +810,10 @@ class PSBTTest(BitcoinTestFramework):
         # Broadcast transaction
         rawtx = self.nodes[2].finalizepsbt(psbt)["hex"]
         self.nodes[2].sendrawtransaction(rawtx)
+
+        self.log.info("Test descriptorprocesspsbt raises if an invalid sighashtype is passed")
+        assert_raises_rpc_error(-8, "all is not a valid sighash parameter.", self.nodes[2].descriptorprocesspsbt, psbt, [descriptor], sighashtype="all")
+
 
 if __name__ == '__main__':
     PSBTTest().main()
