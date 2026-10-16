@@ -246,6 +246,7 @@ jobs:
       container-path: ${{ needs.container.outputs.path }}
       base-image-digest: ${{ needs.check-skip.outputs.base-image-digest }}
       runs-on: ${{ needs.check-skip.outputs['runner-arm64'] }}
+      runs-on-arch: aarch64
 
   depends-linux64_nowallet:
     name: x86_64-pc-linux-gnu_nowallet

@@ -19,6 +19,11 @@ on:
         description: "Runner label to use (e.g., ubuntu-24.04 or ubuntu-24.04-arm)"
         required: true
         type: string
+      runs-on-arch:
+        description: "Machine arch (uname -m) of the runs-on runner, used by check-cache to compute the same HOST the build runner would"
+        required: false
+        default: x86_64
+        type: string
     outputs:
       key:
         description: "Key needed for restoring depends cache"
@@ -39,7 +44,7 @@ on:
 jobs:
   check-cache:
     name: Check cache
-    runs-on: ${{ inputs.runs-on }}
+    runs-on: ${{ vars.DASH_LIGHT_RUNNER || 'dash-x64-light' }}
     outputs:
       cache-hit: ${{ steps.cache-check.outputs.cache-hit }}
       cache-key: ${{ steps.setup.outputs.cache-key }}
@@ -68,6 +73,9 @@ jobs:
           BUILD_TARGET: ${{ inputs.build-target }}
           BASE_IMAGE_DIGEST: ${{ inputs.base-image-digest }}
           RUNS_ON: ${{ inputs.runs-on }}
+          # This job does not run on the build runner, so name its arch for
+          # the targets whose HOST follows the machine (see ci/test).
+          DEPENDS_ARCH: ${{ inputs.runs-on-arch }}
         run: |
           source ./ci/dash/matrix.sh
           echo "DEP_OPTS=${DEP_OPTS}" >> "${GITHUB_OUTPUT}"
@@ -139,6 +147,20 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           allow-unsafe-pr-checkout: true
           persist-credentials: false
+
+      - name: Check depends host matches this runner
+        # check-cache computed HOST from runs-on-arch; fail loudly if the
+        # runner that builds disagrees instead of caching for the wrong host.
+        env:
+          BUILD_TARGET: ${{ inputs.build-target }}
+          EXPECTED_HOST: ${{ needs.check-cache.outputs.host }}
+        run: |
+          source ./ci/dash/matrix.sh
+          if [ "${HOST}" != "${EXPECTED_HOST}" ]; then
+            echo "::error::Build runner computes HOST=${HOST} but check-cache used ${EXPECTED_HOST}; fix runs-on-arch for ${BUILD_TARGET}"
+            exit 1
+          fi
+        shell: bash
 
       - name: Restore depends sources
         uses: actions/cache/restore@v5
