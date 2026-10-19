@@ -511,11 +511,11 @@ void Shutdown(NodeContext& node)
         PrepareShutdown(node);
     }
     // Shutdown part 2: delete wallet instance
-    node.kernel.reset();
     node.mempool.reset();
     node.fee_estimator.reset();
     node.chainman.reset();
     node.scheduler.reset();
+    node.kernel.reset();
 
     RemovePidFile(*node.args);
 
