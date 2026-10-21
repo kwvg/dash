@@ -72,6 +72,7 @@ class BlockchainTest(BitcoinTestFramework):
 
     def run_test(self):
         self.wallet = MiniWallet(self.nodes[0])
+        self._test_prune_disk_space()
         self.mine_chain()
         self._test_max_future_block_time()
         self.restart_node(
@@ -107,8 +108,15 @@ class BlockchainTest(BitcoinTestFramework):
             self.generate(self.wallet, 1)
         assert_equal(self.nodes[0].getblockchaininfo()['blocks'], 200)
 
+    def _test_prune_disk_space(self):
+        self.log.info("Test that a manually pruned node does not run into "
+                      "integer overflow on first start up")
+        self.restart_node(0, extra_args=["-prune=1"])
+        self.log.info("Avoid warning when assumed chain size is enough")
+        self.restart_node(0, extra_args=["-prune=123456789"], expected_stderr=EXPECTED_STDERR_NO_GOV_PRUNE)
+
     def _test_max_future_block_time(self):
-        self.stop_node(0)
+        self.stop_node(0, expected_stderr=EXPECTED_STDERR_NO_GOV_PRUNE)
         self.log.info("A block tip of more than MAX_FUTURE_BLOCK_TIME in the future raises an error")
         self.nodes[0].assert_start_raises_init_error(
             extra_args=[f"-mocktime={TIME_RANGE_TIP - MAX_FUTURE_BLOCK_TIME - 1}"],

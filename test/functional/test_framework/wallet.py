@@ -13,7 +13,7 @@ from typing import (
     Optional,
 )
 from test_framework.address import (
-    base58_to_byte,
+    address_to_scriptpubkey,
     key_to_p2pkh,
     ADDRESS_BCRT1_P2SH_OP_TRUE,
 )
@@ -36,8 +36,6 @@ from test_framework.script import (
 from test_framework.script_util import (
     key_to_p2pk_script,
     key_to_p2pkh_script,
-    keyhash_to_p2pkh_script,
-    scripthash_to_p2sh_script,
 )
 from test_framework.util import (
     assert_equal,
@@ -87,7 +85,7 @@ class MiniWallet:
             self._scriptPubKey = key_to_p2pk_script(pub_key.get_bytes())
         elif mode == MiniWalletMode.ADDRESS_OP_TRUE:
             self._address = ADDRESS_BCRT1_P2SH_OP_TRUE
-            self._scriptPubKey = bytes.fromhex(self._test_node.validateaddress(self._address)['scriptPubKey'])
+            self._scriptPubKey = address_to_scriptpubkey(self._address)
 
         # When the pre-mined test framework chain is used, it contains coinbase
         # outputs to the MiniWallet's default address in blocks 76-100
@@ -389,15 +387,3 @@ def getnewdestination(address_type='legacy'):
     else:
         assert False
     return pubkey, scriptpubkey, address
-
-
-def address_to_scriptpubkey(address):
-    """Converts a given address to the corresponding output script (scriptPubKey)."""
-    payload, version = base58_to_byte(address)
-    if version == 140:  # testnet pubkey hash
-        return keyhash_to_p2pkh_script(payload)
-    elif version == 19:  # testnet script hash
-        return scripthash_to_p2sh_script(payload)
-    # TODO: also support other address formats
-    else:
-        assert False
