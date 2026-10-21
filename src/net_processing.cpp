@@ -2624,8 +2624,8 @@ void PeerManagerImpl::RelayInvFiltered(const CInv& inv, const CTransaction& rela
             }
         } // LOCK(tx_relay->m_bloom_filter_mutex)
         if (inv.type == MSG_ISDLOCK && PeerReconstructsISLockFromRecsig(*pnode, *peer)) {
-            LogPrint(BCLog::NET, "%s -- skipping ISDLOCK inv (peer wants recsigs): %s peer=%d\n",
-                     __func__, inv.ToString(), peer->m_id);
+            LogPrint(BCLog::NET, "RelayInvFiltered -- skipping ISDLOCK inv (peer wants recsigs): %s peer=%d\n",
+                     inv.ToString(), peer->m_id);
             return;
         }
         PushInv(*peer, inv);
@@ -2654,8 +2654,8 @@ void PeerManagerImpl::RelayInvFiltered(const CInv& inv, const uint256& relatedTx
             }
         } // LOCK(tx_relay->m_bloom_filter_mutex)
         if (inv.type == MSG_ISDLOCK && PeerReconstructsISLockFromRecsig(*pnode, *peer)) {
-            LogPrint(BCLog::NET, "%s -- skipping ISDLOCK inv (peer wants recsigs): %s peer=%d\n",
-                     __func__, inv.ToString(), peer->m_id);
+            LogPrint(BCLog::NET, "RelayInvFiltered -- skipping ISDLOCK inv (peer wants recsigs): %s peer=%d\n",
+                     inv.ToString(), peer->m_id);
             return;
         }
         PushInv(*peer, inv);
